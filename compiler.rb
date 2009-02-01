@@ -2,7 +2,9 @@
 
 require 'emitter'
 
-DO_BEFORE= []
+DO_BEFORE= [ 
+  [:defun, :array, [:size],[:malloc,[:mul,:size,4]]]
+]
 DO_AFTER= []
 
 class Function
@@ -54,7 +56,7 @@ class Compiler
 
   def output_functions
     @global_functions.each do |name,func|
-      @e.func(name) { compile_exp(Scope.new(self,func),func.body) }
+      @e.func(name) { compile_eval_arg(Scope.new(self,func),func.body) }
     end
   end
 
@@ -85,6 +87,7 @@ class Compiler
     return aparam if atype == :int
     return @e.addr_value(aparam) if atype == :strconst
     @e.load_address(aparam) if atype == :addr
+    @e.emit(:movl,"(%#{aparam.to_s})",@e.result_value) if atype == :indirect
     @e.load_arg(aparam) if atype == :arg
     return @e.result_value
   end
@@ -92,8 +95,13 @@ class Compiler
   def compile_assign scope, left, right
     source = compile_eval_arg(scope, right)
     atype, aparam = get_arg(scope,left)
-    raise "Expected an argument on left hand side of assignment" if atype != :arg
-    @e.save_to_arg(source,aparam)
+    if atype == :indirect
+      @e.emit(:movl,source,"(%#{aparam})")
+    elsif atype == :arg
+      @e.save_to_arg(source,aparam)
+    else
+      raise "Expected an argument on left hand side of assignment"
+    end
     return [:subexpr]
   end
 
@@ -113,6 +121,16 @@ class Compiler
     return [:subexpr]
   end
 
+  def compile_index scope,arr,index
+    source = compile_eval_arg(scope, arr)
+    @e.movl(source,:edx)
+    source = compile_eval_arg(scope, index)
+    @e.save_result(source)
+    @e.sall(2,:eax)
+    @e.addl(:eax,:edx)
+    return [:indirect,:edx]
+  end
+
   def compile_while(scope, cond, body)
     @e.loop do |br|
       var = compile_eval_arg(scope,cond)
@@ -130,8 +148,13 @@ class Compiler
     return compile_lambda(scope,*exp[1..-1]) if (exp[0] == :lambda)
     return compile_assign(scope,*exp[1..-1]) if (exp[0] == :assign) 
     return compile_while(scope,*exp[1..-1]) if (exp[0] == :while)
+    return compile_index(scope,*exp[1..-1]) if (exp[0] == :index)
     return compile_call(scope,exp[1],exp[2]) if (exp[0] == :call)
-    return compile_call(scope,exp[0],exp[1..-1])
+    return compile_call(scope,exp[0],exp[1..-1]) if (exp.is_a? Array)
+    STDERR.puts "Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}"
+    res = compile_eval_arg(scope,exp[0])
+    @e.save_result(res)
+    return [:subexpr]
   end
 
   def compile_main(exp)
