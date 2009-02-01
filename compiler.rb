@@ -75,7 +75,7 @@ class Compiler
     return [:subexpr]
   end
 
-  def compile_ifelse scope,cond, if_arm,else_arm 
+  def compile_ifelse scope,cond, if_arm,else_arm = nil
     compile_exp(scope,cond) 
     puts "\ttestl\t%eax, %eax" 
     else_arm_seq = @seq
@@ -146,8 +146,8 @@ class Compiler
     puts "\tjmp\t.L#{cond_seq}"
     puts ".L#{start_while_seq}:"
     compile_exp(scope,body)
-    var = compile_eval_arg(scope,cond)
     puts ".L#{cond_seq}:"
+    var = compile_eval_arg(scope,cond)
     puts "\ttestl\t#{var}, #{var}"
     puts "\tjne\t.L#{start_while_seq}"
     return [:subexpr]
@@ -200,17 +200,3 @@ EPILOG
   end  
 end
 
-
-prog = [:do,
-  [:call, [:lambda, [:i], 
-      [:while, 
-        :i,
-        [:do, 
-          [:printf, "Countdown: %ld\\n", :i],
-          [:assign, :i, [:sub, :i, 1]]
-        ]
-      ]
-    ], [10] ]
-  ]
-
-Compiler.new.compile(prog)

@@ -1,14 +1,23 @@
 
 
-all: step9
+all: parser
 
-step9: step9.o runtime.o
+parser: parser.o runtime.o
 
-step9.o: step9.s
+parser.o: parser.s
 
-step9.s: compiler.rb
-	ruby compiler.rb >step9.s
+parser.s: parser.rb
+	ruby parser.rb >parser.s
+
+
+parser2: parser2.o runtime.o
+
+parser2.o: parser2.s
+
+parser2.s: parser2.rb
+	ruby parser2.rb >parser2.s
 
 clean:
-	rm -f *~ *.o *.s step9
+	rm -f *~ *.o *.s parser parser2
+
 
