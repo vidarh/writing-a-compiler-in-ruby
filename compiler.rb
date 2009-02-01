@@ -3,6 +3,8 @@
 # Step 2
 
 class Compiler
+  PTR_SIZE=4
+
   def initialize
     @string_constants = {}
     @seq = 0
@@ -29,16 +31,18 @@ class Compiler
   def compile_exp(exp)
     call = exp[0].to_s
 
-    args = exp[1..-1].collect {|a| get_arg(a)} 
-    
-    puts "\tsubl\t$4,%esp"
+    args = exp[1..-1].collect {|a| get_arg(a)}
 
-    args.each do |a|
-      puts "\tmovl\t$.LC#{a},(%esp)"
+    # gcc on i386 does 4 bytes regardless of arguments, and then
+    # jumps up 16 at a time. We will blindly do the same.
+    stack_adjustment = PTR_SIZE + (((args.length+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
+    puts "\tsubl\t$#{stack_adjustment}, %esp"
+    args.each_with_index do |a,i|
+      puts "\tmovl\t$.LC#{a},#{i>0 ? i*PTR_SIZE : ""}(%esp)"
     end
 
     puts "\tcall\t#{call}"
-	puts "\taddl\t$4, %esp"
+    puts "\taddl\t$#{stack_adjustment}, %esp"
   end
 
   def compile(exp)
@@ -71,6 +75,6 @@ EPILOG
   end
 end
 
-prog = [:puts,"Hello World"]
+prog = [:printf,"Hello %s\\n","World"]
 
 Compiler.new.compile(prog)
