@@ -1,7 +1,5 @@
 #!/bin/env ruby
 
-# Step 2
-
 class Compiler
   PTR_SIZE=4
 
@@ -11,13 +9,18 @@ class Compiler
   end
 
   def get_arg(a)
-    # For now we assume strings only
+    # Handle strings or subexpressions 
+    if a.is_a?(Array) 
+      compile_exp(a) 
+      return [:subexpr] 
+     end 
+
     seq = @string_constants[a]
     return seq if seq
     seq = @seq
     @seq += 1
     @string_constants[a] = seq
-    return seq
+    return [:strconst,seq]
   end
 
   def output_constants
@@ -29,16 +32,27 @@ class Compiler
   end
 
   def compile_exp(exp)
+    if exp[0] == :do 
+      exp[1..-1].each { |e| compile_exp(e) } 
+      return 
+    end 
+
     call = exp[0].to_s
 
-    args = exp[1..-1].collect {|a| get_arg(a)}
+    stack_adjustment = PTR_SIZE + (((exp.length-1+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
 
-    # gcc on i386 does 4 bytes regardless of arguments, and then
-    # jumps up 16 at a time. We will blindly do the same.
-    stack_adjustment = PTR_SIZE + (((args.length+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
-    puts "\tsubl\t$#{stack_adjustment}, %esp"
-    args.each_with_index do |a,i|
-      puts "\tmovl\t$.LC#{a},#{i>0 ? i*PTR_SIZE : ""}(%esp)"
+    puts "\tsubl\t$#{stack_adjustment}, %esp" if exp[0] != :do
+    
+    exp[1..-1].each_with_index do |a,i| 
+      atype, aparam = get_arg(a)
+      if exp[0] != :do
+        if atype == :strconst
+          param = "$.LC#{aparam}"
+        else
+          param = "%eax"
+        end
+        puts "\tmovl\t#{param},#{i>0 ? i*4 : ""}(%esp)"
+      end
     end
 
     puts "\tcall\t#{call}"
@@ -75,6 +89,6 @@ EPILOG
   end
 end
 
-prog = [:printf,"Hello %s\\n","World"]
+prog = [:printf,"'hello world' takes %ld bytes\\n",[:strlen, "hello world"]]
 
 Compiler.new.compile(prog)
