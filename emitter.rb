@@ -22,6 +22,11 @@ class Emitter
     "#{PTR_SIZE*(aparam+2)}(%ebp)"
   end
 
+  def local_var(aparam)
+    # FIXME: The +2 instead of +1 is ecause %ecx is pushed onto the stack in "main". It's really only needed there.
+    "-#{PTR_SIZE*(aparam+2)}(%ebp)"
+  end
+
   def label(l)
     puts "#{l.to_s}:"
     l
@@ -56,11 +61,19 @@ class Emitter
   end
 
   def save_result(param)
-    movl(param,:eax)
+    movl(param,:eax) if param != :eax
   end
 
   def load_arg(aparam)
     movl(local_arg(aparam),:eax)
+  end
+
+  def load_local_var(aparam)
+    movl(local_var(aparam),:eax)
+  end
+
+  def save_to_local_var(arg,aparam)
+    movl(arg,local_var(aparam))
   end
 
   def save_to_arg(arg,aparam)
@@ -69,6 +82,11 @@ class Emitter
 
   def load_address(label)
     save_result(addr_value(label))
+  end
+
+  def with_local(args)
+    # FIXME: The "+1" is a hack because main contains a pushl %ecx
+    with_stack(args+1) { yield }
   end
 
   def with_stack(args)

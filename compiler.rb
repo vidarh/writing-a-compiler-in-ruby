@@ -28,6 +28,20 @@ class Scope
   end
 end
 
+class LocalVarScope
+  def initialize locals, next_scope
+    @next = next_scope
+    @locals = locals
+  end
+
+  def get_arg a
+    a = a.to_sym
+    return [:lvar,@locals[a]] if @locals.include?(a)
+    return @next.get_arg(a) if @next
+    return [:addr,a] # Shouldn't get here normally
+  end
+end
+
 class Compiler
   attr_reader :global_functions
 
@@ -89,18 +103,25 @@ class Compiler
     @e.load_address(aparam) if atype == :addr
     @e.emit(:movl,"(%#{aparam.to_s})",@e.result_value) if atype == :indirect
     @e.load_arg(aparam) if atype == :arg
+    @e.load_local_var(aparam) if atype == :lvar
     return @e.result_value
   end
 
   def compile_assign scope, left, right
     source = compile_eval_arg(scope, right)
+    @e.pushl(source)
     atype, aparam = get_arg(scope,left)
     if atype == :indirect
+      @e.popl(:eax)
       @e.emit(:movl,source,"(%#{aparam})")
+    elsif atype == :lvar
+      @e.popl(:eax)
+      @e.save_to_local_var(source,aparam)
     elsif atype == :arg
+      @e.popl(:eax)
       @e.save_to_arg(source,aparam)
     else
-      raise "Expected an argument on left hand side of assignment"
+      raise "Expected an argument on left hand side of assignment" 
     end
     return [:subexpr]
   end
@@ -117,7 +138,7 @@ class Compiler
   end
 
   def compile_do(scope,*exp)
-    exp.each { |e| compile_exp(scope,e) } 
+    exp.each { |e| source=compile_eval_arg(scope,e); @e.save_result(source); }
     return [:subexpr]
   end
 
@@ -140,6 +161,13 @@ class Compiler
     return [:subexpr]
   end
 
+  def compile_let(scope,varlist,*args)
+    vars = {}
+    varlist.each_with_index {|v,i| vars[v]=i}
+    ls = LocalVarScope.new(vars,scope)
+    @e.with_local(vars.size) { compile_do(ls,*args) }
+  end
+
   def compile_exp(scope,exp)
     return if !exp || exp.size == 0
     return compile_do(scope,*exp[1..-1]) if exp[0] == :do 
@@ -149,6 +177,7 @@ class Compiler
     return compile_assign(scope,*exp[1..-1]) if (exp[0] == :assign) 
     return compile_while(scope,*exp[1..-1]) if (exp[0] == :while)
     return compile_index(scope,*exp[1..-1]) if (exp[0] == :index)
+    return compile_let(scope,*exp[1..-1]) if (exp[0] == :let)
     return compile_call(scope,exp[1],exp[2]) if (exp[0] == :call)
     return compile_call(scope,exp[0],exp[1..-1]) if (exp.is_a? Array)
     STDERR.puts "Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}"
@@ -159,8 +188,11 @@ class Compiler
 
   def compile_main(exp)
     @e.main do
+      # We should allow arguments to main
+      # so argc and argv get defined, but
+      # that is for later.
       @main = Function.new([],[])
-      compile_exp(Scope.new(self,@main),exp)
+      compile_eval_arg(Scope.new(self,@main),exp)
     end
 
     output_functions
