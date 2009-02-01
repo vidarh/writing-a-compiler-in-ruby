@@ -40,7 +40,7 @@ class Compiler
     return scope.get_arg(a) if (a.is_a?(Symbol))
 
     seq = @string_constants[a]
-    return seq if seq
+    return [:strconst,seq] if seq
     seq = @seq
     @seq += 1
     @string_constants[a] = seq
@@ -131,12 +131,21 @@ class Compiler
     return [:subexpr]
   end
 
+  def compile_assign scope, left, right 
+    source = compile_eval_arg(scope, right) 
+    atype, aparam = get_arg(scope,left) 
+    raise "Expected a variable on left hand side of assignment" if atype != :arg 
+    puts "\tmovl\t#{source},#{PTR_SIZE*(aparam+2)}(%ebp)" 
+    return [:subexpr] 
+  end 
+
   def compile_exp(scope,exp)
     return if !exp || exp.size == 0
     return compile_do(scope,*exp[1..-1]) if exp[0] == :do 
     return compile_defun(scope,*exp[1..-1]) if (exp[0] == :defun)
     return compile_ifelse(scope,*exp[1..-1]) if (exp[0] == :if)
     return compile_lambda(scope,*exp[1..-1]) if (exp[0] == :lambda)
+    return compile_assign(scope,*exp[1..-1]) if (exp[0] == :assign) 
     return compile_call(scope,exp[1],exp[2]) if (exp[0] == :call)
     return compile_call(scope,exp[0],exp[1..-1])
   end
@@ -176,9 +185,12 @@ EPILOG
   end  
 end
 
-prog = [:do,
-  [:defun,:myputs,[:foo],[:puts,:foo]],
-  [:myputs,"Demonstrating argument passing"],
-]
+prog = [:call, [:lambda, [:i],  
+    [:do, 
+      [:printf, "Testing sub and assign (before): %ld\\n", :i], 
+      [:assign, :i, [:sub, :i, 1]], 
+      [:printf, "Testing sub and assign (after): %ld\\n", :i], 
+    ] 
+  ], [10] ] 
 
 Compiler.new.compile(prog)
