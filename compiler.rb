@@ -9,19 +9,16 @@ class Compiler
   PTR_SIZE=4
 
   def initialize
-    @string_constants = {}
     @global_functions = {}
+    @string_constants = {}
     @seq = 0
   end
 
   def get_arg(a)
     # Handle strings or subexpressions 
-    if a.is_a?(Array) 
-      compile_exp(a) 
-      return [:subexpr] 
-     end 
-
+    return compile_exp(a) if a.is_a?(Array)
     return [:int, a] if (a.is_a?(Fixnum)) 
+    return [:atom, a] if (a.is_a?(Symbol))
 
     seq = @string_constants[a]
     return seq if seq
@@ -32,7 +29,7 @@ class Compiler
   end
 
   def output_constants
-    puts "\t.section\t.rodata"
+    puts "\t.section .rodata"
     @string_constants.each do |c,seq|
       puts ".LC#{seq}:"
       puts "\t.string \"#{c}\""
@@ -44,66 +41,81 @@ class Compiler
      puts ".globl #{name}"
      puts ".type   #{name}, @function"
      puts "#{name}:"
-      puts "\tpushl   %ebp"
-      puts "\tmovl    %esp, %ebp"
-      compile_exp(data[1])
-      puts "\tleave"
-      puts "\tret"
+     puts "\tpushl   %ebp"
+     puts "\tmovl    %esp, %ebp"
+     compile_exp(data[1])
+     puts "\tleave"
+     puts "\tret"
      puts "\t.size   #{name}, .-#{name}"
-      puts
+     puts
     end
   end
 
-  def defun name, args, body
+  def compile_defun name, args, body
     @global_functions[name] = [args,body]
+    return [:subexpr]
   end
 
-  def ifelse cond, if_arm,else_arm 
+  def compile_ifelse cond, if_arm,else_arm 
     compile_exp(cond) 
-     puts "\ttestl   %eax, %eax" 
-     @seq += 2 
-     else_arm_seq = @seq - 1 
-     end_if_arm_seq = @seq 
-    puts "\tje  .L#{else_arm_seq}" 
-     compile_exp(if_arm) 
-    puts "\tjmp .L#{end_if_arm_seq}" 
+    puts "\ttestl\t%eax, %eax" 
+    else_arm_seq = @seq
+    end_if_arm_seq = @seq + 1
+    @seq += 2 
+    puts "\tje\t.L#{else_arm_seq}" 
+    compile_exp(if_arm) 
+    puts "\tjmp\t.L#{end_if_arm_seq}" 
     puts ".L#{else_arm_seq}:" 
-     compile_exp(else_arm) 
+    compile_exp(else_arm) 
     puts ".L#{end_if_arm_seq}:" 
+    return [:subexpr]
   end 
+
+  def compile_lambda args, body
+    name = "lambda__#{@seq}"
+    @seq += 1
+    compile_defun(name, args,body)
+    puts "\tmovl\t$#{name},%eax"
+    return [:subexpr]
+  end
+
+  def compile_eval_arg arg
+    atype, aparam = get_arg(arg)
+    return "$.LC#{aparam}" if atype == :strconst
+    return "$#{aparam}" if atype == :int
+    return aparam.to_s if atype == :atom
+    return "%eax"
+  end
+
+  def compile_call func, args
+    stack_adjustment = PTR_SIZE + (((args.length+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
+
+    puts "\tsubl\t$#{stack_adjustment}, %esp"
+    args.each_with_index do |a,i| 
+      param = compile_eval_arg(a)
+      puts "\tmovl\t#{param},#{i>0 ? i*4 : ""}(%esp)"
+    end
+
+    res = compile_eval_arg(func) 
+    res = "*%eax" if res == "%eax" # Ugly. Would be nicer to retain some knowledge of what "res" contains
+    puts "\tcall\t#{res}"
+    puts "\taddl\t$#{stack_adjustment}, %esp"
+    return [:subexpr]
+  end
+
+  def compile_do(*exp)
+    exp.each { |e| compile_exp(e) } 
+    return [:subexpr]
+  end
 
   def compile_exp(exp)
     return if !exp || exp.size == 0
-
-    if exp[0] == :do 
-      exp[1..-1].each { |e| compile_exp(e) } 
-      return 
-    end 
-
-    return defun(*exp[1..-1]) if (exp[0] == :defun)
-    return ifelse(*exp[1..-1]) if (exp[0] == :if) 
-
-    call = exp[0].to_s
-
-    stack_adjustment = PTR_SIZE + (((exp.length-1+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
-
-    puts "\tsubl\t$#{stack_adjustment}, %esp" if exp[0] != :do
-    
-    exp[1..-1].each_with_index do |a,i| 
-      atype, aparam = get_arg(a)
-      if exp[0] != :do
-        if atype == :strconst
-          param = "$.LC#{aparam}"
-        elsif atype == :int then param = "$#{aparam}" 
-        else
-          param = "%eax"
-        end
-        puts "\tmovl\t#{param},#{i>0 ? i*4 : ""}(%esp)"
-      end
-    end
-
-    puts "\tcall\t#{call}"
-    puts "\taddl\t$#{stack_adjustment}, %esp"
+    return compile_do(*exp[1..-1]) if exp[0] == :do 
+    return compile_defun(*exp[1..-1]) if (exp[0] == :defun)
+    return compile_ifelse(*exp[1..-1]) if (exp[0] == :if)
+    return compile_lambda(*exp[1..-1]) if (exp[0] == :lambda)
+    return compile_call(exp[1],exp[2]) if (exp[0] == :call)
+    return compile_call(exp[0],exp[1..-1])
   end
 
   def compile_main(exp)
@@ -128,7 +140,7 @@ PROLOG
 	popl	%ebp
 	leal	-4(%ecx), %esp
 	ret
-	.size	main, .-main
+
 EPILOG
 
     output_functions
@@ -141,14 +153,7 @@ EPILOG
 end
 
 prog = [:do,
-  [:if, [:strlen,""], 
-    [:puts, "IF: The string was not empty"], 
-    [:puts, "ELSE: The string was empty"] 
-  ], 
-  [:if, [:strlen,"Test"], 
-    [:puts, "Second IF: The string was not empty"], 
-    [:puts, "Second IF: The string was empty"] 
-  ]
+  [:call, [:lambda, [], [:puts, "Test"]], [] ]
 ]
 
 Compiler.new.compile(prog)
