@@ -1,14 +1,14 @@
 
 
-all: step8
+all: step9
 
-step8: step8.o runtime.o
+step9: step9.o runtime.o
 
-step8.o: step8.s
+step9.o: step9.s
 
-step8.s: compiler.rb
-	ruby compiler.rb >step8.s
+step9.s: compiler.rb
+	ruby compiler.rb >step9.s
 
 clean:
-	rm -f *~ *.o *.s step8
+	rm -f *~ *.o *.s step9
 

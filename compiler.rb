@@ -139,6 +139,20 @@ class Compiler
     return [:subexpr] 
   end 
 
+  def compile_while(scope, cond, body)
+    start_while_seq = @seq
+    cond_seq = @seq + 1
+    @seq += 2
+    puts "\tjmp\t.L#{cond_seq}"
+    puts ".L#{start_while_seq}:"
+    compile_exp(scope,body)
+    var = compile_eval_arg(scope,cond)
+    puts ".L#{cond_seq}:"
+    puts "\ttestl\t#{var}, #{var}"
+    puts "\tjne\t.L#{start_while_seq}"
+    return [:subexpr]
+  end
+
   def compile_exp(scope,exp)
     return if !exp || exp.size == 0
     return compile_do(scope,*exp[1..-1]) if exp[0] == :do 
@@ -146,6 +160,7 @@ class Compiler
     return compile_ifelse(scope,*exp[1..-1]) if (exp[0] == :if)
     return compile_lambda(scope,*exp[1..-1]) if (exp[0] == :lambda)
     return compile_assign(scope,*exp[1..-1]) if (exp[0] == :assign) 
+    return compile_while(scope,*exp[1..-1]) if (exp[0] == :while)
     return compile_call(scope,exp[1],exp[2]) if (exp[0] == :call)
     return compile_call(scope,exp[0],exp[1..-1])
   end
@@ -185,12 +200,17 @@ EPILOG
   end  
 end
 
-prog = [:call, [:lambda, [:i],  
-    [:do, 
-      [:printf, "Testing sub and assign (before): %ld\\n", :i], 
-      [:assign, :i, [:sub, :i, 1]], 
-      [:printf, "Testing sub and assign (after): %ld\\n", :i], 
-    ] 
-  ], [10] ] 
+
+prog = [:do,
+  [:call, [:lambda, [:i], 
+      [:while, 
+        :i,
+        [:do, 
+          [:printf, "Countdown: %ld\\n", :i],
+          [:assign, :i, [:sub, :i, 1]]
+        ]
+      ]
+    ], [10] ]
+  ]
 
 Compiler.new.compile(prog)
