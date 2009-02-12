@@ -7,11 +7,45 @@ DO_BEFORE= [
 ]
 DO_AFTER= []
 
+class Arg
+  attr_reader :name,:rest
+  def initialize name, *modifiers
+    @name = name
+    modifiers.each do |m|
+      @rest = true if m == :rest
+    end
+  end
+
+  def rest?; @rest; end  
+  def type
+    rest? ? :argaddr : :arg
+  end
+end
+
 class Function
   attr_reader :args,:body
   def initialize args,body
-    @args = args
     @body = body
+    @rest = false
+    @args = args.collect do |a|
+      arg = Arg.new(*[a].flatten)
+      @rest = true if arg.rest?
+      arg
+    end
+  end
+
+  def rest?; @rest; end
+  def get_arg(a)
+    if a == :numargs
+      return [:int,args.size] if !rest?
+      return [:numargs]
+    end
+
+    args.each_with_index do |arg,i|
+      return [arg.type,i] if arg.name == a
+    end
+
+    return nil
   end
 end
 
@@ -21,9 +55,16 @@ class Scope
     @func = func
   end
 
+  def rest?
+    @func ? @func.rest? : false
+  end
+
   def get_arg a
     a = a.to_sym
-    @func.args.each_with_index {|arg,i| return [:arg,i] if arg == a }
+    if @func
+      arg = @func.get_arg(a)
+      return arg if arg
+    end
     return [:addr,a]
   end
 end
@@ -34,9 +75,13 @@ class LocalVarScope
     @locals = locals
   end
 
+  def rest?
+    @next ? @next.rest? : false
+  end
+
   def get_arg a
     a = a.to_sym
-    return [:lvar,@locals[a]] if @locals.include?(a)
+    return [:lvar,@locals[a] + (rest? ? 1 : 0)] if @locals.include?(a)
     return @next.get_arg(a) if @next
     return [:addr,a] # Shouldn't get here normally
   end
@@ -70,7 +115,7 @@ class Compiler
 
   def output_functions
     @global_functions.each do |name,func|
-      @e.func(name) { compile_eval_arg(Scope.new(self,func),func.body) }
+      @e.func(name, func.rest?) { compile_eval_arg(Scope.new(self,func),func.body) }
     end
   end
 
@@ -100,10 +145,21 @@ class Compiler
     atype, aparam = get_arg(scope,arg)
     return aparam if atype == :int
     return @e.addr_value(aparam) if atype == :strconst
-    @e.load_address(aparam) if atype == :addr
-    @e.emit(:movl,"(%#{aparam.to_s})",@e.result_value) if atype == :indirect
-    @e.load_arg(aparam) if atype == :arg
-    @e.load_local_var(aparam) if atype == :lvar
+    case atype
+    when :numargs
+      @e.movl("-4(%ebp)",@e.result_value)
+    when :argaddr:
+        @e.load_arg_address(aparam)
+    when :addr
+      @e.load_address(aparam)
+    when :indirect
+      @e.emit(:movl,"(%#{aparam.to_s})",@e.result_value)
+    when :arg
+      @e.load_arg(aparam)
+    when :lvar
+      @e.load_local_var(aparam)
+    else
+    end
     return @e.result_value
   end
 
@@ -127,7 +183,7 @@ class Compiler
   end
 
   def compile_call scope,func, args
-    @e.with_stack(args.length) do
+    @e.with_stack(args.length,true) do
       args.each_with_index do |a,i| 
         param = compile_eval_arg(scope,a)
         @e.save_to_stack(param,i)

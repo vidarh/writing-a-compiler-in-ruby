@@ -23,7 +23,8 @@ class Emitter
   end
 
   def local_var(aparam)
-    # FIXME: The +2 instead of +1 is ecause %ecx is pushed onto the stack in "main". It's really only needed there.
+    # +2 instead of +1 because %ecx is pushed onto the stack in main, 
+    # In any variadic function we push :numargs from %ebx into -4(%ebp) 
     "-#{PTR_SIZE*(aparam+2)}(%ebp)"
   end
 
@@ -89,11 +90,12 @@ class Emitter
     with_stack(args+1) { yield }
   end
 
-  def with_stack(args)
+  def with_stack(args,numargs=false)
     # gcc does 4 bytes regardless of arguments, and then jumps up 16 at a time
     # We will do the same, but assume its tied to pointer size
     adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
     subl(adj,:esp)
+    movl(args,:ebx) if numargs
     yield
     addl(adj,:esp)
   end
@@ -137,11 +139,12 @@ class Emitter
     local(br)
   end
 
-  def func name
+  def func name, save_numargs = false
     export(name,:function) if name.to_s[0] != ?.
     label(name)
     pushl(:ebp)
     movl(:esp,:ebp)
+    pushl(:ebx) if save_numargs
     yield
     leave
     ret
