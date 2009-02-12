@@ -69,6 +69,10 @@ class Emitter
     movl(local_arg(aparam),:eax)
   end
 
+  def load_arg_address(aparam) 
+    leal(local_arg(aparam),:eax) 
+  end 
+
   def load_local_var(aparam)
     movl(local_var(aparam),:eax)
   end

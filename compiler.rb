@@ -39,7 +39,7 @@ class Function
     if a == :numargs
       # This is a bit of a hack, but it turns :numargs
       # into a constant for any non-variadic function
-      return rest? ? [:lvar,-1],[:int,args.size]
+      return rest? ? [:lvar,-1] : [:int,args.size]
     end
 
     args.each_with_index do |arg,i|
