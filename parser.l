@@ -1,5 +1,5 @@
 
-(do
+%s(do
  (defun parse_quoted (c)
    (while (and 
 		   (ne (assign c (getchar)) -1) 
