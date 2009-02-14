@@ -34,6 +34,7 @@ class Scanner
 
   def expect(str)
     return true if str == ""
+    return str.expect(self) if str.respond_to?(:expect)
     buf = ""
     str.each_byte do |s|
       c = peek
