@@ -30,21 +30,9 @@ class SEXParser
   end
 
   def parse_exp
+    ws
     (ret = @s.expect(Atom) || @s.expect(Int) || @s.expect(Quoted) || parse_sexp) && ws
     return ret
   end
-end
-
-s = Scanner.new(STDIN)
-
-begin
-  PP.pp SEXParser.new(s).parse
-rescue Exception => e
-  PP.pp e
-  buf = ""
-  while s.peek
-    buf += s.get
-  end
-  puts buf
 end
 

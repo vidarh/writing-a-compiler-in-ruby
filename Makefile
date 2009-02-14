@@ -6,33 +6,22 @@ parser: parser.o runtime.o
 
 parser.o: parser.s
 
-parser.s: parser.rb
-	ruby parser.rb >parser.s
-
-
-parser2: parser2.o runtime.o
-
-parser2.o: parser2.s
-
-parser2.s: parser2.rb parser
-	ruby parser2.rb >parser2.s
-
-parser2.rb: parser.l parser
-	@./parser <parser.l >parser2.rb
+parser.s: parser.l
+	ruby compiler.rb <parser.l >parser.s
 
 clean:
-	@rm -f *~ *.o *.s parser parser2
+	@rm -f *~ *.o *.s parser testarray testargs
 
-testarray.s: testarray.rb
-	ruby testarray.rb >testarray.s
+testarray.s: testarray.l
+	ruby compiler.rb <testarray.l >testarray.s
 
 testarray.o: testarray.s 
 
 testarray: testarray.o runtime.o
 	gcc -o testarray testarray.o runtime.o
 
-testargs.s: testargs.rb
-	ruby testargs.rb >testargs.s
+testargs.s: testargs.l
+	ruby compiler.rb <testargs.l >testargs.s
 
 testargs.o: testargs.s
 
