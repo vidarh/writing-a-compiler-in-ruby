@@ -263,6 +263,11 @@ end
 s = Scanner.new(STDIN)
 prog = nil
 
+dump = false
+ARGV.each do |opt|
+  dump = true if opt == "--parsetree"
+end  
+
 begin
   prog = Parser.new(s).parse
 rescue Exception => e
@@ -273,6 +278,11 @@ rescue Exception => e
     buf += s.get
   end
   STDERR.puts buf
+end
+
+if prog && dump
+  PP.pp prog 
+  exit
 end
 
 Compiler.new.compile(prog) if prog
