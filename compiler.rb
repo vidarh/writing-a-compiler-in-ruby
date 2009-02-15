@@ -1,7 +1,7 @@
 #!/bin/env ruby
 
 require 'emitter'
-require 'sexp'
+require 'parser'
 
 DO_BEFORE= [ 
   [:defun, :array, [:size],[:malloc,[:mul,:size,4]]]
@@ -264,7 +264,7 @@ s = Scanner.new(STDIN)
 prog = nil
 
 begin
-  prog = SEXParser.new(s).parse
+  prog = Parser.new(s).parse
 rescue Exception => e
   STDERR.puts "#{e.message}"
   STDERR.puts "Failed before:\n"
