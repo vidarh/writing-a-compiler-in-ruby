@@ -1,10 +1,7 @@
-require 'scanner'
-require 'tokens'
-require 'pp'
+require 'parserbase'
 
 # Simple Recursive-Descent s-expression parser
-class SEXParser
-  include Tokens
+class SEXParser < ParserBase
 
   def initialize s
     @s = s # The scanner
@@ -18,8 +15,7 @@ class SEXParser
   def parse_sexp
     return nil if !@s.expect("(")
     @s.ws
-    exprs = []
-    while exp = parse_exp; exprs << exp; end
+    exprs = zero_or_more(:exp)
     raise "Expected ')'" if !@s.expect(")")
     return exprs
   end

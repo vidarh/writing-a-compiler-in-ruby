@@ -1,8 +1,7 @@
+require 'parserbase'
 require 'sexp'
 
-class Parser
-  include Tokens
-
+class Parser < ParserBase
   def initialize s
     @s = s
     @sexp = SEXParser.new(s)
@@ -34,8 +33,7 @@ class Parser
     raise "Expected function name" if !(name = parse_name)
     args = parse_args
     @s.ws
-    exps = [:do]
-    while e = parse_defexp; exps << e; end
+    exps = [:do] + zero_or_more(:defexp)
     raise "Expected expression of 'end'" if !@s.expect("end")
     return [:defun, name, args, exps]
   end
@@ -50,8 +48,7 @@ class Parser
 
   # program ::= exp* ws*
   def parse
-    res = [:do]
-    while e = parse_exp; res << e; end
+    res = [:do] + zero_or_more(:exp)
     @s.ws
     raise "Expected EOF" if @s.peek
     return res
