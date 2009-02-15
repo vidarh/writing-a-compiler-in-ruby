@@ -12,6 +12,7 @@ class Parser
     @sexp.parse
   end
 
+  # program ::= ws* (sexp ws*)*
   def parse
     res = [:do]
     @s.ws
