@@ -46,4 +46,8 @@ class Scanner
     end
     return true
   end
+
+  def ws
+    while (c = peek) && [9,10,13,32].member?(c) do get; end
+  end
 end
