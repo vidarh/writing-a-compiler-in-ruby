@@ -1,6 +1,5 @@
 
-%s(do
- (defun parse_quoted (c)
+%s(defun parse_quoted (c)
    (while (and 
 		   (ne (assign c (getchar)) -1) 
 		   (ne c 34)) 
@@ -8,7 +7,7 @@
 	 )
    )
 
- (defun parse (c sep)
+%s(defun parse (c sep)
    (while (and 
 		   (ne (assign c (getchar)) -1)
 		   (ne c 41)) 
@@ -48,11 +47,11 @@
 	 )
    )
  
-  (puts "require 'compiler'\\n")
-  (puts "prog = [:do,")
-  (parse 0 0)
-  (puts "]\n\n")
-  (puts "Compiler.new.compile(prog)")
-)
+%s(puts "require 'compiler'\\n")
+%s(puts "prog = [:do,")
+%s(parse 0 0)
+%s(puts "]\n\n")
+%s(puts "Compiler.new.compile(prog)")
+
 
 							 
