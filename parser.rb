@@ -12,10 +12,40 @@ class Parser < ParserBase
     @s.expect(Atom)
   end
 
-  # args ::= ws* sexp
+  # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
+  def parse_arglist
+    rest = false
+    if (@s.expect("*"))
+      rest = true
+      @s.ws
+    end
+
+    name = parse_name
+    raise "Expected argument name" if rest && !name
+    return nil if !name
+
+    args = [(rest ? [name.to_sym,:rest] : name.to_sym)]
+
+    @s.nolfws
+
+    return args if (!@s.expect(","))
+    @s.ws
+    more = parse_arglist
+    raise "Expected argument" if !more
+    return args + more
+  end
+
+  # args ::= nolfws* ( "(" ws* arglist ws* ")" | arglist )
   def parse_args
-    @s.ws # We should probably require no linefeed here.
-    @sexp.parse
+    @s.nolfws
+    if (@s.expect("("))
+      @s.ws
+      args = parse_arglist
+      @s.ws
+      raise "Expected ')'" if !@s.expect(")")
+      return args
+    end
+    return parse_arglist
   end
 
   # Later on "defexp" will allow anything other than "def"

@@ -1,5 +1,5 @@
 
-def f %s(test (arr rest))
+def f test, *arr
 %s(let (i)
    (assign i 0)
    (while (lt i (sub numargs 1)) 
@@ -11,7 +11,7 @@ def f %s(test (arr rest))
    )
 end
 
-def g %s(i j)
+def g i, j
 %s(let (k)
 	(assign k 42)
 	(printf "numargs=%ld, i=%ld,j=%ld,k=%ld\n" numargs i j k)
