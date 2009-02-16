@@ -50,4 +50,8 @@ class Scanner
   def ws
     while (c = peek) && [9,10,13,32].member?(c) do get; end
   end
+
+  def nolfws
+    while (c = peek) && [9,13,32].member?(c) do get; end
+  end
 end
