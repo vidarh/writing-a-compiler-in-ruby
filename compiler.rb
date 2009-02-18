@@ -221,7 +221,11 @@ class Compiler
     vars = {}
     varlist.each_with_index {|v,i| vars[v]=i}
     ls = LocalVarScope.new(vars,scope)
-    @e.with_local(vars.size) { compile_do(ls,*args) }
+    if vars.size
+      @e.with_local(vars.size) { compile_do(ls,*args) }
+    else
+      compile_do(ls,*args)
+    end
   end
 
   def compile_exp(scope,exp)

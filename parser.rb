@@ -1,5 +1,6 @@
 require 'parserbase'
 require 'sexp'
+require 'utils'
 
 class Parser < ParserBase
   def initialize s
@@ -63,7 +64,9 @@ class Parser < ParserBase
     raise "Expected function name" if !(name = parse_name)
     args = parse_args
     @s.ws
-    exps = [:do] + zero_or_more(:defexp)
+    exps = zero_or_more(:defexp)
+    vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
+    exps = [:let,vars] + exps 
     raise "Expected expression of 'end'" if !@s.expect("end")
     return [:defun, name, args, exps]
   end

@@ -1,14 +1,12 @@
 
 def f test, *arr
-%s(let (i)
-   (assign i 0)
-   (while (lt i (sub numargs 1)) 
-	 (do
-	  (printf "test=%ld, i=%ld, numargs=%ld, arr[i]=%ld\n" test i numargs (index arr i))
-	  (assign i (add i 1))
-	  )
+%s(assign i 0)
+%s(while (lt i (sub numargs 1)) 
+	(do
+	 (printf "test=%ld, i=%ld, numargs=%ld, arr[i]=%ld\n" test i numargs (index arr i))
+	 (assign i (add i 1))
 	 )
-   )
+	)
 end
 
 def g i, j
