@@ -49,12 +49,27 @@ class Parser < ParserBase
     return parse_arglist
   end
 
+  # condition ::= sexp
+  def parse_condition
+    @sexp.parse
+  end
+
+  # while ::= "while" ws* condition defexp* "end"
+  def parse_while
+    return nil if !@s.expect("while")
+    @s.ws
+    raise "Expected condition for 'while' block" if !(cond  = parse_condition)
+    exps = zero_or_more(:defexp)
+    raise "Expected 'end'" if !@s.expect("end")
+    return [:while,cond,[:do]+exps]
+  end
+
   # Later on "defexp" will allow anything other than "def"
-  # and "class". For now, that's only sexp's.
-  # defexp ::= sexp
+  # and "class".
+  # defexp ::= sexp | while
   def parse_defexp
     @s.ws
-    @sexp.parse
+    @sexp.parse || parse_while
   end
 
   # def ::= "def" ws* name args? ws* defexp* "end"
