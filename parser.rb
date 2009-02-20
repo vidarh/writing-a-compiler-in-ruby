@@ -1,11 +1,13 @@
 require 'parserbase'
 require 'sexp'
 require 'utils'
+require 'shunting'
 
 class Parser < ParserBase
   def initialize s
     @s = s
     @sexp = SEXParser.new(s)
+    @shunting = OpPrec::parser(s)
   end
 
   # name ::= atom
@@ -51,7 +53,7 @@ class Parser < ParserBase
 
   # condition ::= sexp
   def parse_condition
-    @sexp.parse
+    @sexp.parse || @shunting.parse
   end
 
   # while ::= "while" ws* condition defexp* "end"
@@ -69,7 +71,7 @@ class Parser < ParserBase
   # defexp ::= sexp | while
   def parse_defexp
     @s.ws
-    @sexp.parse || parse_while
+    @sexp.parse || parse_while || @shunting.parse
   end
 
   # def ::= "def" ws* name args? ws* defexp* "end"
@@ -91,7 +93,7 @@ class Parser < ParserBase
   # exp ::= ws* (def | sexp)
   def parse_exp
     @s.ws
-    parse_def || parse_sexp
+    parse_def || parse_sexp || @shunting.parse
   end
 
   # program ::= exp* ws*

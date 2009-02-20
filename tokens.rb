@@ -49,4 +49,41 @@ module Tokens
       return buf
     end
   end
+
+  class Tokenizer
+    def initialize scanner
+      @s = scanner
+    end
+
+    def each
+      while t = get
+        yield t
+      end
+    end
+
+    def get
+      @s.nolfws
+      case @s.peek
+      when ?"
+        return @s.expect(Quoted)
+      when ?0 .. ?9
+        return @s.expect(Int)
+      when ?a .. ?z , ?A .. ?Z
+        buf = @s.expect(Atom)
+        if (buf == :end || buf == :def) # FIXME: Make this a keyword lookup
+          @s.unget(buf.to_s)
+          return nil
+        end
+        return buf
+      when ?<, ?(, ?), ?-, ?+, ?=, ?, # FIXME: Derive this from oper table
+        return @s.get.to_s
+      when nil
+        return nil
+      else
+        return nil
+      end
+    end
+  end
 end
+
+
