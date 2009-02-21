@@ -1,4 +1,6 @@
 
+require 'operators'
+
 module Tokens
 
   class Atom
@@ -75,11 +77,10 @@ module Tokens
           return nil
         end
         return buf
-      when ?<, ?(, ?), ?-, ?+, ?=, ?, , ?[, ?] # FIXME: Derive this from oper table
-        return @s.get.to_s
       when nil
         return nil
       else
+        return @s.get if Operators[@s.peek.chr]
         return nil
       end
     end

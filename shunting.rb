@@ -2,7 +2,6 @@
 require 'pp'
 
 module OpPrec
-  Oper = Struct.new(:pri,:sym,:type)
 
   class TreeOutput
     def initialize
@@ -98,24 +97,7 @@ module OpPrec
   end
 
   def self.parser scanner
-    opers = {
-      "," => Oper.new(2,  :comma,   :infix),
-      "=" => Oper.new(6,  :assign,   :infix),
-      "<" => Oper.new(9,  :lt,   :infix),
-      "+" => Oper.new(10, :add,  :infix),
-      "-" => Oper.new(10, :sub,  :infix),
-      "!" => Oper.new(10, :not,   :prefix),
-      "*" => Oper.new(20, :mul,   :infix),
-      "/" => Oper.new(20, :div,   :infix),
-
-      "[" => Oper.new(99, :index, :infix),
-      "]" => Oper.new(99, nil,   :rp),
-
-      "(" => Oper.new(99, nil,   :lp),
-      ")" => Oper.new(99, nil,   :rp)
-    }
-
-    ShuntingYard.new(opers,TreeOutput.new,Tokens::Tokenizer.new(scanner))
+     ShuntingYard.new(Operators,TreeOutput.new,Tokens::Tokenizer.new(scanner))
   end
 
 end
