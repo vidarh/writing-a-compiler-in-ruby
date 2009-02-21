@@ -75,7 +75,7 @@ module Tokens
           return nil
         end
         return buf
-      when ?<, ?(, ?), ?-, ?+, ?=, ?, # FIXME: Derive this from oper table
+      when ?<, ?(, ?), ?-, ?+, ?=, ?, , ?[, ?] # FIXME: Derive this from oper table
         return @s.get.to_s
       when nil
         return nil

@@ -99,16 +99,18 @@ module OpPrec
 
   def self.parser scanner
     opers = {
+      "," => Oper.new(2,  :comma,   :infix),
+      "=" => Oper.new(6,  :assign,   :infix),
+      "<" => Oper.new(9,  :lt,   :infix),
       "+" => Oper.new(10, :add,  :infix),
-      "++" => {:infix_or_postfix => Oper.new(30, :postincr,  :postfix), 
-             :prefix => Oper.new(30,:preincr, :prefix)},
       "-" => Oper.new(10, :sub,  :infix),
+      "!" => Oper.new(10, :not,   :prefix),
       "*" => Oper.new(20, :mul,   :infix),
       "/" => Oper.new(20, :div,   :infix),
-      "<" => Oper.new(20, :lt,   :infix),
-      "=" => Oper.new(5, :assign,   :infix),
-      "!" => Oper.new(30, :not,   :prefix),
-      "," => Oper.new(2,  :comma,   :infix),
+
+      "[" => Oper.new(99, :index, :infix),
+      "]" => Oper.new(99, nil,   :rp),
+
       "(" => Oper.new(99, nil,   :lp),
       ")" => Oper.new(99, nil,   :rp)
     }
