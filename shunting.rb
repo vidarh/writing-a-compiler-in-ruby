@@ -21,7 +21,7 @@ module OpPrec
         @vstack << [o.sym,@vstack.pop] + rightv[1..-1]
       elsif (o.sym == :call) && rightv.is_a?(Array) && rightv[0] == :comma
         # This is a way to flatten the tree by removing all the :comma operators
-        @vstack << [@vstack.pop] + rightv[1..-1]
+        @vstack << [o.sym,@vstack.pop,rightv[1..-1]]
       else
         if o.type == :infix
           leftv = @vstack.pop
