@@ -77,6 +77,15 @@ module Tokens
           return nil
         end
         return buf
+      # Special cases - two character operators:
+      when ?= 
+        @s.get
+        return "==" if @s.peek == ?=
+        return "="
+      when ?!
+        @s.get
+        return "!=" if @s.peek == ?=
+        return "!"
       when nil
         return nil
       else
