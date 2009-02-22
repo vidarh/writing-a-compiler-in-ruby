@@ -51,7 +51,7 @@ class Parser < ParserBase
     return parse_arglist
   end
 
-  # condition ::= sexp
+  # condition ::= sexp | opprecexpr
   def parse_condition
     @sexp.parse || @shunting.parse
   end
