@@ -47,6 +47,7 @@ class Scanner
     return true
   end
 
+  # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
   def ws
     while (c = peek) && [9,10,13,32,?#].member?(c) do 
       get
@@ -56,6 +57,7 @@ class Scanner
     end
   end
 
+  # nolfws ::= [\t\r ]*
   def nolfws
     while (c = peek) && [9,13,32].member?(c) do get; end
   end
