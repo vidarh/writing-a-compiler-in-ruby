@@ -6,5 +6,9 @@ class Foo
   end
 end
 
-f = Foo.new
-f.bar
+def test
+  f = Foo.new
+  f.bar
+end
+
+test
