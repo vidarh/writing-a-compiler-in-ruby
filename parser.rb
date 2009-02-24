@@ -79,7 +79,7 @@ class Parser < ParserBase
     return nil if !@s.expect("def")
     @s.ws
     raise "Expected function name" if !(name = parse_name)
-    args = parse_args
+    args = parse_args || []
     @s.ws
     exps = zero_or_more(:defexp)
     vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
