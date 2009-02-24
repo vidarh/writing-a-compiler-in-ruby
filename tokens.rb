@@ -6,7 +6,7 @@ module Tokens
   class Atom
     def self.expect s
       tmp = ""
-      if (c = s.peek) && ((?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
+      if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
         tmp += s.get
         
         while (c = s.peek) && ((?a .. ?z).member?(c) || 
