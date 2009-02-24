@@ -84,16 +84,27 @@ class Parser < ParserBase
     exps = zero_or_more(:defexp)
     vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
     exps = [:let,vars] + exps 
-    raise "Expected expression of 'end'" if !@s.expect("end")
+    raise "Expected expression or 'end'" if !@s.expect("end")
     return [:defun, name, args, exps]
   end
 
   def parse_sexp; @sexp.parse; end
 
-  # exp ::= ws* (def | sexp)
+  # class ::= "class" ws* name ws* exp* "end"
+  def parse_class
+    return nil if !@s.expect("class")
+    @s.ws
+    raise "Expected class name" if !(name = @s.expect(Atom))
+    @s.ws
+    exps = zero_or_more(:exp)
+    raise "Expected expression or 'end'" if !@s.expect("end")
+    return [:class,name,exps]
+  end
+
+  # exp ::= ws* (class | def | sexp)
   def parse_exp
     @s.ws
-    parse_def || parse_sexp || @shunting.parse
+    parse_class || parse_def || parse_sexp || @shunting.parse
   end
 
   # program ::= exp* ws*

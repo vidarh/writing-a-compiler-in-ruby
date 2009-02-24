@@ -18,6 +18,8 @@ Operators = {
 
   "*"  => Oper.new(20, :mul,    :infix),
   "/"  => Oper.new(20, :div,    :infix),
+
+  "."  => Oper.new(90, :callm,  :infix),
   
   "["  => Oper.new(99, :index,  :infix),
   "]"  => Oper.new(99, nil,     :rp),
