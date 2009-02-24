@@ -4,7 +4,7 @@
 def f test, *arr
   i = 0
   while i < (numargs - 1)
-    printf("test=%ld, i=%ld, numargs=%ld, arr[i]=%ld\n",test,i,numargs,arr[i]))
+    printf("test=%ld, i=%ld, numargs=%ld, arr[i]=%ld\n",test,i,numargs,arr[i])
     i = i + 1
   end
 end
