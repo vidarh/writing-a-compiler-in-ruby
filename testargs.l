@@ -1,4 +1,6 @@
 
+# Comments are now allowed
+
 def f test, *arr
   i = 0
   while i < (numargs - 1)
