@@ -8,6 +8,10 @@ class Emitter
     @seq = 0
   end
 
+  def comment(str)
+    puts "\t# #{str}"
+  end
+
   def export(label,type=nil)
     puts ".globl #{label}"
     puts "\t.type\t#{label}, @#{type.to_s}"
@@ -15,6 +19,11 @@ class Emitter
 
   def rodata
     emit(".section",".rodata")
+    yield
+  end
+
+  def bss
+    emit(".section",".bss")
     yield
   end
 
@@ -123,6 +132,11 @@ class Emitter
   def string l,str
     local(l)
     emit(".string","\"#{str}\"")
+  end
+
+  def bsslong l
+    label(l)
+    emit(".long 0")
   end
 
   def jmp_on_false(label,op=:eax)
