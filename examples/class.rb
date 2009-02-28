@@ -17,6 +17,7 @@ class Foo
 
   def bar
     puts("test")
+    self.hello
   end
 
   def hello
