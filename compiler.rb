@@ -50,9 +50,9 @@ class Compiler
 
   def compile_defun scope,name, args, body
     if scope.is_a?(ClassScope) # Ugly. Create a default "register_function" or something. Have it return the global name
-      f = Function.new([:self]+args,body)
+      f = Function.new([:self]+args,body) # "self" is "faked" as an argument to class methods.
       @e.comment("method #{name}")
-      fname = @e.get_local
+      fname = "__method_#{scope.name}_#{name}"
       scope.set_vtable_entry(name,fname,f)
       @e.load_address(fname)
       @e.movl(scope.name.to_s,:edx)
