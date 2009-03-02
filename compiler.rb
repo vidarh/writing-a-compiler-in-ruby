@@ -145,13 +145,14 @@ class Compiler
     args ||= []
     @e.with_stack(args.length+1,true) do
       ret = compile_eval_arg(scope,ob)
-      @e.save_to_stack(ret,0)
-      args.each_with_index do |a,i| 
-        param = compile_eval_arg(scope,a)
-        @e.save_to_stack(param,i+1)
+      @e.save_register(ret) do
+        @e.save_to_stack(ret,0)
+        args.each_with_index do |a,i| 
+          param = compile_eval_arg(scope,a)
+          @e.save_to_stack(param,i+1)
+        end
       end
-      reg = @e.load_indirect(:esp)
-      reg = @e.load_indirect(reg,:edx)
+      reg = @e.load_indirect(ret,:edx)
       off = @vtableoffsets.get_offset(method)
       raise "No offset for #{method}, and we don't yet implement send" if !off
       @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})",:eax)
