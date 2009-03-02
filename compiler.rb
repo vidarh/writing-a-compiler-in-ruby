@@ -90,20 +90,22 @@ class Compiler
     return @e.addr_value(aparam) if atype == :strconst
     case atype
     when :argaddr
-      @e.load_arg_address(aparam)
+      return @e.load_arg_address(aparam)
     when :addr
-      @e.load_address(aparam)
+      return @e.load_address(aparam)
     when :indirect
-      @e.emit(:movl,"(%#{aparam.to_s})",@e.result_value)
+      return @e.load_indirect(arg)
     when :arg
-      @e.load_arg(aparam)
+      return @e.load_arg(aparam)
     when :lvar
-      @e.load_local_var(aparam)
+      return @e.load_local_var(aparam)
     when :global
-      @e.emit(:movl,aparam.to_s,@e.result_value)
+      return @e.load_global_var(aparam)
+    when :subexpr
+      return @e.result_value
     else
+      raise "WHAT? #{atype.inspect} / #{arg.inspect}"
     end
-    return @e.result_value
   end
 
   def compile_assign scope, left, right
@@ -193,6 +195,7 @@ class Compiler
     else
       compile_do(ls,*args)
     end
+    return [:subexpr]
   end
 
   def compile_class(scope,name,*exps)
@@ -216,10 +219,11 @@ class Compiler
       addr = compile_do(cscope,*e)
     end
     @e.comment("=== end class #{name} ===")
+    return [:global,name]
   end
 
   def compile_exp(scope,exp)
-    return if !exp || exp.size == 0
+    return [:subexpr] if !exp || exp.size == 0
     return compile_do(scope,*exp[1..-1]) if exp[0] == :do 
     return compile_class(scope,*exp[1..-1]) if (exp[0] == :class)
     return compile_defun(scope,*exp[1..-1]) if (exp[0] == :defun)

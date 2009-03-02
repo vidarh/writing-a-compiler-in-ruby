@@ -76,14 +76,22 @@ class Emitter
 
   def load_arg(aparam)
     movl(local_arg(aparam),:eax)
+    return :eax
   end
 
   def load_arg_address(aparam) 
     leal(local_arg(aparam),:eax) 
+    return :eax
   end 
+
+  def load_global_var(aparam)
+    movl(aparam.to_s,result_value)
+    return result_value
+  end
 
   def load_local_var(aparam)
     movl(local_var(aparam),:eax)
+    return :eax
   end
 
   def save_to_local_var(arg,aparam)
@@ -96,6 +104,12 @@ class Emitter
 
   def load_address(label)
     save_result(addr_value(label))
+    return :eax
+  end
+
+  def load_indirect(arg)
+    movl("(#{to_param_value(arg)})",result_value)
+    return result_value
   end
 
   def with_local(args)
