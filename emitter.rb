@@ -113,7 +113,21 @@ class Emitter
     addl(adj,:esp)
   end
 
+  def save_register reg
+    @save_register ||= []
+    @save_register << [reg,false]
+    yield
+    f = @save_register.pop
+    if f[1]
+      puts "\tpopl\t#{to_operand_value(f[0])}"
+    end
+  end
+
   def emit op,*args
+    if @save_register && @save_register.size > 0 && reg = @save_register.detect{|r| r[0] == args[1] && r[1] == false}
+      puts "\tpushl\t#{to_operand_value(args[1])}"
+      reg[1] = true
+    end
     puts "\t#{op}\t"+args.collect{|a|to_operand_value(a)}.join(', ')
   end
 

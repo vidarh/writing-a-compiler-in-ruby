@@ -108,19 +108,17 @@ class Compiler
 
   def compile_assign scope, left, right
     source = compile_eval_arg(scope, right)
-    @e.pushl(source)
-    atype, aparam = get_arg(scope,left)
+    atype,aparam=nil,nil
+    @e.save_register(source) do
+      atype, aparam = get_arg(scope,left)
+    end
     if atype == :indirect
-      @e.popl(:eax)
       @e.emit(:movl,source,"(%#{aparam})")
     elsif atype == :global
-      @e.popl(:eax)
       @e.emit(:movl,source,aparam.to_s)
     elsif atype == :lvar
-      @e.popl(:eax)
       @e.save_to_local_var(source,aparam)
     elsif atype == :arg
-      @e.popl(:eax)
       @e.save_to_arg(source,aparam)
     else
       raise "Expected an argument on left hand side of assignment - got #{atype.to_s}" 
