@@ -107,9 +107,9 @@ class Emitter
     return :eax
   end
 
-  def load_indirect(arg)
-    movl("(#{to_param_value(arg)})",result_value)
-    return result_value
+  def load_indirect(arg,reg=:eax)
+    movl("(#{to_operand_value(arg)})",reg)
+    return reg
   end
 
   def with_local(args)

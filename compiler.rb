@@ -145,17 +145,16 @@ class Compiler
     args ||= []
     @e.with_stack(args.length+1,true) do
       ret = compile_eval_arg(scope,ob)
-      @e.movl(ret,:eax) if ret != :eax
-      @e.save_to_stack(:eax,0)
+      @e.save_to_stack(ret,0)
       args.each_with_index do |a,i| 
         param = compile_eval_arg(scope,a)
         @e.save_to_stack(param,i+1)
       end
-      @e.movl("(%esp)",:eax)
-      @e.movl("(%eax)",:edx)
+      reg = @e.load_indirect(:esp)
+      reg = @e.load_indirect(reg,:edx)
       off = @vtableoffsets.get_offset(method)
       raise "No offset for #{method}, and we don't yet implement send" if !off
-      @e.movl("#{off*Emitter::PTR_SIZE}(%edx)",:eax)
+      @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})",:eax)
       @e.call(:eax)
     end
     @e.comment("callm #{ob.to_s}.#{method.to_s} END")
@@ -203,7 +202,6 @@ class Compiler
     cscope = ClassScope.new(scope,name,@vtableoffsets)
     # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)
     # FIXME: Fill in all unused vtable slots with __method_missing
-    # FIXME: Fill in slot 0 with the Class vtable.
     exps.each do |l2|
       l2.each do |e|
         if e.is_a?(Array) && e[0] == :defun
