@@ -11,4 +11,20 @@ class ParserBase
     res
   end
 
+  def expect *args
+    args.each do |a|
+      r = @s.expect(a)
+      return r if r
+    end
+    return nil
+  end
+
+  def expected name
+    raise "Error: Expected #{name}"
+  end
+
+  def ws
+    @s.ws
+  end
+
 end
