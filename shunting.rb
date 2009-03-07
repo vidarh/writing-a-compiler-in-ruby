@@ -13,22 +13,19 @@ module OpPrec
     end
 
     def oper o
-      rightv = @vstack.pop
-      raise "Missing value in expression" if !rightv
-      if (o.sym == :comma) && rightv.is_a?(Array) && rightv[0] == :comma
-        # This is a way to flatten the tree by removing all the :comma operators
-        @vstack << [o.sym,@vstack.pop] + rightv[1..-1]
-      elsif (o.sym == :call) && rightv.is_a?(Array) && rightv[0] == :comma
-        # This is a way to flatten the tree by removing all the :comma operators
-        @vstack << [o.sym,@vstack.pop,rightv[1..-1]]
-      else
-        if o.type == :infix
-          leftv = @vstack.pop
-          raise "Missing value in expression" if !leftv
-          @vstack << [o.sym, leftv, rightv]
+      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.arity > 0
+      rightv = @vstack.pop if o.arity > 0
+      raise "Missing value in expression / #{o.inspect} / #{@vstack.inspect} / #{rightv.inspect}" if @vstack.empty? and o.arity > 1
+      leftv = @vstack.pop if o.arity > 1
+      # This is a way to flatten the tree by removing all the :comma operators
+      if rightv.is_a?(Array) && rightv[0] == :comma
+        if o.sym == :call
+          @vstack << [o.sym,leftv,rightv[1..-1]].compact
         else
-          @vstack <<  [o.sym,rightv]
+          @vstack << [o.sym,leftv].compact + rightv[1..-1]
         end
+      else # no comma operator
+        @vstack << [o.sym, leftv, rightv].compact
       end
     end
 
@@ -57,8 +54,8 @@ module OpPrec
       # because the alternative gives a malfored expression.
       while  !@ostack.empty? && (@ostack[-1].pri > pri || @ostack[-1].type == :postfix)
         o = @ostack.pop
-        return if o.type == :lp
-        @out.oper(o)
+        @out.oper(o) if o.sym
+        return if o.type == :lp 
       end
     end
     
@@ -67,14 +64,19 @@ module OpPrec
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
                                 # share the same token.
+      lastlp = false
       src.each do |token|
+        # Handling "a[1]" differently from "[1]"
+        token = "index" if token == "[" && possible_func
         if op = @opers[token]
           op = op[opstate] if op.is_a?(Hash)
-          if op.type == :rp then reduce
+          if op.type == :rp
+            @out.value(nil) if lastlp # Dummy value to balance out the expressions when closing an empty pair of parentheses.
+            reduce(op)
           else
             opstate = :prefix
             reduce op # For handling the postfix operators
-            @ostack << (op.type == :lp && possible_func ? Oper.new(1, :call, :infix) : op)
+            @ostack << (lastlp && possible_func ? Oper.new(1, :call, :infix) : op)
             o = @ostack[-1]
           end
         else 
@@ -82,6 +84,7 @@ module OpPrec
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
+        lastlp = op && op.type == :lp
         possible_func = !op && !token.is_a?(Numeric)
       end
       reduce
