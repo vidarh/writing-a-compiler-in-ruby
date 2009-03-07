@@ -38,6 +38,14 @@ Feature: Shunting Yard
 	  | expr        | tree                                           |
 	  | "a[1]"      | [:index,:a,1]                                  |
 
+    Scenario Outline: Function calls
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr                       | tree                                         |
+	  | "attr_reader :args,:body"  | [:call, :attr_reader, [:":args", :":body"]]  |
 
 	Scenario Outline: Terminating expressions with keywords
 		Given the expression <expr>

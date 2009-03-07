@@ -76,10 +76,11 @@ module OpPrec
           else
             opstate = :prefix
             reduce op # For handling the postfix operators
-            @ostack << (lastlp && possible_func ? Oper.new(1, :call, :infix) : op)
+            @ostack << (op.type == :lp && possible_func ? Operators["call"] : op)
             o = @ostack[-1]
           end
         else 
+          @ostack << Operators["call"] if possible_func
           @out.value(token)
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.

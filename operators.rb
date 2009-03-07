@@ -19,7 +19,7 @@ Operators = {
   "index"  => Oper.new(1,  :index,  :infix),
 
   # "Fake" operator for function calls
-  "call"   => Oper.new(1, :call, :prefix),
+  "call"   => Oper.new(1, :call, :infix),
 
   ","  => Oper.new(99,  :comma,  :infix),
 
