@@ -10,7 +10,7 @@ end
 
 When /^calling get (\d+) times?$/ do |n|
   @prev_results = @results
-  @results ||= []
+  @results = []
   n.to_i.times { @results << @scanner.get }
 end
 
@@ -27,6 +27,10 @@ When /^calling unget once with a string consisting of both characters$/ do
   @results and @results.size == 2 and @scanner.unget(@results.join)
 end
 
+When /^calling expect with the two characters$/ do
+  @results = @scanner.expect("ab")
+end
+
 # ----------- Then
 
 Then /^the first character in the stream should be returned both times$/ do
@@ -35,8 +39,8 @@ Then /^the first character in the stream should be returned both times$/ do
 end
 
 Then /^both characters should be returned( followed by nil)?$/ do |followed|
-  @results[0].should == "a"
-  @results[1].should == "b"
+  res = @results.is_a?(Array) ? @results.join : @results
+  res.should == "ab"
   if followed
     @results.size.should == 3
     @results[2].should == nil

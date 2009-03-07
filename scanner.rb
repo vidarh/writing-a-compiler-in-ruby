@@ -48,7 +48,7 @@ class Scanner
   end
 
   def expect(str)
-    return true if str == ""
+    return buf if str == ""
     return str.expect(self) if str.respond_to?(:expect)
     buf = ""
     str.each_byte do |s|
@@ -59,7 +59,7 @@ class Scanner
       end
       buf += get
     end
-    return true
+    return buf
   end
 
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
