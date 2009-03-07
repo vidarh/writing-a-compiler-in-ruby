@@ -4,9 +4,12 @@
 # so I'm sticking to something simple. The code below is sufficient to write recursive descent parsers in a pretty
 # concise style in Ruby
 class Scanner
+  attr_reader :col,:lineno
   def initialize io
     @io = io
     @buf = ""
+    @lineno = 1
+    @col = 1
   end
 
   def fill
@@ -24,12 +27,24 @@ class Scanner
     
   def get
     fill
-    return @buf.slice!(-1,1)
+    ch = @buf.slice!(-1,1)
+    @col += 1
+    if ch == "\n"
+      @lineno += 1
+      @col = 1
+    end
+    return ch
   end
 
   def unget(c)
-    c = c.reverse if c.is_a?(String)
+    if c.is_a?(String)
+      c = c.reverse 
+      @col -= c.length
+    else
+      @col -= 1
+    end
     @buf += c
+    # FIXME: Count any linefeeds too.
   end
 
   def expect(str)
@@ -39,7 +54,7 @@ class Scanner
     str.each_byte do |s|
       c = peek
       if !c || c.to_i != s 
-        unget(buf)
+        unget(buf) if !buf.empty?
         return false
       end
       buf += get
