@@ -1,11 +1,20 @@
 
 require 'operators'
+require 'set'
 
 module Tokens
+
+  Keywords=Set[:def,:end,:if,:return,:require,:include]
 
   class Atom
     def self.expect s
       tmp = ""
+      c = s.peek
+      if c == ?@ || c == ?$ || c == ?:
+        tmp += s.get
+        tmp == s.get if c == ?@ && s.peek == ?@
+      end
+
       if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
         tmp += s.get
         
@@ -14,6 +23,9 @@ module Tokens
                                   (?0 .. ?9).member?(c) || ?_ == c)
           tmp += s.get
         end
+      end
+      if tmp.size > 0 && (s.peek == ?! || s.peek == ??)
+        tmp += s.get
       end
       return nil if tmp == ""
       return tmp.to_sym
@@ -44,10 +56,15 @@ module Tokens
 
 
     def self.expect s
-      return nil if !s.expect('"')
+      q = s.expect('"') || s.expect("'") or return nil
       buf = ""
-      while (e = escaped(s)); buf += e; end
-      raise "Unterminated string" if !s.expect('"')
+      if q == '"'
+        while (e = escaped(s)); buf += e; end
+        raise "Unterminated string" if !s.expect('"')
+      else
+        while (e = s.get) && e != "'"; buf += e; end
+        raise "Unterminated string" if e != "'"
+      end
       return buf
     end
   end
@@ -70,22 +87,29 @@ module Tokens
         return @s.expect(Quoted)
       when ?0 .. ?9
         return @s.expect(Int)
-      when ?a .. ?z , ?A .. ?Z
+      when ?a .. ?z , ?A .. ?Z, ?@, ?$, ?:
         buf = @s.expect(Atom)
-        if (buf == :end || buf == :def) # FIXME: Make this a keyword lookup
+        if Keywords.member?(buf)
           @s.unget(buf.to_s)
           return nil
         end
         return buf
+      when ?-
+        @s.get
+        if (?0 .. ?9).member?(@s.peek)
+          @s.unget("-")
+          return @s.expect(Int)
+        end
+        return "-"
       # Special cases - two character operators:
-      when ?= 
-        @s.get
-        return "==" if @s.peek == ?=
-        return "="
-      when ?!
-        @s.get
-        return "!=" if @s.peek == ?=
-        return "!"
+      when ?=, ?!, ?+
+        first = @s.get
+        second = @s.get
+        buf = first + second
+        op = Operators[buf]
+        return buf if op
+        @s.unget(second)
+        return first
       when nil
         return nil
       else
