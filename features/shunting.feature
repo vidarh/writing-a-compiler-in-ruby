@@ -14,6 +14,30 @@ Feature: Shunting Yard
 	  | "1 - 2"     | [:sub,1,2]									 |
       | "1 + 2 * 3" | [:add,1,[:mul,2,3]]                            |
 	  | "1 * 2 + 3" | [:add,[:mul,1,2],3]							 |
+	  | "(1+2)*3"   | [:mul,[:add,1,2],3]                            |
+	  | "1 , 2"     | [:comma,1,2]                                   |
+
+	Scenario Outline: Array syntax
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr        | tree                                           |
+      | "[]"        | [:createarray]                                 |
+      | "[1,2]"     | [:createarray,1,2]                             |
+      | "a = [1,2]" | [:assign,:a,[:createarray,1,2]]                |
+      | "a = []"    | [:assign,:a,[:createarray]]                    |
+
+	Scenario Outline: Array operators
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr        | tree                                           |
+	  | "a[1]"      | [:index,:a,1]                                  |
+
 
 	Scenario Outline: Terminating expressions with keywords
 		Given the expression <expr>
