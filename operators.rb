@@ -20,10 +20,10 @@ AtomOperators = Set["return","and","or"]
 
 Operators = {
   # "Fake" operator for [] following a name
-  "index"  => Oper.new(1,  :index,  :infix),
+  "#index#"  => Oper.new(1,  :index,  :infix),
 
   # "Fake" operator for function calls
-  "call"   => Oper.new(1, :call, :infix),
+  "#call#"   => Oper.new(1, :call, :infix),
 
   ","  => Oper.new(99,  :comma,  :infix),
 
@@ -49,6 +49,7 @@ Operators = {
   "/"  => Oper.new(20, :div,    :infix),
 
   "."  => Oper.new(90, :callm,  :infix),
+  "::" => Oper.new(90, :deref,  :infix),
   
   "["  => Oper.new(99,  :createarray,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),

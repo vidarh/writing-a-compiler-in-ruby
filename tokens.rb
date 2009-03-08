@@ -75,8 +75,8 @@ module Tokens
     end
 
     def each
-      while t = get
-        yield t
+      while t = get and t[0]
+        yield *t
       end
     end
 
@@ -84,38 +84,39 @@ module Tokens
       @s.nolfws
       case @s.peek
       when ?",?'
-        return @s.expect(Quoted)
+        return [@s.expect(Quoted),nil]
       when ?0 .. ?9
-        return @s.expect(Int)
-      when ?a .. ?z , ?A .. ?Z, ?@, ?$, ?:
+        return [@s.expect(Int),nil]
+      when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:
         buf = @s.expect(Atom)
         if Keywords.member?(buf)
           @s.unget(buf.to_s)
-          return nil
+          return [nil,nil]
         end
-        return buf.to_s if AtomOperators.member?(buf.to_s)
-        return buf
+        return [buf,Operators[buf.to_s]] if AtomOperators.member?(buf.to_s)
+        return [buf,nil]
       when ?-
         @s.get
         if (?0 .. ?9).member?(@s.peek)
           @s.unget("-")
-          return @s.expect(Int)
+          return [@s.expect(Int),nil]
         end
-        return "-"
+        return ["-",Operators["-"]]
       # Special cases - two character operators:
-      when ?=, ?!, ?+, ?<
+      when ?=, ?!, ?+, ?<, ?:
         first = @s.get
         second = @s.get
         buf = first + second
         op = Operators[buf]
-        return buf if op
+        return [buf,op] if op
         @s.unget(second)
-        return first
+        return [first,Operators[first]]
       when nil
-        return nil
+        return [nil,nil]
       else
-        return @s.get if Operators[@s.peek.chr]
-        return nil
+        op = Operators[@s.peek.chr]
+        return [nil,nil] if !op
+        return [@s.get,op]
       end
     end
   end

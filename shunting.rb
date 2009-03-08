@@ -49,8 +49,8 @@ module OpPrec
   end
 
   class ShuntingYard
-    def initialize opers,output,tokenizer
-      @ostack,@opers,@out,@tokenizer = [],opers,output,tokenizer
+    def initialize output,tokenizer
+      @ostack,@out,@tokenizer = [],output,tokenizer
     end
 
     def reset
@@ -75,32 +75,30 @@ module OpPrec
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
                                 # share the same token.
-      lastlp = false
-      src.each do |token|
-        # Handling "a[1]" differently from "[1]"
-        token = "index" if token == "[" && possible_func
-        if op = @opers[token]
+      lastlp = false            # Was the last token a :lp? Used to output "dummy values" for empty parentheses
+      src.each do |token,op|
+        if op
+          # Handling "a[1]" differently from "[1]"
+          op = Operators["#index#"] if op.sym == :createarray && possible_func
           op = op[opstate] if op.is_a?(Hash)
-          if op.type == :rp
-            @out.value(nil) if lastlp # Dummy value to balance out the expressions when closing an empty pair of parentheses.
-            reduce(op)
-          else
+          @out.value(nil) if op.type == :rp && lastlp # Dummy value to balance out the expressions when closing an empty pair of parentheses.
+          reduce(op)
+          if op.type != :rp
             opstate = :prefix
-            reduce op # For handling the postfix operators
-            @ostack << (op.type == :lp && possible_func ? Operators["call"] : op)
+            @ostack << (op.type == :lp && possible_func ? Operators["#call#"] : op)
             o = @ostack[-1]
           end
         else 
-          @ostack << Operators["call"] if possible_func
+          @ostack << Operators["#call#"] if possible_func
           @out.value(token)
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
-        lastlp = op && op.type == :lp
         possible_func = !op && !token.is_a?(Numeric)
+        lastlp = op && op.type == :lp
       end
+
       reduce
-    
       return @out if  @ostack.empty?
       raise "Syntax error. #{@ostack.inspect}"
     end
@@ -112,7 +110,7 @@ module OpPrec
   end
 
   def self.parser scanner
-     ShuntingYard.new(Operators,TreeOutput.new,Tokens::Tokenizer.new(scanner))
+     ShuntingYard.new(TreeOutput.new,Tokens::Tokenizer.new(scanner))
   end
 
 end
