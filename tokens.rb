@@ -83,7 +83,7 @@ module Tokens
     def get
       @s.nolfws
       case @s.peek
-      when ?"
+      when ?",?'
         return @s.expect(Quoted)
       when ?0 .. ?9
         return @s.expect(Int)
@@ -102,7 +102,7 @@ module Tokens
         end
         return "-"
       # Special cases - two character operators:
-      when ?=, ?!, ?+
+      when ?=, ?!, ?+, ?<
         first = @s.get
         second = @s.get
         buf = first + second
