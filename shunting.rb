@@ -17,8 +17,19 @@ module OpPrec
       rightv = @vstack.pop if o.arity > 0
       raise "Missing value in expression / #{o.inspect} / #{@vstack.inspect} / #{rightv.inspect}" if @vstack.empty? and o.arity > 1
       leftv = @vstack.pop if o.arity > 1
-      # This is a way to flatten the tree by removing all the :comma operators
-      if rightv.is_a?(Array) && rightv[0] == :comma
+
+      ra = rightv.is_a?(Array)
+
+      # Flatten :callm nodes
+      if ra && rightv[0] == :call
+        if o.sym == :callm
+          @vstack << [o.sym,leftv] + rightv[1..-1]
+          return
+        end
+      end
+
+      if ra && rightv[0] == :comma
+        # This is a way to flatten the tree by removing all the :comma operators
         if o.sym == :call
           @vstack << [o.sym,leftv,rightv[1..-1]].compact
         else

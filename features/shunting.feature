@@ -17,7 +17,22 @@ Feature: Shunting Yard
 	  | "(1+2)*3"      | [:mul,[:add,1,2],3]                      |
 	  | "1 , 2"        | [:comma,1,2]                             |
 	  | "a << b"       | [:shiftleft,:a,:b]                       |
-	  | "self.foo bar" | [:callm,:self,:foo,[:bar]]               |
+
+	Scenario Outline: Method calls
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr           | tree                                     |
+	  | "foo(1)"       | [:call,:foo,1]                           |
+	  | "foo(1,2)"     | [:call,:foo,[1,2]]                       |
+	  | "foo 1"        | [:call,:foo,1]                           |
+	  | "foo 1,2"      | [:call,:foo,[1,2]]                       |
+	  | "self.foo"     | [:callm,:self,:foo]                      |
+	  | "self.foo(1)"  | [:callm,:self,:foo,1]                    |
+	  | "self.foo(1,2)"| [:callm,:self,:foo,[1,2]]                |
+	  | "self.foo bar" | [:callm,:self,:foo,:bar]                 |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>
