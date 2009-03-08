@@ -1,4 +1,6 @@
 
+require 'set'
+
 class Oper
   attr_accessor :pri,:sym,:type,:arity
 
@@ -14,6 +16,8 @@ class Oper
   end
 end
 
+AtomOperators = Set["return","and","or"]
+
 Operators = {
   # "Fake" operator for [] following a name
   "index"  => Oper.new(1,  :index,  :infix),
@@ -22,6 +26,9 @@ Operators = {
   "call"   => Oper.new(1, :call, :infix),
 
   ","  => Oper.new(99,  :comma,  :infix),
+
+  "return" => Oper.new(5, :return, :prefix), #FIXME: Check pri. Also, "return" can also stand on its own
+  "or" => Oper.new(5, :or, :infix),
 
   "?"  => Oper.new(7,  :ternif, :infix),
   ":"  => Oper.new(7,  :teralt, :infix),
@@ -45,8 +52,13 @@ Operators = {
   
   "["  => Oper.new(99,  :createarray,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),
-  
+
+  "{"  => Oper.new(99,  :block,  :lp,1),
+  "}"  => Oper.new(0, nil,     :rp),
+
   "("  => Oper.new(99, nil,     :lp),
-  ")"  => Oper.new(0, nil,     :rp)
+  ")"  => Oper.new(0, nil,     :rp),
+
+  "<<"  => Oper.new(7,  :shiftleft,     :infix), # FIXME: Verify priority
 }
 
