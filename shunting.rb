@@ -13,19 +13,17 @@ module OpPrec
     end
 
     def oper o
-      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.arity > 0
+      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
       rightv = @vstack.pop if o.arity > 0
-      raise "Missing value in expression / #{o.inspect} / #{@vstack.inspect} / #{rightv.inspect}" if @vstack.empty? and o.arity > 1
+      raise "Missing value in expression / #{o.inspect} / #{@vstack.inspect} / #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
       leftv = @vstack.pop if o.arity > 1
 
       ra = rightv.is_a?(Array)
 
       # Flatten :callm nodes
-      if ra && rightv[0] == :call
-        if o.sym == :callm
-          @vstack << [o.sym,leftv] + rightv[1..-1]
-          return
-        end
+      if ra && rightv[0] == :call && o.sym == :callm
+        @vstack << [o.sym,leftv] + rightv[1..-1]
+        return
       end
 
       if ra && rightv[0] == :comma

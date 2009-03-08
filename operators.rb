@@ -2,9 +2,9 @@
 require 'set'
 
 class Oper
-  attr_accessor :pri,:sym,:type,:arity
+  attr_accessor :pri,:sym,:type,:arity, :minarity
 
-  def initialize pri,sym,type,arity = nil
+  def initialize pri,sym,type,arity = nil, minarity = nil
     @pri,@sym,@type = pri,sym,type
     if !arity
       @arity = 0 if type == :lp
@@ -13,6 +13,7 @@ class Oper
     else
       @arity = arity
     end
+    @minarity = minarity || @arity
   end
 end
 
@@ -27,7 +28,7 @@ Operators = {
 
   ","  => Oper.new(99,  :comma,  :infix),
 
-  "return" => Oper.new(5, :return, :prefix), #FIXME: Check pri. Also, "return" can also stand on its own
+  "return" => Oper.new(5, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
   "or" => Oper.new(5, :or, :infix),
 
   "?"  => Oper.new(7,  :ternif, :infix),

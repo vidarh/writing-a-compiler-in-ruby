@@ -18,6 +18,8 @@ Feature: Shunting Yard
 	  | "1 , 2"              | [:comma,1,2]                         |
 	  | "a << b"             | [:shiftleft,:a,:b]                   |
 	  | "a = 1 or foo + bar" | [:or,[:assign,:a,1],[:add,:foo,:bar]]|
+      | "return 1"           | [:return,1]                          |
+      | "return"             | [:return]                            |
 
 	Scenario Outline: Method calls
 		Given the expression <expr>
