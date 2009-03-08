@@ -272,7 +272,7 @@ begin
   prog = Parser.new(s).parse
 rescue Exception => e
   STDERR.puts "#{e.message}"
-  STDERR.puts "Failed before:\n"
+  STDERR.puts "Failed at line #{s.lineno} / col #{s.col}  before:\n"
   buf = ""
   while s.peek && buf.size < 100
     buf += s.get
