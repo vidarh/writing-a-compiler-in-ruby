@@ -9,13 +9,15 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr        | tree                                           |
-	  | "1 + 2"     | [:add,1,2]                                     |
-	  | "1 - 2"     | [:sub,1,2]									 |
-      | "1 + 2 * 3" | [:add,1,[:mul,2,3]]                            |
-	  | "1 * 2 + 3" | [:add,[:mul,1,2],3]							 |
-	  | "(1+2)*3"   | [:mul,[:add,1,2],3]                            |
-	  | "1 , 2"     | [:comma,1,2]                                   |
+	  | expr           | tree                                     |
+	  | "1 + 2"        | [:add,1,2]                               |
+	  | "1 - 2"        | [:sub,1,2]					  	          |
+      | "1 + 2 * 3"    | [:add,1,[:mul,2,3]]                      |
+	  | "1 * 2 + 3"    | [:add,[:mul,1,2],3]		   	      	  |
+	  | "(1+2)*3"      | [:mul,[:add,1,2],3]                      |
+	  | "1 , 2"        | [:comma,1,2]                             |
+	  | "a << b"       | [:shiftleft,:a,:b]                       |
+	  | "self.foo bar" | [:callm,:self,:foo,[:bar]]               |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>
