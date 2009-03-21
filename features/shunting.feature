@@ -46,8 +46,12 @@ Feature: Shunting Yard
 	  | expr        | tree                                           |
       | "[]"        | [:createarray]                                 |
       | "[1,2]"     | [:createarray,1,2]                             |
+      | "[1,[2,3]]" | [:createarray,1,[:createarray,2,3]]            |
       | "a = [1,2]" | [:assign,:a,[:createarray,1,2]]                |
       | "a = []"    | [:assign,:a,[:createarray]]                    |
+	  | "[o.sym]"   | [:createarray,[:callm,:o,:sym]]                | 
+	  | "[o.sym(1)]"   | [:createarray,[:callm,:o,:sym,1]]           | 
+	  | "[o.sym,foo]"| [:createarray,[:callm,:o,:sym],:foo]          | 
 
 	Scenario Outline: Array operators
 		Given the expression <expr>
