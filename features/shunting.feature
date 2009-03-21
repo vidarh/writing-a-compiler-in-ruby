@@ -52,6 +52,7 @@ Feature: Shunting Yard
 	  | "[o.sym]"   | [:createarray,[:callm,:o,:sym]]                | 
 	  | "[o.sym(1)]"   | [:createarray,[:callm,:o,:sym,1]]           | 
 	  | "[o.sym,foo]"| [:createarray,[:callm,:o,:sym],:foo]          | 
+	  | "[1].compact"| [:callm,[:createarray,1],:compact]            | 
 
 	Scenario Outline: Array operators
 		Given the expression <expr>
