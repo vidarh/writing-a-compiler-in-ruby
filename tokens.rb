@@ -102,21 +102,21 @@ module Tokens
           return [@s.expect(Int),nil]
         end
         return ["-",Operators["-"]]
-      # Special cases - two character operators:
-      when ?=, ?!, ?+, ?<, ?:
-        first = @s.get
-        second = @s.get
-        buf = first + second
-        op = Operators[buf]
-        return [buf,op] if op
-        @s.unget(second)
-        return [first,Operators[first]]
       when nil
         return [nil,nil]
       else
-        op = Operators[@s.peek.chr]
-        return [nil,nil] if !op
-        return [@s.get,op]
+        # Special cases - two character operators: 
+        first = @s.get
+        if second = @s.get
+          buf = first + second
+          op = Operators[buf]
+          return [buf,op] if op
+          @s.unget(second)
+        end
+        op = Operators[first]
+        return [first,op] if op
+        @s.unget(first)
+        return [nil,nil]
       end
     end
   end
