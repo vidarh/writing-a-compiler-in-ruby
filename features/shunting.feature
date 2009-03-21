@@ -46,6 +46,7 @@ Feature: Shunting Yard
 	  | expr        | tree                                           |
       | "[]"        | [:createarray]                                 |
       | "[1,2]"     | [:createarray,1,2]                             |
+      | "[1,2] + [3]"| [:add,[:createarray,1,2],[:createarray,3]]    |
       | "[1,[2,3]]" | [:createarray,1,[:createarray,2,3]]            |
       | "a = [1,2]" | [:assign,:a,[:createarray,1,2]]                |
       | "a = []"    | [:assign,:a,[:createarray]]                    |
