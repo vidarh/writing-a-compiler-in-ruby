@@ -51,7 +51,7 @@ class Parser < ParserBase
 
   # condition ::= sexp | opprecexpr
   def parse_condition
-    @sexp.parse || @shunting.parse
+    ret = @sexp.parse || @shunting.parse
   end
 
   # if ::= "if" ws* condition defexp* "end"
@@ -59,6 +59,7 @@ class Parser < ParserBase
     expect("if") or return
     ws
     cond = parse_condition or expected("condition for 'if' block")
+    @s.nolfws; expect(";")
     exps = zero_or_more(:defexp)
     raise "Expected expression or 'end' for open if" if !@s.expect("end")
     return [:if,cond,[:do]+exps]
@@ -69,6 +70,7 @@ class Parser < ParserBase
     expect("while") or return
     ws
     cond = parse_condition or expected("condition for 'while' block")
+    @s.nolfws; expect(";")
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
     return [:while,cond,[:do]+exps]
@@ -81,6 +83,7 @@ class Parser < ParserBase
     if expect("if")
       ws
       cond = parse_condition or expected("condition for 'if' statement modifier")
+      @s.nolfws; expect(";")
       exp = [:if,cond,exp]
     end
     return exp
