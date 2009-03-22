@@ -28,7 +28,7 @@ Operators = {
 
   ","  => Oper.new(99,  :comma,  :infix),
 
-  "return" => Oper.new(5, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
+  "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
   "or" => Oper.new(5, :or, :infix),
   "&&" => Oper.new(5, :and, :infix), # FIXME: Check pri - probably not right.
 
@@ -50,7 +50,7 @@ Operators = {
   "*"  => Oper.new(20, :mul,    :infix),
   "/"  => Oper.new(20, :div,    :infix),
 
-  "."  => Oper.new(99, :callm,  :infix),
+  "."  => Oper.new(100, :callm,  :infix),
   "::" => Oper.new(90, :deref,  :infix),
   
   "["  => Oper.new(99,  :createarray,  :lp,1),

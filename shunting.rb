@@ -12,17 +12,24 @@ module OpPrec
       @vstack = []
     end
 
+    def flatten r
+      return r if !r.is_a?(Array)
+      return r if r[0] != :comma
+      return [r[1],flatten(r[2])]
+    end
+
     def oper o
       raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
       rightv = @vstack.pop if o.arity > 0
       raise "Missing value in expression / #{o.inspect} / #{@vstack.inspect} / #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
       leftv = @vstack.pop if o.arity > 1
 
+      la = leftv.is_a?(Array)
       ra = rightv.is_a?(Array)
 
       # Flatten :callm nodes
-      if ra && rightv[0] == :call && o.sym == :callm
-        @vstack << [o.sym,leftv] + rightv[1..-1]
+      if la && leftv[0] == :callm && o.sym == :call
+        @vstack << leftv + [flatten(rightv)]
         return
       end
 
@@ -87,13 +94,26 @@ module OpPrec
             o = @ostack[-1]
           end
         else 
-          @ostack << Operators["#call#"] if possible_func
+          if possible_func
+            reduce
+            @ostack << Operators["#call#"]
+          end
           @out.value(token)
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
         possible_func = !op && !token.is_a?(Numeric)
         lastlp = op && op.type == :lp
+      end
+
+      if opstate == :prefix && @ostack.size && @ostack[-1].type == :prefix
+        # This is an error unless the top of the @ostack has minarity == 0,
+        # which means it's ok for it to be provided with no argument
+        if @ostack[-1].minarity == 0
+          @out.value(nil)
+        else
+          raise "Missing value for prefix operator #{@ostack[-1].sym.to_s}"
+        end
       end
 
       reduce
