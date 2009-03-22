@@ -85,3 +85,15 @@ Feature: Shunting Yard
       | "1 + 2 if"  | [:add,1,2]               | "if"                        |
 
 
+	Scenario Outline: Handling variable arity expressions
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr            | tree                                      |
+	  | "return 1"      | [:return,1]                               |
+	  | "return"        | [:return]                                 |
+	  | "5 or return 1" | [:or,5,[:return,1]]                       |
+	  | "5 or return"   | [:or,5,[:return]]                         |
+	  | "return if 5"   | [:return]                                 |
