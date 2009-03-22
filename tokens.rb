@@ -93,7 +93,7 @@ module Tokens
           @s.unget(buf.to_s)
           return [nil,nil]
         end
-        return [buf,Operators[buf.to_s]] if AtomOperators.member?(buf.to_s)
+        return [buf,Operators[buf.to_s]] if Operators.member?(buf.to_s)
         return [buf,nil]
       when ?-
         @s.get

@@ -106,7 +106,7 @@ module OpPrec
         lastlp = op && op.type == :lp
       end
 
-      if opstate == :prefix && @ostack.size && @ostack[-1].type == :prefix
+      if opstate == :prefix && @ostack.size && @ostack[-1] && @ostack[-1].type == :prefix
         # This is an error unless the top of the @ostack has minarity == 0,
         # which means it's ok for it to be provided with no argument
         if @ostack[-1].minarity == 0

@@ -97,3 +97,14 @@ Feature: Shunting Yard
 	  | "5 or return 1" | [:or,5,[:return,1]]                       |
 	  | "5 or return"   | [:or,5,[:return]]                         |
 	  | "return if 5"   | [:return]                                 |
+
+	Scenario Outline: Complex expressions
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr              | tree                                    |
+      | "foo ? 1 : 0"     | [:ternif, :foo, [:ternalt, 1, 0]]       |
+      | "(rest? ? 1 : 0)" | [:ternif, :rest?, [:ternalt, 1, 0]]     |
+      | "@locals[a] + (rest? ? 1 : 0)" | [:add, [:index, :@locals, :a], [:ternif, :rest?, [:ternalt, 1, 0]]] |

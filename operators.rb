@@ -17,8 +17,6 @@ class Oper
   end
 end
 
-AtomOperators = Set["return","and","or"]
-
 Operators = {
   # "Fake" operator for [] following a name
   "#index#"  => Oper.new(1,  :index,  :infix),
@@ -31,9 +29,10 @@ Operators = {
   "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
   "or" => Oper.new(5, :or, :infix),
   "&&" => Oper.new(5, :and, :infix), # FIXME: Check pri - probably not right.
+  "||" => Oper.new(5, :or, :infix), # FIXME: Check pri - probably not right.
 
   "?"  => Oper.new(7,  :ternif, :infix),
-  ":"  => Oper.new(7,  :teralt, :infix),
+  ":"  => Oper.new(7,  :ternalt, :infix),
 
   "="  => Oper.new(6,  :assign, :infix),
 
