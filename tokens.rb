@@ -101,6 +101,10 @@ module Tokens
           @s.unget("-")
           return [@s.expect(Int),nil]
         end
+        if @s.peek == ?=
+          @s.get
+          return ["-=",Operators["-="]]
+        end
         return ["-",Operators["-"]]
       when nil
         return [nil,nil]
