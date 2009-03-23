@@ -109,6 +109,12 @@ module Tokens
         first = @s.get
         if second = @s.get
           buf = first + second
+          if third = @s.get
+            buf2 = buf + third
+            op = Operators[buf2]
+            return [buf2,op] if op
+            @s.unget(third)
+          end
           op = Operators[buf]
           return [buf,op] if op
           @s.unget(second)

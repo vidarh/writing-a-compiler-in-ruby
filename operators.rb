@@ -35,12 +35,14 @@ Operators = {
   ":"  => Oper.new(7,  :ternalt, :infix),
 
   "="  => Oper.new(6,  :assign, :infix),
+  "||=" => Oper.new(6, :or_assign, :infix),
+  "-=" => Oper.new(6,  :decr, :infix),
+  "+=" => Oper.new(6,  :incr,   :infix),
 
   "<"  => Oper.new(9,  :lt,     :infix),
   ">"  => Oper.new(9,  :gt,     :infix),
   "==" => Oper.new(9,  :eq,     :infix),
   "!=" => Oper.new(9,  :ne,     :infix),
-  "+=" => Oper.new(9,  :incr,   :infix),
 
   "+"  => Oper.new(10, :add,    :infix),
   "-"  => Oper.new(10, :sub,    :infix),
