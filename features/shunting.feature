@@ -108,3 +108,15 @@ Feature: Shunting Yard
       | "foo ? 1 : 0"     | [:ternif, :foo, [:ternalt, 1, 0]]       |
       | "(rest? ? 1 : 0)" | [:ternif, :rest?, [:ternalt, 1, 0]]     |
       | "@locals[a] + (rest? ? 1 : 0)" | [:add, [:index, :@locals, :a], [:ternif, :rest?, [:ternalt, 1, 0]]] |
+
+	Scenario Outline: Blocks
+		Given the expression <expr>
+		When I parse it with the shunting yard parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr                | tree                                    |
+	  | "foo do end"        | [:call, :foo, [], [:do]]                |
+      | "foo.bar do end"    | [:callm, :foo, :bar, [], [:do]]         |
+	  | "foo {}"            | [:call, :foo, [],[:do]]                 |
+	  | "foo 1 {}"	        | [:call, :foo, 1,[:do]]                  |

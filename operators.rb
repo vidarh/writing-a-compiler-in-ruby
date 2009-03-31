@@ -24,6 +24,10 @@ Operators = {
   # "Fake" operator for function calls
   "#call#"   => Oper.new(1, :call, :infix),
 
+  # "Fake" operator injected for blocks.
+  "#block#"  => Oper.new(1, :block, :infix),
+  "#flatten#" => Oper.new(1, :flatten, :infix),
+
   ","  => Oper.new(99,  :comma,  :infix),
 
   "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
@@ -57,7 +61,9 @@ Operators = {
   "["  => Oper.new(99,  :createarray,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),
 
-  "{"  => Oper.new(99,  :block,  :lp,1),
+  "do"  => Oper.new(99, :block,  :lp,1),
+  "{"  => Oper.new(99,  :hash_or_block,  :lp,1),
+  "#hash#"  => Oper.new(99,  :hash,  :lp,1),
   "}"  => Oper.new(0, nil,     :rp),
 
   "("  => Oper.new(99, nil,     :lp),

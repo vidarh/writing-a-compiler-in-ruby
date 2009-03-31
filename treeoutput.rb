@@ -27,13 +27,17 @@ module OpPrec
 
       # Flatten :callm nodes
       if la && leftv[0] == :callm && o.sym == :call
-        @vstack << leftv + [flatten(rightv)]
+        if ra && rightv[0] == :flatten
+          @vstack << leftv + flatten(rightv[1..-1])
+        else
+          @vstack << leftv + [flatten(rightv)]
+        end
         return
       end
 
-      if ra && rightv[0] == :comma
+      if ra and rightv[0] == :comma || rightv[0] == :flatten
         # This is a way to flatten the tree by removing all the :comma operators
-        if o.sym == :call
+        if o.sym == :call and rightv[0] != :flatten
           @vstack << [o.sym,leftv,rightv[1..-1]].compact
         else
           @vstack << [o.sym,leftv].compact + rightv[1..-1]

@@ -7,7 +7,7 @@ class Parser < ParserBase
   def initialize s
     @s = s
     @sexp = SEXParser.new(s)
-    @shunting = OpPrec::parser(s)
+    @shunting = OpPrec::parser(self,s)
   end
   
   # name ::= atom
@@ -99,16 +99,45 @@ class Parser < ParserBase
     ret
   end
 
-  # def ::= "def" ws* name args? ws* defexp* "end"
+  # block_body ::=  ws * defexp*
+  def parse_block_exps
+    ws
+    exps = zero_or_more(:defexp)
+    vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
+    exps
+  end
+
+  def parse_block(start = nil)
+    return nil if start == nil and !(start = expect("{")  || expect("do"))
+    close = (start.to_s == "{") ? "}" : "end"
+    ws
+    args = []
+    if expect("|")
+       ws
+      begin
+        ws
+        if name = parse_name
+          args << name
+          ws
+        end
+      end while name and expect(",")
+      ws
+      expect("|")
+    end
+    exps = parse_block_exps or raise "Expected a block body"
+    ws
+    expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
+    [:do, args,exps]
+  end
+
+
+  # def ::= "def" ws* name args? block_body
   def parse_def
     expect("def") or return
     ws
     name = parse_name || @shunting.parse or expected("function name")
     args = parse_args || []
-    ws
-    exps = zero_or_more(:defexp)
-    vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
-    exps = [:let,vars] + exps 
+    exps = [:let,vars] + parse_block_exps
     expect("end") or expected("expression or 'end' for open def")
     return [:defun, name, args, exps]
   end

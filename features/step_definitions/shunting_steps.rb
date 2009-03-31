@@ -2,11 +2,25 @@ $: << File.expand_path(File.dirname(__FILE__)+"/../..")
 require 'operators'
 require 'tokens'
 require 'shunting'
+require 'parser'
 require 'spec/expectations'
+
+class DummyParser
+  def initialize s
+    @s = s
+  end
+
+  def parse_block start
+    close = (start.to_s) == "{" ? "}" : "end"
+    @s.ws
+    @s.expect(close) or raise "Expected #{start}"
+    [:do]
+  end
+end
 
 Given /^the expression (.*)$/ do |expr|
   @scanner = Scanner.new(StringIO.new(eval(expr)))
-  @parser = OpPrec::parser(@scanner)
+  @parser =  OpPrec::parser(@scanner,DummyParser.new(@scanner))
   @expr = expr
 end
 

@@ -4,8 +4,8 @@ require 'treeoutput'
 
 module OpPrec
   class ShuntingYard
-    def initialize output,tokenizer
-      @ostack,@out,@tokenizer = [],output,tokenizer
+    def initialize output,tokenizer, parser
+      @ostack,@out,@tokenizer,@parser = [],output,tokenizer,parser
     end
 
     def reset
@@ -24,7 +24,11 @@ module OpPrec
         return if o.type == :lp 
       end
     end
-    
+
+    def parse_block start
+      @parser.parse_block(start)
+    end
+
     def shunt src
       possible_func = false     # was the last token a possible function name?
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
@@ -37,11 +41,27 @@ module OpPrec
           op = Operators["#index#"] if op.sym == :createarray && possible_func
           op = op[opstate] if op.is_a?(Hash)
           @out.value(nil) if op.type == :rp && lastlp # Dummy value to balance out the expressions when closing an empty pair of parentheses.
-          reduce(op)
-          if op.type != :rp
-            opstate = :prefix
-            @ostack << (op.type == :lp && possible_func ? Operators["#call#"] : op)
-            o = @ostack[-1]
+
+          if op.sym == :hash_or_block || op.sym == :block
+            if possible_func || @ostack[-1] == Operators["#call#"] || @ostack[-1] == Operators["#callm#"]
+              if @ostack[-1] != Operators["#call#"]
+                reduce
+                @out.value([]) 
+              end
+              @out.value(parse_block(token))
+              @out.oper(Operators["#flatten#"])
+              @ostack << Operators["#call#"]  if @ostack[-1] != Operators["#call#"]
+            elsif op.sym == :hash_or_block
+              op = Operators["#hash#"]
+            else
+              raise "Block not allowed here"
+            end
+          else
+            reduce(op)
+            if op.type != :rp
+              opstate = :prefix
+              @ostack << (op.type == :lp && possible_func ? Operators["#call#"] : op)
+            end
           end
         else 
           if possible_func
@@ -77,8 +97,8 @@ module OpPrec
     end
   end
 
-  def self.parser scanner
-     ShuntingYard.new(TreeOutput.new,Tokens::Tokenizer.new(scanner))
+  def self.parser scanner, parser
+     ShuntingYard.new(TreeOutput.new,Tokens::Tokenizer.new(scanner), parser)
   end
 
 end
