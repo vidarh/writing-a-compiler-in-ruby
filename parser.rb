@@ -7,7 +7,7 @@ class Parser < ParserBase
   def initialize s
     @s = s
     @sexp = SEXParser.new(s)
-    @shunting = OpPrec::parser(self,s)
+    @shunting = OpPrec::parser(s,self)
   end
   
   # name ::= atom
@@ -104,7 +104,7 @@ class Parser < ParserBase
     ws
     exps = zero_or_more(:defexp)
     vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
-    exps
+    [vars,exps]
   end
 
   def parse_block(start = nil)
@@ -127,7 +127,7 @@ class Parser < ParserBase
     exps = parse_block_exps or raise "Expected a block body"
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
-    [:do, args,exps]
+    [:do, args,exps[1]]
   end
 
 
@@ -137,7 +137,8 @@ class Parser < ParserBase
     ws
     name = parse_name || @shunting.parse or expected("function name")
     args = parse_args || []
-    exps = [:let,vars] + parse_block_exps
+    vars, exps = parse_block_exps
+    exps = [:let,vars]
     expect("end") or expected("expression or 'end' for open def")
     return [:defun, name, args, exps]
   end
