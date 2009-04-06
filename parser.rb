@@ -137,6 +137,7 @@ class Parser < ParserBase
     ws
     name = parse_name || @shunting.parse or expected("function name")
     args = parse_args || []
+    expect(";")
     vars, exps = parse_block_exps
     exps = [:let,vars]
     expect("end") or expected("expression or 'end' for open def")
