@@ -17,6 +17,7 @@ Feature: Shunting Yard
 	  | "(1+2)*3"            | [:mul,[:add,1,2],3]                  |
 	  | "1 , 2"              | [:comma,1,2]                         |
 	  | "a << b"             | [:shiftleft,:a,:b]                   |
+	  | "1 .. 2"             | [:range,1,2]	                        |
 	  | "a = 1 or foo + bar" | [:or,[:assign,:a,1],[:add,:foo,:bar]]|
       | "return 1"           | [:return,1]                          |
       | "return"             | [:return]                            |
