@@ -30,12 +30,10 @@ module OpPrec
         @vstack << [o.sym,leftv].compact+ flatten(rightv[1..-1])
       elsif ra and rightv[0] == :call and o.sym == :callm
         @vstack << [o.sym,leftv].compact+ flatten(rightv[1..-1])
-      elsif ra and rightv[0] == :comma and o.sym == :call
-        @vstack << [o.sym,leftv,rightv[1..-1]].compact
-      elsif ra and rightv[0] == :comma and o.sym == :createarray 
-        @vstack << [o.sym, leftv].compact + rightv[1..-1]
       elsif la and leftv[0] == :callm and o.sym == :call
         @vstack << leftv + [flatten(rightv)]
+      elsif ra and rightv[0] == :comma and o.sym == :createarray 
+        @vstack << [o.sym, leftv].compact + flatten(rightv)
       else
         @vstack << [o.sym, leftv, flatten(rightv)].compact
       end

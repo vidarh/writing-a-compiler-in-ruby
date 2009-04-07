@@ -2,6 +2,12 @@
 require 'pp'
 require 'treeoutput'
 
+# FIXME:
+#
+# Handle symbols that are valid operators but that are not valid in certain circumstances:
+#  '}' should cause a return if no '{' has been seen, and should be unget.
+#  ',' should cause a return if :call isn't on the opstack?
+
 module OpPrec
   class ShuntingYard
     def initialize output,tokenizer, parser
@@ -44,9 +50,7 @@ module OpPrec
 
           if op.sym == :hash_or_block || op.sym == :block
             if possible_func || @ostack[-1] == Operators["#call#"] || @ostack[-1] == Operators["#callm#"]
-              if @ostack[-1] != Operators["#call#"]
-                @out.value([]) 
-              end
+              @out.value([]) if @ostack[-1] != Operators["#call#"]
               @out.value(parse_block(token))
               @out.oper(Operators["#flatten#"])
               @ostack << Operators["#call#"]  if @ostack[-1] != Operators["#call#"]
