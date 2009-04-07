@@ -121,3 +121,4 @@ Feature: Shunting Yard
       | "foo.bar do end"    | [:callm, :foo, :bar, [], [:do]]         |
 	  | "foo {}"            | [:call, :foo, [],[:do]]                 |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:do]]                  |
+	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:do]]]|

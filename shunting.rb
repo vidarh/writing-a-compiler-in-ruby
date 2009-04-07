@@ -45,7 +45,6 @@ module OpPrec
           if op.sym == :hash_or_block || op.sym == :block
             if possible_func || @ostack[-1] == Operators["#call#"] || @ostack[-1] == Operators["#callm#"]
               if @ostack[-1] != Operators["#call#"]
-                reduce
                 @out.value([]) 
               end
               @out.value(parse_block(token))
