@@ -26,7 +26,6 @@ module OpPrec
       while  !ostack.empty? && (ostack[-1].pri > pri || ostack[-1].type == :postfix)
         o = ostack.pop
         @out.oper(o) if o.sym
-        return if o.type == :lp # FIXME: Check that it is the right :lp
       end
     end
 
