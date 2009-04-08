@@ -55,6 +55,7 @@ Feature: Shunting Yard
 	  | "[o.sym(1)]"   | [:array,[:callm,:o,:sym,1]]           | 
 	  | "[o.sym,foo]"| [:array,[:callm,:o,:sym],:foo]          | 
 	  | "[1].compact"| [:callm,[:array,1],:compact]            | 
+	  | "return []"  | [:return,[:array]]                      |
 
 	Scenario Outline: Array operators
 		Given the expression <expr>

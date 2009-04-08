@@ -63,6 +63,7 @@ module OpPrec
             reduce(ostack,op)
             if op.type == :lp
               shunt(src,[op]) 
+              opstate = :infix_or_postfix
               # Handling function calls and a[1] vs [1]
               ostack << (op.sym == :array ? Operators["#index#"] : opcall) if possible_func
             elsif op.type == :rp
