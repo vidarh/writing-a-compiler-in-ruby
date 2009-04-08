@@ -80,6 +80,10 @@ module Tokens
       end
     end
 
+    def unget(token)
+      @s.unget(token)
+    end
+
     def get
       @s.nolfws
       case @s.peek

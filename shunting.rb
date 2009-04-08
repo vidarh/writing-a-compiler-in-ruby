@@ -39,49 +39,57 @@ module OpPrec
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
                                 # share the same token.
-      lastlp = false            # Was the last token a :lp? Used to output "dummy values" for empty parentheses
+
+      opcall  = Operators["#call#"]
+      opcallm = Operators["#callm#"]
+      lastlp = true
       src.each do |token,op|
         if op
-          # Handling "a[1]" differently from "[1]"
-          op = Operators["#index#"] if op.sym == :createarray && possible_func
-          op = op[opstate] if op.is_a?(Hash)
-          @out.value(nil) if op.type == :rp && lastlp # Dummy value to balance out the expressions when closing an empty pair of parentheses.
-
           if op.sym == :hash_or_block || op.sym == :block
-            if possible_func || ostack[-1] == Operators["#call#"] || ostack[-1] == Operators["#callm#"]
-              @out.value([]) if ostack[-1] != Operators["#call#"]
+            if possible_func || ostack.last == opcall || ostack.last == opcallm
+              @out.value([]) if ostack.last != opcall
               @out.value(parse_block(token))
               @out.oper(Operators["#flatten#"])
-              ostack << Operators["#call#"]  if ostack.last != Operators["#call#"]
+              ostack << opcall if ostack.last != opcall
             elsif op.sym == :hash_or_block
               op = Operators["#hash#"]
             else
               raise "Block not allowed here"
             end
           else
+            if op.type == :rp
+              @out.value(nil) if lastlp
+              src.unget(token) if !ostack.last || !ostack.last.type == :lp  || !ostack.last.sym == :call
+            end
             reduce(ostack,op)
-            if op.type != :rp
+            if op.type == :lp
+              shunt(src,[op]) 
+              # Handling function calls and a[1] vs [1]
+              ostack << (op.sym == :array ? Operators["#index#"] : opcall) if possible_func
+            elsif op.type == :rp
+              return nil
+            else
               opstate = :prefix
-              ostack << (op.type == :lp && possible_func ? Operators["#call#"] : op)
+              ostack << op
             end
           end
         else 
           if possible_func
             reduce(ostack)
-            ostack << Operators["#call#"]
+            ostack << opcall
           end
           @out.value(token)
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
         possible_func = !op && !token.is_a?(Numeric)
-        lastlp = op && op.type == :lp
+        lastlp = false
       end
 
-      if opstate == :prefix && ostack.size && ostack[-1] && ostack[-1].type == :prefix
+      if opstate == :prefix && ostack.size && ostack.last && ostack.last.type == :prefix
         # This is an error unless the top of the @ostack has minarity == 0,
         # which means it's ok for it to be provided with no argument
-        if ostack[-1].minarity == 0
+        if ostack.last.minarity == 0
           @out.value(nil)
         else
           raise "Missing value for prefix operator #{ostack[-1].sym.to_s}"
@@ -95,7 +103,8 @@ module OpPrec
     
     def parse
       reset
-      shunt(@tokenizer).result
+      res = shunt(@tokenizer)
+      res ? res.result : nil
     end
   end
 

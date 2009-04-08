@@ -22,20 +22,24 @@ module OpPrec
       raise "Missing value in expression / #{o.inspect} / #{@vstack.inspect} / #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
       leftv = @vstack.pop if o.arity > 1
 
+      leftv = [] if !leftv && o.sym == :flatten # Empty argument list. :flatten is badly named
+
       la = leftv.is_a?(Array)
       ra = rightv.is_a?(Array)
 
       # Rewrite rules to simplify the tree
       if ra and rightv[0] == :flatten
-        @vstack << [o.sym,leftv].compact+ flatten(rightv[1..-1])
+        @vstack << [o.sym,leftv] + flatten(rightv[1..-1])
       elsif ra and rightv[0] == :call and o.sym == :callm
-        @vstack << [o.sym,leftv].compact+ flatten(rightv[1..-1])
+        @vstack << [o.sym,leftv] + flatten(rightv[1..-1])
       elsif la and leftv[0] == :callm and o.sym == :call
         @vstack << leftv + [flatten(rightv)]
-      elsif ra and rightv[0] == :comma and o.sym == :createarray 
+      elsif ra and rightv[0] == :array and o.sym == :index
+        @vstack << [o.sym, leftv].compact + flatten(rightv[1..-1])
+      elsif ra and rightv[0] == :comma and o.sym == :array 
         @vstack << [o.sym, leftv].compact + flatten(rightv)
       else
-        @vstack << [o.sym, leftv, flatten(rightv)].compact
+        @vstack << [o.sym, flatten(leftv), flatten(rightv)].compact
       end
       return
     end

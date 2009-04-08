@@ -44,17 +44,17 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr        | tree                                           |
-      | "[]"        | [:createarray]                                 |
-      | "[1,2]"     | [:createarray,1,2]                             |
-      | "[1,2] + [3]"| [:add,[:createarray,1,2],[:createarray,3]]    |
-      | "[1,[2,3]]" | [:createarray,1,[:createarray,2,3]]            |
-      | "a = [1,2]" | [:assign,:a,[:createarray,1,2]]                |
-      | "a = []"    | [:assign,:a,[:createarray]]                    |
-	  | "[o.sym]"   | [:createarray,[:callm,:o,:sym]]                | 
-	  | "[o.sym(1)]"   | [:createarray,[:callm,:o,:sym,1]]           | 
-	  | "[o.sym,foo]"| [:createarray,[:callm,:o,:sym],:foo]          | 
-	  | "[1].compact"| [:callm,[:createarray,1],:compact]            | 
+	  | expr        | tree                                     |
+      | "[]"        | [:array]                                 |
+      | "[1,2]"     | [:array,1,2]                             |
+      | "[1,2] + [3]"| [:add,[:array,1,2],[:array,3]]          |
+      | "[1,[2,3]]" | [:array,1,[:array,2,3]]                  |
+      | "a = [1,2]" | [:assign,:a,[:array,1,2]]                |
+      | "a = []"    | [:assign,:a,[:array]]                    |
+	  | "[o.sym]"   | [:array,[:callm,:o,:sym]]                | 
+	  | "[o.sym(1)]"   | [:array,[:callm,:o,:sym,1]]           | 
+	  | "[o.sym,foo]"| [:array,[:callm,:o,:sym],:foo]          | 
+	  | "[1].compact"| [:callm,[:array,1],:compact]            | 
 
 	Scenario Outline: Array operators
 		Given the expression <expr>
@@ -120,5 +120,8 @@ Feature: Shunting Yard
 	  | "foo do end"        | [:call, :foo, [], [:do]]                |
       | "foo.bar do end"    | [:callm, :foo, :bar, [], [:do]]         |
 	  | "foo {}"            | [:call, :foo, [],[:do]]                 |
+      | "foo() {}"          | [:call, :foo, [],[:do]]                 |
+      | "foo(1) {}"         | [:call, :foo, 1,[:do]]                  |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:do]]                  |
+      | "foo(1,2) {}"       | [:call, :foo, [1,2],[:do]]              |
 	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:do]]]|

@@ -19,7 +19,7 @@ end
 
 Operators = {
   # "Fake" operator for [] following a name
-  "#index#"  => Oper.new(1,  :index,  :infix),
+  "#index#"  => Oper.new(100,  :index,  :infix),
 
   # "Fake" operator for function calls
   "#call#"   => Oper.new(1, :call, :infix),
@@ -59,7 +59,7 @@ Operators = {
   "."  => Oper.new(100, :callm,  :infix),
   "::" => Oper.new(90, :deref,  :infix),
   
-  "["  => Oper.new(99,  :createarray,  :lp,1),
+  "["  => Oper.new(99,  :array,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),
 
   "do"  => Oper.new(99, :block,  :lp,1),
