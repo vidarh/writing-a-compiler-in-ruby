@@ -15,3 +15,4 @@ Feature: Parser
 	  | "foo { }"            | [:do,[:call,:foo,[], [:do]]]                  | Testing empty blocks                               |
 	  | "foo(1) { }"         | [:do,[:call,:foo,1, [:do]]]                   | Testing empty blocks                               |
 	  | "foo(1) { bar }"     | [:do,[:call,:foo,1, [:do, [:call,:bar]]]]     | Testing function calls inside a block              |
+	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:do, [:index,:bar,0]]]]  | Testing index operator inside a block              |
