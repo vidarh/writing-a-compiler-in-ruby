@@ -124,9 +124,10 @@ class Parser < ParserBase
       ws
       expect("|")
     end
-    exps = parse_block_exps or raise "Expected a block body"
+    exps = parse_block_exps
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
+    return [:do] if args.size == 0 and !exps[1] || exps[1].size == 0
     [:do, args,exps[1]]
   end
 
