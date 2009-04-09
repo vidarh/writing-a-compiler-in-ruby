@@ -138,6 +138,11 @@ class Parser < ParserBase
     expect("def") or return
     ws
     name = parse_name || @shunting.parse or expected("function name")
+    if (expect("."))
+      name = [name]
+      ret = parse_name or expected("name following '#{name}.'")
+      name << ret
+    end
     args = parse_args || []
     expect(";")
     vars, exps = parse_block_exps
