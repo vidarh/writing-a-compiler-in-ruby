@@ -17,3 +17,13 @@ Feature: Parser
 	  | "foo(1) { bar }"     | [:do,[:call,:foo,1, [:block, [],[:bar]]]]     | Testing function calls inside a block              |
 	  | "foo(1) { bar 1 }"   | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]] | Testing function calls inside a block          |
 	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:index,:bar,0]]]]]| Testing index operator inside a block          |
+
+	Scenario Outline: String interpolation
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr                 | tree                                          | notes                                              |
+	  | '"#{1}"'             | [:call,:to_s,1]                               | Basic case                                         |
+      | '"#{""}"'            | [:call,:to_s,[""]]                            | Interpolated expression containing a string        |
