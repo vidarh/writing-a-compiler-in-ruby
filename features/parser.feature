@@ -27,3 +27,16 @@ Feature: Parser
 	  | expr                 | tree                                          | notes                                              |
 	  | '"#{1}"'             | [:call,:to_s,1]                               | Basic case                                         |
       | '"#{""}"'            | [:call,:to_s,[""]]                            | Interpolated expression containing a string        |
+
+
+	Scenario Outline: Function definition
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr                          | tree                                          | notes                                         |
+# FIXME: The expected result here quietly accepts that the parser doesn't yet try to store the argument defauts
+	  | "def foo(bar=nil)\nend\n"     | [:do, [:defun, :foo, [:bar], [:let, []]]]    | Default value for arguments                   |
+	  | "def foo(bar = nil)\nend\n"   | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
+
