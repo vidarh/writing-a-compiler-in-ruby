@@ -14,7 +14,7 @@ class DummyParser
     close = (start.to_s) == "{" ? "}" : "end"
     @s.ws
     @s.expect(close) or raise "Expected #{start}"
-    [:do]
+    [:block]
   end
 end
 

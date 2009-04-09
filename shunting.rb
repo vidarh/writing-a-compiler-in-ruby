@@ -54,7 +54,7 @@ module OpPrec
           else
             if op.type == :rp
               @out.value(nil) if lastlp
-              src.unget(token) if !ostack.last || !ostack.last.type == :lp  || !ostack.last.sym == :call
+              src.unget(token) if !ostack.first or ostack.first.type != :lp
             end
             reduce(ostack,op)
             if op.type == :lp
@@ -63,7 +63,7 @@ module OpPrec
               # Handling function calls and a[1] vs [1]
               ostack << (op.sym == :array ? Operators["#index#"] : opcall) if possible_func
             elsif op.type == :rp
-              return nil
+              break
             else
               opstate = :prefix
               ostack << op

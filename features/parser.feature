@@ -12,7 +12,8 @@ Feature: Parser
 	Examples:
 	  | expr                 | tree                                          | notes                                              |
 	  | "1 + 2"              | [:do,[:add,1,2]]                              | The full parser wraps a [:do] around everything    |
-	  | "foo { }"            | [:do,[:call,:foo,[], [:do]]]                  | Testing empty blocks                               |
-	  | "foo(1) { }"         | [:do,[:call,:foo,1, [:do]]]                   | Testing empty blocks                               |
-	  | "foo(1) { bar }"     | [:do,[:call,:foo,1, [:do, [:call,:bar]]]]     | Testing function calls inside a block              |
-	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:do, [:index,:bar,0]]]]  | Testing index operator inside a block              |
+	  | "foo { }"            | [:do,[:call,:foo,[], [:block]]]               | Testing empty blocks                               |
+	  | "foo(1) { }"         | [:do,[:call,:foo,1, [:block]]]                | Testing empty blocks                               |
+	  | "foo(1) { bar }"     | [:do,[:call,:foo,1, [:block, [],[:bar]]]]     | Testing function calls inside a block              |
+	  | "foo(1) { bar 1 }"   | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]] | Testing function calls inside a block          |
+	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:index,:bar,0]]]]]| Testing index operator inside a block          |

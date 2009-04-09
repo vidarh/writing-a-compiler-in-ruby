@@ -117,12 +117,12 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr                | tree                                    |
-	  | "foo do end"        | [:call, :foo, [], [:do]]                |
-      | "foo.bar do end"    | [:callm, :foo, :bar, [], [:do]]         |
-	  | "foo {}"            | [:call, :foo, [],[:do]]                 |
-      | "foo() {}"          | [:call, :foo, [],[:do]]                 |
-      | "foo(1) {}"         | [:call, :foo, 1,[:do]]                  |
-	  | "foo 1 {}"	        | [:call, :foo, 1,[:do]]                  |
-      | "foo(1,2) {}"       | [:call, :foo, [1,2],[:do]]              |
-	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:do]]]|
+	  | expr                | tree                                       |
+	  | "foo do end"        | [:call, :foo, [], [:block]]                |
+      | "foo.bar do end"    | [:callm, :foo, :bar, [], [:block]]         |
+	  | "foo {}"            | [:call, :foo, [],[:block]]                 |
+      | "foo() {}"          | [:call, :foo, [],[:block]]                 |
+      | "foo(1) {}"         | [:call, :foo, 1,[:block]]                  |
+	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
+      | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
+	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:block]]]|
