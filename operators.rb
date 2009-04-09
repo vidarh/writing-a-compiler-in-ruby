@@ -32,8 +32,9 @@ Operators = {
 
   "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
   "or" => Oper.new(5, :or, :infix),
-  "&&" => Oper.new(5, :and, :infix), # FIXME: Check pri - probably not right.
-  "||" => Oper.new(5, :or, :infix), # FIXME: Check pri - probably not right.
+  "and" => Oper.new(5, :and, :infix),
+  "&&" => Oper.new(6, :and, :infix), # FIXME: Check pri - probably not right.
+  "||" => Oper.new(6, :or, :infix), # FIXME: Check pri - probably not right.
   ".." => Oper.new(5, :range, :infix), # FIXME: Check pri - probably not right.
 
   "?"  => Oper.new(7,  :ternif, :infix),
