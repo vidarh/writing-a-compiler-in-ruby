@@ -20,11 +20,11 @@ end
 
 Given /^the expression (.*)$/ do |expr|
   @scanner = Scanner.new(StringIO.new(eval(expr)))
-  @parser =  OpPrec::parser(@scanner,DummyParser.new(@scanner))
   @expr = expr
 end
 
 When /^I parse it with the shunting yard parser$/ do
+  @parser =  OpPrec::parser(@scanner,DummyParser.new(@scanner))
   @tree = @parser.parse
 end
 
