@@ -113,9 +113,11 @@ module Tokens
       when nil
         return [nil,nil]
       else
-        # Special cases - two character operators: 
+        # Special cases - two/three character operators, and character constants
         first = @s.get
         if second = @s.get
+          return [second[0],nil] if first == "?" and !([32,10,9,13].member?(second[0])) #FIXME: Handle escaped characters, such as ?\s etc.
+
           buf = first + second
           if third = @s.get
             buf2 = buf + third

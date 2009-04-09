@@ -22,6 +22,8 @@ Feature: Shunting Yard
       | "foo and !bar"       | [:and,:foo,[:not,:bar]]              |
       | "return 1"           | [:return,1]                          |
       | "return"             | [:return]                            |
+      | "5"                  | 5                                    |
+      | "?A"                 | 65                                   |
 
 	Scenario Outline: Method calls
 		Given the expression <expr>
