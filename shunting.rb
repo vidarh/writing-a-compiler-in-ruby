@@ -14,10 +14,6 @@ module OpPrec
       @out,@tokenizer,@parser = output,tokenizer,parser
     end
 
-    def reset
-      @out.reset
-    end
-    
     def reduce ostack,op = nil
       pri = op ? op.pri : 0
       # We check for :postfix to handle cases where a postfix operator has been given a lower precedence than an
@@ -102,8 +98,10 @@ module OpPrec
     end
     
     def parse
-      reset
-      res = shunt(@tokenizer)
+      out = @out.dup
+      out.reset
+      tmp = self.class.new(out,@tokenizer,@parser)
+      res = tmp.shunt(@tokenizer)
       res ? res.result : nil
     end
   end
