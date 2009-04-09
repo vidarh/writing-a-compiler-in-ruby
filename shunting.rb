@@ -34,7 +34,7 @@ module OpPrec
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
                                 # share the same token.
-
+      lp_on_entry = ostack.first && ostack.first.type == :lp
       opcall  = Operators["#call#"]
       opcallm = Operators["#callm#"]
       lastlp = true
@@ -54,7 +54,7 @@ module OpPrec
           else
             if op.type == :rp
               @out.value(nil) if lastlp
-              src.unget(token) if !ostack.first or ostack.first.type != :lp
+              src.unget(token) if !lp_on_entry
             end
             reduce(ostack,op)
             if op.type == :lp
