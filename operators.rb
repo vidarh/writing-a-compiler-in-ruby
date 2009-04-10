@@ -54,7 +54,11 @@ Operators = {
   "-"  => Oper.new(10, :sub,    :infix),
   "!"  => Oper.new(10, :not,    :prefix),
 
-  "*"  => Oper.new(20, :mul,    :infix),
+  "*"  => {
+    :infix_or_postfix => Oper.new(20, :mul,    :infix),
+    :prefix => Oper.new(100, :splat, :prefix)
+  },
+
   "/"  => Oper.new(20, :div,    :infix),
 
   "."  => Oper.new(100, :callm,  :infix),

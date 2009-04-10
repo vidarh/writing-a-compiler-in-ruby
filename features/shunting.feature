@@ -31,15 +31,18 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr           | tree                                     |
-	  | "foo(1)"       | [:call,:foo,1]                           |
-	  | "foo(1,2)"     | [:call,:foo,[1,2]]                       |
-	  | "foo 1"        | [:call,:foo,1]                           |
-	  | "foo 1,2"      | [:call,:foo,[1,2]]                       |
-	  | "self.foo"     | [:callm,:self,:foo]                      |
-	  | "self.foo(1)"  | [:callm,:self,:foo,1]                    |
-	  | "self.foo(1,2)"| [:callm,:self,:foo,[1,2]]                |
-	  | "self.foo bar" | [:callm,:self,:foo,:bar]                 |
+	  | expr                 | tree                                     |
+	  | "foo(1)"             | [:call,:foo,1]                           |
+	  | "foo(1,2)"           | [:call,:foo,[1,2]]                       |
+	  | "foo 1"              | [:call,:foo,1]                           |
+	  | "foo 1,2"            | [:call,:foo,[1,2]]                       |
+	  | "self.foo"           | [:callm,:self,:foo]                      |
+	  | "self.foo(1)"        | [:callm,:self,:foo,1]                    |
+	  | "self.foo(1,2)"      | [:callm,:self,:foo,[1,2]]                |
+	  | "self.foo bar"       | [:callm,:self,:foo,:bar]                 |
+      | "foo(*arg)"          | [:call,:foo,[:splat, :arg]]              |
+      | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
+      | "foo(1 * arg,bar)"   | [:call,:foo,[[:mul, 1, :arg],:bar]]      |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>

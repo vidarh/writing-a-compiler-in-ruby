@@ -40,6 +40,7 @@ module OpPrec
       lastlp = true
       src.each do |token,op|
         if op
+          op = op[opstate] if op.is_a?(Hash)
           if op.sym == :hash_or_block || op.sym == :block
             if possible_func || ostack.last == opcall || ostack.last == opcallm
               @out.value([]) if ostack.last != opcall
