@@ -17,6 +17,7 @@ Feature: Parser
 	  | "foo(1) { bar }"     | [:do,[:call,:foo,1, [:block, [],[:bar]]]]     | Testing function calls inside a block              |
 	  | "foo(1) { bar 1 }"   | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]] | Testing function calls inside a block          |
 	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:index,:bar,0]]]]]| Testing index operator inside a block          |
+	  | "while foo do end"   | []                                            | while with "do ... end" instead of just "end"      |
 
 	Scenario Outline: String interpolation
 		Given the expression <expr>
