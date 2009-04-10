@@ -19,7 +19,11 @@ module OpPrec
       # We check for :postfix to handle cases where a postfix operator has been given a lower precedence than an
       # infix operator, yet it needs to bind tighter to tokens preceeding it than a following infix operator regardless,
       # because the alternative gives a malfored expression.
-      while  !ostack.empty? && (ostack[-1].pri > pri || ostack[-1].type == :postfix)
+      #
+      # As a special rule only :rp's are allowed to reduce past an :lp. This is a bit of a hack - since we recurse for :lp's
+      # then don't strictly need to go on the stack at all - they could be pushed on after the shunt returns. May
+      # do that later.
+      while  !ostack.empty? && (ostack.last.pri > pri || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
         o = ostack.pop
         @out.oper(o) if o.sym
       end
