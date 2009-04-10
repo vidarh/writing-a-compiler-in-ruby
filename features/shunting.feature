@@ -42,6 +42,7 @@ Feature: Shunting Yard
 	  | "self.foo bar"       | [:callm,:self,:foo,:bar]                 |
       | "foo(*arg)"          | [:call,:foo,[:splat, :arg]]              |
       | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
+      | "foo(1 + arg)"       | [:call,:foo,[:add, 1, :arg]]             |
       | "foo(1 * arg,bar)"   | [:call,:foo,[[:mul, 1, :arg],:bar]]      |
 
 	Scenario Outline: Array syntax
