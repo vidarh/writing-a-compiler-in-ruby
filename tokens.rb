@@ -70,8 +70,11 @@ module Tokens
   end
 
   class Tokenizer
+    attr_accessor :keywords
+
     def initialize scanner
       @s = scanner
+      @keywords = Keywords.dup
     end
 
     def each
@@ -93,7 +96,7 @@ module Tokens
         return [@s.expect(Int),nil]
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:
         buf = @s.expect(Atom)
-        if Keywords.member?(buf)
+        if @keywords.member?(buf)
           @s.unget(buf.to_s)
           return [nil,nil]
         end

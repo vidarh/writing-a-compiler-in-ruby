@@ -14,6 +14,10 @@ module OpPrec
       @out,@tokenizer,@parser = output,tokenizer,parser
     end
 
+    def keywords
+      @tokenizer.keywords
+    end
+
     def reduce ostack,op = nil
       pri = op ? op.pri : 0
       # We check for :postfix to handle cases where a postfix operator has been given a lower precedence than an

@@ -52,7 +52,13 @@ class Parser < ParserBase
 
   # condition ::= sexp | opprecexpr
   def parse_condition
+    # This is needed because of ugly constructs like "while cond do end"
+    # where the "do .. end" block belongs to "while", not to any function
+    # in the condition.
+    @shunting.keywords << :do
     ret = @sexp.parse || @shunting.parse
+    @shunting.keywords.delete(:do)
+    ret
   end
 
   # if ::= "if" ws* condition defexp* "end"
@@ -66,12 +72,13 @@ class Parser < ParserBase
     return [:if,cond,[:do]+exps]
   end
 
-  # while ::= "while" ws* condition defexp* "end"
+  # while ::= "while" ws* condition "do"? defexp* "end"
   def parse_while
     expect("while") or return
     ws
     cond = parse_condition or expected("condition for 'while' block")
-    @s.nolfws; expect(";")
+    @s.nolfws; expect(";") or expect("do")
+    @s.nolfws;
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
     return [:while,cond,[:do]+exps]
