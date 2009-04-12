@@ -19,6 +19,7 @@ Feature: Parser
 	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:index,:bar,0]]]]]| Testing index operator inside a block        |
 	  | "while foo do end"   | [:do, [:while, :foo, [:do]]]                  | while with "do ... end" instead of just "end"      |
       | "{}"                 | [:do,[:hash]]                                 | Literal hash                                       |
+      | "{:a => 1}"          | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash                                       |
       | "vtable = {}"        | [:do,[:assign,:vtable,[:hash]]]               | Literal hash                                       |
       | "Keywords=Set[1]\nfoo" | [:do,[:assign,:Keywords,[:index,:Set,1]],:foo] | :rp before linefeed should terminate an expression |
 
