@@ -145,9 +145,7 @@ module Tokens
       @lastop ? @s.ws : @s.nolfws
       @lastop = false
       res = get_raw
-      if res[1]
-        @lastop = res[1].type != :rp
-      end
+      @lastop = res[1] && res[1].type != :rp
       return res
     end
   end
