@@ -145,7 +145,8 @@ module Tokens
       @lastop ? @s.ws : @s.nolfws
       @lastop = false
       res = get_raw
-      @lastop = res[1] && res[1].type != :rp
+      # The is_a? weeds out hashes, which we assume don't contain :rp operators
+      @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp) 
       return res
     end
   end
