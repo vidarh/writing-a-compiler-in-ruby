@@ -88,9 +88,7 @@ module Tokens
       @s.unget(token)
     end
 
-    def get
-      @lastop ? @s.ws : @s.nolfws
-      @lastop = false
+    def get_raw
       case @s.peek
       when ?",?'
         return [@s.expect(Quoted),nil]
@@ -102,10 +100,7 @@ module Tokens
           @s.unget(buf.to_s)
           return [nil,nil]
         end
-        if Operators.member?(buf.to_s)
-          @lastop = true
-          return [buf,Operators[buf.to_s]]
-        end
+        return [buf,Operators[buf.to_s]] if Operators.member?(buf.to_s)
         return [buf,nil]
       when ?-
         @s.get
@@ -131,27 +126,29 @@ module Tokens
           if third = @s.get
             buf2 = buf + third
             op = Operators[buf2]
-            if op
-              @lastop = true
-              return [buf2,op]
-            end
+            return [buf2,op] if op
             @s.unget(third)
           end
           op = Operators[buf]
-          if op
-            @lastop = true
-            return [buf,op] 
-          end
+          return [buf,op] if op
           @s.unget(second)
         end
         op = Operators[first]
-        if op
-          @lastop = true
-          return [first,op] 
-        end
+        return [first,op] if op
         @s.unget(first)
         return [nil,nil]
       end
+    end
+
+
+    def get
+      @lastop ? @s.ws : @s.nolfws
+      @lastop = false
+      res = get_raw
+      if res[1]
+        @lastop = res[1].type != :rp
+      end
+      return res
     end
   end
 end

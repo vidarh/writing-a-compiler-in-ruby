@@ -20,6 +20,7 @@ Feature: Parser
 	  | "while foo do end"   | [:do, [:while, :foo, [:do]]]                  | while with "do ... end" instead of just "end"      |
       | "{}"                 | [:do,[:hash]]                                 | Literal hash                                       |
       | "vtable = {}"        | [:do,[:assign,:vtable,[:hash]]]               | Literal hash                                       |
+      | "Keywords=Set[1]\nfoo" | [:do,[:assign,:Keywords,[:index,:Set,1]],:foo] | :rp before linefeed should terminate an expression |
 
 	Scenario Outline: String interpolation
 		Given the expression <expr>
