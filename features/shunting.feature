@@ -71,8 +71,9 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr        | tree                                           |
-	  | "a[1]"      | [:index,:a,1]                                  |
+	  | expr        | tree                |
+	  | "a[1]"      | [:index,:a,1]       |
+      | "Set[1,2,3]"| [:index,:Set,1,2,3] | # Strictly this is a method call to Set.[], but we'll do that transformation at a higher level.
 
     Scenario Outline: Function calls
 		Given the expression <expr>

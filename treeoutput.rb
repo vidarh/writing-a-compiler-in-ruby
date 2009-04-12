@@ -13,7 +13,8 @@ module OpPrec
     def flatten r
       return r if !r.is_a?(Array)
       return r if r[0] != :comma
-      return [r[1],flatten(r[2])]
+      return r[1..2] if !r[2].is_a?(Array) or r[2][0] == :array
+      return [r[1]] + flatten(r[2])
     end
 
     def oper o
