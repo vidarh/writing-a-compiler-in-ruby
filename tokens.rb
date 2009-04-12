@@ -75,6 +75,7 @@ module Tokens
     def initialize scanner
       @s = scanner
       @keywords = Keywords.dup
+      @lastop = false
     end
 
     def each
@@ -88,7 +89,8 @@ module Tokens
     end
 
     def get
-      @s.nolfws
+      @lastop ? @s.ws : @s.nolfws
+      @lastop = false
       case @s.peek
       when ?",?'
         return [@s.expect(Quoted),nil]
@@ -100,7 +102,10 @@ module Tokens
           @s.unget(buf.to_s)
           return [nil,nil]
         end
-        return [buf,Operators[buf.to_s]] if Operators.member?(buf.to_s)
+        if Operators.member?(buf.to_s)
+          @lastop = true
+          return [buf,Operators[buf.to_s]]
+        end
         return [buf,nil]
       when ?-
         @s.get
@@ -108,6 +113,7 @@ module Tokens
           @s.unget("-")
           return [@s.expect(Int),nil]
         end
+        @lastop = true
         if @s.peek == ?=
           @s.get
           return ["-=",Operators["-="]]
@@ -125,15 +131,24 @@ module Tokens
           if third = @s.get
             buf2 = buf + third
             op = Operators[buf2]
-            return [buf2,op] if op
+            if op
+              @lastop = true
+              return [buf2,op]
+            end
             @s.unget(third)
           end
           op = Operators[buf]
-          return [buf,op] if op
+          if op
+            @lastop = true
+            return [buf,op] 
+          end
           @s.unget(second)
         end
         op = Operators[first]
-        return [first,op] if op
+        if op
+          @lastop = true
+          return [first,op] 
+        end
         @s.unget(first)
         return [nil,nil]
       end

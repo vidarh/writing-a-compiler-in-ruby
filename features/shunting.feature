@@ -24,6 +24,7 @@ Feature: Shunting Yard
       | "return"             | [:return]                            |
       | "5"                  | 5                                    |
       | "?A"                 | 65                                   |
+      | "foo +\nbar"         | [:add,:foo,:bar]                     |
 
 	Scenario Outline: Method calls
 		Given the expression <expr>
