@@ -44,7 +44,7 @@ module OpPrec
                                 # share the same token.
       lp_on_entry = ostack.first && ostack.first.type == :lp
       opcall  = Operators["#call#"]
-      opcallm = Operators["#callm#"]
+      opcallm = Operators["."]
       lastlp = true
       src.each do |token,op|
         if op
@@ -57,6 +57,8 @@ module OpPrec
               ostack << opcall if ostack.last != opcall
             elsif op.sym == :hash_or_block
               op = Operators["#hash#"]
+              shunt(src,[op])
+              opstate = :infix_or_postfix
             else
               raise "Block not allowed here"
             end

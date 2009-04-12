@@ -18,6 +18,8 @@ Feature: Parser
 	  | "foo(1) { bar 1 }"   | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]] | Testing function calls inside a block        |
 	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:index,:bar,0]]]]]| Testing index operator inside a block        |
 	  | "while foo do end"   | [:do, [:while, :foo, [:do]]]                  | while with "do ... end" instead of just "end"      |
+      | "{}"                 | [:do,[:hash]]                                 | Literal hash                                       |
+      | "vtable = {}"        | [:do,[:assign,:vtable,[:hash]]]               | Literal hash                                       |
 
 	Scenario Outline: String interpolation
 		Given the expression <expr>
