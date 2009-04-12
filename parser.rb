@@ -68,9 +68,39 @@ class Parser < ParserBase
     cond = parse_condition or expected("condition for 'if' block")
     @s.nolfws; expect(";")
     exps = zero_or_more(:defexp)
-    raise "Expected expression or 'end' for open if" if !@s.expect("end")
+    expect("end") or expected("expression or 'end' for open 'if'")
     return [:if,cond,[:do]+exps]
   end
+
+  # when ::= "when" ws* condition (nolfws* ":")? ws* defexp*
+  def parse_when
+    expect("when") or return
+    ws
+    cond = parse_condition or expect("condition for 'when'")
+    @s.nolfws
+    expect(":")
+    ws
+    exps = zero_or_more(:defexp)
+    [:when,cond,exps]
+  end
+
+  # case ::= "case" ws* condition when* ("else" ws* defexp*) "end"
+  def parse_case
+    expect("case") or return
+    ws
+    cond = parse_condition or expect("condition for 'case' block")
+    ws
+    whens = zero_or_more(:when)
+    ws
+    if expect("else")
+      ws
+      elses = zero_or_more(:defexp)
+    end
+    ws
+    expect("end") or expected("'end' for open 'case'")
+    [:case, cond, whens, elses].compact
+  end
+
 
   # while ::= "while" ws* condition "do"? defexp* "end"
   def parse_while
@@ -99,10 +129,10 @@ class Parser < ParserBase
 
   # Later on "defexp" will allow anything other than "def"
   # and "class".
-  # defexp ::= sexp | while | if | subexp
+  # defexp ::= sexp | while | case | if | subexp
   def parse_defexp
     ws
-    ret = parse_sexp || parse_while || parse_if || parse_subexp
+    ret = parse_sexp || parse_while || parse_case || parse_if || parse_subexp
     ws; expect(";"); ws
     ret
   end

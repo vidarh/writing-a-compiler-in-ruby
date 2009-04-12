@@ -44,3 +44,13 @@ Feature: Parser
 	  | "def foo(bar=nil)\nend\n"     | [:do, [:defun, :foo, [:bar], [:let, []]]]    | Default value for arguments                   |
 	  | "def foo(bar = nil)\nend\n"   | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
 	  | "def self.foo\nend\n"         | [:do, [:defun, [:self,:foo], [], [:let, []]]] | Class method etc.                             |
+
+	Scenario Outline: Control structures
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr                          | tree                                          | notes                                         |
+	  | "case foo\nwhen a\nend"       | [:do, [:case, :foo, [[:when, :a, []]]]]       | Basic case structure                          |
+
