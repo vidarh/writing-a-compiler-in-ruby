@@ -1,13 +1,14 @@
-
-
+# Represents a function argument.
+# Can also be a list of arguments if :rest is specified in modifiers
+# for variable argument functions.
 class Arg
   attr_reader :name, :rest
 
   def initialize(name, *modifiers)
     @name = name
-    modifiers.each do |m|
-      @rest = true if m == :rest
-    end
+    # @rest indicates if we have 
+    # a variable amount of parameters
+    @rest = modifiers.include?(:rest)
   end
 
   def rest?
@@ -50,4 +51,3 @@ class Function
     return nil
   end
 end
-
