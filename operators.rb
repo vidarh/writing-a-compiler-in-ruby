@@ -2,10 +2,10 @@
 require 'set'
 
 class Oper
-  attr_accessor :pri,:sym,:type,:arity, :minarity
+  attr_accessor :pri, :sym, :type, :arity, :minarity
 
-  def initialize pri,sym,type,arity = nil, minarity = nil
-    @pri,@sym,@type = pri,sym,type
+  def initialize(pri, sym, type, arity = nil, minarity = nil)
+    @pri, @sym, @type = pri, sym, type
     if !arity
       @arity = 0 if type == :lp
       @arity = 1 if type != :lp
@@ -64,7 +64,7 @@ Operators = {
 
   "."  => Oper.new(100, :callm,  :infix),
   "::" => Oper.new(90, :deref,  :infix),
-  
+
   "["  => Oper.new(99,  :array,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),
 

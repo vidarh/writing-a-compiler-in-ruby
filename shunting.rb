@@ -10,15 +10,15 @@ require 'treeoutput'
 
 module OpPrec
   class ShuntingYard
-    def initialize output,tokenizer, parser
-      @out,@tokenizer,@parser = output,tokenizer,parser
+    def initialize(output, tokenizer, parser)
+      @out, @tokenizer, @parser = output, tokenizer, parser
     end
 
     def keywords
       @tokenizer.keywords
     end
 
-    def reduce ostack,op = nil
+    def reduce(ostack, op = nil)
       pri = op ? op.pri : 0
       # We check for :postfix to handle cases where a postfix operator has been given a lower precedence than an
       # infix operator, yet it needs to bind tighter to tokens preceeding it than a following infix operator regardless,
@@ -33,11 +33,11 @@ module OpPrec
       end
     end
 
-    def parse_block start
+    def parse_block(start)
       @parser.parse_block(start)
     end
 
-    def shunt src, ostack = []
+    def shunt(src, ostack = [])
       possible_func = false     # was the last token a possible function name?
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
@@ -57,7 +57,7 @@ module OpPrec
               ostack << opcall if ostack.last != opcall
             elsif op.sym == :hash_or_block
               op = Operators["#hash#"]
-              shunt(src,[op])
+              shunt(src, [op])
               opstate = :infix_or_postfix
             else
               raise "Block not allowed here"
@@ -67,9 +67,9 @@ module OpPrec
               @out.value(nil) if lastlp
               src.unget(token) if !lp_on_entry
             end
-            reduce(ostack,op)
+            reduce(ostack, op)
             if op.type == :lp
-              shunt(src,[op]) 
+              shunt(src, [op])
               opstate = :infix_or_postfix
               # Handling function calls and a[1] vs [1]
               ostack << (op.sym == :array ? Operators["#index#"] : opcall) if possible_func
@@ -80,7 +80,7 @@ module OpPrec
               ostack << op
             end
           end
-        else 
+        else
           if possible_func
             reduce(ostack)
             ostack << opcall
@@ -104,20 +104,20 @@ module OpPrec
       end
 
       reduce(ostack)
-      return @out if  ostack.empty?
+      return @out if ostack.empty?
       raise "Syntax error. #{ostack.inspect}"
     end
-    
+
     def parse
       out = @out.dup
       out.reset
-      tmp = self.class.new(out,@tokenizer,@parser)
+      tmp = self.class.new(out, @tokenizer,@parser)
       res = tmp.shunt(@tokenizer)
       res ? res.result : nil
     end
   end
 
-  def self.parser scanner, parser
+  def self.parser(scanner, parser)
      ShuntingYard.new(TreeOutput.new,Tokens::Tokenizer.new(scanner), parser)
   end
 

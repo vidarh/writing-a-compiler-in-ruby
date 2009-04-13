@@ -11,7 +11,7 @@ class ParserBase
     res
   end
 
-  def expect *args
+  def expect(*args)
     args.each do |a|
       r = @s.expect(a)
       return r if r
@@ -19,7 +19,7 @@ class ParserBase
     return nil
   end
 
-  def expected name
+  def expected(name)
     raise "Error: Expected #{name}"
   end
 

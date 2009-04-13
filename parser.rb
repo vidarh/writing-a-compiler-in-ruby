@@ -4,17 +4,17 @@ require 'utils'
 require 'shunting'
 
 class Parser < ParserBase
-  def initialize s
+  def initialize(s)
     @s = s
     @sexp = SEXParser.new(s)
-    @shunting = OpPrec::parser(s,self)
+    @shunting = OpPrec::parser(s, self)
   end
-  
+
   # name ::= atom
   def parse_name
     expect(Atom)
   end
-  
+
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist
     rest = expect("*")
@@ -31,14 +31,14 @@ class Parser < ParserBase
       # FIXME: Store
     end
 
-    args = [(rest ? [name.to_sym,:rest] : name.to_sym)]
+    args = [(rest ? [name.to_sym, :rest] : name.to_sym)]
     @s.nolfws
     expect(",") or return args
     ws
     more = parse_arglist or expected("argument")
     return args + more
   end
-  
+
   # args ::= nolfws* ( "(" ws* arglist ws* ")" | arglist )
   def parse_args
     @s.nolfws
@@ -69,7 +69,7 @@ class Parser < ParserBase
     @s.nolfws; expect(";")
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'if'")
-    return [:if,cond,[:do]+exps]
+    return [:if, cond, [:do]+exps]
   end
 
   # when ::= "when" ws* condition (nolfws* ":")? ws* defexp*
@@ -81,7 +81,7 @@ class Parser < ParserBase
     expect(":")
     ws
     exps = zero_or_more(:defexp)
-    [:when,cond,exps]
+    [:when, cond, exps]
   end
 
   # case ::= "case" ws* condition when* ("else" ws* defexp*) "end"
@@ -111,7 +111,7 @@ class Parser < ParserBase
     @s.nolfws;
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
-    return [:while,cond,[:do]+exps]
+    return [:while, cond, [:do]+exps]
   end
 
   # subexp ::= exp nolfws* ("if" ws* condition)?
@@ -122,7 +122,7 @@ class Parser < ParserBase
       ws
       cond = parse_condition or expected("condition for 'if' statement modifier")
       @s.nolfws; expect(";")
-      exp = [:if,cond,exp]
+      exp = [:if, cond, exp]
     end
     return exp
   end
@@ -141,8 +141,8 @@ class Parser < ParserBase
   def parse_block_exps
     ws
     exps = zero_or_more(:defexp)
-    vars = deep_collect(exps,Array) {|node| node[0] == :assign ? node[1] : nil}
-    [vars,exps]
+    vars = deep_collect(exps, Array) {|node| node[0] == :assign ? node[1] : nil}
+    [vars, exps]
   end
 
   def parse_block(start = nil)
@@ -166,7 +166,7 @@ class Parser < ParserBase
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
     return [:block] if args.size == 0 and !exps[1] || exps[1].size == 0
-    [:block, args,exps[1]]
+    [:block, args, exps[1]]
   end
 
 
@@ -203,7 +203,7 @@ class Parser < ParserBase
     end
     exps = zero_or_more(:exp)
     expect("end") or expected("expression or 'end'")
-    return [type.to_sym,name,exps]
+    return [type.to_sym, name, exps]
   end
 
   # require ::= "require" ws* quoted
@@ -212,7 +212,7 @@ class Parser < ParserBase
     ws
     q = expect(Quoted) or expected("name of source to require")
     ws
-    return [:require,q]
+    return [:require, q]
   end
 
   # include ::= "include" ws* name w
@@ -221,7 +221,7 @@ class Parser < ParserBase
     ws
     n = parse_name or expected("name of module to include")
     ws
-    [:include,n]
+    [:include, n]
   end
 
   # exp ::= ws* (class | def | sexp)

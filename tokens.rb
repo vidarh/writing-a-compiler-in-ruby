@@ -4,10 +4,10 @@ require 'set'
 
 module Tokens
 
-  Keywords=Set[:def,:end,:if,:require,:include]
+  Keywords = Set[:def, :end, :if, :require, :include]
 
   class Atom
-    def self.expect s
+    def self.expect(s)
       tmp = ""
       c = s.peek
       if c == ?@ || c == ?$ || c == ?:
@@ -17,9 +17,9 @@ module Tokens
 
       if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
         tmp += s.get
-        
-        while (c = s.peek) && ((?a .. ?z).member?(c) || 
-                                  (?A .. ?Z).member?(c) || 
+
+        while (c = s.peek) && ((?a .. ?z).member?(c) ||
+                                  (?A .. ?Z).member?(c) ||
                                   (?0 .. ?9).member?(c) || ?_ == c)
           tmp += s.get
         end
@@ -33,7 +33,7 @@ module Tokens
   end
 
   class Int
-    def self.expect s
+    def self.expect(s)
       tmp = ""
       tmp += s.get if s.peek == ?-
       while (c = s.peek) && (?0 .. ?9).member?(c)
@@ -49,13 +49,13 @@ module Tokens
       return nil if s.peek == ?"
       if s.expect("\\")
         raised "Unexpected EOF" if !s.peek
-        return "\\"+s.get 
+        return "\\"+s.get
       end
       return s.get
     end
 
 
-    def self.expect s
+    def self.expect(s)
       q = s.expect('"') || s.expect("'") or return nil
       buf = ""
       if q == '"'
@@ -72,7 +72,7 @@ module Tokens
   class Tokenizer
     attr_accessor :keywords
 
-    def initialize scanner
+    def initialize(scanner)
       @s = scanner
       @keywords = Keywords.dup
       @lastop = false
@@ -91,22 +91,22 @@ module Tokens
     def get_raw
       case @s.peek
       when ?",?'
-        return [@s.expect(Quoted),nil]
+        return [@s.expect(Quoted), nil]
       when ?0 .. ?9
-        return [@s.expect(Int),nil]
+        return [@s.expect(Int), nil]
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:
         buf = @s.expect(Atom)
         if @keywords.member?(buf)
           @s.unget(buf.to_s)
-          return [nil,nil]
+          return [nil, nil]
         end
-        return [buf,Operators[buf.to_s]] if Operators.member?(buf.to_s)
-        return [buf,nil]
+        return [buf, Operators[buf.to_s]] if Operators.member?(buf.to_s)
+        return [buf, nil]
       when ?-
         @s.get
         if (?0 .. ?9).member?(@s.peek)
           @s.unget("-")
-          return [@s.expect(Int),nil]
+          return [@s.expect(Int), nil]
         end
         @lastop = true
         if @s.peek == ?=
@@ -115,28 +115,28 @@ module Tokens
         end
         return ["-",Operators["-"]]
       when nil
-        return [nil,nil]
+        return [nil, nil]
       else
         # Special cases - two/three character operators, and character constants
         first = @s.get
         if second = @s.get
-          return [second[0],nil] if first == "?" and !([32,10,9,13].member?(second[0])) #FIXME: Handle escaped characters, such as ?\s etc.
+          return [second[0], nil] if first == "?" and !([32, 10, 9, 13].member?(second[0])) #FIXME: Handle escaped characters, such as ?\s etc.
 
           buf = first + second
           if third = @s.get
             buf2 = buf + third
             op = Operators[buf2]
-            return [buf2,op] if op
+            return [buf2, op] if op
             @s.unget(third)
           end
           op = Operators[buf]
-          return [buf,op] if op
+          return [buf, op] if op
           @s.unget(second)
         end
         op = Operators[first]
-        return [first,op] if op
+        return [first, op] if op
         @s.unget(first)
-        return [nil,nil]
+        return [nil, nil]
       end
     end
 
@@ -146,7 +146,7 @@ module Tokens
       @lastop = false
       res = get_raw
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
-      @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp) 
+      @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
       return res
     end
   end

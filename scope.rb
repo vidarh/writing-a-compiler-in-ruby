@@ -11,14 +11,14 @@ class GlobalScope
     @globals = Set.new
   end
 
-  def get_arg a
-    return [:global,a] if @globals.member?(a)
-    return [:addr,a]
+  def get_arg(a)
+    return [:global, a] if @globals.member?(a)
+    return [:addr, a]
   end
 end
 
 class FuncScope
-  def initialize func, next_scope = nil
+  def initialize(func, next_scope = nil)
     @func = func
     @next = next_scope
   end
@@ -27,20 +27,20 @@ class FuncScope
     @func ? @func.rest? : false
   end
 
-  def get_arg a
+  def get_arg(a)
     a = a.to_sym
     if @func
       arg = @func.get_arg(a)
       return arg if arg
     end
     return @next.get_arg(a) if @next
-    return [:addr,a]
+    return [:addr, a]
   end
 end
 
 
 class LocalVarScope
-  def initialize locals, next_scope
+  def initialize(locals, next_scope)
     @next = next_scope
     @locals = locals
   end
@@ -49,16 +49,16 @@ class LocalVarScope
     @next ? @next.rest? : false
   end
 
-  def get_arg a
+  def get_arg(a)
     a = a.to_sym
-    return [:lvar,@locals[a] + (rest? ? 1 : 0)] if @locals.include?(a)
+    return [:lvar, @locals[a] + (rest? ? 1 : 0)] if @locals.include?(a)
     return @next.get_arg(a) if @next
-    return [:addr,a] # Shouldn't get here normally
+    return [:addr, a] # Shouldn't get here normally
   end
 end
 
 
-VTableEntry = Struct.new(:name,:realname,:offset,:function)
+VTableEntry = Struct.new(:name, :realname, :offset, :function)
 
 # Need a global list of vtable offsets since
 # we can't usually statically determine what class
@@ -86,9 +86,9 @@ class VTableOffsets
 end
 
 class ClassScope
-  attr_reader :name,:vtable
+  attr_reader :name, :vtable
 
-  def initialize next_scope,name,offsets
+  def initialize(next_scope, name, offsets)
     @next = next_scope
     @name = name
     @vtable = {}
@@ -99,9 +99,9 @@ class ClassScope
     false
   end
 
-  def get_arg a
+  def get_arg(a)
     return @next.get_arg(a) if @next
-    return [:addr,a]
+    return [:addr, a]
   end
 
   def klass_size
@@ -116,7 +116,7 @@ class ClassScope
     return v
   end
 
-  def set_vtable_entry(name,realname,f)
+  def set_vtable_entry(name, realname, f)
     v = add_vtable_entry(name)
     v.realname = realname
     v.function = f

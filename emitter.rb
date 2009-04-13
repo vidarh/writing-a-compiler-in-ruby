@@ -12,7 +12,7 @@ class Emitter
     puts "\t# #{str}"
   end
 
-  def export(label,type=nil)
+  def export(label, type = nil)
     puts ".globl #{label}"
     puts "\t.type\t#{label}, @#{type.to_s}"
   end
@@ -32,8 +32,8 @@ class Emitter
   end
 
   def local_var(aparam)
-    # +2 instead of +1 because %ecx is pushed onto the stack in main, 
-    # In any variadic function we push :numargs from %ebx into -4(%ebp) 
+    # +2 instead of +1 because %ecx is pushed onto the stack in main,
+    # In any variadic function we push :numargs from %ebx into -4(%ebp)
     "-#{PTR_SIZE*(aparam+2)}(%ebp)"
   end
 
@@ -42,16 +42,16 @@ class Emitter
     l
   end
 
-  def local(l=nil)
+  def local(l = nil)
     l = get_local if !l
     label(l)
   end
 
-  def int_value param
+  def int_value(param)
     return "$#{param.to_i}"
   end
 
-  def addr_value param
+  def addr_value(param)
     return "$#{param.to_s}"
   end
 
@@ -59,14 +59,14 @@ class Emitter
     return :eax
   end
 
-  def to_operand_value src
+  def to_operand_value(src)
     return int_value(src) if src.is_a?(Fixnum)
     return "%#{src.to_s}" if src.is_a?(Symbol)
     return src.to_s
   end
 
   # Store "param" in stack slot "i"
-  def save_to_stack param,i
+  def save_to_stack(param, i)
     movl(param,"#{i>0 ? i*4 : ""}(%esp)")
   end
 
@@ -79,10 +79,10 @@ class Emitter
     return :eax
   end
 
-  def load_arg_address(aparam) 
-    leal(local_arg(aparam),:eax) 
+  def load_arg_address(aparam)
+    leal(local_arg(aparam),:eax)
     return :eax
-  end 
+  end
 
   def load_global_var(aparam)
     movl(aparam.to_s,result_value)
@@ -94,11 +94,11 @@ class Emitter
     return :eax
   end
 
-  def save_to_local_var(arg,aparam)
+  def save_to_local_var(arg, aparam)
     movl(arg,local_var(aparam))
   end
 
-  def save_to_arg(arg,aparam)
+  def save_to_arg(arg, aparam)
     movl(arg,local_arg(aparam))
   end
 
@@ -107,7 +107,7 @@ class Emitter
     return :eax
   end
 
-  def load_indirect(arg,reg=:eax)
+  def load_indirect(arg, reg = :eax)
     movl("(#{to_operand_value(arg)})",reg)
     return reg
   end
@@ -117,7 +117,7 @@ class Emitter
     with_stack(args+1) { yield }
   end
 
-  def with_stack(args,numargs=false)
+  def with_stack(args, numargs = false)
     # gcc does 4 bytes regardless of arguments, and then jumps up 16 at a time
     # We will do the same, but assume its tied to pointer size
     adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
@@ -127,7 +127,7 @@ class Emitter
     addl(adj,:esp)
   end
 
-  def save_register reg
+  def save_register(reg)
     @save_register ||= []
     @save_register << [reg,false]
     yield
@@ -137,7 +137,7 @@ class Emitter
     end
   end
 
-  def emit op,*args
+  def emit(op, *args)
     if @save_register && @save_register.size > 0 && reg = @save_register.detect{|r| r[0] == args[1] && r[1] == false}
       puts "\tpushl\t#{to_operand_value(args[1])}"
       reg[1] = true
@@ -149,25 +149,25 @@ class Emitter
     emit(sym,*args)
   end
 
-  def call loc
+  def call(loc)
     if loc.is_a?(Symbol)
       emit(:call,"*"+to_operand_value(loc))
     else
       emit(:call,loc)
     end
   end
-    
-  def string l,str
+
+  def string(l, str)
     local(l)
     emit(".string","\"#{str}\"")
   end
 
-  def bsslong l
+  def bsslong(l)
     label(l)
     emit(".long 0")
   end
 
-  def jmp_on_false(label,op=:eax)
+  def jmp_on_false(label, op = :eax)
     testl(op,op)
     je(label)
   end
@@ -185,7 +185,7 @@ class Emitter
     local(br)
   end
 
-  def func name, save_numargs = false
+  def func(name, save_numargs = false)
     export(name,:function) if name.to_s[0] != ?.
     label(name)
     pushl(:ebp)
@@ -208,7 +208,7 @@ class Emitter
     movl(:esp,:ebp)
     pushl(:ecx)
 
-    yield 
+    yield
 
     popl(:ecx)
     popl(:ebp)

@@ -5,7 +5,8 @@
 # concise style in Ruby
 class Scanner
   attr_reader :col,:lineno
-  def initialize io
+
+  def initialize(io)
     @io = io
     @buf = ""
     @lineno = 1
@@ -24,7 +25,7 @@ class Scanner
     fill
     return @buf[-1]
   end
-    
+
   def get
     fill
     ch = @buf.slice!(-1,1)
@@ -38,7 +39,7 @@ class Scanner
 
   def unget(c)
     if c.is_a?(String)
-      c = c.reverse 
+      c = c.reverse
       @col -= c.length
     else
       @col -= 1
@@ -53,7 +54,7 @@ class Scanner
     buf = ""
     str.each_byte do |s|
       c = peek
-      if !c || c.to_i != s 
+      if !c || c.to_i != s
         unget(buf) if !buf.empty?
         return false
       end
@@ -64,7 +65,7 @@ class Scanner
 
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
   def ws
-    while (c = peek) && [9,10,13,32,?#].member?(c) do 
+    while (c = peek) && [9,10,13,32,?#].member?(c) do
       get
       if c == ?#
         while (c = get) && c != "\n" do end
@@ -74,6 +75,6 @@ class Scanner
 
   # nolfws ::= [\t\r ]*
   def nolfws
-    while (c = peek) && [9,13,32].member?(c) do get; end
+    while (c = peek) && [9, 13, 32].member?(c) do get; end
   end
 end

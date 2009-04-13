@@ -3,7 +3,7 @@ require 'parserbase'
 # Simple Recursive-Descent s-expression parser
 class SEXParser < ParserBase
 
-  def initialize s
+  def initialize(s)
     @s = s # The scanner
   end
 
@@ -22,7 +22,7 @@ class SEXParser < ParserBase
 
   def parse_exp
     ws
-    ret = expect(Atom,Int,Quoted) || parse_sexp
+    ret = expect(Atom, Int, Quoted) || parse_sexp
     ws
     return ret
   end
