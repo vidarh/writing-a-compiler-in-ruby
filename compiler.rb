@@ -16,6 +16,15 @@ DO_AFTER= []
 class Compiler
   attr_reader :global_functions
 
+  # list of all predefined keywords with a corresponding compile-method
+  # call & callm are ignored, since their compile-methods require
+  # a special calling convention
+  @@keywords = [
+                :do, :class, :defun, :if, :lambda,
+                :assign, :while, :index, :let
+               ]
+
+
   def initialize
     @e = Emitter.new
     @global_functions = {}
@@ -68,7 +77,7 @@ class Compiler
     return [:addr, name]
   end
 
-  def compile_ifelse(scope, cond, if_arm, else_arm = nil)
+  def compile_if(scope, cond, if_arm, else_arm = nil)
     compile_exp(scope, cond)
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
@@ -224,18 +233,16 @@ class Compiler
 
   def compile_exp(scope, exp)
     return [:subexpr] if !exp || exp.size == 0
-    return compile_do(scope, *exp.rest) if exp[0] == :do
-    return compile_class(scope, *exp.rest) if (exp[0] == :class)
-    return compile_defun(scope, *exp.rest) if (exp[0] == :defun)
-    return compile_ifelse(scope, *exp.rest) if (exp[0] == :if)
-    return compile_lambda(scope, *exp.rest) if (exp[0] == :lambda)
-    return compile_assign(scope, *exp.rest) if (exp[0] == :assign)
-    return compile_while(scope, *exp.rest) if (exp[0] == :while)
-    return compile_index(scope, *exp.rest) if (exp[0] == :index)
-    return compile_let(scope, *exp.rest) if (exp[0] == :let)
-    return compile_call(scope, exp[1], exp[2]) if (exp[0] == :call)
-    return compile_callm(scope, exp[1], exp[2], exp[3]) if (exp[0] == :callm)
-    return compile_call(scope, exp[0], exp.rest) if (exp.is_a? Array)
+
+    # check if exp is within predefined keywords list
+    if(@@keywords.include?(exp[0]))
+      return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
+    else
+      return compile_call(scope, exp[1], exp[2]) if (exp[0] == :call)
+      return compile_callm(scope, exp[1], exp[2], exp[3]) if (exp[0] == :callm)
+      return compile_call(scope, exp[0], exp.rest) if (exp.is_a? Array)
+    end
+
     STDERR.puts "Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}"
     res = compile_eval_arg(scope, exp[0])
     @e.save_result(res)
