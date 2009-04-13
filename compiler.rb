@@ -94,10 +94,11 @@ class Compiler
     compile_defun(scope, @e.get_local, args,body)
   end
 
-  def compile_eval_arg scope,arg
+  def compile_eval_arg(scope, arg)
     atype, aparam = get_arg(scope, arg)
     return aparam if atype == :int
     return @e.addr_value(aparam) if atype == :strconst
+
     case atype
     when :argaddr
       return @e.load_arg_address(aparam)
@@ -222,7 +223,7 @@ class Compiler
     end
     @classes[name] = cscope
     @global_scope.globals << name
-    compile_exp(scope,[:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size]]])
+    compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size]]])
     @global_constants << name
     exps.each do |e|
       addr = compile_do(cscope, *e)
