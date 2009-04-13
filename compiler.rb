@@ -4,6 +4,7 @@ require 'emitter'
 require 'parser'
 require 'scope'
 require 'function'
+require 'extensions'
 
 require 'set'
 
@@ -50,7 +51,7 @@ class Compiler
 
   def compile_defun(scope, name, args, body)
     if scope.is_a?(ClassScope) # Ugly. Create a default "register_function" or something. Have it return the global name
-      f = Function.new([:self]+args,body) # "self" is "faked" as an argument to class methods.
+      f = Function.new([:self]+args, body) # "self" is "faked" as an argument to class methods.
       @e.comment("method #{name}")
       fname = "__method_#{scope.name}_#{name}"
       scope.set_vtable_entry(name, fname, f)
@@ -115,9 +116,9 @@ class Compiler
       atype, aparam = get_arg(scope, left)
     end
     if atype == :indirect
-      @e.emit(:movl,source,"(%#{aparam})")
+      @e.emit(:movl, source, "(%#{aparam})")
     elsif atype == :global
-      @e.emit(:movl,source,aparam.to_s)
+      @e.emit(:movl, source, aparam.to_s)
     elsif atype == :lvar
       @e.save_to_local_var(source, aparam)
     elsif atype == :arg
@@ -223,18 +224,18 @@ class Compiler
 
   def compile_exp(scope, exp)
     return [:subexpr] if !exp || exp.size == 0
-    return compile_do(scope, *exp[1..-1]) if exp[0] == :do
-    return compile_class(scope, *exp[1..-1]) if (exp[0] == :class)
-    return compile_defun(scope, *exp[1..-1]) if (exp[0] == :defun)
-    return compile_ifelse(scope, *exp[1..-1]) if (exp[0] == :if)
-    return compile_lambda(scope, *exp[1..-1]) if (exp[0] == :lambda)
-    return compile_assign(scope, *exp[1..-1]) if (exp[0] == :assign)
-    return compile_while(scope, *exp[1..-1]) if (exp[0] == :while)
-    return compile_index(scope, *exp[1..-1]) if (exp[0] == :index)
-    return compile_let(scope, *exp[1..-1]) if (exp[0] == :let)
+    return compile_do(scope, *exp.rest) if exp[0] == :do
+    return compile_class(scope, *exp.rest) if (exp[0] == :class)
+    return compile_defun(scope, *exp.rest) if (exp[0] == :defun)
+    return compile_ifelse(scope, *exp.rest) if (exp[0] == :if)
+    return compile_lambda(scope, *exp.rest) if (exp[0] == :lambda)
+    return compile_assign(scope, *exp.rest) if (exp[0] == :assign)
+    return compile_while(scope, *exp.rest) if (exp[0] == :while)
+    return compile_index(scope, *exp.rest) if (exp[0] == :index)
+    return compile_let(scope, *exp.rest) if (exp[0] == :let)
     return compile_call(scope, exp[1], exp[2]) if (exp[0] == :call)
     return compile_callm(scope, exp[1], exp[2], exp[3]) if (exp[0] == :callm)
-    return compile_call(scope, exp[0], exp[1..-1]) if (exp.is_a? Array)
+    return compile_call(scope, exp[0], exp.rest) if (exp.is_a? Array)
     STDERR.puts "Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}"
     res = compile_eval_arg(scope, exp[0])
     @e.save_result(res)
