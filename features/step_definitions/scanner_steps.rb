@@ -1,4 +1,5 @@
-require '../scanner'
+$: << File.expand_path(File.dirname(__FILE__)+"/../..")
+require 'scanner'
 require 'spec/expectations'
 
 Given /^there are two different characters in the stream$/ do
