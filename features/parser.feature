@@ -18,10 +18,22 @@ Feature: Parser
 	  | "foo(1) { bar 1 }"   | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]] | Testing function calls inside a block        |
 	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:index,:bar,0]]]]]| Testing index operator inside a block        |
 	  | "while foo do end"   | [:do, [:while, :foo, [:do]]]                  | while with "do ... end" instead of just "end"      |
+      | "Keywords=Set[1]\nfoo" | [:do,[:assign,:Keywords,[:index,:Set,1]],:foo] | :rp before linefeed should terminate an expression |
+
+    Scenario Outline: Hash syntax
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+    Examples:
+	  | expr                 | tree                                          | notes                                              |
       | "{}"                 | [:do,[:hash]]                                 | Literal hash                                       |
       | "{:a => 1}"          | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash                                       |
+      | "{:a => 1\n}"        | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash with linefeed                         |
+      | "{:a => 1,}"         | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash with trailing comma                   |
+      | "{:a => 1, :b => 2}" | [:do,[:hash,[:pair,:":a",1],[:pair,:"b",2]]]  | Literal hash with two values                       |
       | "vtable = {}"        | [:do,[:assign,:vtable,[:hash]]]               | Literal hash                                       |
-      | "Keywords=Set[1]\nfoo" | [:do,[:assign,:Keywords,[:index,:Set,1]],:foo] | :rp before linefeed should terminate an expression |
+
 
 	Scenario Outline: String interpolation
 		Given the expression <expr>
