@@ -144,12 +144,16 @@ module Tokens
       @s.ws
     end
 
+    attr_reader :lasttoken
+
     def get
+      @lasttoken = @curtoken
       @lastop ? @s.ws : @s.nolfws
       @lastop = false
       res = get_raw
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
       @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
+      @curtoken = res
       return res
     end
   end
