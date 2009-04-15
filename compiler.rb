@@ -272,10 +272,10 @@ end
 s = Scanner.new(STDIN)
 prog = nil
 
-dump = false
-ARGV.each do |opt|
-  dump = true if opt == "--parsetree"
-end
+dump = ARGV.include?("--parsetree")
+
+# Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
+OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite") 
 
 begin
   prog = Parser.new(s).parse

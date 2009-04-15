@@ -6,6 +6,11 @@ module OpPrec
       reset
     end
 
+    @@dont_rewrite = false
+    def self.dont_rewrite
+      @@dont_rewrite = true
+    end
+
     def reset
       @vstack = []
     end
@@ -31,6 +36,10 @@ module OpPrec
 
       la = leftv.is_a?(Array)
       ra = rightv.is_a?(Array)
+
+
+      # Debug option: Output the tree without rewriting.
+      return @vstack << [o.sym, leftv, rightv] if @@dont_rewrite
 
       # Rewrite rules to simplify the tree
       if ra and rightv[0] == :flatten
