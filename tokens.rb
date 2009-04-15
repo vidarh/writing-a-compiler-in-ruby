@@ -140,6 +140,9 @@ module Tokens
       end
     end
 
+    def ws
+      @s.ws
+    end
 
     def get
       @lastop ? @s.ws : @s.nolfws

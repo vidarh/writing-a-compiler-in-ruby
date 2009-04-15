@@ -91,6 +91,7 @@ module OpPrec
         end
         possible_func = !op && !token.is_a?(Numeric)
         lastlp = false
+        src.ws if lp_on_entry
       end
 
       if opstate == :prefix && ostack.size && ostack.last && ostack.last.type == :prefix
