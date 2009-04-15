@@ -28,7 +28,7 @@ Operators = {
   "#block#"  => Oper.new(1, :block, :infix),
   "#flatten#" => Oper.new(1, :flatten, :infix),
 
-  ","  => Oper.new(4,  :comma,  :infix),
+  ","  => Oper.new(4,  :comma,  :infix,2,1),
   "=>"  => Oper.new(5, :pair,   :infix),
 
   "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
