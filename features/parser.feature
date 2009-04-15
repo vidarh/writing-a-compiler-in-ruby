@@ -33,6 +33,7 @@ Feature: Parser
       | "{:a => 1,}"         | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash with trailing comma                   |
       | "{:a => 1, :b => 2}" | [:do,[:hash,[:pair,:":a",1],[:pair,:":b",2]]] | Literal hash with two values                       |
       | "vtable = {}"        | [:do,[:assign,:vtable,[:hash]]]               | Literal hash                                       |
+      | "foo = {:a => 1,}"   | [:do,[:assign,:foo,[:hash,[:pair,:":a",1]]]]                 | Literal hash with trailing comma    |
 
 
 	Scenario Outline: String interpolation
