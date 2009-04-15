@@ -19,6 +19,7 @@ module OpPrec
       return r if !r.is_a?(Array)
       return r if r[0] != :comma
       return r[1..2] if !r[2].is_a?(Array) or r[2][0] == :array
+      return [r[1], flatten(r[2])] if r[2][0] != :comma
       return [r[1]] + flatten(r[2])
     end
 
@@ -50,10 +51,12 @@ module OpPrec
         @vstack << leftv + [flatten(rightv)]
       elsif ra and rightv[0] == :array and o.sym == :index
         @vstack << [o.sym, leftv].compact + flatten(rightv[1..-1])
-      elsif ra and rightv[0] == :comma and o.sym == :array
+      elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
         @vstack << [o.sym, leftv].compact + flatten(rightv)
+      elsif ra and rightv[0] == :comma and o.sym != :comma
+        @vstack << [o.sym, leftv, flatten(rightv)].compact
       else
-        @vstack << [o.sym, flatten(leftv), flatten(rightv)].compact
+        @vstack << [o.sym, flatten(leftv), rightv].compact
       end
       return
     end

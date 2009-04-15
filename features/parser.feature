@@ -31,7 +31,7 @@ Feature: Parser
       | "{:a => 1}"          | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash                                       |
       | "{:a => 1\n}"        | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash with linefeed                         |
       | "{:a => 1,}"         | [:do,[:hash,[:pair,:":a",1]]]                 | Literal hash with trailing comma                   |
-      | "{:a => 1, :b => 2}" | [:do,[:hash,[:pair,:":a",1],[:pair,:"b",2]]]  | Literal hash with two values                       |
+      | "{:a => 1, :b => 2}" | [:do,[:hash,[:pair,:":a",1],[:pair,:":b",2]]] | Literal hash with two values                       |
       | "vtable = {}"        | [:do,[:assign,:vtable,[:hash]]]               | Literal hash                                       |
 
 
