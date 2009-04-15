@@ -2,12 +2,6 @@
 require 'pp'
 require 'treeoutput'
 
-# FIXME:
-#
-# Handle symbols that are valid operators but that are not valid in certain circumstances:
-#  '}' should cause a return if no '{' has been seen, and should be unget.
-#  ',' should cause a return if :call isn't on the opstack?
-
 module OpPrec
   class ShuntingYard
     def initialize(output, tokenizer, parser)
@@ -49,6 +43,13 @@ module OpPrec
       src.each do |token,op|
         if op
           op = op[opstate] if op.is_a?(Hash)
+
+          # This makes me feel dirty, but it reflects the grammar:
+          # - Inside a literal hash, "," outside of any type of parentheses binds looser than a function call,
+          #   while outside of it, it binds tighter... Yay for context sensitive precedence rules.
+          # This whole module needs a cleanup
+          op = Operators["#,#"] if op == Operators[","] and ostack.first and ostack.first == Operators["#hash#"]
+
           if op.sym == :hash_or_block || op.sym == :block
             if possible_func || ostack.last == opcall || ostack.last == opcallm
               @out.value([]) if ostack.last != opcall

@@ -22,13 +22,14 @@ Operators = {
   "#index#"  => Oper.new(100,  :index,  :infix),
 
   # "Fake" operator for function calls
-  "#call#"   => Oper.new(1, :call, :infix),
+  "#call#"   => Oper.new(2, :call, :prefix,2,1),
 
   # "Fake" operator injected for blocks.
   "#block#"  => Oper.new(1, :block, :infix),
   "#flatten#" => Oper.new(1, :flatten, :infix),
 
-  ","  => Oper.new(4,  :comma,  :infix,2,1),
+  ","  => Oper.new(3,  :comma,  :infix,2,1),
+  "#,#"  => Oper.new(1,  :comma,  :infix,2,1),
   "=>"  => Oper.new(5, :pair,   :infix),
 
   "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
