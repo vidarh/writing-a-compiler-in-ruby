@@ -136,3 +136,4 @@ Feature: Shunting Yard
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
 	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:block]]]|
+      | "&foo"              | [:to_block, :foo]                          |

@@ -56,6 +56,8 @@ Operators = {
   "-"  => Oper.new(10, :sub,    :infix),
   "!"  => Oper.new(10, :not,    :prefix),
 
+  "&"  => Oper.new(5,  :to_block, :prefix), # This will need to be treated like "*" when I add bitwise and.
+
   "*"  => {
     :infix_or_postfix => Oper.new(20, :mul,    :infix),
     :prefix => Oper.new(100, :splat, :prefix)
