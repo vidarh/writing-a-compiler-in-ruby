@@ -33,8 +33,8 @@ Operators = {
   "=>"  => Oper.new(5, :pair,   :infix),
 
   "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
-  "or" => Oper.new(5, :or, :infix),
-  "and" => Oper.new(5, :and, :infix),
+  "or" => Oper.new(1, :or, :infix),
+  "and" => Oper.new(1, :and, :infix),
   "&&" => Oper.new(6, :and, :infix), # FIXME: Check pri - probably not right.
   "||" => Oper.new(6, :or, :infix), # FIXME: Check pri - probably not right.
   ".." => Oper.new(5, :range, :infix), # FIXME: Check pri - probably not right.
