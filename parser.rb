@@ -27,7 +27,7 @@ class Parser < ParserBase
     @s.nolfws
     if expect("=")
       @s.nolfws
-      parse_subexp
+      @shunting.parse([","])
       # FIXME: Store
     end
 

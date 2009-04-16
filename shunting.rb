@@ -31,7 +31,7 @@ module OpPrec
       @parser.parse_block(start)
     end
 
-    def shunt(src, ostack = [])
+    def shunt(src, ostack = [], inhibit = [])
       possible_func = false     # was the last token a possible function name?
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
@@ -41,6 +41,10 @@ module OpPrec
       opcallm = Operators["."]
       lastlp = true
       src.each do |token,op|
+        if inhibit.include?(token)
+          src.unget(token)
+          break
+        end
         if op
           op = op[opstate] if op.is_a?(Hash)
 
@@ -111,11 +115,11 @@ module OpPrec
       raise "Syntax error. #{ostack.inspect}"
     end
 
-    def parse
+    def parse(inhibit=[])
       out = @out.dup
       out.reset
       tmp = self.class.new(out, @tokenizer,@parser)
-      res = tmp.shunt(@tokenizer)
+      res = tmp.shunt(@tokenizer,[],inhibit)
       res ? res.result : nil
     end
   end
