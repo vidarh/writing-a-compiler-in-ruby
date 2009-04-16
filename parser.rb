@@ -27,7 +27,7 @@ class Parser < ParserBase
     @s.nolfws
     if expect("=")
       @s.nolfws
-      expect(Atom)
+      parse_subexp
       # FIXME: Store
     end
 
