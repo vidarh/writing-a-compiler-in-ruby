@@ -68,4 +68,5 @@ Feature: Parser
 	Examples:
 	  | expr                          | tree                                          | notes                                         |
 	  | "case foo\nwhen a\nend"       | [:do, [:case, :foo, [[:when, :a, []]]]]       | Basic case structure                          |
+      | "begin\nputs 'foo'\nrescue Exception => e\nend\n" |  [:do, [:block, [], [[:call, :puts, "foo"]], [:rescue, :Exception, :e, []]]] | begin/rescue |
 

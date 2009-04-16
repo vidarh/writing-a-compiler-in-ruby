@@ -4,7 +4,7 @@ require 'set'
 
 module Tokens
 
-  Keywords = Set[:def, :end, :if, :require, :include]
+  Keywords = Set[:def, :end, :if, :require, :include, :begin, :rescue]
 
   class Atom
     def self.expect(s)

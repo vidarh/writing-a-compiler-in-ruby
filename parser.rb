@@ -114,6 +114,32 @@ class Parser < ParserBase
     return [:while, cond, [:do]+exps]
   end
 
+  # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
+  def parse_rescue
+    expect("rescue") or return
+    @s.nolfws
+    if c = parse_name
+      @s.nolfws
+      if expect("=>")
+        ws
+        name = parse_name or expected("variable to hold exception") 
+      end
+    end
+    ws
+    exps = zero_or_more(:defexp)
+    return [:rescue, c, name, exps]
+  end
+
+  # begin ::= "begin" ws* defexp* rescue? "end"
+  def parse_begin
+    expect("begin") or return
+    ws
+    exps = zero_or_more(:defexp)
+    rescue_ = parse_rescue
+    expect("end") or expected("expression or 'end' for open 'begin' block")
+    return [:block, [], exps, rescue_]
+  end
+
   # subexp ::= exp nolfws* ("if" ws* condition)?
   def parse_subexp
     exp = @shunting.parse or return nil
@@ -129,10 +155,10 @@ class Parser < ParserBase
 
   # Later on "defexp" will allow anything other than "def"
   # and "class".
-  # defexp ::= sexp | while | case | if | subexp
+  # defexp ::= sexp | while | begin | case | if | subexp
   def parse_defexp
     ws
-    ret = parse_sexp || parse_while || parse_case || parse_if || parse_subexp
+    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
     ws; expect(";"); ws
     ret
   end
