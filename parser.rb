@@ -140,17 +140,11 @@ class Parser < ParserBase
     return [:block, [], exps, rescue_]
   end
 
-  # subexp ::= exp nolfws* ("if" ws* condition)?
+  # subexp ::= exp nolfws*
   def parse_subexp
-    exp = @shunting.parse or return nil
+    ret = @shunting.parse
     @s.nolfws
-    if expect("if")
-      ws
-      cond = parse_condition or expected("condition for 'if' statement modifier")
-      @s.nolfws; expect(";")
-      exp = [:if, cond, exp]
-    end
-    return exp
+    ret
   end
 
   # Later on "defexp" will allow anything other than "def"
@@ -159,6 +153,16 @@ class Parser < ParserBase
   def parse_defexp
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
+    @s.nolfws
+    if sym = expect("if") || expect("while")
+      # FIXME: This is likely the wrong way to go in some situations involving blocks 
+      # that have different semantics - parser may need a way of distinguishing them
+      # from "normal" :if/:while
+      ws
+      cond = parse_condition or expected("condition for '#{sym.to_s}' statement modifier")
+      @s.nolfws; expect(";")
+      ret = [sym.to_sym, cond, ret]
+    end
     ws; expect(";"); ws
     ret
   end
@@ -194,7 +198,6 @@ class Parser < ParserBase
     return [:block] if args.size == 0 and !exps[1] || exps[1].size == 0
     [:block, args, exps[1]]
   end
-
 
   # def ::= "def" ws* name args? block_body
   def parse_def
