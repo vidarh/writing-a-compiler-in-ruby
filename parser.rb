@@ -17,10 +17,10 @@ class Parser < ParserBase
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist
-    rest = expect("*")
-    ws if rest
+    prefix = expect("*") || expect("&")
+    ws if prefix
     if !(name = parse_name)
-      expected("argument name following '*'") if rest
+      expected("argument name following '#{prefix}'") if prefix
       return
     end
 
@@ -31,7 +31,9 @@ class Parser < ParserBase
       # FIXME: Store
     end
 
-    args = [(rest ? [name.to_sym, :rest] : name.to_sym)]
+    if prefix then args = [[name.to_sym, prefix == "*" ? :rest : :block]]
+    else args = [name.to_sym]
+    end
     @s.nolfws
     expect(",") or return args
     ws

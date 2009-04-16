@@ -60,6 +60,7 @@ Feature: Parser
 	  | "def foo(bar=nil)\nend\n"     | [:do, [:defun, :foo, [:bar], [:let, []]]]    | Default value for arguments                   |
 	  | "def foo(bar = nil)\nend\n"   | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
 	  | "def foo(bar = [])\nend\n"    | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
+	  | "def foo(&bar)\nend\n  "      | [:do, [:defun, :foo, [[:bar,:block]], [:let, []]]] | Block as named argument                  |
 	  | "def self.foo\nend\n"         | [:do, [:defun, [:self,:foo], [], [:let, []]]] | Class method etc.                             |
 
 	Scenario Outline: Control structures
