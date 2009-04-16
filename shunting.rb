@@ -66,7 +66,7 @@ module OpPrec
           else
             if op.type == :rp
               @out.value(nil) if lastlp
-              @out.value(nil) if src.lasttoken and src.lasttoken[0] == ","
+              @out.value(nil) if src.lasttoken and src.lasttoken[1] == Operators[","]
               src.unget(token) if !lp_on_entry
             end
             reduce(ostack, op)
