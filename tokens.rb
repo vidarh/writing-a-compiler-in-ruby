@@ -94,7 +94,7 @@ module Tokens
         return [@s.expect(Quoted), nil]
       when ?0 .. ?9
         return [@s.expect(Int), nil]
-      when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:
+      when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_
         buf = @s.expect(Atom)
         if @keywords.member?(buf)
           @s.unget(buf.to_s)
