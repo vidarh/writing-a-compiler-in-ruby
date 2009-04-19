@@ -10,7 +10,7 @@ Feature: Shunting Yard
 
 	Examples:
 	  | expr                 | tree                                 |
-      | "__FILE__"           | __FILE__                             |
+      | "__FILE__"           | :__FILE__                            |
 	  | "1 + 2"              | [:add,1,2]                           |
 	  | "1 - 2"              | [:sub,1,2]				            |
       | "1 + 2 * 3"          | [:add,1,[:mul,2,3]]                  |
