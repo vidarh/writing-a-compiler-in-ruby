@@ -265,7 +265,7 @@ class Parser < ParserBase
     ws
 
     if q.is_a?(Array) || @opts[:norequire]
-      STDERR.puts "WARNING: NOT processing dynamic 'require'"
+      STDERR.puts "WARNING: NOT processing require for #{q.inspect}"
       return [:require, q]
     end
 
