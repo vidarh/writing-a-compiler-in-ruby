@@ -50,6 +50,7 @@ Feature: Parser
 	  | expr                 | tree                                          | notes                                              |
 	  | '"#{1}"'             | [:call,:to_s,1]                               | Basic case                                         |
       | '"#{""}"'            | [:call,:to_s,[""]]                            | Interpolated expression containing a string        |
+      | '"Parsing #{"Ruby #{"is #{ %(hard)}"}"}."' | "Parsing Ruby is hard"      | Courtesy of http://www.jbarnette.com/2009/01/22/parsing-ruby-is-hard.html |
 
 
 	Scenario Outline: Function definition
