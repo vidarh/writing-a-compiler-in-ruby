@@ -237,7 +237,7 @@ class Parser < ParserBase
     return [type.to_sym, name, exps]
   end
 
-  # require ::= "require" ws* quoted
+  # require ::= "require" ws* subexp
   def parse_require
     expect("require") or return
     ws
