@@ -4,6 +4,8 @@ require 'utils'
 require 'shunting'
 
 class Parser < ParserBase
+  @@requires = {}
+
   def initialize(s)
     @s = s
     @sexp = SEXParser.new(s)
@@ -156,7 +158,7 @@ class Parser < ParserBase
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
     nolfws
-    if sym = expect("if") || expect("while")
+    if sym = expect("if") || expect("while") || expect("rescue")
       # FIXME: This is likely the wrong way to go in some situations involving blocks 
       # that have different semantics - parser may need a way of distinguishing them
       # from "normal" :if/:while
@@ -243,7 +245,26 @@ class Parser < ParserBase
     ws
     q = parse_subexp or expected("name of source to require")
     ws
-    return [:require, q]
+
+    if q.is_a?(Array)
+      STDERR.puts "WARNING: NOT processing dynamic 'require'"
+      return [:require, q]
+    end
+
+    # Statically including a require'd file
+    #
+    # Not sure if I think this really belong in the parser,
+    # as opposed to being handled as post-processing later -
+    # may refactor this as a separate tree-rewriting step later.
+    return @@requires[q] if @@requires[q]
+    STDERR.puts "NOTICE: Statically requiring '#{q}'"
+    # FIXME: Handle include path
+    paths = [q,"#{q}.rb","lib/#{q}","lib/#{q}.rb"]
+    f= nil
+    paths.detect { |path| f = File.open(path) rescue nil }
+    raise "Unable to load '#{q}'" if !f
+    s = Scanner.new(f)
+    @@requires[q] = Parser.new(s).parse
   end
 
   # include ::= "include" ws* name w
