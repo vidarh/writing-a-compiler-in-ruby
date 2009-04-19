@@ -20,6 +20,9 @@ Feature: Parser
 	  | "while foo do end"   | [:do, [:while, :foo, [:do]]]                  | while with "do ... end" instead of just "end"      |
       | "Keywords=Set[1]\nfoo" | [:do,[:assign,:Keywords,[:index,:Set,1]],:foo] | :rp before linefeed should terminate an expression |
 	  | "expect(',') or return args" | [:do,[:or,[:call,:expect,","],[:return,:args]]] | Priority of "or" vs. call/return         |
+      | "require File.dirname() + '/../spec_helper'" | [] | |
+      | "File.dirname() + '/../spec_helper'" | [] | |
+      | "dirname() + '/../spec_helper'" | [:do, [:add,[:call, :dirname],"/../spec_helper"]] | |
 
     Scenario Outline: Hash syntax
 		Given the expression <expr>
