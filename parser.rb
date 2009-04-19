@@ -6,7 +6,7 @@ require 'shunting'
 class Parser < ParserBase
   @@requires = {}
 
-  def initialize(s, opts)
+  def initialize(s, opts = {})
     @s = s
     @opts = opts
     @sexp = SEXParser.new(s)
@@ -292,8 +292,8 @@ class Parser < ParserBase
   # program ::= exp* ws*
   def parse(require_core = true)
     res = [:do]
-    res << self.require("lib/core/core.rb") if require_core
-    res << zero_or_more(:exp)
+    res += self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
+    res += zero_or_more(:exp)
     ws
     raise "Expected EOF" if @s.peek
     return res

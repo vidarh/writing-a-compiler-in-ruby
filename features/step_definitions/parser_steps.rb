@@ -11,7 +11,7 @@ require 'spec/expectations'
 #OpPrec::TreeOutput.dont_rewrite
 
 When /^I parse it with the full parser$/ do
-  @parser = Parser.new(@scanner)
+  @parser = Parser.new(@scanner, {:norequire => true})
   @tree = @parser.parse
 end
 
