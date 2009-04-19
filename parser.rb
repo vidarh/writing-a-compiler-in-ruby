@@ -6,8 +6,9 @@ require 'shunting'
 class Parser < ParserBase
   @@requires = {}
 
-  def initialize(s)
+  def initialize(s, opts)
     @s = s
+    @opts = opts
     @sexp = SEXParser.new(s)
     @shunting = OpPrec::parser(s, self)
   end
@@ -239,18 +240,7 @@ class Parser < ParserBase
     return [type.to_sym, name, exps]
   end
 
-  # require ::= "require" ws* subexp
-  def parse_require
-    expect("require") or return
-    ws
-    q = parse_subexp or expected("name of source to require")
-    ws
-
-    if q.is_a?(Array)
-      STDERR.puts "WARNING: NOT processing dynamic 'require'"
-      return [:require, q]
-    end
-
+  def require q
     # Statically including a require'd file
     #
     # Not sure if I think this really belong in the parser,
@@ -264,7 +254,22 @@ class Parser < ParserBase
     paths.detect { |path| f = File.open(path) rescue nil }
     raise "Unable to load '#{q}'" if !f
     s = Scanner.new(f)
-    @@requires[q] = Parser.new(s).parse
+    @@requires[q] = Parser.new(s,@opts).parse(false)
+  end
+
+  # require ::= "require" ws* subexp
+  def parse_require
+    expect("require") or return
+    ws
+    q = parse_subexp or expected("name of source to require")
+    ws
+
+    if q.is_a?(Array) || @opts[:norequire]
+      STDERR.puts "WARNING: NOT processing dynamic 'require'"
+      return [:require, q]
+    end
+
+    self.require(q)
   end
 
   # include ::= "include" ws* name w
@@ -279,14 +284,16 @@ class Parser < ParserBase
   # exp ::= ws* (class | def | sexp)
   def parse_exp
     ws
-    ret = parse_class || parse_def || parse_defexp || parse_require || parse_include
+    ret = parse_class || parse_def || parse_require || parse_include || parse_defexp
     ws; expect(";"); ws
     ret
   end
 
   # program ::= exp* ws*
-  def parse
-    res = [:do] + zero_or_more(:exp)
+  def parse(require_core = true)
+    res = [:do]
+    res << self.require("lib/core/core.rb") if require_core
+    res << zero_or_more(:exp)
     ws
     raise "Expected EOF" if @s.peek
     return res

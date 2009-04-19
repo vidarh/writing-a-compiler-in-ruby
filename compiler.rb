@@ -273,12 +273,14 @@ s = Scanner.new(STDIN)
 prog = nil
 
 dump = ARGV.include?("--parsetree")
+norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
 
 # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
 OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite") 
 
 begin
-  prog = Parser.new(s).parse
+  parser = Parser.new(s, {:norequire => norequire})
+  prog = parser.parse
 rescue Exception => e
   STDERR.puts "#{e.message}"
   STDERR.puts "Failed at line #{s.lineno} / col #{s.col}  before:\n"
