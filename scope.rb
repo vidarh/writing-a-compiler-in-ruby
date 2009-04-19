@@ -109,6 +109,13 @@ class ClassScope
   end
 
   def add_vtable_entry(name)
+    # FIXME: If "name" is an array, the first element specified the
+    # class object to add the vtable entry to. If it is "self"
+    # it means adding the entry to the meta class (and possibly creating
+    # the meta class). If it is not "self" we need to generate code
+    # for adding this method, as the class object may be dynamically
+    # determined. The vtable offset would be determined based on name[1] in
+    # this case.
     @vtable[name] ||= VTableEntry.new
     v = @vtable[name]
     v.name = name.to_s
