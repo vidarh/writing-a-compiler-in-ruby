@@ -241,7 +241,7 @@ class Parser < ParserBase
   def parse_require
     expect("require") or return
     ws
-    q = expect(Quoted) or expected("name of source to require")
+    q = parse_subexp or expected("name of source to require")
     ws
     return [:require, q]
   end
