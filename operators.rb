@@ -22,13 +22,13 @@ Operators = {
   "#index#"  => Oper.new(100,  :index,  :infix),
 
   # "Fake" operator for function calls
-  "#call#"   => Oper.new(2, :call, :prefix,2,1),
+  "#call#"   => Oper.new(99, :call, :prefix,2,1),
 
   # "Fake" operator injected for blocks.
   "#block#"  => Oper.new(1, :block, :infix),
   "#flatten#" => Oper.new(1, :flatten, :infix),
 
-  ","  => Oper.new(3,  :comma,  :infix,2,1),
+  ","  => Oper.new(99,  :comma,  :infix,2,1),
   "#,#"  => Oper.new(1,  :comma,  :infix,2,1),
   "=>"  => Oper.new(5, :pair,   :infix),
 

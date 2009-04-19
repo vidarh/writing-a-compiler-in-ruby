@@ -49,10 +49,10 @@ module OpPrec
           op = op[opstate] if op.is_a?(Hash)
 
           # This makes me feel dirty, but it reflects the grammar:
-          # - Inside a literal hash, "," outside of any type of parentheses binds looser than a function call,
+          # - Inside a literal hash, or function call arguments "," outside of any type of parentheses binds looser than a function call,
           #   while outside of it, it binds tighter... Yay for context sensitive precedence rules.
           # This whole module needs a cleanup
-          op = Operators["#,#"] if op == Operators[","] and ostack.first and ostack.first == Operators["#hash#"]
+          op = Operators["#,#"] if op == Operators[","] and lp_on_entry
 
           if op.sym == :hash_or_block || op.sym == :block
             if possible_func || ostack.last == opcall || ostack.last == opcallm
