@@ -24,9 +24,9 @@ class Parser < ParserBase
       return
     end
 
-    @s.nolfws
+    nolfws
     if expect("=")
-      @s.nolfws
+      nolfws
       @shunting.parse([","])
       # FIXME: Store
     end
@@ -34,7 +34,7 @@ class Parser < ParserBase
     if prefix then args = [[name.to_sym, prefix == "*" ? :rest : :block]]
     else args = [name.to_sym]
     end
-    @s.nolfws
+    nolfws
     expect(",") or return args
     ws
     more = parse_arglist or expected("argument")
@@ -43,7 +43,7 @@ class Parser < ParserBase
 
   # args ::= nolfws* ( "(" ws* arglist ws* ")" | arglist )
   def parse_args
-    @s.nolfws
+    nolfws
     if expect("(")
       ws; args = parse_arglist; ws
       expect(")") or expected("')'")
@@ -68,7 +68,7 @@ class Parser < ParserBase
     expect("if") or return
     ws
     cond = parse_condition or expected("condition for 'if' block")
-    @s.nolfws; expect(";")
+    nolfws; expect(";")
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'if'")
     return [:if, cond, [:do]+exps]
@@ -79,7 +79,7 @@ class Parser < ParserBase
     expect("when") or return
     ws
     cond = parse_condition or expect("condition for 'when'")
-    @s.nolfws
+    nolfws
     expect(":")
     ws
     exps = zero_or_more(:defexp)
@@ -109,8 +109,8 @@ class Parser < ParserBase
     expect("while") or return
     ws
     cond = parse_condition or expected("condition for 'while' block")
-    @s.nolfws; expect(";") or expect("do")
-    @s.nolfws;
+    nolfws; expect(";") or expect("do")
+    nolfws;
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
     return [:while, cond, [:do]+exps]
@@ -119,9 +119,9 @@ class Parser < ParserBase
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
   def parse_rescue
     expect("rescue") or return
-    @s.nolfws
+    nolfws
     if c = parse_name
-      @s.nolfws
+      nolfws
       if expect("=>")
         ws
         name = parse_name or expected("variable to hold exception") 
@@ -145,7 +145,7 @@ class Parser < ParserBase
   # subexp ::= exp nolfws*
   def parse_subexp
     ret = @shunting.parse
-    @s.nolfws
+    nolfws
     ret
   end
 
@@ -155,14 +155,14 @@ class Parser < ParserBase
   def parse_defexp
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
-    @s.nolfws
+    nolfws
     if sym = expect("if") || expect("while")
       # FIXME: This is likely the wrong way to go in some situations involving blocks 
       # that have different semantics - parser may need a way of distinguishing them
       # from "normal" :if/:while
       ws
       cond = parse_condition or expected("condition for '#{sym.to_s}' statement modifier")
-      @s.nolfws; expect(";")
+      nolfws; expect(";")
       ret = [sym.to_sym, cond, ret]
     end
     ws; expect(";"); ws

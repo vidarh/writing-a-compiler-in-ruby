@@ -23,6 +23,10 @@ class ParserBase
     raise "Error: Expected #{name}"
   end
 
+  def nolfws
+    @s.nolfws
+  end
+
   def ws
     @s.ws
   end
