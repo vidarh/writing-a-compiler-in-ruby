@@ -180,7 +180,7 @@ class Compiler
 
   def compile_index(scope, arr, index)
     source = compile_eval_arg(scope, arr)
-    @e.movl(source,:edx)
+    @e.movl(source, :edx)
     source = compile_eval_arg(scope, index)
     @e.save_result(source)
     @e.sall(2, :eax)
@@ -276,7 +276,7 @@ dump = ARGV.include?("--parsetree")
 norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
 
 # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
-OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite") 
+OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
 
 begin
   parser = Parser.new(s, {:norequire => norequire})
