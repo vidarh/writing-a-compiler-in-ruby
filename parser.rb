@@ -6,11 +6,11 @@ require 'shunting'
 class Parser < ParserBase
   @@requires = {}
 
-  def initialize(s, opts = {})
-    @s = s
+  def initialize(scanner, opts = {})
+    super(scanner)
     @opts = opts
-    @sexp = SEXParser.new(s)
-    @shunting = OpPrec::parser(s, self)
+    @sexp = SEXParser.new(scanner)
+    @shunting = OpPrec::parser(scanner, self)
   end
 
   # name ::= atom
@@ -127,7 +127,7 @@ class Parser < ParserBase
       nolfws
       if expect("=>")
         ws
-        name = parse_name or expected("variable to hold exception") 
+        name = parse_name or expected("variable to hold exception")
       end
     end
     ws
@@ -160,7 +160,7 @@ class Parser < ParserBase
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
     nolfws
     if sym = expect("if") || expect("while") || expect("rescue")
-      # FIXME: This is likely the wrong way to go in some situations involving blocks 
+      # FIXME: This is likely the wrong way to go in some situations involving blocks
       # that have different semantics - parser may need a way of distinguishing them
       # from "normal" :if/:while
       ws
@@ -295,7 +295,7 @@ class Parser < ParserBase
     res += self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
     res += zero_or_more(:exp)
     ws
-    raise "Expected EOF" if @s.peek
+    raise "Expected EOF" if scanner.peek
     return res
   end
 end
