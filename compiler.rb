@@ -142,7 +142,7 @@ class Compiler
         @e.load_indirect(ret, reg)
         off = @vtableoffsets.get_offset(method)
         raise "No offset for #{method}, and we don't yet implement send" if !off
-        @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_vale)
+        @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
         @e.call(@e.result_value)
       end
     end
