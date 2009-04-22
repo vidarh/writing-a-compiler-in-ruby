@@ -123,7 +123,7 @@ class Compiler
   # the if and else arm.
   # If no else arm is given, it defaults to nil.
   def compile_if(scope, cond, if_arm, else_arm = nil)
-    compile_exp(scope, cond)
+    compile_eval_arg(scope, cond)
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
     @e.jmp_on_false(l_else_arm)
@@ -265,6 +265,8 @@ class Compiler
   # that belong to the class.
   def compile_class(scope, name, *exps)
     @e.comment("=== class #{name} ===")
+    # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If 
+    # not we are unable to determine the correct #klass_size (see below).
     cscope = ClassScope.new(scope, name, @vtableoffsets)
     # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)
     # FIXME: Fill in all unused vtable slots with __method_missing
