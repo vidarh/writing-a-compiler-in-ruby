@@ -105,7 +105,7 @@ class Compiler
     when :addr
       return @e.load_address(aparam)
     when :indirect
-      return @e.load_indirect(arg)
+      return @e.load_indirect(aparam)
     when :arg
       return @e.load_arg(aparam)
     when :lvar
