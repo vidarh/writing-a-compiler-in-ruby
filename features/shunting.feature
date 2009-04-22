@@ -46,6 +46,7 @@ Feature: Shunting Yard
       | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
       | "foo(1 + arg)"       | [:call,:foo,[:add, 1, :arg]]             |
       | "foo(1 * arg,bar)"   | [:call,:foo,[[:mul, 1, :arg],:bar]]      |
+      | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]    |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>
