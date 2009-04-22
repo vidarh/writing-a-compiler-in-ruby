@@ -80,7 +80,7 @@ class Compiler
   end
 
   def compile_if(scope, cond, if_arm, else_arm = nil)
-    compile_exp(scope, cond)
+    compile_eval_arg(scope, cond)
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
     @e.jmp_on_false(l_else_arm)
