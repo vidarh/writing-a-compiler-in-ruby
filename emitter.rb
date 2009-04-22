@@ -128,6 +128,8 @@ class Emitter
       save_to_local_var(source, dest)
     when :arg
       save_to_arg(source, dest)
+    when :addr
+      save_to_addr(source,dest)
     else
       return false
     end
@@ -189,6 +191,10 @@ class Emitter
 
   def save_to_arg(arg, aparam)
     movl(arg,local_arg(aparam))
+  end
+
+  def save_to_address(src,dest)
+    movl(src,addr_value(label))
   end
 
   def load_address(label)
