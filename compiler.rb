@@ -128,6 +128,7 @@ class Compiler
   def compile_callm(scope, ob, method, args)
     @e.comment("callm #{ob.to_s}.#{method.to_s}")
     args ||= []
+    args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
     @e.with_stack(args.length+1, true) do
       ret = compile_eval_arg(scope, ob)
       @e.save_register(ret) do
