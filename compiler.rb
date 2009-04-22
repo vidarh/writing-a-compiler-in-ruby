@@ -134,7 +134,7 @@ class Compiler
     elsif atype == :arg
       @e.save_to_arg(source, aparam)
     else
-      raise "Expected an argument on left hand side of assignment - got #{atype.to_s}"
+      raise "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left}, right: #{right})"
     end
     return [:subexpr]
   end
