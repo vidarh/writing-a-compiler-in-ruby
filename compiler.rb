@@ -65,10 +65,12 @@ class Compiler
       fname = "__method_#{scope.name}_#{name}"
       scope.set_vtable_entry(name, fname, f)
       @e.load_address(fname)
-      @e.movl(scope.name.to_s, :edx)
-      v = scope.vtable[name]
-      @e.addl(v.offset*Emitter::PTR_SIZE, :edx) if v.offset > 0
-      @e.movl(@e.result_value, "(%edx)")
+      @e.with_register do |reg|
+        @e.movl(scope.name.to_s, reg)
+        v = scope.vtable[name]
+        @e.addl(v.offset*Emitter::PTR_SIZE, reg) if v.offset > 0
+        @e.save_to_indirect(@e.result_value,reg)
+      end
       name = fname
     else
       f = Function.new(args, body)
@@ -135,11 +137,13 @@ class Compiler
           @e.save_to_stack(param, i+1)
         end
       end
-      reg = @e.load_indirect(ret, :edx)
-      off = @vtableoffsets.get_offset(method)
-      raise "No offset for #{method}, and we don't yet implement send" if !off
-      @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", :eax)
-      @e.call(:eax)
+      @e.with_register do |reg|
+        @e.load_indirect(ret, reg)
+        off = @vtableoffsets.get_offset(method)
+        raise "No offset for #{method}, and we don't yet implement send" if !off
+        @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_vale)
+        @e.call(@e.result_value)
+      end
     end
     @e.comment("callm #{ob.to_s}.#{method.to_s} END")
     return [:subexpr]
@@ -152,12 +156,15 @@ class Compiler
 
   def compile_index(scope, arr, index)
     source = compile_eval_arg(scope, arr)
-    @e.movl(source,:edx)
-    source = compile_eval_arg(scope, index)
-    @e.save_result(source)
-    @e.sall(2, :eax)
-    @e.addl(:eax, :edx)
-    return [:indirect, :edx]
+    reg = nil #This is needed to retain |reg|
+    @e.with_register do |reg|
+      @e.movl(source,reg)
+      source = compile_eval_arg(scope, index)
+      @e.save_result(source)
+      @e.sall(2, @e.result_value)
+      @e.addl(@e.result_value,reg)
+    end
+    return [:indirect, reg]
   end
 
   def compile_while(scope, cond, body)

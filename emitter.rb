@@ -148,6 +148,10 @@ class Emitter
     return :eax
   end
 
+  def save_to_indirect(src,dest)
+    movl(src,"(%#{dest.to_s})")
+  end
+
   def load_indirect(arg, reg = :eax)
     movl("(#{to_operand_value(arg)})",reg)
     return reg
@@ -166,6 +170,12 @@ class Emitter
     movl(args,:ebx) if numargs
     yield
     addl(adj,:esp)
+  end
+
+  def with_register
+    # FIXME: This is a hack - for now we just hand out :edx,
+    # we don't actually do any allocation
+    yield(:edx)
   end
 
   def save_register(reg)
