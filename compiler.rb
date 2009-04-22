@@ -191,6 +191,8 @@ class Compiler
 
   def compile_class(scope, name, *exps)
     @e.comment("=== class #{name} ===")
+    # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If 
+    # not we are unable to determine the correct #klass_size (see below).
     cscope = ClassScope.new(scope, name, @vtableoffsets)
     # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)
     # FIXME: Fill in all unused vtable slots with __method_missing
