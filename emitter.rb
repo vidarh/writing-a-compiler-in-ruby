@@ -71,13 +71,7 @@ class Emitter
   end
 
   def save_result(param)
-    # this is somewhat of a hack
-    # somehow, it turns a :do into $do
-    # don't know why, but it only does this once
-    # in the example programs (testarray.rb for example)
-    # need to look into it later on
-    # same problem is with indexing arrays
-    if param != :eax and param != "$do"
+    if param != :eax
       movl(param,:eax)
     end
   end
