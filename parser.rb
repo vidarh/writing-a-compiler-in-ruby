@@ -292,7 +292,7 @@ class Parser < ParserBase
   # program ::= exp* ws*
   def parse(require_core = true)
     res = [:do]
-    res += self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
+    res << self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
     res += zero_or_more(:exp)
     ws
     raise "Expected EOF" if scanner.peek
