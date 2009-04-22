@@ -19,7 +19,7 @@ class Compiler
   # list of all predefined keywords with a corresponding compile-method
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
-  @@keywords = [
+  @@keywords = Set[
                 :do, :class, :defun, :if, :lambda,
                 :assign, :while, :index, :let
                ]
@@ -105,7 +105,7 @@ class Compiler
     when :addr
       return @e.load_address(aparam)
     when :indirect
-      return @e.load_indirect(arg)
+      return @e.load_indirect(aparam)
     when :arg
       return @e.load_arg(aparam)
     when :lvar
