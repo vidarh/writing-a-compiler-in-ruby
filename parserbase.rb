@@ -2,9 +2,13 @@ require 'scanner'
 require 'tokens'
 require 'pp'
 
+# Base-class for all Parsers.
+# Defines some common methods for parsing sourcecode.
 class ParserBase
   include Tokens
 
+  # The constructor takes a Scanner instance as an argument
+  # to read the source code to parse from.
   def initialize(scanner)
     @scanner = scanner
   end
@@ -38,6 +42,8 @@ class ParserBase
 
   protected
 
+  # Protected accessor method for the scanner object.
+  # For use in subclasses.
   def scanner
     @scanner
   end
