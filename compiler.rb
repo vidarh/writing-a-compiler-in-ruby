@@ -255,7 +255,7 @@ dump = ARGV.include?("--parsetree")
 norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
 
 # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
-OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite") 
+OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
 
 begin
   parser = Parser.new(s, {:norequire => norequire})

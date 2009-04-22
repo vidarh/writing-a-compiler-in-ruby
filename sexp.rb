@@ -3,8 +3,8 @@ require 'parserbase'
 # Simple Recursive-Descent s-expression parser
 class SEXParser < ParserBase
 
-  def initialize(s)
-    @s = s # The scanner
+  def initialize(scanner)
+    super(scanner)
   end
 
   def parse

@@ -71,7 +71,9 @@ class Emitter
   end
 
   def save_result(param)
-    movl(param,:eax) if param != :eax
+    if param != :eax
+      movl(param,:eax)
+    end
   end
 
   def save(atype, source, dest)
