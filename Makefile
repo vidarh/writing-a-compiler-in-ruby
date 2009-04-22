@@ -4,6 +4,7 @@ all:  testargs testarray
 
 clean:
 	@rm -f *~ *.o *.s testarray testargs
+	@rm -rf doc/
 
 doc:
 	rdoc --all *.rb

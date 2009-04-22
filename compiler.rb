@@ -8,9 +8,15 @@ require 'extensions'
 
 require 'set'
 
+# This gets compiled before each programm.
+# It defines the array function, that allocates the appropriate amount of
+# bytes for a given array-size.
 DO_BEFORE= [
   [:defun, :array, [:size],[:malloc,[:mul,:size,4]]],
 ]
+
+# This is used for code, that needs to be compiled at the end of a programm.
+# For now, it's empty.
 DO_AFTER= []
 
 class Compiler
@@ -34,6 +40,13 @@ class Compiler
     @vtableoffsets = VTableOffsets.new
   end
 
+
+  # Returns an argument with its type identifier.
+  #
+  # If an Array is given, we have a subexpression, which needs to be compiled first.
+  # If a Fixnum is given, it's an int ->   [:int, a]
+  # If it's a Symbol, its a variable identifier and needs to be looked up within the given scope.
+  # Otherwise, we assume it's a string constant and treat it like one.
   def get_arg(scope, a)
     return compile_exp(scope, a) if a.is_a?(Array)
     return [:int, a] if (a.is_a?(Fixnum))
@@ -47,17 +60,34 @@ class Compiler
     return [:strconst,lab]
   end
 
+
+  # Outputs all constants used within the code generated so far.
+  # Outputs them as string and global constants, respectively.
   def output_constants
     @e.rodata { @string_constants.each { |c,l| @e.string(l, c) } }
     @e.bss    { @global_constants.each { |c|   @e.bsslong(c) }}
   end
 
+
+  # Similar to output_constants, but for functions.
+  # Compiles all functions, defined so far and outputs the appropriate assembly code.
   def output_functions
     @global_functions.each do |name,func|
+
+      # create a function scope for each defined function and compile it appropriately.
+      # also pass it the current global scope for further lookup of variables used
+      # within the functions body that aren't defined there (global variables and those,
+      # that are defined in the outer scope of the function's)
       @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func,@global_scope),func.body) }
+
     end
   end
 
+
+  # Compiles a function definition.
+  # Takes the current scope, in which the function is defined,
+  # the name of the function, its arguments as well as the body-expression that holds
+  # the actual code for the function's body.
   def compile_defun(scope, name, args, body)
     if scope.is_a?(ClassScope) # Ugly. Create a default "register_function" or something. Have it return the global name
       f = Function.new([:self]+args, body) # "self" is "faked" as an argument to class methods.
@@ -73,12 +103,25 @@ class Compiler
       end
       name = fname
     else
+      # function isn't within a class (which would mean, it's a method)
+      # so it must be global
       f = Function.new(args, body)
     end
+
+    # add function to the global list of functions defined so far
     @global_functions[name] = f
+
+    # a function is referenced by its name (in assembly this is a label).
+    # wherever we encounter that name, we really need the adress of the label.
+    # so we mark the function with an adress type.
     return [:addr, name]
   end
 
+
+  # Compiles an if expression.
+  # Takes the current (outer) scope and two expressions representing
+  # the if and else arm.
+  # If no else arm is given, it defaults to nil.
   def compile_if(scope, cond, if_arm, else_arm = nil)
     compile_eval_arg(scope, cond)
     l_else_arm = @e.get_local
@@ -92,6 +135,10 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles an anonymous function.
+  # Simply calls compile_defun, only, that the name gets generated
+  # by the emitter via Emitter#get_local.
   def compile_lambda(scope, args, body)
     compile_defun(scope, @e.get_local, args,body)
   end
@@ -101,6 +148,8 @@ class Compiler
     return @e.load(atype,aparam)
   end
 
+
+  # Compiles an assignment statement.
   def compile_assign(scope, left, right)
     source = compile_eval_arg(scope, right)
     atype, aparam = nil, nil
@@ -113,6 +162,10 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles a function call.
+  # Takes the current scope, the function to call as well as the arguments
+  # to call the function with.
   def compile_call(scope, func, args)
     args = [args] if !args.is_a?(Array)
     @e.with_stack(args.length, true) do
@@ -125,6 +178,12 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles a method call to an object.
+  # Similar to compile_call but with an additional object parameter
+  # representing the object to call the method on.
+  # The object gets passed to the method, which is just another function,
+  # as the first parameter.
   def compile_callm(scope, ob, method, args)
     @e.comment("callm #{ob.to_s}.#{method.to_s}")
     args ||= []
@@ -150,11 +209,16 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles a do-end block expression.
   def compile_do(scope, *exp)
     exp.each { |e| source=compile_eval_arg(scope, e); @e.save_result(source); }
     return [:subexpr]
   end
 
+
+  # Compiles a array indexing-expression.
+  # Takes the current scope, the array as well as the index number to access.
   def compile_index(scope, arr, index)
     source = compile_eval_arg(scope, arr)
     reg = nil #This is needed to retain |reg|
@@ -168,6 +232,9 @@ class Compiler
     return [:indirect, reg]
   end
 
+
+  # Compiles a while loop.
+  # Takes the current scope, a condition expression as well as the body of the function.
   def compile_while(scope, cond, body)
     @e.loop do |br|
       var = compile_eval_arg(scope, cond)
@@ -177,6 +244,9 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles a let expression.
+  # Takes the current scope, a list of variablenames as well as a list of arguments.
   def compile_let(scope, varlist, *args)
     vars = {}
     varlist.each_with_index {|v,i| vars[v]=i}
@@ -189,6 +259,10 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles a class definition.
+  # Takes the current scope, the name of the class as well as a list of expressions
+  # that belong to the class.
   def compile_class(scope, name, *exps)
     @e.comment("=== class #{name} ===")
     # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If 
@@ -199,7 +273,7 @@ class Compiler
     exps.each do |l2|
       l2.each do |e|
         if e.is_a?(Array) && e[0] == :defun
-          cscope.add_vtable_entry(e[1])
+          cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
         end
       end
     end
@@ -232,6 +306,8 @@ class Compiler
     return [:subexpr]
   end
 
+
+  # Compiles the main function, where the compiled programm starts execution.
   def compile_main(exp)
     @e.main do
       # We should allow arguments to main
@@ -242,10 +318,14 @@ class Compiler
       compile_eval_arg(FuncScope.new(@main, @global_scope), exp)
     end
 
+    # after the main function, we ouput all functions and constants
+    # used and defined so far.
     output_functions
     output_constants
   end
 
+
+  # Starts the actual compile process.
   def compile(exp)
     compile_main([:do, DO_BEFORE, exp, DO_AFTER])
   end
