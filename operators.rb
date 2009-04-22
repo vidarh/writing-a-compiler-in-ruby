@@ -15,7 +15,9 @@ class Oper
   attr_accessor :pri, :sym, :type, :arity, :minarity
 
   def initialize(pri, sym, type, arity = nil, minarity = nil)
-    @pri, @sym, @type = pri, sym, type
+    @pri = pri
+    @sym = sym
+    @type = type
     if !arity
       @arity = 0 if type == :lp
       @arity = 1 if type != :lp
