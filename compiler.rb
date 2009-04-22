@@ -151,11 +151,18 @@ class Compiler
 
   # Compiles an assignment statement.
   def compile_assign(scope, left, right)
+    # transform "foo.bar = baz" into "foo.bar=(baz) - FIXME: Is this better handled in treeoutput.rb?
+    # Also need to handle :call equivalently.
+    if left.is_a?(Array) && left[0] == :callm && left.size == 3 # no arguments
+      return compile_callm(scope, left[1], (left[2].to_s + "=").to_sym, right)
+    end
+
     source = compile_eval_arg(scope, right)
     atype, aparam = nil, nil
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
     end
+
     if !(@e.save(atype,source,aparam))
       raise "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
     end
