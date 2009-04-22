@@ -1,6 +1,16 @@
 
 require 'set'
 
+# Represents Operators within the language.
+# An operator is defined by up to 5 components:
+#  - Priority (pri)
+#  - Unique Name / Identifier (sym)
+#  - Type (prefix, infix or suffix)
+#  - Arity (how many arguments? Most operators are either unary or binary)
+#  - Minarity
+#
+# The priority defines the precedence-rules for the parser.
+# Smaller numbers mean higher priority.
 class Oper
   attr_accessor :pri, :sym, :type, :arity, :minarity
 
@@ -17,6 +27,10 @@ class Oper
   end
 end
 
+
+# A hash of all operators within the language.
+# The keys are the actual identifiers for each operator.
+# The values are the operators themself (instances of the Oper class).
 Operators = {
   # "Fake" operator for [] following a name
   "#index#"  => Oper.new(100,  :index,  :infix),

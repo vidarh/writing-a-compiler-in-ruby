@@ -6,7 +6,7 @@ class Arg
 
   def initialize(name, *modifiers)
     @name = name
-    # @rest indicates if we have 
+    # @rest indicates if we have
     # a variable amount of parameters
     @rest = modifiers.include?(:rest)
   end
@@ -20,6 +20,8 @@ class Arg
   end
 end
 
+# Represents a function.
+# Takes arguments and a body of code.
 class Function
   attr_reader :args, :body
 
