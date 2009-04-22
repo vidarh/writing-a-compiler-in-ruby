@@ -19,7 +19,7 @@ class Compiler
   # list of all predefined keywords with a corresponding compile-method
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
-  @@keywords = [
+  @@keywords = Set[
                 :do, :class, :defun, :if, :lambda,
                 :assign, :while, :index, :let
                ]
