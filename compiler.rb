@@ -157,7 +157,7 @@ class Compiler
       atype, aparam = get_arg(scope, left)
     end
     if !(@e.save(atype,source,aparam))
-      raise "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left}, right: #{right})"
+      raise "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
     end
     return [:subexpr]
   end
