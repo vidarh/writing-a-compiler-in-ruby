@@ -96,27 +96,7 @@ class Compiler
 
   def compile_eval_arg(scope, arg)
     atype, aparam = get_arg(scope, arg)
-    return aparam if atype == :int
-    return @e.addr_value(aparam) if atype == :strconst
-
-    case atype
-    when :argaddr
-      return @e.load_arg_address(aparam)
-    when :addr
-      return @e.load_address(aparam)
-    when :indirect
-      return @e.load_indirect(aparam)
-    when :arg
-      return @e.load_arg(aparam)
-    when :lvar
-      return @e.load_local_var(aparam)
-    when :global
-      return @e.load_global_var(aparam)
-    when :subexpr
-      return @e.result_value
-    else
-      raise "WHAT? #{atype.inspect} / #{arg.inspect}"
-    end
+    return @e.load(atype,aparam)
   end
 
   def compile_assign(scope, left, right)
@@ -125,15 +105,7 @@ class Compiler
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
     end
-    if atype == :indirect
-      @e.emit(:movl, source, "(%#{aparam})")
-    elsif atype == :global
-      @e.emit(:movl, source, aparam.to_s)
-    elsif atype == :lvar
-      @e.save_to_local_var(source, aparam)
-    elsif atype == :arg
-      @e.save_to_arg(source, aparam)
-    else
+    if !(@e.save(atype,source,aparam))
       raise "Expected an argument on left hand side of assignment - got #{atype.to_s}"
     end
     return [:subexpr]

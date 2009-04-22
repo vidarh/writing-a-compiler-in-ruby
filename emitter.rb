@@ -74,6 +74,47 @@ class Emitter
     movl(param,:eax) if param != :eax
   end
 
+  def save(atype, source, dest)
+    case atype
+    when :indirect
+      emit(:movl,source, "(%#{dest})")
+    when :global
+      emit(:movl, source, dest.to_s)
+    when :lvar
+      save_to_local_var(source, dest)
+    when :arg
+      save_to_arg(source, dest)
+    else
+      return false
+    end
+    return true
+  end
+
+  def load(atype,aparam)
+    case atype
+    when :int
+      return aparam
+    when :strconst
+      return addr_value(aparam)
+    when :argaddr
+      return load_arg_address(aparam)
+    when :addr
+      return load_address(aparam)
+    when :indirect
+      return load_indirect(aparam)
+    when :arg
+      return load_arg(aparam)
+    when :lvar
+      return load_local_var(aparam)
+    when :global
+      return load_global_var(aparam)
+    when :subexpr
+      return result_value
+    else
+      raise "WHAT? #{atype.inspect} / #{arg.inspect}"
+    end
+  end
+
   def load_arg(aparam)
     movl(local_arg(aparam),:eax)
     return :eax
