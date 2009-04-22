@@ -72,6 +72,7 @@ class VTableOffsets
   end
 
   def get_offset(name)
+    name = name[1] if name.is_a?(Array) # Handle cases like self.foo => look up he offset for "foo"
     name = name.to_sym
     if !@vtable[name]
       @vtable[name] = @vtable_max
