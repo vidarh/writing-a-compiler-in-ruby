@@ -3,3 +3,4 @@
 *.s
 bin/*
 asm/*
+doc/*

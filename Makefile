@@ -5,6 +5,9 @@ all:  testargs testarray
 clean:
 	@rm -f *~ *.o *.s testarray testargs
 
+doc:
+	rdoc --all *.rb
+
 testarray.s: testarray.l
 	ruby compiler.rb <testarray.l >testarray.s
 
