@@ -76,11 +76,12 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr        | tree                                  | notes |
-	  | "a[1]"      | [:callm,:a,:[],[1]]                   |       |
-      | "Set[1,2,3]"| [:callm,:Set,:[],[1,2,3]]             |       |
-      | "r[2][0]"   | [:callm, [:callm,:r,:[],[2]],:[],[0]] |       |
-      | "s.foo[0]"  | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
+	  | expr         | tree                                  | notes |
+	  | "a[1]"       | [:callm,:a,:[],[1]]                   |       |
+      | "Set[1,2,3]" | [:callm,:Set,:[],[1,2,3]]             |       |
+      | "r[2][0]"    | [:callm, [:callm,:r,:[],[2]],:[],[0]] |       |
+      | "s.foo[0]"   | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
+      | "foo[1] = 2" | [:callm, :foo, :[]=, [1m2]]           | Tree rewrite |
 
     Scenario Outline: Function calls
 		Given the expression <expr>

@@ -46,6 +46,11 @@ module OpPrec
         @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
       elsif la and leftv[0] == :callm and o.sym == :call
         @vstack << leftv + [flatten(rightv)]
+      elsif la and leftv[0] == :callm and o.sym == :assign and leftv[2] == :[]
+        # FIXME: Will need rewrite for things like self.foo = bar too, but in that case *without
+        # arguments
+        rightv = [rightv] if !ra
+        @vstack << [:callm, leftv[1], "[]=".to_sym,leftv[3]+rightv]
       elsif o.sym == :index
         if ra and rightv[0] == :array
           @vstack << [:callm, leftv, :[], flatten(rightv[1..-1])]
