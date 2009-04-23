@@ -73,10 +73,10 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr        | tree                      | notes |
-	  | "a[1]"      | [:callm,:a,:[],1]         |       |
-      | "Set[1,2,3]"| [:callm,:Set,:[],[1,2,3]] |       |
-      | "r[2][0]"   | [:callm, [:callm,:r,:[],2],:[],0] |       |
+	  | expr        | tree                                  | notes |
+	  | "a[1]"      | [:callm,:a,:[],[1]]                   |       |
+      | "Set[1,2,3]"| [:callm,:Set,:[],[1,2,3]]             |       |
+      | "r[2][0]"   | [:callm, [:callm,:r,:[],2[]],:[],[0]] |       |
 
     Scenario Outline: Function calls
 		Given the expression <expr>
@@ -121,7 +121,7 @@ Feature: Shunting Yard
 	  | expr              | tree                                    |
       | "foo ? 1 : 0"     | [:ternif, :foo, [:ternalt, 1, 0]]       |
       | "(rest? ? 1 : 0)" | [:ternif, :rest?, [:ternalt, 1, 0]]     |
-      | "@locals[a] + (rest? ? 1 : 0)" | [:add, [:index, :@locals, :a], [:ternif, :rest?, [:ternalt, 1, 0]]] |
+      | "@locals[a] + (rest? ? 1 : 0)" | [:add, [:callm, :@locals,:[], [:a]], [:ternif, :rest?, [:ternalt, 1, 0]]] |
 
 	Scenario Outline: Blocks
 		Given the expression <expr>
