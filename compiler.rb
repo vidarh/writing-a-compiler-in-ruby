@@ -49,6 +49,14 @@ class Compiler
            current expression: #{current_exp}\n"
   end
 
+  # Allocate an integer value to a symbol. We'll "cheat" for now and just
+  # use the "host" system. The symbol table needs to eventually get
+  # reflected in the compiled program -- you need to be able to retrieve the
+  # name etc.. We also need to either create a "real" object for each of them
+  # *or* use a typetag like MRI
+  def intern(sym)
+    sym.intern.to_i
+  end
 
   # Returns an argument with its type identifier.
   #
@@ -59,7 +67,11 @@ class Compiler
   def get_arg(scope, a)
     return compile_exp(scope, a) if a.is_a?(Array)
     return [:int, a] if (a.is_a?(Fixnum))
-    return scope.get_arg(a) if (a.is_a?(Symbol))
+    if (a.is_a?(Symbol))
+      name = a.to_s
+      return [:int,intern(name.rest)] if name[0] == ?: 
+      return scope.get_arg(a) 
+    end
 
     lab = @string_constants[a]
     if !lab
@@ -101,7 +113,12 @@ class Compiler
     if scope.is_a?(ClassScope) # Ugly. Create a default "register_function" or something. Have it return the global name
       f = Function.new([:self]+args, body) # "self" is "faked" as an argument to class methods.
       @e.comment("method #{name}")
-      fname = "__method_#{scope.name}_#{name}"
+
+      # Need to clean up the name to be able to use it in the assembler.
+      # Strictly speaking we don't *need* to use a sensible name at all,
+      # but it makes me a lot happier when debugging the asm.
+      cleaned = name.to_s.gsub("?","__Q") # FIXME: Needs to do more.
+      fname = "__method_#{scope.name}_#{cleaned}"
       scope.set_vtable_entry(name, fname, f)
       @e.load_address(fname)
       @e.with_register do |reg|
