@@ -1,6 +1,6 @@
 
 
-all:  testargs testarray
+all: compiler testargs testarray
 
 clean:
 	@rm -f *~ *.o *.s testarray testargs
@@ -8,6 +8,12 @@ clean:
 
 doc:
 	rdoc --all *.rb
+
+compiler.s: *.rb
+	ruby compiler.rb <compiler.rb >compiler.s
+
+compiler: compiler.s runtime.o
+	gcc -o compiler compiler.s runtime.o
 
 testarray.s: testarray.l
 	ruby compiler.rb <testarray.l >testarray.s
