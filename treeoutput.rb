@@ -28,7 +28,7 @@ module OpPrec
       rightv = @vstack.pop if o.arity > 0
 
       # Handle repeated / nested array indieces: a[1][2] etc.
-      o = Operators["#index#"] if o.sym == :array and @vstack.last and @vstack.last.is_a?(Array) and @vstack.last[0] == :index
+      o = Operators["#index#"] if o.sym == :array and @vstack.last and @vstack.last.is_a?(Array) and @vstack.last[0] == :callm
 
       raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
       leftv = @vstack.pop if o.arity > 1
@@ -50,7 +50,11 @@ module OpPrec
       elsif la and leftv[0] == :callm and o.sym == :call
         @vstack << leftv + [flatten(rightv)]
       elsif o.sym == :index
-        @vstack << [:callm, leftv, :[], flatten(rightv[1..-1])]
+        if ra and rightv[0] == :array
+          @vstack << [:callm, leftv, :[], flatten(rightv[1..-1])]
+        else
+          @vstack << [:callm, leftv, :[], [rightv]]
+        end
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
         @vstack << [o.sym, leftv].compact + flatten(rightv)
       elsif ra and rightv[0] == :comma and o.sym != :comma
