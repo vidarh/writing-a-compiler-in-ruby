@@ -216,8 +216,8 @@ class Parser < ParserBase
     end
     args = parse_args || []
     expect(";")
-    vars, exps = parse_block_exps
-    exps = [:let,vars] + exps
+    ret = parse_block_exps
+    exps = [:let,ret[0]] + ret[1]
     expect("end") or expected("expression or 'end' for open def")
     return [:defun, name, args, exps]
   end
