@@ -76,7 +76,7 @@ Feature: Shunting Yard
 	  | expr        | tree                                  | notes |
 	  | "a[1]"      | [:callm,:a,:[],[1]]                   |       |
       | "Set[1,2,3]"| [:callm,:Set,:[],[1,2,3]]             |       |
-      | "r[2][0]"   | [:callm, [:callm,:r,:[],2[]],:[],[0]] |       |
+      | "r[2][0]"   | [:callm, [:callm,:r,:[],[2]],:[],[0]] |       |
 
     Scenario Outline: Function calls
 		Given the expression <expr>
