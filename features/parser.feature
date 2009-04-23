@@ -55,12 +55,11 @@ Feature: Parser
 
 	Scenario Outline: Function definition
 		Given the expression <expr>
-		When I parse it with the full parser
-		Then the parse tree should become <tree>
+        When I parse it with the full parser
+        Then the parse tree should become <tree>
 
-	Examples:
+    Examples:
 	  | expr                          | tree                                          | notes                                         |
-# FIXME: The expected result here quietly accepts that the parser doesn't yet try to store the argument defauts
 	  | "def foo(bar=nil)\nend\n"     | [:do, [:defun, :foo, [:bar], [:let, []]]]    | Default value for arguments                   |
 	  | "def foo(bar = nil)\nend\n"   | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
 	  | "def foo(bar = [])\nend\n"    | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |

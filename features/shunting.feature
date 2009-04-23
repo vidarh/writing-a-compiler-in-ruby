@@ -67,6 +67,7 @@ Feature: Shunting Yard
 	  | "[1].compact"| [:callm,[:array,1],:compact]            | 
 	  | "return []"  | [:return,[:array]]                      |
 
+    @arrays
 	Scenario Outline: Array operators
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
