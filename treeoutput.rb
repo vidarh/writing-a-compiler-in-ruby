@@ -27,9 +27,6 @@ module OpPrec
       raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
       rightv = @vstack.pop if o.arity > 0
 
-      # Handle repeated / nested array indieces: a[1][2] etc.
-      o = Operators["#index#"] if o.sym == :array and @vstack.last and @vstack.last.is_a?(Array) and @vstack.last[0] == :callm
-
       raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
       leftv = @vstack.pop if o.arity > 1
 

@@ -95,7 +95,7 @@ module OpPrec
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
-        possible_func = !op && !token.is_a?(Numeric)
+        possible_func = op ? op.type == :lp :  !token.is_a?(Numeric)
         lastlp = false
         src.ws if lp_on_entry
       end
