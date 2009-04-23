@@ -74,9 +74,9 @@ Feature: Shunting Yard
 
 	Examples:
 	  | expr        | tree                      | notes |
-	  | "a[1]"      | [:index,:a,1]             |       |
-      | "Set[1,2,3]"| [:index,:Set,1,2,3]       |Strictly this is a method call to Set.[], but we'll do that transformation at a higher level. |
-      | "r[2][0]"   | [:index, [:index,:r,2],0] |       |
+	  | "a[1]"      | [:callm,:a,:[],1]         |       |
+      | "Set[1,2,3]"| [:callm,:Set,:[],[1,2,3]] |       |
+      | "r[2][0]"   | [:callm, [:callm,:r,:[],2],:[],0] |       |
 
     Scenario Outline: Function calls
 		Given the expression <expr>
