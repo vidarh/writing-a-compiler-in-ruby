@@ -39,6 +39,27 @@ class ParserBase
     @scanner.ws
   end
 
+  # Returns filename from which parser reads code.
+  def filename
+    @scanner.filename
+  end
+
+  # Returns true, if the parser gets code from a file.
+  def from_file?
+    not @scanner.filename.nil?
+  end
+
+
+  # Output error message by raising an exception.
+  # Error message contains filename and linenumber, if reading from a file.
+  # Otherwise, the message only contains the current linenumber and the error message.
+  def error(message)
+    if from_file?
+      raise "Parse error: #{filename}(#{@scanner.lineno}):  #{message}"
+    else
+      raise "Parse error: #{@scanner.lineno}: #{message}"
+    end
+  end
 
   protected
 

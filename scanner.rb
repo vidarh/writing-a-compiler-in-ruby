@@ -4,13 +4,17 @@
 # so I'm sticking to something simple. The code below is sufficient to write recursive descent parsers in a pretty
 # concise style in Ruby
 class Scanner
-  attr_reader :col,:lineno
+  attr_reader :col,:lineno, :filename # @filename holds the name of the file the parser reads from
 
   def initialize(io)
     @io = io
     @buf = ""
     @lineno = 1
     @col = 1
+
+    # set filename if io is an actual file (instead of STDIN)
+    # otherwhise, simply set it to nil
+    @filename = File.file?(io) ? io.path : nil
   end
 
   def fill

@@ -240,17 +240,24 @@ class Parser < ParserBase
     return [type.to_sym, name, exps]
   end
 
+
+  # Returns the include paths relative to a given filename.
+  def rel_include_paths(filename)
+    [filename,"#{filename}.rb","lib/#{filename}","lib/#{filename}.rb"]
+  end
+
+
+  # Statically including a require'd file
+  #
+  # Not sure if I think this really belong in the parser,
+  # as opposed to being handled as post-processing later -
+  # may refactor this as a separate tree-rewriting step later.
   def require q
-    # Statically including a require'd file
-    #
-    # Not sure if I think this really belong in the parser,
-    # as opposed to being handled as post-processing later -
-    # may refactor this as a separate tree-rewriting step later.
     return @@requires[q] if @@requires[q]
     STDERR.puts "NOTICE: Statically requiring '#{q}'"
     # FIXME: Handle include path
-    paths = [q,"#{q}.rb","lib/#{q}","lib/#{q}.rb"]
-    f= nil
+    paths = rel_include_paths(q)
+    f = nil
     paths.detect { |path| f = File.open(path) rescue nil }
     raise "Unable to load '#{q}'" if !f
     s = Scanner.new(f)
