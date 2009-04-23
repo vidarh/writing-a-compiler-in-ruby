@@ -7,7 +7,7 @@ require 'set'
 #  - Unique Name / Identifier (sym)
 #  - Type (prefix, infix or suffix)
 #  - Arity (how many arguments? Most operators are either unary or binary)
-#  - Minarity
+#  - Minarity (The minimum arity, for operators with optional arguments)
 #
 # The priority defines the precedence-rules for the parser.
 # Smaller numbers mean higher priority.
