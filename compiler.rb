@@ -127,10 +127,10 @@ class Compiler
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
     @e.jmp_on_false(l_else_arm)
-    compile_exp(scope, if_arm)
+    compile_eval_arg(scope, if_arm)
     @e.jmp(l_end_if_arm) if else_arm
     @e.local(l_else_arm)
-    compile_exp(scope, else_arm) if else_arm
+    compile_eval_arg(scope, else_arm) if else_arm
     @e.local(l_end_if_arm) if else_arm
     return [:subexpr]
   end
