@@ -129,7 +129,7 @@ class Emitter
     when :arg
       save_to_arg(source, dest)
     when :addr
-      save_to_addr(source,dest)
+      save_to_address(source,dest)
     else
       return false
     end
