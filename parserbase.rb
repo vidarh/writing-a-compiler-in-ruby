@@ -28,7 +28,7 @@ class ParserBase
   end
 
   def expected(name)
-    raise "Error: Expected #{name}"
+    error("Expected: #{name}")
   end
 
   def nolfws
