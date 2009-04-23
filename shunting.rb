@@ -5,7 +5,9 @@ require 'treeoutput'
 module OpPrec
   class ShuntingYard
     def initialize(output, tokenizer, parser)
-      @out, @tokenizer, @parser = output, tokenizer, parser
+      @out = output
+      @tokenizer = tokenizer
+      @parser = parser
     end
 
     def keywords
