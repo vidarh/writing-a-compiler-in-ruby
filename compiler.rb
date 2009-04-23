@@ -144,8 +144,8 @@ class Compiler
   end
 
   def compile_eval_arg(scope, arg)
-    atype, aparam = get_arg(scope, arg)
-    return @e.load(atype,aparam)
+    args = get_arg(scope,arg)
+    return @e.load(args[0],args[1])
   end
 
 
@@ -158,7 +158,8 @@ class Compiler
     end
 
     source = compile_eval_arg(scope, right)
-    atype, aparam = nil, nil
+    atype = nil
+    aparam = nil
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
     end
