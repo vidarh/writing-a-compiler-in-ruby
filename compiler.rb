@@ -41,6 +41,15 @@ class Compiler
   end
 
 
+  # Outputs nice compiler error messages, similar to
+  # the parser (ParserBase#error).
+  def error(error_message, current_scope = nil, current_exp = nil)
+    raise "Compiler error: #{error_message}\n
+           current scope: #{current_scope.inspect}\n
+           current expression: #{current_exp}\n"
+  end
+
+
   # Returns an argument with its type identifier.
   #
   # If an Array is given, we have a subexpression, which needs to be compiled first.
@@ -165,7 +174,8 @@ class Compiler
     end
 
     if !(@e.save(atype,source,aparam))
-      raise "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
+      err_msg = "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
+      error(err_msg, scope, [:assign, left, right]) # pass current expression as well
     end
     return [:subexpr]
   end
@@ -208,7 +218,12 @@ class Compiler
       @e.with_register do |reg|
         @e.load_indirect(ret, reg)
         off = @vtableoffsets.get_offset(method)
-        raise "No offset for #{method}, and we don't yet implement send" if !off
+
+        if !off
+          err_msg = "No offset for #{method}, and we don't yet implement send"
+          error(err_msg, scope, [:callm, ob, method, args])
+        end
+
         @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
         @e.call(@e.result_value)
       end
@@ -273,7 +288,7 @@ class Compiler
   # that belong to the class.
   def compile_class(scope, name, *exps)
     @e.comment("=== class #{name} ===")
-    # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If 
+    # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If
     # not we are unable to determine the correct #klass_size (see below).
     cscope = ClassScope.new(scope, name, @vtableoffsets)
     # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)

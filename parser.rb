@@ -267,7 +267,7 @@ class Parser < ParserBase
     paths = rel_include_paths(q)
     f = nil
     paths.detect { |path| f = File.open(path) rescue nil }
-    raise "Unable to load '#{q}'" if !f
+    error("Unable to load '#{q}'") if !f
     s = Scanner.new(f)
     @@requires[q] = Parser.new(s,@opts).parse(false)
   end
@@ -310,7 +310,7 @@ class Parser < ParserBase
     res << self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
     res += zero_or_more(:exp)
     ws
-    raise "Expected EOF" if scanner.peek
+    error("Expected EOF") if scanner.peek
     return res
   end
 end
