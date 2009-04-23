@@ -66,15 +66,23 @@ class Parser < ParserBase
     ret
   end
 
-  # if ::= "if" ws* condition defexp* "end"
+  # if ::= "if" ws* condition "then"? defexp* "end"
   def parse_if
     expect("if") or return
     ws
     cond = parse_condition or expected("condition for 'if' block")
     nolfws; expect(";")
+    nolfws; expect("then"); ws;
     exps = zero_or_more(:defexp)
+    ws
+    if expect("else")
+      ws
+      elseexps = zero_or_more(:defexp)
+    end
     expect("end") or expected("expression or 'end' for open 'if'")
-    return [:if, cond, [:do]+exps]
+    ret = [:if, cond, [:do]+exps]
+    ret << [:do]+elseexps if elseexps
+    return  ret
   end
 
   # when ::= "when" ws* condition (nolfws* ":")? ws* defexp*
