@@ -14,7 +14,7 @@ class Scanner
 
     # set filename if io is an actual file (instead of STDIN)
     # otherwhise, simply set it to nil
-    @filename = File.file?(io) ? io.path : nil
+    @filename = File.file?(io) and io.is_a?(File) ? io.path : nil
   end
 
   def fill
