@@ -194,7 +194,7 @@ class Emitter
   end
 
   def save_to_address(src,dest)
-    movl(src,addr_value(dest))
+    movl(src,dest.to_s)
   end
 
   def load_address(label)
