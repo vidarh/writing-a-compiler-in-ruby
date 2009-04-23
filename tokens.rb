@@ -6,13 +6,38 @@ module Tokens
 
   Keywords = Set[:def, :end, :if, :include, :begin, :rescue]
 
+  class Sym
+    def self.expect(s)
+      return nil if s.peek != ?:
+      s.get
+      buf = Atom.expect(s)
+      return ":#{buf.to_s}".to_sym if buf
+
+      # Lots more operators are legal.
+      # FIXME: Need to check which set is legal - it's annoying inconsistent it appears
+      if s.peek == ?[
+        s.get
+        if s.peek == ?]
+          s.get
+          return :":[]=" if s.peek == ?=
+          return :":[]"
+        end
+        s.unget("[")
+      end 
+      s.unget(":")
+      return nil
+   end
+  end
+
   class Atom
     def self.expect(s)
       tmp = ""
       c = s.peek
-      if c == ?@ || c == ?$ || c == ?:
+      return Sym.expect(s) if c == ?: # This is a hack. Shoud be handled separately
+
+      if c == ?@ || c == ?$
         tmp += s.get
-        tmp == s.get if c == ?@ && s.peek == ?@
+        tmp += s.get if c == ?@ && s.peek == ?@
       end
 
       if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
@@ -96,6 +121,7 @@ module Tokens
         return [@s.expect(Int), nil]
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_
         buf = @s.expect(Atom)
+        return [@s.get, Operators[":"]] if @s.peek == ?: and !buf
         if @keywords.member?(buf)
           @s.unget(buf.to_s)
           return [nil, nil]

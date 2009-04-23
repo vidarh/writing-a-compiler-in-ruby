@@ -26,6 +26,8 @@ Feature: Shunting Yard
       | "5"                  | 5                                    |
       | "?A"                 | 65                                   |
       | "foo +\nbar"         | [:add,:foo,:bar]                     |
+      | ":sym"               | :":sym"                              |
+      | ":[]"                | :":[]"                               |
 
 	Scenario Outline: Method calls
 		Given the expression <expr>
