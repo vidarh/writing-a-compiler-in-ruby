@@ -5,6 +5,7 @@ require 'parser'
 require 'scope'
 require 'function'
 require 'extensions'
+require 'ast'
 
 require 'set'
 
@@ -44,7 +45,12 @@ class Compiler
   # Outputs nice compiler error messages, similar to
   # the parser (ParserBase#error).
   def error(error_message, current_scope = nil, current_exp = nil)
-    raise "Compiler error: #{error_message}\n
+    if current_exp.is_a(AST::Node)
+      location = " @ line #{current_exp.lineno}, col #{current_exp.col} in #{current_exp.filename}"
+    else
+      location = ""
+    end
+    raise "Compiler error: #{error_message}#{location}\n
            current scope: #{current_scope.inspect}\n
            current expression: #{current_exp}\n"
   end
@@ -311,6 +317,7 @@ class Compiler
     STDERR.puts "INFO: Max vtable offset is #{@vtableoffsets.max}" # This illustrates the problem above - it should remain the same
 
     cscope = ClassScope.new(scope, name, @vtableoffsets)
+
     # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)
     # FIXME: Fill in all unused vtable slots with __method_missing
     # FIXME: Need to generate "thunks" for __method_missing that knows the name of the slot they are in, and
