@@ -9,6 +9,12 @@ class Scanner
 
   Position = Struct.new(:filename,:lineno,:col)
 
+  class Position
+    def inspect
+      "line #{self.lineno}, col #{self.col} in #{self.filename}"
+    end
+  end
+
   class ScannerString < String
     attr_accessor :position
   end
@@ -25,8 +31,8 @@ class Scanner
     @col = 1
 
     # set filename if io is an actual file (instead of STDIN)
-    # otherwhise, simply set it to nil
-    @filename = File.file?(io) and io.is_a?(File) ? io.path : nil
+    # otherwhise, indicate it comes from a stream
+    @filename = File.file?(io) && io.is_a?(File) ? io.path : "<stream>"
   end
 
   def fill
@@ -79,7 +85,7 @@ class Scanner
         unget(buf) if !buf.empty?
         return false
       end
-      buf += get
+      buf << get
     end
     return buf
   end
