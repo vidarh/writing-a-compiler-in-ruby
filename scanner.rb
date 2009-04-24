@@ -1,10 +1,22 @@
 
+
 # The purpose of the Scanner is to present a narrow interface to read characters from, with support for lookahead / unget.
 # Why not StringScanner? Well, it's a Ruby C-extension, and I want to get the compiler self-hosted as soon as possible,
 # so I'm sticking to something simple. The code below is sufficient to write recursive descent parsers in a pretty
 # concise style in Ruby
 class Scanner
   attr_reader :col,:lineno, :filename # @filename holds the name of the file the parser reads from
+
+  Position = Struct.new(:filename,:lineno,:col)
+
+  class ScannerString < String
+    attr_accessor :position
+  end
+
+  # Return the current position of the parser in one convenient object...
+  def position
+    Position.new(@filename,@lineno,@col)
+  end
 
   def initialize(io)
     @io = io
@@ -48,14 +60,19 @@ class Scanner
     else
       @col -= 1
     end
+    if c.respond_to?(:position) and pos = c.position
+      @lineno = pos.lineno
+      @filename = pos.filename
+      @col = pos.filename
+    end
     @buf += c
-    # FIXME: Count any linefeeds too.
   end
 
   def expect(str)
     return buf if str == ""
     return str.expect(self) if str.respond_to?(:expect)
-    buf = ""
+    buf = ScannerString.new
+    buf.position = self.position
     str.each_byte do |s|
       c = peek
       if !c || c.to_i != s

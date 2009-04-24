@@ -1,8 +1,6 @@
 
 module AST
 
-  Position = Struct.new(:filename,:lineno,:col)
-
   # Adds properties to AST nodes that simplify error
   # reporting, debugging etc.
   module Node
