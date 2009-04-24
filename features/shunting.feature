@@ -83,7 +83,7 @@ Feature: Shunting Yard
       | "Set[1,2,3]" | [:callm,:Set,:[],[1,2,3]]             |       |
       | "r[2][0]"    | [:callm, [:callm,:r,:[],[2]],:[],[0]] |       |
       | "s.foo[0]"   | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
-      | "foo[1] = 2" | [:callm, :foo, :[]=, [1m2]]           | Tree rewrite |
+      | "foo[1] = 2" | [:callm, :foo, :[]=, [1,2]]           | Tree rewrite |
 
     Scenario Outline: Function calls
 		Given the expression <expr>
