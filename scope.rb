@@ -86,14 +86,24 @@ class VTableOffsets
   end
 end
 
+
+# Class scope.
+# Holds name of class, vtable for methods defined within the class
+# as well as all defined instance & class variables.
 class ClassScope
-  attr_reader :name, :vtable
+  # class name,
+  # method v-table,
+  # instance variables
+  # and class variables
+  attr_reader :name, :vtable, :instance_vars, :class_vars
 
   def initialize(next_scope, name, offsets)
     @next = next_scope
     @name = name
     @vtable = {}
     @vtableoffsets = offsets
+    @instance_vars = {}
+    @class_vars = {}
   end
 
   def rest?
@@ -101,6 +111,23 @@ class ClassScope
   end
 
   def get_arg(a)
+    # class variables.
+    # if it starts with "@@" it's a classvariable.
+    if a.to_s[0..1] == "@@" or @class_vars.include?(a)
+      @class_vars[a] ||= a.to_s[2..-1].to_sym # save without "@@"
+      instance_var = @class_vars[a]
+      return [:cvar, "__classvar__#{@name}__#{instance_var}".to_sym] # -> e.g. __classvar__Foo__varname
+    end
+
+    # instance variables.
+    # if it starts with a single "@", it's a instance variable.
+    if a.to_s[0] == ?@ or @instance_vars.include?(a)
+      @instance_vars[a] ||= a.to_s.rest.to_sym # save without "@"
+      instance_var = @instance_vars[a]
+      return [:ivar, "__instancevar__#{@name}__#{instance_var}".to_sym] # -> e.g.__instancevar__Foo__varname
+    end
+
+
     return @next.get_arg(a) if @next
     return [:addr, a]
   end
