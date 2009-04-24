@@ -178,7 +178,11 @@ class Compiler
   end
 
   def compile_eval_arg(scope, arg)
-    STDERR.puts arg.position.inspect if arg.respond_to?(:position) && arg.position != nil
+    if arg.respond_to?(:position) && arg.position != nil
+      pos = arg.position.inspect
+      @e.comment(arg.position.inspect) if pos != @lastpos
+      @lastpos = pos
+    end
     args = get_arg(scope,arg)
     return @e.load(args[0],args[1])
   end
