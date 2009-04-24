@@ -3,6 +3,10 @@ module AST
 
   # Adds properties to AST nodes that simplify error
   # reporting, debugging etc.
+  #
+  # This will later also provide a location for 
+  # plugins to attach additional notation to the
+  # nodes, such as inferred type information etc.
   module Node
     attr_accessor :position
   end
