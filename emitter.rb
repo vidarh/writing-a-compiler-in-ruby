@@ -126,6 +126,10 @@ class Emitter
       emit(:movl, source, dest.to_s)
     when :lvar
       save_to_local_var(source, dest)
+    when :ivar
+      save_to_instance_var(source, dest)
+    when :cvar
+      save_to_class_var(source, dest)
     when :arg
       save_to_arg(source, dest)
     when :addr
@@ -152,6 +156,10 @@ class Emitter
       return load_arg(aparam)
     when :lvar
       return load_local_var(aparam)
+    when :ivar
+      return load_instance_var(aparam)
+    when :cvar
+      return load_class_var(aparam)
     when :global
       return load_global_var(aparam)
     when :subexpr
@@ -185,8 +193,28 @@ class Emitter
     return :eax
   end
 
+  def load_instance_var(aparam)
+    STDERR.puts("Emitter#load_instance_var not implemented yet - #{aparam.inspect}")
+  end
+
+  def load_class_var(aparam)
+    STDERR.puts("Emitter#load_class_var not implemented yet - #{aparam.inspect}")
+  end
+
   def save_to_local_var(arg, aparam)
     movl(arg,local_var(aparam))
+  end
+
+  def save_to_instance_var(arg, aparam)
+    # needs to be implemented
+    STDERR.puts("Emitter#save_to_instance_var needs to be implemented")
+    STDERR.puts("Emitter#save_to_instance_var: arg: #{arg.inspect}, aparam: #{aparam.inspect}")
+  end
+
+  def save_to_class_var(arg, aparam)
+    # needs to be implemented
+    STDERR.puts("Emitter#save_to_class_var needs to be implemented")
+    STDERR.puts("Emitter#save_to_class_var: arg: #{arg.inspect}, aparam: #{aparam.inspect}")
   end
 
   def save_to_arg(arg, aparam)
@@ -280,7 +308,7 @@ class Emitter
   end
 
 
-  # Generates assembly for defining a string constant.
+  # Generates assembl for defining a string constant.
   def string(l, str)
     local(l)
     emit(".string","\"#{str}\"")
