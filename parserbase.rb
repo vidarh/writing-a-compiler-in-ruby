@@ -1,11 +1,13 @@
 require 'scanner'
 require 'tokens'
 require 'pp'
+require 'ast'
 
 # Base-class for all Parsers.
 # Defines some common methods for parsing sourcecode.
 class ParserBase
   include Tokens
+  include AST
 
   # The constructor takes a Scanner instance as an argument
   # to read the source code to parse from.

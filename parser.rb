@@ -219,7 +219,7 @@ class Parser < ParserBase
 
   # def ::= "def" ws* name args? block_body
   def parse_def
-    expect("def") or return
+    sym = expect("def") or return
     ws
     name = parse_name || @shunting.parse or expected("function name")
     if (expect("."))
@@ -232,7 +232,7 @@ class Parser < ParserBase
     ret = parse_block_exps
     exps = [:let,ret[0]] + ret[1]
     expect("end") or expected("expression or 'end' for open def '#{name.to_s}'")
-    return [:defun, name, args, exps]
+    return E[sym.position,:defun, name, args, exps]
   end
 
   def parse_sexp; @sexp.parse; end
