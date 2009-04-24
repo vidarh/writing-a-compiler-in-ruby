@@ -1,24 +1,12 @@
 
 module AST
 
+  Position = Struct.new(:filename,:lineno,:col)
+
   # Adds properties to AST nodes that simplify error
   # reporting, debugging etc.
   module Node
-    class <<
-        attr_accessor :lineno,:col,:filename
-    end
-
-    Position = Struct.new(:filename,:lineno,:col)
-
-    def position= pos
-      @lineno = pos.lineno
-      @col = pos.col
-      @filename = pos.filename
-    end
-
-    def position
-      Position.new(@filename,@lineno,@col)
-    end
+    attr_accessor :position
   end
 
   # Inheriting from Array lets most code just work on the

@@ -18,6 +18,11 @@ class Parser < ParserBase
     expect(Atom)
   end
 
+  # fname ::= name | "[]" | <FIXME: all the other symbols allowed as function names>
+  def parse_fname
+    parse_name || expect("[]")
+  end
+
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist
     prefix = expect("*") || expect("&")
@@ -219,7 +224,7 @@ class Parser < ParserBase
     name = parse_name || @shunting.parse or expected("function name")
     if (expect("."))
       name = [name]
-      ret = parse_name or expected("name following '#{name}.'")
+      ret = parse_fname or expected("name following '#{name}.'")
       name << ret
     end
     args = parse_args || []
@@ -236,7 +241,7 @@ class Parser < ParserBase
   def parse_class
     type = expect("class","module") or return
     ws
-    name = expect(Atom) or expected("class name")
+    name = expect(Atom) || expect("<<") or expected("class name")
     ws
     if expect("<")
       ws

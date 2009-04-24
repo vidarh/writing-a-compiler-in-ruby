@@ -45,8 +45,9 @@ class Compiler
   # Outputs nice compiler error messages, similar to
   # the parser (ParserBase#error).
   def error(error_message, current_scope = nil, current_exp = nil)
-    if current_exp.is_a(AST::Node)
-      location = " @ line #{current_exp.lineno}, col #{current_exp.col} in #{current_exp.filename}"
+    if current_exp.is_a(AST::Node) && current_exp.position.lineno
+      pos = current_exp.position
+      location = " @ #{pos.lineno}, col #{pos.col} in #{pos.filename}" 
     else
       location = ""
     end
