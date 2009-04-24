@@ -385,7 +385,15 @@ class Compiler
 
   # Starts the actual compile process.
   def compile(exp)
-    compile_main([:do, DO_BEFORE, exp, DO_AFTER])
+    # We need to ensure we find the maximum
+    # size of the vtables *before* we compile
+    # any of the classes
+    exp.depth_first(:defun) do |defun|
+      @vtableoffsets.get_offset(defun[1])
+      :skip
+    end
+
+    compile_main(exp)
   end
 end
 
