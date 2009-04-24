@@ -23,7 +23,7 @@ module OpPrec
       # As a special rule only :rp's are allowed to reduce past an :lp. This is a bit of a hack - since we recurse for :lp's
       # then don't strictly need to go on the stack at all - they could be pushed on after the shunt returns. May
       # do that later.
-      while  !ostack.empty? && (ostack.last.pri > pri || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
+      while  !ostack.empty? && (ostack.last.pri > pri || (ostack.last.pri == pri && op.assoc == :left) || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
         o = ostack.pop
         @out.oper(o) if o.sym
       end
