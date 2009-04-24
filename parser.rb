@@ -231,7 +231,7 @@ class Parser < ParserBase
     expect(";")
     ret = parse_block_exps
     exps = [:let,ret[0]] + ret[1]
-    expect("end") or expected("expression or 'end' for open def")
+    expect("end") or expected("expression or 'end' for open def '#{name.to_s}'")
     return [:defun, name, args, exps]
   end
 
