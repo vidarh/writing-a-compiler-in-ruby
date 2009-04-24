@@ -21,6 +21,10 @@ class ParserBase
     res
   end
 
+  def position
+    @scanner.position
+  end
+
   def expect(*args)
     args.each do |a|
       r = @scanner.expect(a)
