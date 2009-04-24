@@ -32,7 +32,7 @@ class Scanner
 
     # set filename if io is an actual file (instead of STDIN)
     # otherwhise, indicate it comes from a stream
-    @filename = File.file?(io) && io.is_a?(File) ? io.path : "<stream>"
+    @filename = io.is_a?(File) && File.file?(io) ? io.path : "<stream>"
   end
 
   def fill

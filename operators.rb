@@ -12,9 +12,9 @@ require 'set'
 # The priority defines the precedence-rules for the parser.
 # Smaller numbers mean higher priority.
 class Oper
-  attr_accessor :pri, :sym, :type, :arity, :minarity
+  attr_accessor :pri, :sym, :type, :arity, :minarity,:assoc
 
-  def initialize(pri, sym, type, arity = nil, minarity = nil)
+  def initialize(pri, sym, type, arity = nil, minarity = nil, assoc = :right)
     @pri = pri
     @sym = sym
     @type = type
@@ -26,6 +26,7 @@ class Oper
       @arity = arity
     end
     @minarity = minarity || @arity
+    @assoc = assoc
   end
 end
 
@@ -81,7 +82,7 @@ Operators = {
 
   "/"  => Oper.new(20, :div,    :infix),
 
-  "."  => Oper.new(100, :callm,  :infix),
+  "."  => Oper.new(100, :callm,  :infix,2,2,:left),
   "::" => Oper.new(90, :deref,  :infix),
 
   "["  => Oper.new(99,  :array,  :lp,1),

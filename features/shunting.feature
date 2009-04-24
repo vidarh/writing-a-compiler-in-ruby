@@ -29,6 +29,7 @@ Feature: Shunting Yard
       | ":sym"               | :":sym"                              |
       | ":[]"                | :":[]"                               |
 
+    @callm
 	Scenario Outline: Method calls
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
@@ -48,6 +49,7 @@ Feature: Shunting Yard
       | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
       | "foo(1 + arg)"       | [:call,:foo,[:add, 1, :arg]]             |
       | "foo(1 * arg,bar)"   | [:call,:foo,[[:mul, 1, :arg],:bar]]      |
+      | "(ret.flatten).uniq" | [:callm,[:callm,:ret,:flatten],:uniq]    |
       | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]    |
 
 	Scenario Outline: Array syntax
@@ -81,7 +83,7 @@ Feature: Shunting Yard
       | "Set[1,2,3]" | [:callm,:Set,:[],[1,2,3]]             |       |
       | "r[2][0]"    | [:callm, [:callm,:r,:[],[2]],:[],[0]] |       |
       | "s.foo[0]"   | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
-      | "foo[1] = 2" | [:callm, :foo, :[]=, [1m2]]           | Tree rewrite |
+      | "foo[1] = 2" | [:callm, :foo, :[]=, [1,2]]           | Tree rewrite |
 
     Scenario Outline: Function calls
 		Given the expression <expr>

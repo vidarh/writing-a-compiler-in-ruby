@@ -141,6 +141,7 @@ class Compiler
       # Strictly speaking we don't *need* to use a sensible name at all,
       # but it makes me a lot happier when debugging the asm.
       cleaned = name.to_s.gsub("?","__Q") # FIXME: Needs to do more.
+      cleaned = cleaned.to_s.gsub("[]","__NDX")
       fname = "__method_#{scope.name}_#{cleaned}"
       scope.set_vtable_entry(name, fname, f)
       @e.load_address(fname)
