@@ -47,13 +47,15 @@ class Compiler
   def error(error_message, current_scope = nil, current_exp = nil)
     if current_exp.respond_to?(:position) && current_exp.position && current_exp.position.lineno
       pos = current_exp.position
-      location = " @ #{pos.lineno}, col #{pos.col} in #{pos.filename}" 
+      location = " @ #{pos.inspect}"
+    elsif @lastpos
+      location = " near (after) #{@lastpos}"
     else
       location = ""
     end
     raise "Compiler error: #{error_message}#{location}\n
            current scope: #{current_scope.inspect}\n
-           current expression: #{current_exp}\n"
+           current expression: #{current_exp.inspect}\n"
   end
 
   # Allocate an integer value to a symbol. We'll "cheat" for now and just
@@ -250,7 +252,7 @@ class Compiler
         off = @vtableoffsets.get_offset(method)
 
         if !off
-          err_msg = "No offset for #{method}, and we don't yet implement send"
+          err_msg = "No vtable offset for '#{method}', and we don't yet implement send"
           error(err_msg, scope, [:callm, ob, method, args])
         end
 
@@ -320,7 +322,7 @@ class Compiler
     @e.comment("=== class #{name} ===")
     # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If
     # not we are unable to determine the correct #klass_size (see below).
-    STDERR.puts "INFO: Max vtable offset is #{@vtableoffsets.max}" # This illustrates the problem above - it should remain the same
+    STDERR.puts "INFO: Max vtable offset when compiling #{name} is #{@vtableoffsets.max}" # This illustrates the problem above - it should remain the same
 
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
@@ -388,8 +390,9 @@ class Compiler
     # We need to ensure we find the maximum
     # size of the vtables *before* we compile
     # any of the classes
+    @vtableoffsets.alloc_offset(:__send__)
     exp.depth_first(:defun) do |defun|
-      @vtableoffsets.get_offset(defun[1])
+      @vtableoffsets.alloc_offset(defun[1])
       :skip
     end
 
