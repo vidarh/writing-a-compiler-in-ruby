@@ -403,6 +403,8 @@ begin
   prog = parser.parse
 rescue Exception => e
   STDERR.puts "#{e.message}"
+  # FIXME: The position ought to come from the parser, as should the rest, since it could come
+  # from a 'require'd file, in which case the fragment below means nothing.
   STDERR.puts "Failed at line #{s.lineno} / col #{s.col}  before:\n"
   buf = ""
   while s.peek && buf.size < 100

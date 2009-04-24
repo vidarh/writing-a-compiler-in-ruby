@@ -73,6 +73,7 @@ class Parser < ParserBase
 
   # if ::= "if" ws* condition "then"? defexp* "end"
   def parse_if
+    pos = position
     expect("if") or return
     ws
     cond = parse_condition or expected("condition for 'if' block")
@@ -85,13 +86,14 @@ class Parser < ParserBase
       elseexps = zero_or_more(:defexp)
     end
     expect("end") or expected("expression or 'end' for open 'if'")
-    ret = [:if, cond, [:do]+exps]
-    ret << [:do]+elseexps if elseexps
+    ret = E[pos,:if, cond, E[:do]+exps]
+    ret << E[:do]+elseexps if elseexps
     return  ret
   end
 
   # when ::= "when" ws* condition (nolfws* ":")? ws* defexp*
   def parse_when
+    pos = position
     expect("when") or return
     ws
     cond = parse_condition or expect("condition for 'when'")
@@ -99,11 +101,12 @@ class Parser < ParserBase
     expect(":")
     ws
     exps = zero_or_more(:defexp)
-    [:when, cond, exps]
+    E[:when, cond, exps]
   end
 
   # case ::= "case" ws* condition when* ("else" ws* defexp*) "end"
   def parse_case
+    pos = position
     expect("case") or return
     ws
     cond = parse_condition or expect("condition for 'case' block")
@@ -116,12 +119,13 @@ class Parser < ParserBase
     end
     ws
     expect("end") or expected("'end' for open 'case'")
-    [:case, cond, whens, elses].compact
+    E[:case, cond, whens, elses].compact
   end
 
 
   # while ::= "while" ws* condition "do"? defexp* "end"
   def parse_while
+    pos = position
     expect("while") or return
     ws
     cond = parse_condition or expected("condition for 'while' block")
@@ -129,7 +133,7 @@ class Parser < ParserBase
     nolfws;
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
-    return [:while, cond, [:do]+exps]
+    return E[:while, cond, [:do]+exps]
   end
 
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
@@ -145,7 +149,7 @@ class Parser < ParserBase
     end
     ws
     exps = zero_or_more(:defexp)
-    return [:rescue, c, name, exps]
+    return E[:rescue, c, name, exps]
   end
 
   # begin ::= "begin" ws* defexp* rescue? "end"
@@ -155,7 +159,7 @@ class Parser < ParserBase
     exps = zero_or_more(:defexp)
     rescue_ = parse_rescue
     expect("end") or expected("expression or 'end' for open 'begin' block")
-    return [:block, [], exps, rescue_]
+    return E[:block, [], exps, rescue_]
   end
 
   # subexp ::= exp nolfws*
@@ -169,6 +173,7 @@ class Parser < ParserBase
   # and "class".
   # defexp ::= sexp | while | begin | case | if | subexp
   def parse_defexp
+    pos = position
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
     nolfws
@@ -179,7 +184,7 @@ class Parser < ParserBase
       ws
       cond = parse_condition or expected("condition for '#{sym.to_s}' statement modifier")
       nolfws; expect(";")
-      ret = [sym.to_sym, cond, ret]
+      ret = E[pos,sym.to_sym, cond, ret]
     end
     ws; expect(";"); ws
     ret
@@ -190,10 +195,11 @@ class Parser < ParserBase
     ws
     exps = zero_or_more(:defexp)
     vars = deep_collect(exps, Array) {|node| node[0] == :assign ? node[1] : nil}
-    [vars, exps]
+    E[vars, exps]
   end
 
   def parse_block(start = nil)
+    pos = position
     return nil if start == nil and !(start = expect("{")  || expect("do"))
     close = (start.to_s == "{") ? "}" : "end"
     ws
@@ -213,13 +219,14 @@ class Parser < ParserBase
     exps = parse_block_exps
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
-    return [:block] if args.size == 0 and !exps[1] || exps[1].size == 0
-    [:block, args, exps[1]]
+    return E[pos,:block] if args.size == 0 and !exps[1] || exps[1].size == 0
+    E[pos,:block, args, exps[1]]
   end
 
   # def ::= "def" ws* name args? block_body
   def parse_def
-    sym = expect("def") or return
+    pos = position
+    expect("def") or return
     ws
     name = parse_name || @shunting.parse or expected("function name")
     if (expect("."))
@@ -232,13 +239,14 @@ class Parser < ParserBase
     ret = parse_block_exps
     exps = [:let,ret[0]] + ret[1]
     expect("end") or expected("expression or 'end' for open def '#{name.to_s}'")
-    return E[sym.position,:defun, name, args, exps]
+    return E[pos,:defun, name, args, exps]
   end
 
   def parse_sexp; @sexp.parse; end
 
   # class ::= ("class"|"module") ws* name ws* exp* "end"
   def parse_class
+    pos = position
     type = expect("class","module") or return
     ws
     name = expect(Atom) || expect("<<") or expected("class name")
@@ -250,7 +258,7 @@ class Parser < ParserBase
     end
     exps = zero_or_more(:exp)
     expect("end") or expected("expression or 'end'")
-    return [type.to_sym, name, exps]
+    return E[pos,type.to_sym, name, exps]
   end
 
 
@@ -279,6 +287,7 @@ class Parser < ParserBase
 
   # require ::= "require" ws* subexp
   def parse_require
+    pos = position
     expect("require") or return
     ws
     q = parse_subexp or expected("name of source to require")
@@ -286,7 +295,7 @@ class Parser < ParserBase
 
     if q.is_a?(Array) || @opts[:norequire]
       STDERR.puts "WARNING: NOT processing require for #{q.inspect}"
-      return [:require, q]
+      return E[pos,:require, q]
     end
 
     self.require(q)
@@ -294,11 +303,12 @@ class Parser < ParserBase
 
   # include ::= "include" ws* name w
   def parse_include
+    pos = position
     expect("include") or return
     ws
     n = parse_name or expected("name of module to include")
     ws
-    [:include, n]
+    E[pos,:include, n]
   end
 
   # exp ::= ws* (class | def | sexp)
@@ -311,7 +321,7 @@ class Parser < ParserBase
 
   # program ::= exp* ws*
   def parse(require_core = true)
-    res = [:do]
+    res = E[position,:do]
     res << self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
     res += zero_or_more(:exp)
     ws
