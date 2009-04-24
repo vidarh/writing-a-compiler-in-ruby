@@ -69,8 +69,8 @@ class Compiler
     return [:int, a] if (a.is_a?(Fixnum))
     if (a.is_a?(Symbol))
       name = a.to_s
-      return [:int,intern(name.rest)] if name[0] == ?: 
-      return scope.get_arg(a) 
+      return [:int,intern(name.rest)] if name[0] == ?:
+      return scope.get_arg(a)
     end
 
     lab = @string_constants[a]
@@ -111,7 +111,11 @@ class Compiler
   # the actual code for the function's body.
   def compile_defun(scope, name, args, body)
     if scope.is_a?(ClassScope) # Ugly. Create a default "register_function" or something. Have it return the global name
-      f = Function.new([:self]+args, body) # "self" is "faked" as an argument to class methods.
+
+      # since we have a class scope,
+      # we also pass the class scope to the function, since it's actually a method.
+      f = Function.new([:self]+args, body, scope) # "self" is "faked" as an argument to class methods.
+
       @e.comment("method #{name}")
 
       # Need to clean up the name to be able to use it in the assembler.
