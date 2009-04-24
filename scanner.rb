@@ -67,6 +67,7 @@ class Scanner
     if c.is_a?(String)
       c = c.reverse
       @col -= c.length
+      @lineno -= c.count(10.chr)
     else
       @col -= 1
     end
@@ -75,7 +76,7 @@ class Scanner
       @filename = pos.filename
       @col = pos.filename
     else
-      STDERR.puts "unget without position: #{c}"
+      #STDERR.puts "unget without position: #{c}"
     end
     @buf += c
   end
