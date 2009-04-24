@@ -58,6 +58,15 @@ class Compiler
            current expression: #{current_exp.inspect}\n"
   end
 
+
+  # Prints out a warning to the console.
+  # Similar to error, but doesn't throw an exception, only prints out a message
+  # and any given additional arguments during compilation process to the console.
+  def warning(warning_message, *args)
+    STDERR.puts("#{warning_message} - #{args.join(',')}")
+  end
+
+
   # Allocate an integer value to a symbol. We'll "cheat" for now and just
   # use the "host" system. The symbol table needs to eventually get
   # reflected in the compiled program -- you need to be able to retrieve the
@@ -249,7 +258,7 @@ class Compiler
       # Argh. Ok, then. Lets do send
       off = @vtableoffsets.get_offset(:__send__)
       args = [intern(method)] + args
-      STDERR.puts "WARNING: No vtable offset for '#{method}' -- you're likely to get a method_missing"
+      warning("WARNING: No vtable offset for '#{method}' -- you're likely to get a method_missing")
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
@@ -366,7 +375,7 @@ class Compiler
       return compile_call(scope, exp[0], exp.rest) if (exp.is_a? Array)
     end
 
-    STDERR.puts "Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}"
+    warning("Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}")
     res = compile_eval_arg(scope, exp[0])
     @e.save_result(res)
     return [:subexpr]
@@ -394,7 +403,7 @@ class Compiler
   # size of the vtables *before* we compile
   # any of the classes
   #
-  # Consider whether to check :call/:callm nodes as well, though they 
+  # Consider whether to check :call/:callm nodes as well, though they
   # will likely hit method_missing
   def alloc_vtable_offsets(exp)
     exp.depth_first(:defun) do |defun|
@@ -404,7 +413,7 @@ class Compiler
 
     classes = 0
     exp.depth_first(:class) {|c| classes += 1; :skip }
-    STDERR.puts "INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes"
+    warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
 
   # Starts the actual compile process.
