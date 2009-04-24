@@ -1,10 +1,28 @@
 
+
 # The purpose of the Scanner is to present a narrow interface to read characters from, with support for lookahead / unget.
 # Why not StringScanner? Well, it's a Ruby C-extension, and I want to get the compiler self-hosted as soon as possible,
 # so I'm sticking to something simple. The code below is sufficient to write recursive descent parsers in a pretty
 # concise style in Ruby
 class Scanner
   attr_reader :col,:lineno, :filename # @filename holds the name of the file the parser reads from
+
+  Position = Struct.new(:filename,:lineno,:col)
+
+  class Position
+    def inspect
+      "line #{self.lineno}, col #{self.col} in #{self.filename}"
+    end
+  end
+
+  class ScannerString < String
+    attr_accessor :position
+  end
+
+  # Return the current position of the parser in one convenient object...
+  def position
+    Position.new(@filename,@lineno,@col)
+  end
 
   def initialize(io)
     @io = io
@@ -13,8 +31,8 @@ class Scanner
     @col = 1
 
     # set filename if io is an actual file (instead of STDIN)
-    # otherwhise, simply set it to nil
-    @filename = File.file?(io) and io.is_a?(File) ? io.path : nil
+    # otherwhise, indicate it comes from a stream
+    @filename = File.file?(io) && io.is_a?(File) ? io.path : "<stream>"
   end
 
   def fill
@@ -32,37 +50,49 @@ class Scanner
 
   def get
     fill
+    pos = position
     ch = @buf.slice!(-1,1)
     @col += 1
     if ch == "\n"
       @lineno += 1
       @col = 1
     end
-    return ch
+    return nil if !ch
+    s = ScannerString.new(ch)
+    s.position = pos
+    return s
   end
 
   def unget(c)
     if c.is_a?(String)
       c = c.reverse
       @col -= c.length
+      @lineno -= c.count(10.chr)
     else
       @col -= 1
     end
+    if c.respond_to?(:position) and pos = c.position
+      @lineno = pos.lineno
+      @filename = pos.filename
+      @col = pos.filename
+    else
+      #STDERR.puts "unget without position: #{c}"
+    end
     @buf += c
-    # FIXME: Count any linefeeds too.
   end
 
   def expect(str)
     return buf if str == ""
     return str.expect(self) if str.respond_to?(:expect)
-    buf = ""
+    buf = ScannerString.new
+    buf.position = self.position
     str.each_byte do |s|
       c = peek
       if !c || c.to_i != s
         unget(buf) if !buf.empty?
         return false
       end
-      buf += get
+      buf << get
     end
     return buf
   end

@@ -110,7 +110,10 @@ module Tokens
     end
 
     def unget(token)
-      @s.unget(token)
+      # a bit of a hack. Breaks down if we ever unget more than one token from the tokenizer.
+      s = Scanner::ScannerString.new(token.to_s)
+      s.position = @lastpos
+      @s.unget(s)
     end
 
     def get_raw
@@ -176,6 +179,7 @@ module Tokens
       @lasttoken = @curtoken
       @lastop ? @s.ws : @s.nolfws
       @lastop = false
+      @lastpos = @s.position
       res = get_raw
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
       @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
