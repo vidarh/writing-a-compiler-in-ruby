@@ -68,17 +68,27 @@ class VTableOffsets
     @vtable = {}
     @vtable_max = 1 # Start at 1 since offset 0 is reserved for the vtable pointer for the Class object
     # Then we insert the "new" method.
-    get_offset(:new)
+    alloc_offset(:new)
+    # __send__ is our fallback if no vtable
+    # offset was found, so it *must* have a slot
+    alloc_offset(:__send__)
   end
 
-  def get_offset(name)
+  def clean_name(name)
     name = name[1] if name.is_a?(Array) # Handle cases like self.foo => look up he offset for "foo"
     name = name.to_sym
+  end
+
+  def alloc_offset(name)
+    name = clean_name(name)
     if !@vtable[name]
       @vtable[name] = @vtable_max
       @vtable_max += 1
     end
-    return @vtable[name]
+  end
+
+  def get_offset(name)
+    return @vtable[clean_name(name)]
   end
 
   def max

@@ -47,13 +47,15 @@ class Compiler
   def error(error_message, current_scope = nil, current_exp = nil)
     if current_exp.respond_to?(:position) && current_exp.position && current_exp.position.lineno
       pos = current_exp.position
-      location = " @ #{pos.lineno}, col #{pos.col} in #{pos.filename}" 
+      location = " @ #{pos.inspect}"
+    elsif @lastpos
+      location = " near (after) #{@lastpos}"
     else
       location = ""
     end
     raise "Compiler error: #{error_message}#{location}\n
            current scope: #{current_scope.inspect}\n
-           current expression: #{current_exp}\n"
+           current expression: #{current_exp.inspect}\n"
   end
 
   # Allocate an integer value to a symbol. We'll "cheat" for now and just
@@ -63,7 +65,7 @@ class Compiler
   # *or* use a typetag like MRI (in other words: we can't just treat it as an
   # arbitrary integer like this code does.
   def intern(sym)
-    sym.intern.to_i
+    sym.to_sym.to_i
   end
 
   # Returns an argument with its type identifier.
@@ -238,8 +240,19 @@ class Compiler
   # as the first parameter.
   def compile_callm(scope, ob, method, args)
     @e.comment("callm #{ob.to_s}.#{method.inspect}")
+
     args ||= []
     args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
+
+    off = @vtableoffsets.get_offset(method)
+    if !off
+      # Argh. Ok, then. Lets do send
+      off = @vtableoffsets.get_offset(:__send__)
+      args = [intern(method)] + args
+      STDERR.puts "WARNING: No vtable offset for '#{method}' -- you're likely to get a method_missing"
+      #error(err_msg, scope, [:callm, ob, method, args])
+    end
+
     @e.with_stack(args.length+1, true) do
       ret = compile_eval_arg(scope, ob)
       @e.save_register(ret) do
@@ -251,12 +264,6 @@ class Compiler
       end
       @e.with_register do |reg|
         @e.load_indirect(ret, reg)
-        off = @vtableoffsets.get_offset(method)
-
-        if !off
-          err_msg = "No offset for #{method}, and we don't yet implement send"
-          error(err_msg, scope, [:callm, ob, method, args])
-        end
 
         @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
         @e.call(@e.result_value)
@@ -322,9 +329,6 @@ class Compiler
   # that belong to the class.
   def compile_class(scope, name, *exps)
     @e.comment("=== class #{name} ===")
-    # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If
-    # not we are unable to determine the correct #klass_size (see below).
-    STDERR.puts "INFO: Max vtable offset is #{@vtableoffsets.max}" # This illustrates the problem above - it should remain the same
 
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
@@ -386,10 +390,27 @@ class Compiler
     output_constants
   end
 
+  # We need to ensure we find the maximum
+  # size of the vtables *before* we compile
+  # any of the classes
+  #
+  # Consider whether to check :call/:callm nodes as well, though they 
+  # will likely hit method_missing
+  def alloc_vtable_offsets(exp)
+    exp.depth_first(:defun) do |defun|
+      @vtableoffsets.alloc_offset(defun[1])
+      :skip
+    end
+
+    classes = 0
+    exp.depth_first(:class) {|c| classes += 1; :skip }
+    STDERR.puts "INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes"
+  end
 
   # Starts the actual compile process.
   def compile(exp)
-    compile_main([:do, DO_BEFORE, exp, DO_AFTER])
+    alloc_vtable_offsets(exp)
+    compile_main(exp)
   end
 end
 
