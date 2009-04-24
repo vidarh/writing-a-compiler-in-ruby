@@ -50,13 +50,17 @@ class Scanner
 
   def get
     fill
+    pos = position
     ch = @buf.slice!(-1,1)
     @col += 1
     if ch == "\n"
       @lineno += 1
       @col = 1
     end
-    return ch
+    return nil if !ch
+    s = ScannerString.new(ch)
+    s.position = pos
+    return s
   end
 
   def unget(c)
@@ -70,6 +74,8 @@ class Scanner
       @lineno = pos.lineno
       @filename = pos.filename
       @col = pos.filename
+    else
+      STDERR.puts "unget without position: #{c}"
     end
     @buf += c
   end
