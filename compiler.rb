@@ -53,7 +53,8 @@ class Compiler
   # use the "host" system. The symbol table needs to eventually get
   # reflected in the compiled program -- you need to be able to retrieve the
   # name etc.. We also need to either create a "real" object for each of them
-  # *or* use a typetag like MRI
+  # *or* use a typetag like MRI (in other words: we can't just treat it as an
+  # arbitrary integer like this code does.
   def intern(sym)
     sym.intern.to_i
   end
