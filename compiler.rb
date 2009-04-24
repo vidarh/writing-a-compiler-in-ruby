@@ -320,9 +320,6 @@ class Compiler
   # that belong to the class.
   def compile_class(scope, name, *exps)
     @e.comment("=== class #{name} ===")
-    # FIXME: *BEFORE* this we need to visit all :call/:callm nodes and decide on a vtable size. If
-    # not we are unable to determine the correct #klass_size (see below).
-    STDERR.puts "INFO: Max vtable offset when compiling #{name} is #{@vtableoffsets.max}" # This illustrates the problem above - it should remain the same
 
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
@@ -384,18 +381,23 @@ class Compiler
     output_constants
   end
 
-
-  # Starts the actual compile process.
-  def compile(exp)
-    # We need to ensure we find the maximum
-    # size of the vtables *before* we compile
-    # any of the classes
-    @vtableoffsets.alloc_offset(:__send__)
+  # We need to ensure we find the maximum
+  # size of the vtables *before* we compile
+  # any of the classes
+  #
+  # Consider whether to check :call/:callm nodes as well, though they 
+  # will likely hit method_missing
+  def alloc_vtable_offsets(exp)
     exp.depth_first(:defun) do |defun|
       @vtableoffsets.alloc_offset(defun[1])
       :skip
     end
+    STDERR.puts "INFO: Max vtable offset when compiling is #{@vtableoffsets.max}"
+  end
 
+  # Starts the actual compile process.
+  def compile(exp)
+    alloc_vtable_offsets(exp)
     compile_main(exp)
   end
 end
