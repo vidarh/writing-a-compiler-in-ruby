@@ -392,7 +392,10 @@ class Compiler
       @vtableoffsets.alloc_offset(defun[1])
       :skip
     end
-    STDERR.puts "INFO: Max vtable offset when compiling is #{@vtableoffsets.max}"
+
+    classes = 0
+    exp.depth_first(:class) {|c| classes += 1; :skip }
+    STDERR.puts "INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes"
   end
 
   # Starts the actual compile process.
