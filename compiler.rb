@@ -202,7 +202,9 @@ class Compiler
       @e.comment(arg.position.inspect) if pos != @lastpos
       @lastpos = pos
     end
-    atype, aparam = get_arg(scope,arg)
+    args = get_arg(scope,arg)
+    atype = args[0]
+    aparam = args[1]
     if atype == :ivar
       ret = compile_eval_arg(scope, :self)
       @e.load_instance_var(ret, aparam)
