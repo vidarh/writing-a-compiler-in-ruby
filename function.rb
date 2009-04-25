@@ -52,12 +52,6 @@ class Function
   end
 
   def get_arg(a)
-    # if we have a method, let's check first,
-    # if the class scope has the argument defined.
-    if is_method?
-      return @cscope.get_arg(a)
-    end
-
     if a == :numargs
       # This is a bit of a hack, but it turns :numargs
       # into a constant for any non-variadic function
@@ -66,6 +60,12 @@ class Function
 
     args.each_with_index do |arg,i|
       return [arg.type, i] if arg.name == a
+    end
+
+    # if we have a method, let's check first,
+    # if the class scope has the argument defined.
+    if is_method?
+      return @cscope.get_arg(a)
     end
 
     return nil
