@@ -194,7 +194,7 @@ class Parser < ParserBase
   def parse_block_exps
     ws
     exps = zero_or_more(:defexp)
-    vars = deep_collect(exps, Array) {|node| node[0] == :assign ? node[1] : nil}
+    vars = deep_collect(exps, Array) {|node| node[0] == :assign && node[1].to_s[0] != ?@ ? node[1] : nil}
     E[vars, exps]
   end
 
