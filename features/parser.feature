@@ -68,6 +68,7 @@ Feature: Parser
 	  | "def foo(a = :b, &bar)\nend\n  " | [:do, [:defun, :foo, [:a,[:bar,:block]], [:let, []]]] | Second argument following argument with initializer |
 	  | "def self.foo\nend\n"         | [:do, [:defun, [:self,:foo], [], [:let, []]]] | Class method etc.                             |
 
+    @control
 	Scenario Outline: Control structures
 		Given the expression <expr>
 		When I parse it with the full parser
@@ -76,5 +77,6 @@ Feature: Parser
 	Examples:
 	  | expr                          | tree                                          | notes                                         |
 	  | "case foo\nwhen a\nend"       | [:do, [:case, :foo, [[:when, :a, []]]]]       | Basic case structure                          |
+      | "case foo\nwhen a\nb\nwhen c\nd\nend" | [:do,[:case, :foo, [[:when,:a,[:b]],[:when,:c,[:d]]]]] | More complicated case         |
       | "begin\nputs 'foo'\nrescue Exception => e\nend\n" |  [:do, [:block, [], [[:call, :puts, "foo"]], [:rescue, :Exception, :e, []]]] | begin/rescue |
 
