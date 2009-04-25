@@ -3,11 +3,12 @@ class Foo
 
   def bar
     puts("test")
+    @foo = "Some text"
     self.hello
   end
 
   def hello
-    puts("Hello World!")
+    printf("Hello World! - %s\n",@foo)
   end
 end
 

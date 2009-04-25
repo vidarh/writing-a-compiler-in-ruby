@@ -64,9 +64,10 @@ VTableEntry = Struct.new(:name, :realname, :offset, :function)
 # we can't usually statically determine what class
 # an object belongs to.
 class VTableOffsets
-  def initialize
+  def initialize 
     @vtable = {}
-    @vtable_max = 1 # Start at 1 since offset 0 is reserved for the vtable pointer for the Class object
+    # Start at CLASS_IVAR_NUM to allow convenient allocation of ivar space for the Class object
+    @vtable_max = ClassScope::CLASS_IVAR_NUM
     # Then we insert the "new" method.
     alloc_offset(:new)
     # __send__ is our fallback if no vtable
@@ -107,12 +108,20 @@ class ClassScope
   # and class variables
   attr_reader :name, :vtable, :instance_vars, :class_vars
 
+  # This is the number of instance variables allowed for the class
+  # Class, and is used for bootstrapping. Note that it could be
+  # determined by the compiler checking the actual class implementation,
+  # so this is a bit of a copout.
+  # 
+  # slot 0 is reserved for the vtable pointer
+  CLASS_IVAR_NUM = 2
+
   def initialize(next_scope, name, offsets)
     @next = next_scope
     @name = name
     @vtable = {}
     @vtableoffsets = offsets
-    @instance_vars = {}
+    @instance_vars = [:@__class__] # FIXME: Do this properly
     @class_vars = {}
   end
 
@@ -120,7 +129,20 @@ class ClassScope
     false
   end
 
+  def add_ivar(a)
+    @instance_vars << a.to_sym
+  end
+
+  def instance_size
+    @instance_vars.size
+  end
+
   def get_arg(a)
+    # Handle self
+    if a.to_sym == :self
+      return [:global,@name]
+    end
+
     # class variables.
     # if it starts with "@@" it's a classvariable.
     if a.to_s[0..1] == "@@" or @class_vars.include?(a)
@@ -132,9 +154,10 @@ class ClassScope
     # instance variables.
     # if it starts with a single "@", it's a instance variable.
     if a.to_s[0] == ?@ or @instance_vars.include?(a)
-      @instance_vars[a] ||= a.to_s.rest.to_sym # save without "@"
-      instance_var = @instance_vars[a]
-      return [:ivar, "__instancevar__#{@name}__#{instance_var}".to_sym] # -> e.g.__instancevar__Foo__varname
+      offset = @instance_vars.index(a)
+      add_ivar(a) if !offset
+      offset = @instance_vars.index(a)
+      return [:ivar, offset]
     end
 
 
@@ -142,6 +165,12 @@ class ClassScope
     return [:addr, a]
   end
 
+  # Returns the size of a class object.
+  # This is a multiple of @vtableoffsets.max, but this
+  # is deceiving as the offsets starts at a value that
+  # is based on the amount of data needed at the start of
+  # the class object as instance variables for the class
+  # object.
   def klass_size
     @vtableoffsets.max * Emitter::PTR_SIZE
   end

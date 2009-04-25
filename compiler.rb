@@ -200,8 +200,13 @@ class Compiler
       @e.comment(arg.position.inspect) if pos != @lastpos
       @lastpos = pos
     end
-    args = get_arg(scope,arg)
-    return @e.load(args[0],args[1])
+    atype, aparam = get_arg(scope,arg)
+    if atype == :ivar
+      ret = compile_eval_arg(scope, :self)
+      @e.load_instance_var(ret, aparam)
+      return @e.result_value
+    end
+    return @e.load(atype,aparam)
   end
 
 
@@ -218,6 +223,12 @@ class Compiler
     aparam = nil
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
+    end
+
+    if atype == :ivar
+      ret = compile_eval_arg(scope,:self)
+      @e.save_to_instance_var(source, ret, aparam)
+      return [:subexpr]
     end
 
     if !(@e.save(atype,source,aparam))
@@ -357,6 +368,7 @@ class Compiler
     @classes[name] = cscope
     @global_scope.globals << name
     compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size]]])
+    compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
     @global_constants << name
     exps.each do |e|
       addr = compile_do(cscope, *e)

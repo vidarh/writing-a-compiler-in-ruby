@@ -156,8 +156,8 @@ class Emitter
       return load_arg(aparam)
     when :lvar
       return load_local_var(aparam)
-    when :ivar
-      return load_instance_var(aparam)
+#    when :ivar
+#      return load_instance_var(aparam)
     when :cvar
       return load_class_var(aparam)
     when :global
@@ -193,8 +193,9 @@ class Emitter
     return :eax
   end
 
-  def load_instance_var(aparam)
-    STDERR.puts("Emitter#load_instance_var not implemented yet - #{aparam.inspect}")
+  def load_instance_var(ob,aparam)
+    movl("#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})",result_value)
+    return result_value
   end
 
   def load_class_var(aparam)
@@ -205,10 +206,8 @@ class Emitter
     movl(arg,local_var(aparam))
   end
 
-  def save_to_instance_var(arg, aparam)
-    # needs to be implemented
-    STDERR.puts("Emitter#save_to_instance_var needs to be implemented")
-    STDERR.puts("Emitter#save_to_instance_var: arg: #{arg.inspect}, aparam: #{aparam.inspect}")
+  def save_to_instance_var(arg, ob,aparam)
+    movl(arg,"#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})")
   end
 
   def save_to_class_var(arg, aparam)
