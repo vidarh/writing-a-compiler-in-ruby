@@ -30,15 +30,28 @@ module AST
   class Expr < Array
     include Node
 
+    def update_position
+      sub = find {|n| n.respond_to?(:position) }
+      position = sub.position if sub
+    end
+
     def self.[] *args
       if args.size > 0 && args.first.is_a?(Scanner::Position)
         pos = args.shift
       end
       e = super *args
-      sub = e.find {|n| n.respond_to?(:position) }
-      e.position = sub.position if sub
-      e.position = pos if pos
+      if pos
+        position = pos
+      else 
+        e.update_position
+      end
       e
+    end
+
+    def concat other
+      super(other)
+      update_position
+      self
     end
   end
 

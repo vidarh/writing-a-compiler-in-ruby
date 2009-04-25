@@ -86,8 +86,8 @@ class Parser < ParserBase
       elseexps = zero_or_more(:defexp)
     end
     expect("end") or expected("expression or 'end' for open 'if'")
-    ret = E[pos,:if, cond, E[:do]+exps]
-    ret << E[:do]+elseexps if elseexps
+    ret = E[pos,:if, cond, E[:do].concat(exps)]
+    ret << E[:do].concat(elseexps) if elseexps
     return  ret
   end
 
@@ -119,7 +119,7 @@ class Parser < ParserBase
     end
     ws
     expect("end") or expected("'end' for open 'case'")
-    E[:case, cond, whens, elses].compact
+    E[pos,:case, cond, whens, elses].compact
   end
 
 
@@ -133,11 +133,12 @@ class Parser < ParserBase
     nolfws;
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
-    return E[:while, cond, [:do]+exps]
+    return E[pos,:while, cond, [:do]+exps]
   end
 
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
   def parse_rescue
+    pos = position
     expect("rescue") or return
     nolfws
     if c = parse_name
@@ -149,17 +150,18 @@ class Parser < ParserBase
     end
     ws
     exps = zero_or_more(:defexp)
-    return E[:rescue, c, name, exps]
+    return E[pos,:rescue, c, name, exps]
   end
 
   # begin ::= "begin" ws* defexp* rescue? "end"
   def parse_begin
+    pos = position
     expect("begin") or return
     ws
     exps = zero_or_more(:defexp)
     rescue_ = parse_rescue
     expect("end") or expected("expression or 'end' for open 'begin' block")
-    return E[:block, [], exps, rescue_]
+    return E[pos,:block, [], exps, rescue_]
   end
 
   # subexp ::= exp nolfws*
@@ -176,6 +178,7 @@ class Parser < ParserBase
     pos = position
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
+    ret.position = pos if pos.respond_to?(:position)
     nolfws
     if sym = expect("if") || expect("while") || expect("rescue")
       # FIXME: This is likely the wrong way to go in some situations involving blocks
@@ -192,10 +195,11 @@ class Parser < ParserBase
 
   # block_body ::=  ws * defexp*
   def parse_block_exps
+    pos = position
     ws
     exps = zero_or_more(:defexp)
     vars = deep_collect(exps, Array) {|node| node[0] == :assign && node[1].to_s[0] != ?@ ? node[1] : nil}
-    E[vars, exps]
+    E[pos,vars, exps]
   end
 
   def parse_block(start = nil)
@@ -237,7 +241,7 @@ class Parser < ParserBase
     args = parse_args || []
     expect(";")
     ret = parse_block_exps
-    exps = [:let,ret[0]] + ret[1]
+    exps = E[:let,ret[0]].concat(ret[1])
     expect("end") or expected("expression or 'end' for open def '#{name.to_s}'")
     return E[pos,:defun, name, args, exps]
   end
