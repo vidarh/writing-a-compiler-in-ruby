@@ -4,7 +4,7 @@ require 'set'
 
 module Tokens
 
-  Keywords = Set[:def, :end, :if, :include, :begin, :rescue, :then,:else]
+  Keywords = Set[:def, :end, :if, :include, :begin, :rescue, :then,:else,:when]
 
   class Sym
     def self.expect(s)
