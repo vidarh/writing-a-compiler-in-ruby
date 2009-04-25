@@ -187,13 +187,15 @@ class Compiler
   end
 
 
-  # Compiles an anonymous function.
+  # Compiles an anonymous function ('lambda-expression').
   # Simply calls compile_defun, only, that the name gets generated
   # by the emitter via Emitter#get_local.
   def compile_lambda(scope, args, body)
     compile_defun(scope, @e.get_local, args,body)
   end
 
+
+  # Compiles and evaluates a given argument within a given scope.
   def compile_eval_arg(scope, arg)
     if arg.respond_to?(:position) && arg.position != nil
       pos = arg.position.inspect
@@ -377,6 +379,10 @@ class Compiler
     return [:global, name]
   end
 
+
+  # General method for compiling expressions.
+  # Calls the specialized compile methods depending of the
+  # expression to be compiled (e.g. compile_if, compile_call, compile_let etc.).
   def compile_exp(scope, exp)
     return [:subexpr] if !exp || exp.size == 0
 
@@ -413,6 +419,7 @@ class Compiler
     output_constants
   end
 
+
   # We need to ensure we find the maximum
   # size of the vtables *before* we compile
   # any of the classes
@@ -429,6 +436,7 @@ class Compiler
     exp.depth_first(:class) {|c| classes += 1; :skip }
     warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
+
 
   # Starts the actual compile process.
   def compile(exp)
