@@ -142,6 +142,7 @@ class Compiler
       # but it makes me a lot happier when debugging the asm.
       cleaned = name.to_s.gsub("?","__Q") # FIXME: Needs to do more.
       cleaned = cleaned.to_s.gsub("[]","__NDX")
+      cleaned = cleaned.to_s.gsub("!","__X")
       fname = "__method_#{scope.name}_#{cleaned}"
       scope.set_vtable_entry(name, fname, f)
       @e.load_address(fname)
