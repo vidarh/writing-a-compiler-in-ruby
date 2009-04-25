@@ -11,22 +11,34 @@ class GlobalScope
     @globals = Set.new
   end
 
+
+  # Returns an argument within the global scope, if defined here.
+  # Otherwise returns it as an address (<tt>:addr</tt>)
   def get_arg(a)
     return [:global, a] if @globals.member?(a)
     return [:addr, a]
   end
 end
 
+
+# Function Scope.
+# Holds variables defined within function, as well as all arguments
+# part of the function.
 class FuncScope
   def initialize(func, next_scope = nil)
     @func = func
     @next = next_scope
   end
 
+
   def rest?
     @func ? @func.rest? : false
   end
 
+
+  # Returns an argument within the function scope, if defined here.
+  # Otherwise tries to return it from the next (outer) scope of this function scope.
+  # If this also doesn't contain the argument, return it as an adress.
   def get_arg(a)
     a = a.to_sym
     if @func
@@ -39,16 +51,24 @@ class FuncScope
 end
 
 
+# Local scope.
+# Is used when local variables are defined via <tt>:let</tt> expression.
 class LocalVarScope
   def initialize(locals, next_scope)
     @next = next_scope
     @locals = locals
   end
 
+
   def rest?
     @next ? @next.rest? : false
   end
 
+
+  # Returns an argument within the current local scope.
+  # If the passed argument isn't defined in this local scope,
+  # check the next (outer) scope.
+  # Finally, return it as an adress, if both doesn't work.
   def get_arg(a)
     a = a.to_sym
     return [:lvar, @locals[a] + (rest? ? 1 : 0)] if @locals.include?(a)
@@ -64,7 +84,7 @@ VTableEntry = Struct.new(:name, :realname, :offset, :function)
 # we can't usually statically determine what class
 # an object belongs to.
 class VTableOffsets
-  def initialize 
+  def initialize
     @vtable = {}
     # Start at CLASS_IVAR_NUM to allow convenient allocation of ivar space for the Class object
     @vtable_max = ClassScope::CLASS_IVAR_NUM
@@ -75,11 +95,19 @@ class VTableOffsets
     alloc_offset(:__send__)
   end
 
+
+  # Returns the given name as a Symbol.
+  # If the name is an array, return the converted first element
+  # of the array as the name.
   def clean_name(name)
-    name = name[1] if name.is_a?(Array) # Handle cases like self.foo => look up he offset for "foo"
+    name = name[1] if name.is_a?(Array) # Handle cases like self.foo => look up the offset for "foo"
     name = name.to_sym
   end
 
+
+  # If the given name isn't saved to the vtable yet,
+  # increase <tt>@vtable_max</tt> and save the name to the vtable
+  # with the new <tt>@vtable_max</tt> as the value.
   def alloc_offset(name)
     name = clean_name(name)
     if !@vtable[name]
@@ -88,10 +116,14 @@ class VTableOffsets
     end
   end
 
+
+  # Returns the vtable offset for a given name.
   def get_offset(name)
     return @vtable[clean_name(name)]
   end
 
+
+  # Returns the current max value for the vtable.
   def max
     @vtable_max
   end
@@ -112,7 +144,7 @@ class ClassScope
   # Class, and is used for bootstrapping. Note that it could be
   # determined by the compiler checking the actual class implementation,
   # so this is a bit of a copout.
-  # 
+  #
   # slot 0 is reserved for the vtable pointer
   CLASS_IVAR_NUM = 2
 
@@ -137,6 +169,11 @@ class ClassScope
     @instance_vars.size
   end
 
+
+  # Returns an argument within a class scope.
+  # First, check if argument is class or instance variable.
+  # If argument is not defined within class scope, check next (outer) scope.
+  # If both fails, the argument is an adress (<tt>:addr</tt>).
   def get_arg(a)
     # Handle self
     if a.to_sym == :self
@@ -160,8 +197,10 @@ class ClassScope
       return [:ivar, offset]
     end
 
-
+    # if not in class scope, check next (outer) scope.
     return @next.get_arg(a) if @next
+
+    # if none works up to here, it must be an adress.
     return [:addr, a]
   end
 
@@ -175,6 +214,8 @@ class ClassScope
     @vtableoffsets.max * Emitter::PTR_SIZE
   end
 
+
+  # Adds a given name / identifier to the classes vtable, if not yet added.
   def add_vtable_entry(name)
     # FIXME: If "name" is an array, the first element specified the
     # class object to add the vtable entry to. If it is "self"
@@ -190,6 +231,9 @@ class ClassScope
     return v
   end
 
+
+  # Sets a given vtable entry (identified by <tt>name</tt>)
+  # with the given <tt>realname</tt> and function <tt>f</tt>
   def set_vtable_entry(name, realname, f)
     v = add_vtable_entry(name)
     v.realname = realname
