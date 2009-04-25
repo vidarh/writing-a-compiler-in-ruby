@@ -28,7 +28,7 @@ class Compiler
   # a special calling convention
   @@keywords = Set[
                 :do, :class, :defun, :if, :lambda,
-                :assign, :while, :index, :let
+                :assign, :while, :index, :let, :case
                ]
 
 
@@ -184,6 +184,10 @@ class Compiler
     compile_eval_arg(scope, else_arm) if else_arm
     @e.local(l_end_if_arm) if else_arm
     return [:subexpr]
+  end
+
+  def compile_case(scope, *args)
+    error(":case not implemented yet", scope, [:case]+args)
   end
 
 
