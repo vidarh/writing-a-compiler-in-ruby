@@ -451,14 +451,26 @@ class Compiler
   end
 end
 
-s = Scanner.new(STDIN)
-prog = nil
-
 dump = ARGV.include?("--parsetree")
 norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
 
 # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
 OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
+
+
+# check remaining arguments, if a filename is given.
+# if not, read from STDIN.
+input_source = STDIN
+ARGV.each do |arg|
+  if File.exists?(arg)
+    input_source = File.open(arg, "r")
+    STDERR.puts "reading from file: #{arg}"
+    break
+  end
+end
+
+s = Scanner.new(input_source)
+prog = nil
 
 begin
   parser = Parser.new(s, {:norequire => norequire})
