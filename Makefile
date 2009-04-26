@@ -6,9 +6,6 @@ clean:
 	@rm -f *~ *.o *.s testarray testargs
 	@rm -rf doc/
 
-doc:
-	rdoc --all *.rb
-
 compiler.s: *.rb
 	ruby compiler.rb <compiler.rb >compiler.s
 
