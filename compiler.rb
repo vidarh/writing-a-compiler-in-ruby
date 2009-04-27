@@ -188,6 +188,12 @@ class Compiler
 
   def compile_case(scope, *args)
     error(":case not implemented yet", scope, [:case]+args)
+    # FIXME:
+    # Implement like this: compile_eval_arg
+    # save the register, and loop over the "when"'s. 
+    # Compile each of the "when"'s as "if"'s where the value
+    # is loaded from the stack and compared with the value
+    # (or values) in the when clause
   end
 
 
