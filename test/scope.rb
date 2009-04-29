@@ -32,10 +32,13 @@ def func_scope
   FuncScope.new(function, global_scope)
 end
 
-
 def local_scope
   locals = {:local1 => 0, :local2 => 1}
   LocalVarScope.new(locals, func_scope)
+end
+
+def class_scope
+  ClassScope.new(global_scope, "SampleClass", VTableOffsets.new)
 end
 
 
@@ -149,6 +152,46 @@ describe VTableOffsets do
 
     vto.alloc_offset(:foo)
     vto.get_offset(:foo).should == with_ivar_offset(2)
+  end
+
+end
+
+
+describe ClassScope do
+
+  it "should contain @__class__ instance variable on creation" do
+    cs = class_scope
+    cs.instance_vars.include?(:@__class__).should == true
+    cs.get_arg(:@__class__).should == [:ivar, 0]
+  end
+
+  it "should add the instance variable" do
+    cs = class_scope
+    cs.add_ivar(:@bar)
+    cs.instance_vars.include?(:@bar).should == true
+  end
+
+  it "should find the instance variable" do
+    cs = class_scope
+    cs.add_ivar(:@foo)
+    cs.instance_size.should == 2 # @__class__ is predefined
+    cs.get_arg(:@foo).should == [:ivar, 1]
+  end
+
+  it "should not find an undefined arg" do
+    cs = class_scope
+    cs.get_arg(:undefined_var).should == [:addr, :undefined_var]
+  end
+
+  it "should find a global variable" do
+    cs = class_scope
+    cs.get_arg(:my_global).should == [:global, :my_global]
+  end
+
+  it "should find a class variable" do
+    cs = class_scope
+    # this needs to get fixed, when class vars are actually stored correctly
+    cs.get_arg(:@@class_var).should == [:cvar, "__classvar__#{cs.name}__class_var".to_sym]
   end
 
 end
