@@ -187,13 +187,37 @@ class Compiler
   end
 
   def compile_case(scope, *args)
-    error(":case not implemented yet", scope, [:case]+args)
+#    error(":case not implemented yet", scope, [:case]+args)
     # FIXME:
     # Implement like this: compile_eval_arg
-    # save the register, and loop over the "when"'s. 
+    # save the register, and loop over the "when"'s.
     # Compile each of the "when"'s as "if"'s where the value
     # is loaded from the stack and compared with the value
     # (or values) in the when clause
+
+
+    # experimental (need to look into saving to register etc..):
+    # but makes it compile all the way through for now...
+
+    @e.comment("compiling case expression")
+    compare_exp = args.first
+
+    @e.comment("compare_exp: #{compare_exp}")
+
+    args.rest.each do |whens|
+      whens.each do |exp| # each when-expression
+        test_value = exp[1] # value to test against
+        body = exp[2] # body to be executed, if compare_exp === test_value
+
+        @e.comment("test_value: #{test_value.inspect}")
+        @e.comment("body: #{body.inspect}")
+
+        # turn case-expression into if.
+        compile_if(scope, [:callm, compare_exp, :===, test_value], body)
+      end
+    end
+
+    return [:subexpr]
   end
 
 
