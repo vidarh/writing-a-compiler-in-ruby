@@ -1,12 +1,23 @@
 
 class Array < Object
-  def include? arg
-    %s(puts "Array#include? not implemented")
+  # still need to make including modules work
+  include Enumerable
+
+  # each needs to be defined in order for all of
+  # Enumerable's methods to work.
+  def each
   end
 
-  def member? arg
-    self.include?(arg)
-  end
+
+# should be defined in Enumerable module:
+#   def include? arg
+#     %s(puts "Array#include? not implemented")
+#   end
+
+#   def member? arg
+#     self.include?(arg)
+#   end
+
 
   def size
     %s(puts "Array#size not implemented")
@@ -15,8 +26,8 @@ class Array < Object
   def last
   end
 
-  def collect
-  end
+#  def collect
+#  end
 
   def first
   end
