@@ -94,7 +94,7 @@ module Enumerable
 
 
   def find(ifnone = nil, &block)
-    self.detect(ifnone, &block)
+    return self.detect(ifnone, &block)
   end
 
 
@@ -120,7 +120,7 @@ module Enumerable
 
   def inject(initial = nil)
     unless initial
-      self.inject(self.first)
+      return self.inject(self.first)
     else
       acc = initial
       self.each do |item|
@@ -132,7 +132,7 @@ module Enumerable
 
 
   def map(&block)
-    self.collect(&block) # probably better to make an alias
+    return self.collect(&block) # probably better to make an alias
   end
 
 
@@ -141,7 +141,7 @@ module Enumerable
 
 
   def member?(obj)
-    self.include?(obj)
+    return self.include?(obj)
   end
 
 
@@ -171,7 +171,7 @@ module Enumerable
         items << item
       end
     end
-    return item
+    return items
   end
 
 
