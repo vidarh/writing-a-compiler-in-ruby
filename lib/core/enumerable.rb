@@ -118,16 +118,16 @@ module Enumerable
   end
 
 
-  def inject(initial = nil)
+  def inject(initial = nil, &block)
     unless initial
-      return self.inject(self.first)
-    else
-      acc = initial
-      self.each do |item|
-        acc = yield(acc, item)
-      end
-      return acc
+      return self[1..-1].inject(self.first, &block)
     end
+
+    acc = initial
+    self.each do |item|
+      acc = yield(acc, item)
+    end
+    return acc
   end
 
 
