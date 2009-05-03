@@ -162,6 +162,7 @@ class Compiler
       # function isn't within a class (which would mean, it's a method)
       # so it must be global
       f = Function.new(args, body)
+      name = clean_method_name(name)
     end
 
     # add function to the global list of functions defined so far
@@ -170,7 +171,7 @@ class Compiler
     # a function is referenced by its name (in assembly this is a label).
     # wherever we encounter that name, we really need the adress of the label.
     # so we mark the function with an adress type.
-    return [:addr, name]
+    return [:addr, clean_method_name(name)]
   end
 
 
