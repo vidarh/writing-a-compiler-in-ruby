@@ -123,6 +123,16 @@ class Compiler
     end
   end
 
+  # Need to clean up the name to be able to use it in the assembler.
+  # Strictly speaking we don't *need* to use a sensible name at all,
+  # but it makes me a lot happier when debugging the asm.
+  def clean_method_name(name)
+    cleaned = name.to_s.gsub("?","__Q") # FIXME: Needs to do more.
+    cleaned = cleaned.to_s.gsub("[]","__NDX")
+    cleaned = cleaned.to_s.gsub("!","__X")
+    return cleaned
+  end
+
 
   # Compiles a function definition.
   # Takes the current scope, in which the function is defined,
@@ -137,12 +147,7 @@ class Compiler
 
       @e.comment("method #{name}")
 
-      # Need to clean up the name to be able to use it in the assembler.
-      # Strictly speaking we don't *need* to use a sensible name at all,
-      # but it makes me a lot happier when debugging the asm.
-      cleaned = name.to_s.gsub("?","__Q") # FIXME: Needs to do more.
-      cleaned = cleaned.to_s.gsub("[]","__NDX")
-      cleaned = cleaned.to_s.gsub("!","__X")
+      cleaned = clean_method_name(name)
       fname = "__method_#{scope.name}_#{cleaned}"
       scope.set_vtable_entry(name, fname, f)
       @e.load_address(fname)
