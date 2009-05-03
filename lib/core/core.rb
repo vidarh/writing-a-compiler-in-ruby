@@ -3,6 +3,10 @@ def __method_missing
   %s(puts "default method missing")
 end
 
+def array size
+  malloc(size*4)
+end
+
 require 'core/kernel'
 require 'core/object'
 require 'core/class'

@@ -9,17 +9,6 @@ require 'ast'
 
 require 'set'
 
-# This gets compiled before each programm.
-# It defines the array function, that allocates the appropriate amount of
-# bytes for a given array-size.
-DO_BEFORE= [
-  [:defun, :array, [:size],[:malloc,[:mul,:size,4]]],
-]
-
-# This is used for code, that needs to be compiled at the end of a programm.
-# For now, it's empty.
-DO_AFTER= []
-
 class Compiler
   attr_reader :global_functions
 
@@ -162,6 +151,7 @@ class Compiler
       # function isn't within a class (which would mean, it's a method)
       # so it must be global
       f = Function.new(args, body)
+      name = clean_method_name(name)
     end
 
     # add function to the global list of functions defined so far
@@ -170,7 +160,7 @@ class Compiler
     # a function is referenced by its name (in assembly this is a label).
     # wherever we encounter that name, we really need the adress of the label.
     # so we mark the function with an adress type.
-    return [:addr, name]
+    return [:addr, clean_method_name(name)]
   end
 
 

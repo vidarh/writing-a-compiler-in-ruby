@@ -71,12 +71,12 @@ class Parser < ParserBase
     ret
   end
 
-  # if ::= "if" ws* condition "then"? defexp* "end"
-  def parse_if
+  # if_unless ::= ("if"|"unless") ws* condition "then"? defexp* "end"
+  def parse_if_unless
     pos = position
-    expect("if") or return
+    type = expect("if") || expect("unless") or return
     ws
-    cond = parse_condition or expected("condition for 'if' block")
+    cond = parse_condition or expected("condition for '#{type.to_s}' block")
     nolfws; expect(";")
     nolfws; expect("then"); ws;
     exps = zero_or_more(:defexp)
@@ -86,7 +86,7 @@ class Parser < ParserBase
       elseexps = zero_or_more(:defexp)
     end
     expect("end") or expected("expression or 'end' for open 'if'")
-    ret = E[pos,:if, cond, E[:do].concat(exps)]
+    ret = E[pos,type.to_sym, cond, E[:do].concat(exps)]
     ret << E[:do].concat(elseexps) if elseexps
     return  ret
   end
@@ -177,7 +177,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if || parse_subexp
+    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_subexp
     ret.position = pos if pos.respond_to?(:position)
     nolfws
     if sym = expect("if") || expect("while") || expect("rescue")
