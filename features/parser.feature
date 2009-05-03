@@ -79,4 +79,5 @@ Feature: Parser
 	  | "case foo\nwhen a\nend"       | [:do, [:case, :foo, [[:when, :a, []]]]]       | Basic case structure                          |
       | "case foo\nwhen a\nb\nwhen c\nd\nend" | [:do,[:case, :foo, [[:when,:a,[:b]],[:when,:c,[:d]]]]] | More complicated case         |
       | "begin\nputs 'foo'\nrescue Exception => e\nend\n" |  [:do, [:block, [], [[:call, :puts, "foo"]], [:rescue, :Exception, :e, []]]] | begin/rescue |
+      | "unless foo\nbar\nelse\nbaz\nend" | [:do, [:unless, :foo, [:do, :bar], [:do, :baz]]] | |
 
