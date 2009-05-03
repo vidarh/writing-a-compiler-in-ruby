@@ -9,17 +9,6 @@ require 'ast'
 
 require 'set'
 
-# This gets compiled before each programm.
-# It defines the array function, that allocates the appropriate amount of
-# bytes for a given array-size.
-DO_BEFORE= [
-  [:defun, :array, [:size],[:malloc,[:mul,:size,4]]],
-]
-
-# This is used for code, that needs to be compiled at the end of a programm.
-# For now, it's empty.
-DO_AFTER= []
-
 class Compiler
   attr_reader :global_functions
 
