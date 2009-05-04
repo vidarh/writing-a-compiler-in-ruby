@@ -52,7 +52,7 @@ class ParserBase
 
   # Returns true, if the parser gets code from a file.
   def from_file?
-    not @scanner.filename.nil?
+    !@scanner.filename.nil?
   end
 
 

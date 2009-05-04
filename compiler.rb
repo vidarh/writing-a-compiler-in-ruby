@@ -16,9 +16,9 @@ class Compiler
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
   @@keywords = Set[
-                :do, :class, :defun, :if, :lambda,
-                :assign, :while, :index, :let, :case
-               ]
+                   :do, :class, :defun, :if, :lambda,
+                   :assign, :while, :index, :let, :case
+                  ]
 
 
   def initialize
@@ -93,21 +93,21 @@ class Compiler
   # Outputs all constants used within the code generated so far.
   # Outputs them as string and global constants, respectively.
   def output_constants
-    @e.rodata { @string_constants.each { |c,l| @e.string(l, c) } }
-    @e.bss    { @global_constants.each { |c|   @e.bsslong(c) }}
+    @e.rodata { @string_constants.each { |c, l| @e.string(l, c) } }
+    @e.bss    { @global_constants.each { |c|    @e.bsslong(c) }}
   end
 
 
   # Similar to output_constants, but for functions.
   # Compiles all functions, defined so far and outputs the appropriate assembly code.
   def output_functions
-    @global_functions.each do |name,func|
+    @global_functions.each do |name, func|
 
       # create a function scope for each defined function and compile it appropriately.
       # also pass it the current global scope for further lookup of variables used
       # within the functions body that aren't defined there (global variables and those,
       # that are defined in the outer scope of the function's)
-      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func,@global_scope),func.body) }
+      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func, @global_scope), func.body) }
 
     end
   end
@@ -116,9 +116,9 @@ class Compiler
   # Strictly speaking we don't *need* to use a sensible name at all,
   # but it makes me a lot happier when debugging the asm.
   def clean_method_name(name)
-    cleaned = name.to_s.gsub("?","__Q") # FIXME: Needs to do more.
-    cleaned = cleaned.to_s.gsub("[]","__NDX")
-    cleaned = cleaned.to_s.gsub("!","__X")
+    cleaned = name.to_s.gsub("?", "__Q") # FIXME: Needs to do more.
+    cleaned = cleaned.to_s.gsub("[]", "__NDX")
+    cleaned = cleaned.to_s.gsub("!", "__X")
     return cleaned
   end
 
@@ -144,7 +144,7 @@ class Compiler
         @e.movl(scope.name.to_s, reg)
         v = scope.vtable[name]
         @e.addl(v.offset*Emitter::PTR_SIZE, reg) if v.offset > 0
-        @e.save_to_indirect(@e.result_value,reg)
+        @e.save_to_indirect(@e.result_value, reg)
       end
       name = fname
     else
@@ -239,7 +239,7 @@ class Compiler
       @e.load_instance_var(ret, aparam)
       return @e.result_value
     end
-    return @e.load(atype,aparam)
+    return @e.load(atype, aparam)
   end
 
 
@@ -259,12 +259,12 @@ class Compiler
     end
 
     if atype == :ivar
-      ret = compile_eval_arg(scope,:self)
+      ret = compile_eval_arg(scope, :self)
       @e.save_to_instance_var(source, ret, aparam)
       return [:subexpr]
     end
 
-    if !(@e.save(atype,source,aparam))
+    if !(@e.save(atype, source, aparam))
       err_msg = "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
       error(err_msg, scope, [:assign, left, right]) # pass current expression as well
     end
@@ -278,7 +278,7 @@ class Compiler
   def compile_call(scope, func, args)
     args = [args] if !args.is_a?(Array)
     @e.with_stack(args.length, true) do
-      args.each_with_index do |a,i|
+      args.each_with_index do |a, i|
         param = compile_eval_arg(scope, a)
         @e.save_to_stack(param, i)
       end
@@ -312,7 +312,7 @@ class Compiler
       ret = compile_eval_arg(scope, ob)
       @e.save_register(ret) do
         @e.save_to_stack(ret, 0)
-        args.each_with_index do |a,i|
+        args.each_with_index do |a, i|
           param = compile_eval_arg(scope, a)
           @e.save_to_stack(param, i+1)
         end
@@ -342,11 +342,11 @@ class Compiler
     source = compile_eval_arg(scope, arr)
     reg = nil #This is needed to retain |reg|
     @e.with_register do |reg|
-      @e.movl(source,reg)
+      @e.movl(source, reg)
       source = compile_eval_arg(scope, index)
       @e.save_result(source)
       @e.sall(2, @e.result_value)
-      @e.addl(@e.result_value,reg)
+      @e.addl(@e.result_value, reg)
     end
     return [:indirect, reg]
   end
@@ -368,7 +368,7 @@ class Compiler
   # Takes the current scope, a list of variablenames as well as a list of arguments.
   def compile_let(scope, varlist, *args)
     vars = {}
-    varlist.each_with_index {|v,i| vars[v]=i}
+    varlist.each_with_index {|v, i| vars[v]=i}
     ls = LocalVarScope.new(vars, scope)
     if vars.size
       @e.with_local(vars.size) { compile_do(ls, *args) }
@@ -464,7 +464,7 @@ class Compiler
     end
 
     classes = 0
-    exp.depth_first(:class) {|c| classes += 1; :skip }
+    exp.depth_first(:class) { |c| classes += 1; :skip }
     warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
 

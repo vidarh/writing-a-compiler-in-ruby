@@ -4,7 +4,7 @@ module AST
   # Adds properties to AST nodes that simplify error
   # reporting, debugging etc.
   #
-  # This will later also provide a location for 
+  # This will later also provide a location for
   # plugins to attach additional notation to the
   # nodes, such as inferred type information etc.
   module Node
@@ -31,27 +31,27 @@ module AST
     include Node
 
     def update_position
-      sub = find {|n| n.respond_to?(:position) }
+      sub = find{ |n| n.respond_to?(:position) }
       position = sub.position if sub
     end
 
-    def self.[] *args
+    def self.[](*args)
       if args.size > 0 && args.first.is_a?(Scanner::Position)
         pos = args.shift
       end
-      e = super *args
+      e = super(*args)
       if pos
         position = pos
-      else 
+      else
         e.update_position
       end
       e
     end
 
-    def concat other
+    def concat(other)
       super(other)
       update_position
-      self
+      return self
     end
   end
 

@@ -23,13 +23,13 @@ class Array
   # FIXME: This should be moved to AST::Expr
   # when the parser is cleaned up to never
   # create "raw" arrays
-  def depth_first(*arg,&block)
+  def depth_first(*arg, &block)
     ret = yield(self) if arg.member?(self[0])
     return :stop if ret == :stop
     return true if ret == :skip
-    
+
     self.each do |n|
-      ret = n.depth_first(*arg,&block) if n.is_a?(Array)
+      ret = n.depth_first(*arg, &block) if n.is_a?(Array)
       return :stop if ret == :stop
     end
     return true

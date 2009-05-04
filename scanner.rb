@@ -5,9 +5,9 @@
 # so I'm sticking to something simple. The code below is sufficient to write recursive descent parsers in a pretty
 # concise style in Ruby
 class Scanner
-  attr_reader :col,:lineno, :filename # @filename holds the name of the file the parser reads from
+  attr_reader :col, :lineno, :filename # @filename holds the name of the file the parser reads from
 
-  Position = Struct.new(:filename,:lineno,:col)
+  Position = Struct.new(:filename, :lineno, :col)
 
   class Position
     def inspect
