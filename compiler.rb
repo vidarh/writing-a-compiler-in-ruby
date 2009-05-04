@@ -294,7 +294,7 @@ class Compiler
   # The object gets passed to the method, which is just another function,
   # as the first parameter.
   def compile_callm(scope, ob, method, args)
-    @e.comment("callm #{ob.to_s}.#{method.inspect}")
+    @e.comment("callm #{ob.inspect}.#{method.inspect}")
 
     args ||= []
     args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
