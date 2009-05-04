@@ -68,7 +68,7 @@ class Parser < ParserBase
     @shunting.keywords << :do
     ret = @sexp.parse || @shunting.parse
     @shunting.keywords.delete(:do)
-    ret
+    return ret
   end
 
   # if_unless ::= ("if"|"unless") ws* condition "then"? defexp* "end"
@@ -101,7 +101,7 @@ class Parser < ParserBase
     expect(":")
     ws
     exps = zero_or_more(:defexp)
-    E[:when, cond, exps]
+    return E[:when, cond, exps]
   end
 
   # case ::= "case" ws* condition when* ("else" ws* defexp*) "end"
@@ -119,7 +119,7 @@ class Parser < ParserBase
     end
     ws
     expect("end") or expected("'end' for open 'case'")
-    E[pos,:case, cond, whens, elses].compact
+    return E[pos, :case, cond, whens, elses].compact
   end
 
 
@@ -133,7 +133,7 @@ class Parser < ParserBase
     nolfws;
     exps = zero_or_more(:defexp)
     expect("end") or expected("expression or 'end' for open 'while' block")
-    return E[pos,:while, cond, [:do]+exps]
+    return E[pos, :while, cond, [:do]+exps]
   end
 
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
@@ -150,7 +150,7 @@ class Parser < ParserBase
     end
     ws
     exps = zero_or_more(:defexp)
-    return E[pos,:rescue, c, name, exps]
+    return E[pos, :rescue, c, name, exps]
   end
 
   # begin ::= "begin" ws* defexp* rescue? "end"
@@ -161,14 +161,14 @@ class Parser < ParserBase
     exps = zero_or_more(:defexp)
     rescue_ = parse_rescue
     expect("end") or expected("expression or 'end' for open 'begin' block")
-    return E[pos,:block, [], exps, rescue_]
+    return E[pos, :block, [], exps, rescue_]
   end
 
   # subexp ::= exp nolfws*
   def parse_subexp
     ret = @shunting.parse
     nolfws
-    ret
+    return ret
   end
 
   # Later on "defexp" will allow anything other than "def"
@@ -187,10 +187,10 @@ class Parser < ParserBase
       ws
       cond = parse_condition or expected("condition for '#{sym.to_s}' statement modifier")
       nolfws; expect(";")
-      ret = E[pos,sym.to_sym, cond, ret]
+      ret = E[pos, sym.to_sym, cond, ret]
     end
     ws; expect(";"); ws
-    ret
+    return ret
   end
 
   # block_body ::=  ws * defexp*
@@ -199,7 +199,7 @@ class Parser < ParserBase
     ws
     exps = zero_or_more(:defexp)
     vars = deep_collect(exps, Array) {|node| node[0] == :assign && node[1].to_s[0] != ?@ ? node[1] : nil}
-    E[pos,vars, exps]
+    return E[pos, vars, exps]
   end
 
   def parse_block(start = nil)
@@ -223,8 +223,8 @@ class Parser < ParserBase
     exps = parse_block_exps
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
-    return E[pos,:block] if args.size == 0 and !exps[1] || exps[1].size == 0
-    E[pos,:block, args, exps[1]]
+    return E[pos, :block] if args.size == 0 and !exps[1] || exps[1].size == 0
+    return E[pos, :block, args, exps[1]]
   end
 
   # def ::= "def" ws* name args? block_body
@@ -243,7 +243,7 @@ class Parser < ParserBase
     ret = parse_block_exps
     exps = E[:let,ret[0]].concat(ret[1])
     expect("end") or expected("expression or 'end' for open def '#{name.to_s}'")
-    return E[pos,:defun, name, args, exps]
+    return E[pos, :defun, name, args, exps]
   end
 
   def parse_sexp; @sexp.parse; end
@@ -262,13 +262,13 @@ class Parser < ParserBase
     end
     exps = zero_or_more(:exp)
     expect("end") or expected("expression or 'end'")
-    return E[pos,type.to_sym, name, exps]
+    return E[pos, type.to_sym, name, exps]
   end
 
 
   # Returns the include paths relative to a given filename.
   def rel_include_paths(filename)
-    [filename,"#{filename}.rb","lib/#{filename}","lib/#{filename}.rb"]
+    return [filename, "#{filename}.rb", "lib/#{filename}", "lib/#{filename}.rb"]
   end
 
 
@@ -286,7 +286,7 @@ class Parser < ParserBase
     paths.detect { |path| f = File.open(path) rescue nil }
     error("Unable to load '#{q}'") if !f
     s = Scanner.new(f)
-    @@requires[q] = Parser.new(s,@opts).parse(false)
+    @@requires[q] = Parser.new(s, @opts).parse(false)
   end
 
   # require ::= "require" ws* subexp
@@ -299,7 +299,7 @@ class Parser < ParserBase
 
     if q.is_a?(Array) || @opts[:norequire]
       STDERR.puts "WARNING: NOT processing require for #{q.inspect}"
-      return E[pos,:require, q]
+      return E[pos, :require, q]
     end
 
     self.require(q)
@@ -312,7 +312,7 @@ class Parser < ParserBase
     ws
     n = parse_name or expected("name of module to include")
     ws
-    E[pos,:include, n]
+    return E[pos, :include, n]
   end
 
   # exp ::= ws* (class | def | sexp)
@@ -320,12 +320,12 @@ class Parser < ParserBase
     ws
     ret = parse_class || parse_def || parse_require || parse_include || parse_defexp
     ws; expect(";"); ws
-    ret
+    return ret
   end
 
   # program ::= exp* ws*
   def parse(require_core = true)
-    res = E[position,:do]
+    res = E[position, :do]
     res << self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
     res.concat(zero_or_more(:exp))
     ws

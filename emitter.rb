@@ -40,7 +40,7 @@ class Emitter
   # Emits rodata-section.
   # Takes a block and calls it after emitting the rodata-section.
   def rodata
-    emit(".section",".rodata")
+    emit(".section", ".rodata")
     yield
   end
 
@@ -114,7 +114,7 @@ class Emitter
   # Stores a given parameter in %eax register as a result for further use.
   def save_result(param)
     if param != :eax
-      movl(param,:eax)
+      movl(param, :eax)
     end
   end
 
@@ -140,7 +140,7 @@ class Emitter
     return true
   end
 
-  def load(atype,aparam)
+  def load(atype, aparam)
     case atype
     when :int
       return aparam
@@ -171,30 +171,30 @@ class Emitter
 
   # Loads an argument into %eax register for further use.
   def load_arg(aparam)
-    movl(local_arg(aparam),:eax)
+    movl(local_arg(aparam), :eax)
     return :eax
   end
 
 
   # Loads an arguments adress into %eax register for further use.
   def load_arg_address(aparam)
-    leal(local_arg(aparam),:eax)
+    leal(local_arg(aparam), :eax)
     return :eax
   end
 
 
   def load_global_var(aparam)
-    movl(aparam.to_s,result_value)
+    movl(aparam.to_s, result_value)
     return result_value
   end
 
   def load_local_var(aparam)
-    movl(local_var(aparam),:eax)
+    movl(local_var(aparam), :eax)
     return :eax
   end
 
-  def load_instance_var(ob,aparam)
-    movl("#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})",result_value)
+  def load_instance_var(ob, aparam)
+    movl("#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})", result_value)
     return result_value
   end
 
@@ -206,7 +206,7 @@ class Emitter
     movl(arg,local_var(aparam))
   end
 
-  def save_to_instance_var(arg, ob,aparam)
+  def save_to_instance_var(arg, ob, aparam)
     movl(arg,"#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})")
   end
 
@@ -220,8 +220,8 @@ class Emitter
     movl(arg,local_arg(aparam))
   end
 
-  def save_to_address(src,dest)
-    movl(src,dest.to_s)
+  def save_to_address(src, dest)
+    movl(src, dest.to_s)
   end
 
   def load_address(label)
@@ -229,12 +229,12 @@ class Emitter
     return :eax
   end
 
-  def save_to_indirect(src,dest)
+  def save_to_indirect(src, dest)
     movl(src,"(%#{dest.to_s})")
   end
 
   def load_indirect(arg, reg = :eax)
-    movl("(#{to_operand_value(arg)})",reg)
+    movl("(#{to_operand_value(arg)})", reg)
     return reg
   end
 
@@ -249,9 +249,9 @@ class Emitter
     # We will do the same, but assume its tied to pointer size
     adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
     subl(adj,:esp)
-    movl(args,:ebx) if numargs
+    movl(args, :ebx) if numargs
     yield
-    addl(adj,:esp)
+    addl(adj, :esp)
   end
 
   def with_register
@@ -262,7 +262,7 @@ class Emitter
 
   def save_register(reg)
     @save_register ||= []
-    @save_register << [reg,false]
+    @save_register << [reg, false]
     yield
     f = @save_register.pop
     if f[1]
@@ -278,11 +278,11 @@ class Emitter
   #
   # -> <tt>movl %esp, %ebp</tt>
   def emit(op, *args)
-    if @save_register && @save_register.size > 0 && reg = @save_register.detect{|r| r[0] == args[1] && r[1] == false}
+    if @save_register && @save_register.size > 0 && reg = @save_register.detect{ |r| r[0] == args[1] && r[1] == false }
       puts "\tpushl\t#{to_operand_value(args[1])}"
       reg[1] = true
     end
-    puts "\t#{op}\t"+args.collect{|a|to_operand_value(a)}.join(', ')
+    puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
   end
 
 
@@ -292,17 +292,17 @@ class Emitter
   #   e = Emitter.new
   #   e.emit(:movl, :esp, :ebp)
   #   e.emit(:popl, :ecx)
-  def method_missing(sym,*args)
-    emit(sym,*args)
+  def method_missing(sym, *args)
+    emit(sym, *args)
   end
 
 
   # Generates a assembly subroutine call.
   def call(loc)
     if loc.is_a?(Symbol)
-      emit(:call,"*"+to_operand_value(loc))
+      emit(:call, "*"+to_operand_value(loc))
     else
-      emit(:call,loc)
+      emit(:call, loc)
     end
   end
 
@@ -310,7 +310,7 @@ class Emitter
   # Generates assembl for defining a string constant.
   def string(l, str)
     local(l)
-    emit(".string","\"#{str}\"")
+    emit(".string", "\"#{str}\"")
   end
 
   def bsslong(l)
@@ -321,7 +321,7 @@ class Emitter
 
   # Generates code, that jumps to a given label, if the test for op fails.
   def jmp_on_false(label, op = :eax)
-    testl(op,op)
+    testl(op, op)
     je(label)
   end
 
@@ -342,15 +342,15 @@ class Emitter
   end
 
   def func(name, save_numargs = false)
-    export(name,:function) if name.to_s[0] != ?.
+    export(name, :function) if name.to_s[0] != ?.
     label(name)
     pushl(:ebp)
-    movl(:esp,:ebp)
+    movl(:esp, :ebp)
     pushl(:ebx) if save_numargs
     yield
     leave
     ret
-    emit(".size",name.to_s, ".-#{name}")
+    emit(".size", name.to_s, ".-#{name}")
   end
 
 
@@ -360,21 +360,21 @@ class Emitter
   # and before the end of the main-function.
   def main
     puts ".text"
-    export(:main,:function)
+    export(:main, :function)
     label(:main)
-    leal("4(%esp)",:ecx)
-    andl(-16,:esp)
+    leal("4(%esp)", :ecx)
+    andl(-16, :esp)
     pushl("-4(%ecx)")
     pushl(:ebp)
-    movl(:esp,:ebp)
+    movl(:esp, :ebp)
     pushl(:ecx)
 
     yield
 
     popl(:ecx)
     popl(:ebp)
-    leal("-4(%ecx)",:esp)
+    leal("-4(%ecx)", :esp)
     ret()
-    emit(".size","main",".-main")
+    emit(".size", "main", ".-main")
   end
 end
