@@ -45,9 +45,9 @@ Feature: Shunting Yard
 	  | "self.foo(1)"        | [:callm,:self,:foo,1]                    |
 	  | "self.foo(1,2)"      | [:callm,:self,:foo,[1,2]]                |
 	  | "self.foo bar"       | [:callm,:self,:foo,:bar]                 |
-      | "foo(*arg)"          | [:call,:foo,[:splat, :arg]]              |
+      | "foo(*arg)"          | [:call,:foo,[[:splat, :arg]]]            |
       | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
-      | "foo(1 + arg)"       | [:call,:foo,[:add, 1, :arg]]             |
+      | "foo(1 + arg)"       | [:call,:foo,[[:add, 1, :arg]]]           |
       | "foo(1 * arg,bar)"   | [:call,:foo,[[:mul, 1, :arg],:bar]]      |
       | "(ret.flatten).uniq" | [:callm,[:callm,:ret,:flatten],:uniq]    |
       | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]    |

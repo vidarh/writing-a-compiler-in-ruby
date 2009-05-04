@@ -40,6 +40,7 @@ module OpPrec
       return @vstack << [o.sym, leftv, rightv] if @@dont_rewrite
 
       # Rewrite rules to simplify the tree
+
       if ra and rightv[0] == :flatten
         @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
       elsif ra and rightv[0] == :call and o.sym == :callm
@@ -61,6 +62,9 @@ module OpPrec
       elsif ra and rightv[0] == :comma and o.sym != :comma
         @vstack << [o.sym, leftv, flatten(rightv)].compact
       else
+        if o.sym == :call || o.sym == :callm and ra and rightv[0] != :flatten and rightv[0] != :comma
+          rightv = [rightv]
+        end
         @vstack << [o.sym, flatten(leftv), rightv].compact
       end
       return
