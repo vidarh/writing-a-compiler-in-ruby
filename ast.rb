@@ -41,8 +41,8 @@ module AST
       end
       e = super *args
       if pos
-        position = pos
-      else 
+        e.position = pos
+      else
         e.update_position
       end
       e
