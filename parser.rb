@@ -241,7 +241,7 @@ class Parser < ParserBase
     args = parse_args || []
     expect(";")
     ret = parse_block_exps
-    exps = E[:let,ret[0]].concat(ret[1])
+    exps = E[:let, ret[0]].concat(ret[1])
     expect("end") or expected("expression or 'end' for open def '#{name.to_s}'")
     return E[pos, :defun, name, args, exps]
   end
@@ -251,7 +251,7 @@ class Parser < ParserBase
   # class ::= ("class"|"module") ws* name ws* exp* "end"
   def parse_class
     pos = position
-    type = expect("class","module") or return
+    type = expect("class", "module") or return
     ws
     name = expect(Atom) || expect("<<") or expected("class name")
     ws
