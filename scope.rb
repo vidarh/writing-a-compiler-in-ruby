@@ -145,7 +145,8 @@ class ClassScope
   # determined by the compiler checking the actual class implementation,
   # so this is a bit of a copout.
   #
-  # slot 0 is reserved for the vtable pointer
+  # slot 0 is reserved for the vtable pointer for _all_ classes.
+  # slot 1 is reserved for @instance_size for objects of class Class
   CLASS_IVAR_NUM = 2
 
   def initialize(next_scope, name, offsets)
