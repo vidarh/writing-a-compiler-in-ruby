@@ -4,7 +4,20 @@ require 'set'
 
 module Tokens
 
-  Keywords = Set[:def, :end, :if, :include, :begin, :rescue, :then,:else,:when]
+  Keywords = Set[
+    :begin, :case, :class, :def, :do, :else, :end, :if, :include, 
+    :module, :require, :rescue, :then, :unless, :when
+  ]
+
+  # Match a (optionally specific) keyword
+  class Keyword
+    def self.expect(s,match)
+      a = Atom.expect(s)
+      return a if (a == match)
+      s.unget(a.to_s)
+      return nil
+    end
+  end
 
   class Sym
     def self.expect(s)
@@ -125,11 +138,11 @@ module Tokens
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_
         buf = @s.expect(Atom)
         return [@s.get, Operators[":"]] if @s.peek == ?: and !buf
+        return [buf, Operators[buf.to_s]] if Operators.member?(buf.to_s)
         if @keywords.member?(buf)
           @s.unget(buf.to_s)
           return [nil, nil]
         end
-        return [buf, Operators[buf.to_s]] if Operators.member?(buf.to_s)
         return [buf, nil]
       when ?-
         @s.get
