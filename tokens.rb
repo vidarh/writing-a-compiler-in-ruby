@@ -162,8 +162,7 @@ module Tokens
         return [@s.get, Operators[":"]] if @s.peek == ?: and !buf
         return [buf, Operators[buf.to_s]] if Operators.member?(buf.to_s)
         if @keywords.member?(buf)
-          @s.unget(buf.to_s)
-          return [nil, nil]
+          return [buf,nil, :keyword]
         end
         return [buf, nil]
       when ?-

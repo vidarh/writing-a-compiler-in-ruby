@@ -42,8 +42,10 @@ module OpPrec
       opcall  = Operators["#call#"]
       opcallm = Operators["."]
       lastlp = true
-      src.each do |token,op|
-        if inhibit.include?(token)
+      src.each do |token,op,keyword|
+        # Normally we stop when encountering a keyword, but it's ok to encounter
+        # one as the second operand for an infix operator
+        if inhibit.include?(token) or keyword && (opstate != :prefix || !ostack.last || ostack.last.type != :infix)
           src.unget(token)
           break
         end
