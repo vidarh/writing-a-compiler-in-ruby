@@ -62,12 +62,10 @@ class Parser < ParserBase
 
   # condition ::= sexp | opprecexpr
   def parse_condition
-    # This is needed because of ugly constructs like "while cond do end"
-    # where the "do .. end" block belongs to "while", not to any function
-    # in the condition.
-    @shunting.keywords << :do
-    ret = @sexp.parse || @shunting.parse
-    @shunting.keywords.delete(:do)
+    # :do is needed in the inhibited set because of ugly constructs like
+    # "while cond do end" where the "do .. end" block belongs to "while",
+    # not to any function in the condition.
+    ret = @sexp.parse || @shunting.parse([:do])
     return ret
   end
 
@@ -96,7 +94,7 @@ class Parser < ParserBase
     pos = position
     expect(:when) or return
     ws
-    cond = parse_condition or expect("condition for 'when'")
+    cond = parse_condition or expected("condition for 'when'")
     nolfws
     expect(":")
     ws
@@ -109,7 +107,7 @@ class Parser < ParserBase
     pos = position
     expect(:case) or return
     ws
-    cond = parse_condition or expect("condition for 'case' block")
+    cond = parse_condition or expected("condition for 'case' block")
     ws
     whens = zero_or_more(:when)
     ws
@@ -118,7 +116,7 @@ class Parser < ParserBase
       elses = zero_or_more(:defexp)
     end
     ws
-    expect("end") or expected("'end' for open 'case'")
+    expect(:end) or expected("'end' for open 'case'")
     return E[pos, :case, cond, whens, elses].compact
   end
 
@@ -129,10 +127,10 @@ class Parser < ParserBase
     expect(:while) or return
     ws
     cond = parse_condition or expected("condition for 'while' block")
-    nolfws; expect(";") or expect("do")
+    nolfws; expect(";"); nolfws; expect(:do)
     nolfws;
     exps = zero_or_more(:defexp)
-    expect("end") or expected("expression or 'end' for open 'while' block")
+    expect(:end) or expected("expression or 'end' for open 'while' block")
     return E[pos, :while, cond, [:do]+exps]
   end
 
