@@ -84,6 +84,7 @@ class Scanner
   def expect(str)
     return buf if str == ""
     return str.expect(self) if str.respond_to?(:expect)
+    return Tokens::Keyword.expect(self, str) if str.is_a?(Symbol)
     buf = ScannerString.new
     buf.position = self.position
     str.each_byte do |s|
