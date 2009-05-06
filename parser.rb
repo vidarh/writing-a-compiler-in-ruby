@@ -16,12 +16,12 @@ class Parser < ParserBase
 
   # name ::= atom | operator-symbol
   def parse_name
-    expect(Atom) || expect(Oper)
+    expect(Methodname) || expect(Atom) || expect(Oper)
   end
 
-  # fname ::= name | "[]" | operator-symbol
+  # fname ::= name | "[]"
   def parse_fname
-    parse_name || expect("[]") || expect(Oper)
+    parse_name || expect("[]")
   end
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?

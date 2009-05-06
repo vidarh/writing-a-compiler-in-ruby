@@ -5,9 +5,13 @@ require 'set'
 module Tokens
 
   Keywords = Set[
-    :begin, :case, :class, :def, :do, :else, :end, :if, :include, 
+    :begin, :case, :class, :def, :do, :else, :end, :if, :include,
     :module, :require, :rescue, :then, :unless, :when
   ]
+
+  # Methods can end with one of these.
+  # e.g.: empty?, flatten!, foo=
+  MethodEndings = Set["?", "=", "!"]
 
   # Match a (optionally specific) keyword
   class Keyword
@@ -36,7 +40,7 @@ module Tokens
           return :":[]"
         end
         s.unget("[")
-      end 
+      end
       s.unget(":")
       return nil
    end
@@ -67,6 +71,24 @@ module Tokens
       end
       return nil if tmp == ""
       return tmp.to_sym
+    end
+  end
+
+  # A methodname can be an atom followed by one of the method endings
+  # defined in MethodEndings (see top).
+  class Methodname
+    def self.expect(s)
+      pre_name = s.expect(Atom)
+      suff_name = MethodEndings.select{ |me| s.expect(me) }.first
+
+      if pre_name || suff_name
+        pre_name = pre_name ? pre_name.to_s : nil
+        suff_name = suff_name ? suff_name.to_s : nil
+        # methodname is prefix + suffix
+        return (pre_name.to_s + suff_name.to_s).to_sym
+      end
+
+      return nil
     end
   end
 
