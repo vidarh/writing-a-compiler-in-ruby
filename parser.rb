@@ -204,7 +204,7 @@ class Parser < ParserBase
 
   def parse_block(start = nil)
     pos = position
-    return nil if start == nil and !(start = expect("{")  || expect(:do))
+    return nil if start == nil and !(start = expect("{",:do))
     close = (start.to_s == "{") ? "}" : :end
     ws
     args = []
