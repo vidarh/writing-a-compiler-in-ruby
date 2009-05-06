@@ -28,6 +28,19 @@ class Oper
     @minarity = minarity || @arity
     @assoc = assoc
   end
+
+  def self.expect(s)
+    # expect any of the defined operators
+    # if operator found, return it's symbol (e.g. "*" -> :*)
+    # otherwise simply return nil,
+    # as no operator was found by scanner
+    Operators.keys.each do |op|
+      if s.expect(op)
+        return op.to_sym
+      end
+    end
+    return nil
+  end
 end
 
 

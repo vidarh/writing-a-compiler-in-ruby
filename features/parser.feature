@@ -67,6 +67,7 @@ Feature: Parser
 	  | "def foo(a = :b, c = :d)\nend\n  " | [:do, [:defun, :foo, [:a,:c], [:let, []]]] | Second argument following argument with initializer |
 	  | "def foo(a = :b, &bar)\nend\n  " | [:do, [:defun, :foo, [:a,[:bar,:block]], [:let, []]]] | Second argument following argument with initializer |
 	  | "def self.foo\nend\n"         | [:do, [:defun, [:self,:foo], [], [:let, []]]] | Class method etc.                             |
+	  | "def *(other_array)\nend\n"         | [:do, [:defun, :*, [:other_array], [:let, []]]] | *-Operator overloading                |
 
     @control
 	Scenario Outline: Control structures
