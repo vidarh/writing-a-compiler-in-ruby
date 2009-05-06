@@ -3,6 +3,7 @@ Feature: Shunting Yard
 	In order to parse expressions, the compiler uses a parser component that uses the shunting yard 
 	algorithm to parse expressions based on a table.
 
+    @basic
 	Scenario Outline: Basic expressions
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
@@ -28,6 +29,7 @@ Feature: Shunting Yard
       | "foo +\nbar"         | [:add,:foo,:bar]                     |
       | ":sym"               | :":sym"                              |
       | ":[]"                | :":[]"                               |
+      | "self.class"         | [:callm,:self,:class]                |
 
     @callm
 	Scenario Outline: Method calls
