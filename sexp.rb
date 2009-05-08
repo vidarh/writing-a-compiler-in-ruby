@@ -9,7 +9,8 @@ class SEXParser < ParserBase
 
   def parse
     expect("%s") or return
-    parse_sexp or expected("s-expression")
+    ret = parse_sexp or expected("s-expression")
+    E[:sexp, ret]
   end
 
   def parse_sexp
