@@ -25,6 +25,9 @@ module Tokens
       s.get
       buf = Atom.expect(s)
       return ":#{buf.to_s}".to_sym if buf
+      c = s.peek
+      buf = Quoted.expect(s)
+      return ":#{buf.to_s}".to_sym if buf
 
       # Lots more operators are legal.
       # FIXME: Need to check which set is legal - it's annoying inconsistent it appears

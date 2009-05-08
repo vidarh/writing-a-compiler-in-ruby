@@ -30,6 +30,7 @@ Feature: Shunting Yard
       | ":sym"               | :":sym"                              |
       | ":[]"                | :":[]"                               |
       | "self.class"         | [:callm,:self,:class]                |
+      | 'return :":[]"'      | [:return, :"::[]"]                   |
 
     @callm
 	Scenario Outline: Method calls
