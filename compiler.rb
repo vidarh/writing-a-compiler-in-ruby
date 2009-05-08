@@ -348,6 +348,14 @@ class Compiler
     return [:subexpr]
   end
 
+  # :sexp nodes are just aliases for :do nodes except
+  # that code that rewrites the tree and don't want to
+  # affect %s() escaped code should avoid descending
+  # into :sexp nodes.
+  def compile_sexp(scope, *exp)
+    compile_do(scope, *exp)
+  end
+
 
   # Compiles a array indexing-expression.
   # Takes the current scope, the array as well as the index number to access.
