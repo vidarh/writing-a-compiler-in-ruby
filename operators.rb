@@ -49,7 +49,7 @@ Operators = {
   "#,#"  => Oper.new(1,  :comma,  :infix,2,1),
   "=>"  => Oper.new(5, :pair,   :infix),
 
-  "return" => Oper.new(50, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
+  "return" => Oper.new(6, :return, :prefix,1,0), #FIXME: Check pri. Also, "return" can also stand on its own
   "or" => Oper.new(1, :or, :infix),
   "and" => Oper.new(1, :and, :infix),
   "&&" => Oper.new(6, :and, :infix), # FIXME: Check pri - probably not right.
