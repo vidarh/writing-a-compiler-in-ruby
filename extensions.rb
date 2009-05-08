@@ -24,7 +24,7 @@ class Array
   # when the parser is cleaned up to never
   # create "raw" arrays
   def depth_first(*arg, &block)
-    ret = yield(self) if arg.member?(self[0])
+    ret = yield(self) if arg.size == 0 || arg.member?(self[0])
     return :stop if ret == :stop
     return true if ret == :skip
 
