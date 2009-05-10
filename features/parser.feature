@@ -4,25 +4,27 @@ Feature: Parser
 	parser components that are combined together to form the full
 	parser.
 
+    @parserexp
 	Scenario Outline: Simple expressions
 		Given the expression <expr>
 		When I parse it with the full parser
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr                 | tree                                          | notes                                              |
-	  | "1 + 2"              | [:do,[:add,1,2]]                              | The full parser wraps a [:do] around everything    |
-	  | "foo { }"            | [:do,[:call,:foo,[], [:block]]]               | Testing empty blocks                               |
-	  | "foo(1) { }"         | [:do,[:call,:foo,1, [:block]]]                | Testing empty blocks                               |
-	  | "foo(1) { bar }"     | [:do,[:call,:foo,1, [:block, [],[:bar]]]]     | Testing function calls inside a block              |
-	  | "foo(1) { bar 1 }"   | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]] | Testing function calls inside a block        |
-	  | "foo { bar[0] }"     | [:do,[:call,:foo,[],[:block, [],[[:callm,:bar,:[],[0]]]]]]| Testing index operator inside a block        |
-	  | "while foo do end"   | [:do, [:while, :foo, [:do]]]                  | while with "do ... end" instead of just "end"      |
-      | "Keywords=Set[1]\nfoo" | [:do,[:assign,:Keywords,[:callm,:Set,:[],[1]]],:foo] | :rp before linefeed should terminate an expression |
-	  | "expect(',') or return args" | [:do,[:or,[:call,:expect,","],[:return,:args]]] | Priority of "or" vs. call/return         |
-      | "require File.dirname() + '/../spec_helper'" | [:do, [:require, [:add, [:callm, :File, :dirname, nil], "/../spec_helper"]]]  | |
-      | "File.dirname() + '/../spec_helper'" | [:do, [:add, [:callm, :File, :dirname, nil], "/../spec_helper"]] | |
-      | "dirname() + '/../spec_helper'" | [:do, [:add,[:call, :dirname],"/../spec_helper"]] | |
+	  | expr                            | tree                                                 | notes                                              |
+	  | "1 + 2"                         | [:do,[:add,1,2]]                                     | The full parser wraps a [:do] around everything    |
+	  | "foo { }"                       | [:do,[:call,:foo,[], [:block]]]                      | Testing empty blocks                               |
+	  | "foo(1) { }"                    | [:do,[:call,:foo,1, [:block]]]                       | Testing empty blocks                               |
+	  | "foo(1) { bar }"                | [:do,[:call,:foo,1, [:block, [],[:bar]]]]            | Testing function calls inside a block              |
+	  | "foo(1) { bar 1 }"              | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]]  | Testing function calls inside a block              |
+	  | "foo { bar[0] }"                | [:do,[:call,:foo,[],[:block, [],[[:callm,:bar,:[],[0]]]]]]| Testing index operator inside a block         |
+	  | "while foo do end"              | [:do, [:while, :foo, [:do]]]                         | while with "do ... end" instead of just "end"      |
+      | "Keywords=Set[1]\nfoo"          | [:do,[:assign,:Keywords,[:callm,:Set,:[],[1]]],:foo] | :rp before linefeed should terminate an expression |
+	  | "expect(',') or return args"    | [:do,[:or,[:call,:expect,","],[:return,:args]]]      | Priority of "or" vs. call/return                   |
+      | "require File.dirname() + '/../spec_helper'" | [:do, [:require, [:add, [:callm, :File, :dirname, nil], "/../spec_helper"]]]  |              |
+      | "File.dirname() + '/../spec_helper'" | [:do, [:add, [:callm, :File, :dirname, nil], "/../spec_helper"]] |                                   |
+      | "dirname() + '/../spec_helper'" | [:do, [:add,[:call, :dirname],"/../spec_helper"]]    | |
+      | "return rest? ? foo : bar"      | [:do, [:return, [:ternif, :rest?, [:ternalt, :foo, :bar]]]] | |
 
     Scenario Outline: Hash syntax
 		Given the expression <expr>
