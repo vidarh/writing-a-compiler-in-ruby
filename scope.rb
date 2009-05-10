@@ -199,7 +199,10 @@ class ClassScope
     end
 
     # if not in class scope, check next (outer) scope.
-    return @next.get_arg(a) if @next
+    n =  @next.get_arg(a) if @next
+
+    return [:possible_callm, n[1]] if n && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
+    return n if n
 
     # if none works up to here, it must be an adress.
     return [:addr, a]

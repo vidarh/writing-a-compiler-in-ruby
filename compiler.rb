@@ -173,7 +173,7 @@ class Compiler
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
     @e.jmp_on_false(l_else_arm)
-   compile_eval_arg(scope, if_arm)
+    compile_eval_arg(scope, if_arm)
     @e.jmp(l_end_if_arm) if else_arm
     @e.local(l_else_arm)
     compile_eval_arg(scope, else_arm) if else_arm
@@ -251,6 +251,8 @@ class Compiler
       ret = compile_eval_arg(scope, :self)
       @e.load_instance_var(ret, aparam)
       return @e.result_value
+    elsif atype == :possible_callm
+      return compile_eval_arg(scope, [:callm, :self, arg,[]])
     end
     return @e.load(atype, aparam)
   end
@@ -269,6 +271,7 @@ class Compiler
     aparam = nil
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
+      atype = :addr if atype == :possible_callm
     end
 
     if atype == :ivar
