@@ -251,6 +251,8 @@ class Compiler
       ret = compile_eval_arg(scope, :self)
       @e.load_instance_var(ret, aparam)
       return @e.result_value
+    elsif atype == :possible_callm
+      return compile_eval_arg(scope, [:callm, :self, arg,[]])
     end
     return @e.load(atype, aparam)
   end
@@ -269,6 +271,7 @@ class Compiler
     aparam = nil
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
+      atype = :addr if atype == :possible_callm
     end
 
     if atype == :ivar
