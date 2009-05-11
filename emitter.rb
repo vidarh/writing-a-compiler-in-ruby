@@ -200,6 +200,10 @@ class Emitter
 
   def load_class_var(aparam)
     STDERR.puts("Emitter#load_class_var not implemented yet - #{aparam.inspect}")
+    # FIXME: uh. yeah. Without fixing the rest the line below 
+    # will not return sensible results, but it should let the code compile
+    # (and fail)
+    return result_value
   end
 
   def save_to_local_var(arg, aparam)
