@@ -67,7 +67,7 @@ Operators = {
   "and" => Oper.new(1, :and, :infix),
   "&&" => Oper.new(6, :and, :infix), # FIXME: Check pri - probably not right.
   "||" => Oper.new(6, :or, :infix), # FIXME: Check pri - probably not right.
-  ".." => Oper.new(5, :range, :infix), # FIXME: Check pri - probably not right.
+  ".." => Oper.new(100, :range, :infix), # FIXME: Check pri - probably not right.
 
   "?"  => Oper.new(7,  :ternif, :infix),
   ":"  => Oper.new(7,  :ternalt, :infix),
@@ -96,7 +96,7 @@ Operators = {
   "/"  => Oper.new(20, :div,    :infix),
 
   "."  => Oper.new(100, :callm,  :infix,2,2,:left),
-  "::" => Oper.new(90, :deref,  :infix),
+  "::" => Oper.new(100, :callm,  :infix,2,2,:left),
 
   "["  => Oper.new(99,  :array,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),

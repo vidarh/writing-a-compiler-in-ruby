@@ -14,4 +14,8 @@ require 'core/enumerable'
 #require 'core/array'
 require 'core/string'
 require 'core/io'
+require 'core/file'
+require 'core/symbol'
+require 'core/fixnum'
+require 'core/struct'
 

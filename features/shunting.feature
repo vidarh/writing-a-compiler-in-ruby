@@ -57,6 +57,7 @@ Feature: Shunting Yard
       | "foo.bar = 123"      | [:callm,:foo,:bar=, [123]]               |
       | "flatten(r[2])"      | [:call, :flatten, [[:callm, :r, :[], [2]]]] |
       | "foo.bar(ret[123])"  | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]] |
+      | "Foo::bar(baz)"      | [:callm, :Foo, :bar, :baz]               |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>

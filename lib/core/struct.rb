@@ -1,0 +1,3 @@
+
+class Struct
+end
