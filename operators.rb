@@ -54,7 +54,7 @@ Operators = {
   "and" => Oper.new(1, :and, :infix),
   "&&" => Oper.new(6, :and, :infix), # FIXME: Check pri - probably not right.
   "||" => Oper.new(6, :or, :infix), # FIXME: Check pri - probably not right.
-  ".." => Oper.new(5, :range, :infix), # FIXME: Check pri - probably not right.
+  ".." => Oper.new(100, :range, :infix), # FIXME: Check pri - probably not right.
 
   "?"  => Oper.new(7,  :ternif, :infix),
   ":"  => Oper.new(7,  :ternalt, :infix),
