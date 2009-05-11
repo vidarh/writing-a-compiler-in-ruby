@@ -139,8 +139,16 @@ module Tokens
       when ?0 .. ?9
         return [@s.expect(Int), nil]
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_
+        if @s.peek == ?:
+          @s.get
+          if @s.peek == ?:
+            @s.get
+            return ["::", Operators["::"]]
+          end
+          @s.unget(":")
+        end
         buf = @s.expect(Atom)
-        return [@s.get, Operators[":"]] if @s.peek == ?: and !buf
+        return [@s.get, Operators[":"]] if !buf
         return [buf, Operators[buf.to_s]] if Operators.member?(buf.to_s)
         if @keywords.member?(buf)
           return [buf,nil, :keyword]

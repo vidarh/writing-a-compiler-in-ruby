@@ -83,7 +83,7 @@ Operators = {
   "/"  => Oper.new(20, :div,    :infix),
 
   "."  => Oper.new(100, :callm,  :infix,2,2,:left),
-  "::" => Oper.new(90, :deref,  :infix),
+  "::" => Oper.new(100, :callm,  :infix,2,2,:left),
 
   "["  => Oper.new(99,  :array,  :lp,1),
   "]"  => Oper.new(0, nil,     :rp),
