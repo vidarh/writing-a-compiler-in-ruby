@@ -287,6 +287,11 @@ class Compiler
       atype = :addr if atype == :possible_callm
     end
 
+    if atype == :addr
+      @global_scope.globals << aparam
+      @global_constants << aparam
+    end
+
     if atype == :ivar
       ret = compile_eval_arg(scope, :self)
       @e.save_to_instance_var(source, ret, aparam)

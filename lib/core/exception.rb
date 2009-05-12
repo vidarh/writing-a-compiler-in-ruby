@@ -1,0 +1,3 @@
+
+class Exception
+end
