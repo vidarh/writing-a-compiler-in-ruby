@@ -17,7 +17,8 @@ class Compiler
   # a special calling convention
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
-                   :assign, :while, :index, :let, :case, :ternif
+                   :assign, :while, :index, :let, :case, :ternif,
+                   :hash
                   ]
 
 
@@ -192,6 +193,10 @@ class Compiler
       if_arm = alt
     end
     compile_if(scope,cond,if_arm,else_arm)
+  end
+
+  def compile_hash(scope, *args)
+    compile_callm(scope, :Hash, :new, args)
   end
 
   def compile_case(scope, *args)
