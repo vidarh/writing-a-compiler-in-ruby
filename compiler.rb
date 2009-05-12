@@ -196,7 +196,15 @@ class Compiler
   end
 
   def compile_hash(scope, *args)
-    compile_callm(scope, :Hash, :new, args)
+    pairs = []
+    args.collect do |pair|
+      if !pair.is_a?(Array) || pair[0] != :pair
+        error("Literal Hash must contain key value pairs only",scope,args)
+      end
+      pairs << pair[1]
+      pairs << pair[2]
+    end
+    compile_callm(scope, :Hash, :new, pairs)
   end
 
   def compile_case(scope, *args)
