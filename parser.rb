@@ -14,14 +14,14 @@ class Parser < ParserBase
     @shunting = OpPrec::parser(scanner, self)
   end
 
-  # name ::= atom | operator-symbol
+  # name ::= atom
   def parse_name
-    expect(Methodname) || expect(Atom) || expect(Oper)
+    expect(Atom)
   end
 
   # fname ::= name | "[]"
   def parse_fname
-    parse_name || expect("[]")
+    expect("[]") || expect(Methodname) || expect(Oper)
   end
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
@@ -231,7 +231,7 @@ class Parser < ParserBase
     pos = position
     expect(:def) or return
     ws
-    name = parse_name || @shunting.parse or expected("function name")
+    name = parse_fname || @shunting.parse or expected("function name")
     if (expect("."))
       name = [name]
       ret = parse_fname or expected("name following '#{name}.'")
