@@ -2,6 +2,7 @@ require 'parserbase'
 require 'sexp'
 require 'utils'
 require 'shunting'
+require 'operators'
 
 class Parser < ParserBase
   @@requires = {}
@@ -13,12 +14,12 @@ class Parser < ParserBase
     @shunting = OpPrec::parser(scanner, self)
   end
 
-  # name ::= atom
+  # name ::= atom | operator-symbol
   def parse_name
-    expect(Atom)
+    expect(Methodname) || expect(Atom) || expect(Oper)
   end
 
-  # fname ::= name | "[]" | <FIXME: all the other symbols allowed as function names>
+  # fname ::= name | "[]"
   def parse_fname
     parse_name || expect("[]")
   end
