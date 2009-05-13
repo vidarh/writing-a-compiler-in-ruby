@@ -17,7 +17,8 @@ class Compiler
   # a special calling convention
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
-                   :assign, :while, :index, :let, :case, :ternif
+                   :assign, :while, :index, :let, :case, :ternif,
+                   :hash
                   ]
 
 
@@ -194,6 +195,18 @@ class Compiler
     compile_if(scope,cond,if_arm,else_arm)
   end
 
+  def compile_hash(scope, *args)
+    pairs = []
+    args.collect do |pair|
+      if !pair.is_a?(Array) || pair[0] != :pair
+        error("Literal Hash must contain key value pairs only",scope,args)
+      end
+      pairs << pair[1]
+      pairs << pair[2]
+    end
+    compile_callm(scope, :Hash, :new, pairs)
+  end
+
   def compile_case(scope, *args)
 #    error(":case not implemented yet", scope, [:case]+args)
     # FIXME:
@@ -272,6 +285,11 @@ class Compiler
     @e.save_register(source) do
       atype, aparam = get_arg(scope, left)
       atype = :addr if atype == :possible_callm
+    end
+
+    if atype == :addr
+      @global_scope.globals << aparam
+      @global_constants << aparam
     end
 
     if atype == :ivar
