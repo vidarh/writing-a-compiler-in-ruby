@@ -18,7 +18,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash
+                   :hash, :return
                   ]
 
 
@@ -180,6 +180,14 @@ class Compiler
     compile_eval_arg(scope, else_arm) if else_arm
     @e.local(l_end_if_arm) if else_arm
     return [:subexpr]
+  end
+
+  def compile_return(scope, arg = nil)
+    STDERR.puts "return #{arg.inspect}"
+    compile_eval_arg(scope, arg) if arg
+    @e.leave
+    @e.ret
+    [:subexpr]
   end
 
   # Compiles the ternary if form (cond ? then : else) 
