@@ -18,7 +18,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return
+                   :hash, :return,:sexp
                   ]
 
 
