@@ -18,7 +18,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp
+                   :hash, :return,:sexp, :module
                   ]
 
 
@@ -428,6 +428,11 @@ class Compiler
     return [:subexpr]
   end
 
+  def compile_module(scope,name, *exps)
+    # FIXME: This is a cop-out that will cause horrible
+    # crashes - they are not the same (though nearly)
+    compile_class(scope,name, *exps)
+  end
 
   # Compiles a class definition.
   # Takes the current scope, the name of the class as well as a list of expressions
