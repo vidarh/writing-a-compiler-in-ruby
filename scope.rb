@@ -186,7 +186,8 @@ class ClassScope
     if a.to_s[0..1] == "@@" or @class_vars.include?(a)
       @class_vars[a] ||= a.to_s[2..-1].to_sym # save without "@@"
       instance_var = @class_vars[a]
-      return [:cvar, "__classvar__#{@name}__#{instance_var}".to_sym] # -> e.g. __classvar__Foo__varname
+      cvar = "__classvar__#{@name}__#{instance_var}"
+      return [:cvar, cvar.to_sym] # -> e.g. __classvar__Foo__varname
     end
 
     # instance variables.
