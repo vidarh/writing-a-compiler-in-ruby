@@ -11,6 +11,7 @@ require 'set'
 
 class Compiler
   attr_reader :global_functions
+  attr_accessor :trace
 
   # list of all predefined keywords with a corresponding compile-method
   # call & callm are ignored, since their compile-methods require
@@ -30,6 +31,7 @@ class Compiler
     @global_constants = Set.new
     @classes = {}
     @vtableoffsets = VTableOffsets.new
+    @trace = false
   end
 
 
@@ -273,7 +275,12 @@ class Compiler
   def compile_eval_arg(scope, arg)
     if arg.respond_to?(:position) && arg.position != nil
       pos = arg.position.inspect
-      @e.comment(arg.position.inspect) if pos != @lastpos
+      if pos != @lastpos
+        @e.comment(arg.position.inspect)
+        if @trace
+          compile_exp(scope,[:call,:puts,arg.position.inspect])
+        end
+      end
       @lastpos = pos
     end
     args = get_arg(scope,arg)
@@ -499,6 +506,12 @@ class Compiler
   def compile_exp(scope, exp)
     return [:subexpr] if !exp || exp.size == 0
 
+    if @trace
+      @trace = false # A bit ugly, but prevents infinite recursion
+      compile_exp(scope,[:call,:puts,exp[0..1].inspect]) 
+      @trace = true
+    end
+
     # check if exp is within predefined keywords list
     if(@@keywords.include?(exp[0]))
       return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
@@ -562,6 +575,7 @@ end
 
 dump = ARGV.include?("--parsetree")
 norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
+trace = ARGV.include?("--trace")
 
 # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
 OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
@@ -601,4 +615,8 @@ if prog && dump
   exit
 end
 
-Compiler.new.compile(prog) if prog
+if prog
+  c = Compiler.new
+  c.trace = true if trace
+  c.compile(prog)
+end

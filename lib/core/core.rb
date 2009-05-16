@@ -41,4 +41,7 @@ STDIN=0
 STDERR = 1
 ARGV=7
 Enumerable=8 #Here because modules doesn't work yet
-nil = 0
+nil = 0      # FIXME: Should be an object of NilClass
+true = 1     # FIXME: Should be an object of TrueClass
+false = 0    # FIXME: Should be an object of FalseClass
+
