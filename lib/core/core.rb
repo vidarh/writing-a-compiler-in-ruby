@@ -7,6 +7,8 @@ def array size
   malloc(size*4)
 end
 
+# FIXME: Should probably add "autoload" of all but the
+# most basic of these
 require 'core/kernel'
 require 'core/object'
 require 'core/class'
@@ -18,6 +20,7 @@ require 'core/io'
 require 'core/file'
 require 'core/symbol'
 require 'core/fixnum'
+require 'core/float'
 require 'core/struct'
 require 'core/exception'
 require 'core/pp'

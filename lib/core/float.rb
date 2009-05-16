@@ -1,0 +1,3 @@
+
+class Float
+end
