@@ -21,6 +21,8 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :incr, :block
                   ]
 
+  @@oper_methods = Set[ :<< ]
+
   def initialize
     @e = Emitter.new
     @global_functions = {}
@@ -500,6 +502,8 @@ class Compiler
     # check if exp is within predefined keywords list
     if(@@keywords.include?(exp[0]))
       return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
+    elsif @@oper_methods.member?(exp[0])
+      return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
       return compile_call(scope, exp[1], exp[2]) if (exp[0] == :call)
       return compile_callm(scope, exp[1], exp[2], exp[3]) if (exp[0] == :callm)

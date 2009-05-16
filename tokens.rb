@@ -45,6 +45,14 @@ module Tokens
           return :":[]"
         end
         s.unget("[")
+      elsif s.peek == ?<
+        s.get
+        if s.peek == ?<
+          s.get
+          return :":<<"
+        end
+        s.unget("<")
+        return :":<"
       end
       s.unget(":")
       return nil

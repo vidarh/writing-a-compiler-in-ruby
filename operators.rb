@@ -75,7 +75,7 @@ Operators = {
 
   "?"         => Oper.new(  7, :ternif,   :infix),
   ":"         => Oper.new(  7, :ternalt,  :infix),
-  "<<"        => Oper.new(  7, :shiftleft,:infix),
+  "<<"        => Oper.new(  7, :<<,       :infix),
 
   "<"         => Oper.new(  9, :lt,       :infix),
   ">"         => Oper.new(  9, :gt,       :infix),
