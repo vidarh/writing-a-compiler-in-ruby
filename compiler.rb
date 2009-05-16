@@ -302,9 +302,7 @@ class Compiler
     if atype == :addr
       @global_scope.globals << aparam
       @global_constants << aparam
-    end
-
-    if atype == :ivar
+    elsif atype == :ivar
       ret = compile_eval_arg(scope, :self)
       @e.save_to_instance_var(source, ret, aparam)
       return [:subexpr]
