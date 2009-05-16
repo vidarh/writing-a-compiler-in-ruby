@@ -508,6 +508,7 @@ class Compiler
 
     if @trace
       @trace = false # A bit ugly, but prevents infinite recursion
+      @e.comment(exp[0..1].inspect)
       compile_exp(scope,[:call,:puts,exp[0..1].inspect]) 
       @trace = true
     end
