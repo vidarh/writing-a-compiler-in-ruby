@@ -67,7 +67,8 @@ class Scanner
     if c.is_a?(String)
       c = c.reverse
       @col -= c.length
-      @lineno -= c.count(10.chr)
+      ten = 10 # FIXME: This is a temporary hack to get the compiler linking
+      @lineno -= c.count(ten.chr)
     else
       @col -= 1
     end
