@@ -48,8 +48,9 @@ end
 # The keys are the actual identifiers for each operator.
 # The values are the operators themself (instances of the Oper class).
 # The priorities (first argument to Oper.new) does not actually
-# *mean* anything - the only reason for gaps is convenience when
-# having to change them during development.
+# *mean* anything other than establish order. The only
+# reason for gaps is convenience when having to change them
+# during development.
 Operators = {
   # "Fake" operator injected for blocks.
   "#block#"   => Oper.new(  1, :block,    :infix),
