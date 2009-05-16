@@ -51,7 +51,8 @@ module OpPrec
       elsif la and leftv[0] == :callm and o.sym == :assign
         rightv = [rightv] if !ra
         args = leftv[3] ? leftv[3]+rightv : rightv
-        @vstack << [:callm, leftv[1], "#{leftv[2].to_s}=".to_sym,args]
+        eq = "#{leftv[2].to_s}="
+        @vstack << [:callm, leftv[1], eq.to_sym,args]
       elsif o.sym == :index
         if ra and rightv[0] == :array
           @vstack << [:callm, leftv, :[], flatten(rightv[1..-1])]
