@@ -18,7 +18,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue
+                   :hash, :return,:sexp, :module, :rescue, :incr
                   ]
 
 
@@ -192,6 +192,10 @@ class Compiler
   def compile_rescue(scope, *args)
     warning("RESCUE is NOT IMPLEMENTED")
     [:subexpr]
+  end
+
+  def compile_incr(scope, left, right)
+    compile_exp(scope, [:assign, left, [:add, left, right]])
   end
 
   # Compiles the ternary if form (cond ? then : else) 
