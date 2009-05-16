@@ -314,7 +314,9 @@ class Emitter
   # Generates assembl for defining a string constant.
   def string(l, str)
     local(l)
-    emit(".string", "\"#{str}\"")
+    if str # nil here is bizarre and probably a bug - it means get_arg() was called with nil
+      emit(".string", str.inspect)
+    end
   end
 
   def bsslong(l)
