@@ -18,7 +18,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr
+                   :hash, :return,:sexp, :module, :rescue, :incr, :block
                   ]
 
   def initialize
@@ -396,6 +396,18 @@ class Compiler
   # into :sexp nodes.
   def compile_sexp(scope, *exp)
     compile_do(scope, *exp)
+  end
+
+  # :block nodes are "begin .. end" blocks or "do .. end" blocks
+  # (which doesn't really matter to the compiler, just the parser
+  # - what matters is that if it stands on it's own it will be
+  # "executed" immediately; otherwise it should be treated like
+  # a :lambda more or less. 
+  #
+  # FIXME: Since we don't implement "rescue" yet, we'll just
+  # treat it as a :do, which is likely to cause lots of failures
+  def compile_block(scope, *exp)
+    compile_do(scope, *exp[1])
   end
 
 
