@@ -107,6 +107,22 @@ module Tokens
     end
   end
 
+  class Number
+    def self.expect(s)
+      i = Int.expect(s)
+      return nil if i.nil?
+      return i if s.peek != ?.
+      s.get
+      if !(?0..?9).member?(s.peek)
+        s.unget(".")
+        return i
+      end
+      f = Int.expect(s)
+      "#{i}.#{f}".to_f # FIXME: Yeah, this is ugly. Do it nicer later.
+    end
+  end
+
+
   class Quoted
     def self.escaped(s)
       return nil if s.peek == ?"
@@ -159,7 +175,7 @@ module Tokens
       when ?",?'
         return [@s.expect(Quoted), nil]
       when ?0 .. ?9
-        return [@s.expect(Int), nil]
+        return [@s.expect(Number), nil]
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_
         if @s.peek == ?:
           @s.get
