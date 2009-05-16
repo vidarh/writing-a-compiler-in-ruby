@@ -252,6 +252,18 @@ class Emitter
     # gcc does 4 bytes regardless of arguments, and then jumps up 16 at a time
     # We will do the same, but assume its tied to pointer size
     adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
+
+    # If we're messing with the stack, any registers marked for saving will be
+    # saved to avoid having to mess with the stack offsets later
+    if @save_register && @save_register.size > 0
+      @save_register.each do |r|
+        if r[1] == false
+          puts "\tpushl\t#{to_operand_value(r[0])}"
+          r[1] = true
+        end
+      end
+    end
+
     subl(adj,:esp)
     movl(args, :ebx) if numargs
     yield
@@ -282,7 +294,7 @@ class Emitter
   #
   # -> <tt>movl %esp, %ebp</tt>
   def emit(op, *args)
-    if @save_register && @save_register.size > 0 && reg = @save_register.detect{ |r| r[0] == args[1] && r[1] == false }
+    if @save_register && @save_register.size > 0 && (reg = @save_register.detect{ |r| r[0] == args[1] && r[1] == false })
       puts "\tpushl\t#{to_operand_value(args[1])}"
       reg[1] = true
     end
