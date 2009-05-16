@@ -76,12 +76,14 @@ class Compiler
   def get_arg(scope, a)
     return compile_exp(scope, a) if a.is_a?(Array)
     return [:int, a] if (a.is_a?(Fixnum))
+    return [:int, a.to_i] if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
     if (a.is_a?(Symbol))
       name = a.to_s
       return [:int,intern(name.rest)] if name[0] == ?:
       return scope.get_arg(a)
     end
 
+    warning("nil received by get_arg") if !a
     lab = @string_constants[a]
     if !lab
       lab = @e.get_local
