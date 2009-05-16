@@ -21,7 +21,6 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :incr
                   ]
 
-
   def initialize
     @e = Emitter.new
     @global_functions = {}
@@ -326,6 +325,12 @@ class Compiler
   # Takes the current scope, the function to call as well as the arguments
   # to call the function with.
   def compile_call(scope, func, args)
+    if func == :yield
+      warning("YIELD is NOT IMPLEMENTED")
+      # FIXME: Yeah, we're pretending whatever happens to be in 
+      # %eax is the result of a yield we've not done... Temporary hack
+      return [:subexpr]
+    end
     args = [args] if !args.is_a?(Array)
     @e.with_stack(args.length, true) do
       args.each_with_index do |a, i|
