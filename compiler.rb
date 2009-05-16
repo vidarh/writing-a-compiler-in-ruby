@@ -18,7 +18,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module
+                   :hash, :return,:sexp, :module, :rescue
                   ]
 
 
@@ -183,10 +183,14 @@ class Compiler
   end
 
   def compile_return(scope, arg = nil)
-    STDERR.puts "return #{arg.inspect}"
     compile_eval_arg(scope, arg) if arg
     @e.leave
     @e.ret
+    [:subexpr]
+  end
+
+  def compile_rescue(scope, *args)
+    warning("RESCUE is NOT IMPLEMENTED")
     [:subexpr]
   end
 
