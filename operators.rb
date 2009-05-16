@@ -2,12 +2,14 @@
 require 'set'
 
 # Represents Operators within the language.
-# An operator is defined by up to 5 components:
+# An operator is defined by up to 6 components:
+#
 #  - Priority (pri)
 #  - Unique Name / Identifier (sym)
 #  - Type (prefix, infix or suffix)
 #  - Arity (how many arguments? Most operators are either unary or binary)
 #  - Minarity (The minimum arity, for operators with optional arguments)
+#  - Association: Whether the operator binds to the left or right argument first (the default is right)
 #
 # The priority defines the precedence-rules for the parser.
 # Smaller numbers mean higher priority.
