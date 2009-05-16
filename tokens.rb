@@ -28,10 +28,12 @@ module Tokens
       return nil if s.peek != ?:
       s.get
       buf = Atom.expect(s)
-      return ":#{buf.to_s}".to_sym if buf
+      bs = ":#{buf.to_s}"
+      return bs.to_sym if buf
       c = s.peek
       buf = Quoted.expect(s)
-      return ":#{buf.to_s}".to_sym if buf
+      bs = ":#{buf.to_s}"
+      return bs.to_sym if buf
 
       # Lots more operators are legal.
       # FIXME: Need to check which set is legal - it's annoying inconsistent it appears
@@ -118,7 +120,9 @@ module Tokens
         return i
       end
       f = Int.expect(s)
-      "#{i}.#{f}".to_f # FIXME: Yeah, this is ugly. Do it nicer later.
+      # FIXME: Yeah, this is ugly. Do it nicer later.
+      num = "#{i}.#{f}"
+      num.to_f
     end
   end
 
