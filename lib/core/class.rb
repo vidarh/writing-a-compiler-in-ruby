@@ -2,7 +2,8 @@
 def __new_class_object(size)
   ob = malloc(size)
   i = 1
-  %s(printf "class object: %p (%d bytes) / Class: %p\n" ob size Class)
+  %s(printf "class object: %p (%d bytes) / Class: %p" ob size Class)
+  %s(puts "")
   %s(while (lt i size) (do
        (assign (index ob i) __method_missing)
        (assign i (add i 1))
@@ -19,6 +20,11 @@ class Class
     ob = malloc(@instance_size*4) 
     %s(assign (index ob 0) self)
     ob
+  end
+
+  def attr_accessor sym
+    %s(printf "attr_accessor %d" sym)
+    %s(puts "")
   end
 end
 
