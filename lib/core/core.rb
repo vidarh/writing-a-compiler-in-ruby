@@ -7,11 +7,13 @@ def array size
   malloc(size*4)
 end
 
+# Must be the first file to be require'd, in order to initialize the Class constant.
+require 'core/class'
+
 # FIXME: Should probably add "autoload" of all but the
 # most basic of these
 require 'core/kernel'
 require 'core/object'
-require 'core/class'
 require 'core/enumerable'
 #require 'core/array'
 require 'core/hash'

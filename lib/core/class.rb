@@ -2,13 +2,13 @@
 def __new_class_object(size)
   ob = malloc(size)
   i = 1
-  %s(printf "class object: %p (%d bytes)\n" ob size)
+  %s(printf "class object: %p (%d bytes) / Class: %p\n" ob size Class)
   %s(while (lt i size) (do
        (assign (index ob i) __method_missing)
        (assign i (add i 1))
   ))
   %s(assign (index ob 0) Class)
-  return ob
+  ob
 end
 
 class Class
