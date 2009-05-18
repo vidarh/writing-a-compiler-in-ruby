@@ -7,7 +7,7 @@ clean:
 	@rm -rf doc/
 
 compiler.s: *.rb
-	ruby compiler.rb --trace compiler.rb >compiler.s
+	ruby compiler.rb compiler.rb >compiler.s
 
 compiler: compiler.s runtime.o
 	gcc -o compiler compiler.s runtime.o
