@@ -1,9 +1,9 @@
 
 
-all: compiler testargs testarray
+all: compiler
 
 clean:
-	@rm -f *~ *.o *.s testarray testargs
+	@rm -f *~ *.o *.s
 	@rm -rf doc/
 
 compiler.s: *.rb
@@ -12,17 +12,3 @@ compiler.s: *.rb
 compiler: compiler.s runtime.o
 	gcc -o compiler compiler.s runtime.o
 
-testarray.s: testarray.l
-	ruby compiler.rb <testarray.l >testarray.s
-
-testarray.o: testarray.s 
-
-testarray: testarray.o runtime.o
-	gcc -o testarray testarray.o runtime.o
-
-testargs.s: testargs.rb
-	ruby compiler.rb <testargs.rb >testargs.s
-
-testargs.o: testargs.s
-
-testargs: testargs.o runtime.o
