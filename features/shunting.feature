@@ -59,7 +59,6 @@ Feature: Shunting Yard
       | "flatten(r[2])"      | [:call, :flatten, [[:callm, :r, :[], [2]]]] |
       | "foo.bar(ret[123])"  | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]] |
       | "Foo::bar(baz)"      | [:callm, :Foo, :bar, :baz]               |
-      | "@e.with_local(vars) { }" | [:callm, :@e, :with_local, [:var], [:block]] |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>
@@ -139,6 +138,7 @@ Feature: Shunting Yard
       | "(rest? ? 1 : 0)" | [:ternif, :rest?, [:ternalt, 1, 0]]     |
       | "@locals[a] + (rest? ? 1 : 0)" | [:add, [:callm, :@locals,:[], [:a]], [:ternif, :rest?, [:ternalt, 1, 0]]] |
 
+    @blocks
 	Scenario Outline: Blocks
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
@@ -151,6 +151,7 @@ Feature: Shunting Yard
 	  | "foo {}"            | [:call, :foo, [],[:block]]                 |
       | "foo() {}"          | [:call, :foo, [],[:block]]                 |
       | "foo(1) {}"         | [:call, :foo, 1,[:block]]                  |
+      | "e.foo(vars) { }"   | [:callm, :e, :foo, [:vars], [:block]]      |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
 	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:block]]]|
