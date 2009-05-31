@@ -23,8 +23,14 @@ class Class
   end
 
   def attr_accessor sym
-    %s(printf "attr_accessor %d" sym)
-    %s(puts "")
+#    %s(printf "attr_accessor %d" sym)
+#    %s(puts "")
+  end
+  
+  def attr_reader sym
+  end
+
+  def attr_writer sym
   end
 end
 
