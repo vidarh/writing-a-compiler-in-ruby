@@ -19,7 +19,7 @@ Feature: Shunting Yard
 	  | "1 * 2 + 3"          | [:add,[:mul,1,2],3]		   	        |
 	  | "(1+2)*3"            | [:mul,[:add,1,2],3]                  |
 	  | "1 , 2"              | [:comma,1,2]                         |
-	  | "a << b"             | [:shiftleft,:a,:b]                   |
+	  | "a << b"             | [:<<,:a,:b]                          |
 	  | "1 .. 2"             | [:range,1,2]	                        |
       | "a = 1 or foo + bar" | [:or,[:assign,:a,1],[:add,:foo,:bar]]|
       | "foo and !bar"       | [:and,:foo,[:not,:bar]]              |
@@ -152,6 +152,7 @@ Feature: Shunting Yard
       | "foo() {}"          | [:call, :foo, [],[:block]]                 |
       | "foo(1) {}"         | [:call, :foo, 1,[:block]]                  |
       | "e.foo(vars) { }"   | [:callm, :e, :foo, [:vars], [:block]]      |
+      | "e.foo(vars)"       | [:callm, :e, :foo, :vars]                  |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
 	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:block]]]|
