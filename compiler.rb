@@ -404,7 +404,7 @@ class Compiler
   # affect %s() escaped code should avoid descending
   # into :sexp nodes.
   def compile_sexp(scope, *exp)
-    compile_do(scope, *exp)
+    compile_do(SexpScope.new(scope), *exp)
   end
 
   # :block nodes are "begin .. end" blocks or "do .. end" blocks
