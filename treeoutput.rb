@@ -17,7 +17,7 @@ module OpPrec
 
     def flatten(r)
       return r if !r.is_a?(Array)
-      return r if r[0] != :comma
+      return r if r[0] != :comma and r[0] != :flatten
       return r[1..2] if !r[2].is_a?(Array) or r[2][0] == :array
       return [r[1], flatten(r[2])] if r[2][0] != :comma
       return [r[1]] + flatten(r[2])
@@ -41,13 +41,11 @@ module OpPrec
 
       # Rewrite rules to simplify the tree
 
-      if ra and rightv[0] == :flatten
-        @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
-      elsif ra and rightv[0] == :call and o.sym == :callm
+      if ra and rightv[0] == :call and o.sym == :callm
         @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
       elsif la and leftv[0] == :callm and o.sym == :call
-        args = !ra || rightv[0] == :comma ? flatten(rightv) : [flatten(rightv)]
-        @vstack << leftv + [args]
+        args = !ra || rightv[0] == :comma ? [flatten(rightv)] : flatten(rightv[1..-1])
+        @vstack << leftv + args
       elsif la and leftv[0] == :callm and o.sym == :assign
         rightv = [rightv] if !ra
         args = leftv[3] ? leftv[3]+rightv : rightv
@@ -63,6 +61,8 @@ module OpPrec
         @vstack << [o.sym, leftv].compact + flatten(rightv)
       elsif ra and rightv[0] == :comma and o.sym != :comma
         @vstack << [o.sym, leftv, flatten(rightv)].compact
+      elsif ra and rightv[0] == :flatten
+        @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
       else
         if o.sym == :call || o.sym == :callm and ra and rightv[0] != :flatten and rightv[0] != :comma
           rightv = [rightv]

@@ -151,7 +151,7 @@ Feature: Shunting Yard
 	  | "foo {}"            | [:call, :foo, [],[:block]]                 |
       | "foo() {}"          | [:call, :foo, [],[:block]]                 |
       | "foo(1) {}"         | [:call, :foo, 1,[:block]]                  |
-      | "e.foo(vars) { }"   | [:callm, :e, :foo, [:vars], [:block]]      |
+      | "e.foo(vars) { }"   | [:callm, :e, :foo, :vars, [:block]]      |
       | "e.foo(vars)"       | [:callm, :e, :foo, :vars]                  |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
