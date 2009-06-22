@@ -5,10 +5,14 @@ class Emitter
 
   attr_accessor :seq
 
-  def initialize
+  def initialize out = STDOUT
     @seq = 0
+    @out = out
   end
 
+  def puts str
+    @out.puts(str)
+  end
 
   # Outputs assembly-comment.
   # Useful for debugging / inspecting generated assembly code.
