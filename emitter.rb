@@ -262,7 +262,7 @@ class Emitter
     if @save_register && @save_register.size > 0
       @save_register.each do |r|
         if r[1] == false
-          puts "\tpushl\t#{to_operand_value(r[0])}"
+          raw_emit(:pushl,r[0])
           r[1] = true
         end
       end
@@ -286,10 +286,23 @@ class Emitter
     yield
     f = @save_register.pop
     if f[1]
-      puts "\tpopl\t#{to_operand_value(f[0])}"
+      raw_emit(:popl,f[0])
     end
   end
 
+  # Emits a given operator with possible arguments as an assembly call.
+  # raw_emit will *not* take into account registers that are to be
+  # saved etc. It should generally only be called directly by code
+  # that needs to avoid register saving logic, such as the register
+  # saving code itself.
+  # 
+  # Example:
+  #   emit(:movl, :esp, :ebp)
+  #
+  # -> <tt>movl %esp, %ebp</tt>
+  def raw_emit(op, *args)
+    puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
+  end
 
   # Emits a given operator with possible arguments as an assembly call.
   #
@@ -299,10 +312,10 @@ class Emitter
   # -> <tt>movl %esp, %ebp</tt>
   def emit(op, *args)
     if @save_register && @save_register.size > 0 && (reg = @save_register.detect{ |r| r[0] == args[1] && r[1] == false })
-      puts "\tpushl\t#{to_operand_value(args[1])}"
+      raw_emit(:pushl,args[1])
       reg[1] = true
     end
-    puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
+    raw_emit(op, *args)
   end
 
 
@@ -381,7 +394,7 @@ class Emitter
   # Takes a block, that gets called after some initialization code
   # and before the end of the main-function.
   def main
-    puts ".text"
+    raw_emit(".text")
     export(:main, :function)
     label(:main)
     leal("4(%esp)", :ecx)
