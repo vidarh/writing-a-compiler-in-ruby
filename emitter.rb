@@ -1,3 +1,54 @@
+
+class IOOutput
+  def initialize out = STDOUT
+    @out = out
+  end
+
+  def puts str
+    @out.puts(str)
+  end
+
+  def comment str
+    puts "\t# #{str}"
+  end
+
+  def label l
+    puts "#{l.to_s}:"
+  end
+
+  def emit(op, *args)
+    puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
+  end
+
+  def export(label, type = nil)
+    puts ".globl #{label}"
+    puts "\t.type\t#{label}, @#{type.to_s}"
+  end
+end
+
+class ArrayOutput
+  attr_reader :output
+
+  def initialize 
+    @output = []
+  end
+
+  def comment str
+  end
+
+  def label l
+    @output << ["#{l.to_s}"]
+  end
+
+  def emit *args
+    @output << args
+  end
+
+  def export label,type = nil
+    @output << [:export,label,type]
+  end
+end
+
 # Emitter class.
 # Emits assembly code for x86 (32 Bit) architecture.
 class Emitter
@@ -5,14 +56,14 @@ class Emitter
 
   attr_accessor :seq
 
-  def initialize out = STDOUT
+  attr_accessor :basic_main
+
+  def initialize out = IOOutput
     @seq = 0
     @out = out
+    @basic_main = false
   end
 
-  def puts str
-    @out.puts(str)
-  end
 
   # Outputs assembly-comment.
   # Useful for debugging / inspecting generated assembly code.
@@ -23,7 +74,7 @@ class Emitter
   #
   # -> <tt># this is a comment</tt>
   def comment(str)
-    puts "\t# #{str}"
+    @out.comment(str)
   end
 
 
@@ -37,8 +88,7 @@ class Emitter
   #   .globl main
   #   type main, @function
   def export(label, type = nil)
-    puts ".globl #{label}"
-    puts "\t.type\t#{label}, @#{type.to_s}"
+    @out.export(label,type);
   end
 
   # Emits rodata-section.
@@ -71,7 +121,7 @@ class Emitter
 
   # Generates code for creating a label in assembly.
   def label(l)
-    puts "#{l.to_s}:"
+    @out.label(l)
     l
   end
 
@@ -262,7 +312,7 @@ class Emitter
     if @save_register && @save_register.size > 0
       @save_register.each do |r|
         if r[1] == false
-          raw_emit(:pushl,r[0])
+          @out.emit(:pushl,r[0])
           r[1] = true
         end
       end
@@ -286,22 +336,8 @@ class Emitter
     yield
     f = @save_register.pop
     if f[1]
-      raw_emit(:popl,f[0])
+      @out.emit(:popl,f[0])
     end
-  end
-
-  # Emits a given operator with possible arguments as an assembly call.
-  # raw_emit will *not* take into account registers that are to be
-  # saved etc. It should generally only be called directly by code
-  # that needs to avoid register saving logic, such as the register
-  # saving code itself.
-  # 
-  # Example:
-  #   emit(:movl, :esp, :ebp)
-  #
-  # -> <tt>movl %esp, %ebp</tt>
-  def raw_emit(op, *args)
-    puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
   end
 
   # Emits a given operator with possible arguments as an assembly call.
@@ -312,10 +348,10 @@ class Emitter
   # -> <tt>movl %esp, %ebp</tt>
   def emit(op, *args)
     if @save_register && @save_register.size > 0 && (reg = @save_register.detect{ |r| r[0] == args[1] && r[1] == false })
-      raw_emit(:pushl,args[1])
+      @out.emit(:pushl,args[1])
       reg[1] = true
     end
-    raw_emit(op, *args)
+    @out.emit(op, *args)
   end
 
 
@@ -394,7 +430,11 @@ class Emitter
   # Takes a block, that gets called after some initialization code
   # and before the end of the main-function.
   def main
-    raw_emit(".text")
+    if @basic_main
+      return yield
+    end
+
+    @out.emit(".text")
     export(:main, :function)
     label(:main)
     leal("4(%esp)", :ecx)
@@ -403,7 +443,7 @@ class Emitter
     pushl(:ebp)
     movl(:esp, :ebp)
     pushl(:ecx)
-
+  
     yield
 
     popl(:ecx)
