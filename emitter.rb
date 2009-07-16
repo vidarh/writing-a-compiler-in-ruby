@@ -1,4 +1,22 @@
 
+# Returns the operand-value for a given element.
+# If an integer (Fixnum) is given, returns a assembly constant (e.g. 42 -> $42)
+# If a Symbol is given, it should be a register (e.g. :eax -> %eax)
+# Otherwise, returns its string value.
+def to_operand_value(src)
+  return int_value(src) if src.is_a?(Fixnum)
+  return "%#{src.to_s}" if src.is_a?(Symbol)
+  return src.to_s
+end
+
+# Returns assembly constant for integer-value.
+def int_value(param)
+  return "$#{param.to_i}"
+end
+
+
+
+
 class IOOutput
   def initialize out = STDOUT
     @out = out
@@ -58,7 +76,7 @@ class Emitter
 
   attr_accessor :basic_main
 
-  def initialize out = IOOutput
+  def initialize out = IOOutput.new
     @seq = 0
     @out = out
     @basic_main = false
@@ -133,12 +151,6 @@ class Emitter
   end
 
 
-  # Returns assembly constant for integer-value.
-  def int_value(param)
-    return "$#{param.to_i}"
-  end
-
-
   # Returns assembly constant for a given parameter.
   def addr_value(param)
     return "$#{param.to_s}"
@@ -148,16 +160,6 @@ class Emitter
     return :eax
   end
 
-
-  # Returns the operand-value for a given element.
-  # If an integer (Fixnum) is given, returns a assembly constant (e.g. 42 -> $42)
-  # If a Symbol is given, it should be a register (e.g. :eax -> %eax)
-  # Otherwise, returns its string value.
-  def to_operand_value(src)
-    return int_value(src) if src.is_a?(Fixnum)
-    return "%#{src.to_s}" if src.is_a?(Symbol)
-    return src.to_s
-  end
 
   # Store "param" in stack slot "i"
   def save_to_stack(param, i)
