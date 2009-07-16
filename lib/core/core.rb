@@ -10,6 +10,9 @@ end
 # Must be the first file to be require'd, in order to initialize the Class constant.
 require 'core/class'
 
+# Should auto-generate this so it actually has the correct value...
+__FILE__ = "[filename]"
+
 # FIXME: Should probably add "autoload" of all but the
 # most basic of these
 require 'core/kernel'
