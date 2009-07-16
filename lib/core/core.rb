@@ -19,6 +19,9 @@ require 'core/kernel'
 require 'core/object'
 require 'core/enumerable'
 #require 'core/array'
+class Array
+end
+
 require 'core/hash'
 require 'core/string'
 require 'core/io'
