@@ -188,7 +188,7 @@ class ClassScope
   end
 
   def add_ivar(a)
-    @instance_vars << a.to_sym
+    @instance_vars << a.to_sym if !@instance_vars.include?(a.to_sym)
   end
 
   def instance_size
