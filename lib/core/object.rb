@@ -2,6 +2,10 @@
 class Object
   # FIXME: Should include "Kernel" here
 
+  def initialize
+    # Default. Empty on purpose
+  end
+
   def respond_to?
     %s(puts "Object#respond_to not implemented")
   end
