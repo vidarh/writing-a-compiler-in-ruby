@@ -21,6 +21,7 @@ class Class
     %s(assign size (mul size 4))
     %s(assign ob (malloc size))
     %s(assign (index ob 0) self)
+    %s(callm ob initialize ())
     ob
   end
 
