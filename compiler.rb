@@ -19,7 +19,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr, :block
+                   :hash, :return,:sexp, :module, :rescue, :incr, :block,
                   ]
 
   @@oper_methods = Set[ :<< ]
@@ -141,6 +141,12 @@ class Compiler
       f = Function.new([:self]+args, body, scope) # "self" is "faked" as an argument to class methods.
 
       @e.comment("method #{name}")
+
+      body.depth_first do |exp|
+        exp.each do |n| 
+          scope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
+        end
+      end
 
       cleaned = clean_method_name(name)
       fname = "__method_#{scope.name}_#{cleaned}"
@@ -490,11 +496,12 @@ class Compiler
     @classes[name] = cscope
     @global_scope.globals << name
     compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size]]])
-    compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
     @global_constants << name
     exps.each do |e|
       addr = compile_do(cscope, *e)
     end
+
+    compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
     @e.comment("=== end class #{name} ===")
     return [:global, name]
   end
