@@ -250,6 +250,7 @@ class Emitter
   end
 
   def load_instance_var(ob, aparam)
+    STDERR.puts "load_instance_var: #{aparam}"
     movl("#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})", result_value)
     return result_value
   end
@@ -382,7 +383,7 @@ class Emitter
   def string(l, str)
     local(l)
     if str # nil here is bizarre and probably a bug - it means get_arg() was called with nil
-      emit(".string", str.inspect)
+      emit(".string", "\"#{str}\"")
     end
   end
 
