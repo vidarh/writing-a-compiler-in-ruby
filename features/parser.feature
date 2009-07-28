@@ -72,6 +72,17 @@ Feature: Parser
 	  | "def *(other_array)\nend\n"         | [:do, [:defun, :*, [:other_array], [:let, []]]] | *-Operator overloading                |
 	  | "def foo=(bar)\nend\n"         | [:do, [:defun, :foo=, [:bar], [:let, []]]] | setter    	       		                  |
 
+    @class
+    Scenario Outline: Classes
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+	  | expr                          | tree                                          | notes                                         |
+      | "class Foo; end"              | [:do, [:class, :Foo, []]]                     |                                               |
+      | "class Foo < Bar; end"        | [:do, [:class, :Foo, :Bar, []]]               |                                               |
+
     @control
 	Scenario Outline: Control structures
 		Given the expression <expr>
