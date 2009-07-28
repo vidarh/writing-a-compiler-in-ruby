@@ -257,11 +257,10 @@ class Parser < ParserBase
     if expect("<")
       ws
       superclass = expect(Atom) or expected("superclass")
-      # FIXME: Include superclass in tree
     end
     exps = zero_or_more(:exp)
     expect(:end) or expected("expression or 'end'")
-    return E[pos, type.to_sym, name, exps]
+    return E[pos, type.to_sym, name, superclass || :Object, exps]
   end
 
 

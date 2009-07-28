@@ -80,7 +80,7 @@ Feature: Parser
 
 	Examples:
 	  | expr                          | tree                                          | notes                                         |
-      | "class Foo; end"              | [:do, [:class, :Foo, []]]                     |                                               |
+      | "class Foo; end"              | [:do, [:class, :Foo, :Object, []]]            |                                               |
       | "class Foo < Bar; end"        | [:do, [:class, :Foo, :Bar, []]]               |                                               |
 
     @control

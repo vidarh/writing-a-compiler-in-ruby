@@ -477,11 +477,12 @@ class Compiler
   # Compiles a class definition.
   # Takes the current scope, the name of the class as well as a list of expressions
   # that belong to the class.
-  def compile_class(scope, name, *exps)
+  def compile_class(scope, name,superclass, *exps)
     @e.comment("=== class #{name} ===")
 
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
+    # FIXME: Need to be able to handle re-opening of classes
     # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)
     # FIXME: Fill in all unused vtable slots with __method_missing
     # FIXME: Need to generate "thunks" for __method_missing that knows the name of the slot they are in, and
