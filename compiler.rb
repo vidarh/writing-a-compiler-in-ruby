@@ -483,7 +483,6 @@ class Compiler
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
     # FIXME: Need to be able to handle re-opening of classes
-    # FIXME: (If this class has a superclass, copy the vtable from the superclass as a starting point)
     # FIXME: Fill in all unused vtable slots with __method_missing
     # FIXME: Need to generate "thunks" for __method_missing that knows the name of the slot they are in, and
     #        then jump into __method_missing.
@@ -496,8 +495,12 @@ class Compiler
     end
     @classes[name] = cscope
     @global_scope.globals << name
-    compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size]]])
+    sscope = name == superclass ? nil : @classes[superclass]
+    ssize = sscope ? sscope.klass_size : nil
+    ssize = 0 if ssize.nil?
+    compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]])
     @global_constants << name
+
     exps.each do |e|
       addr = compile_do(cscope, *e)
     end
