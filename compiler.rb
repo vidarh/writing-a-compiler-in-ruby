@@ -80,6 +80,7 @@ class Compiler
     return compile_exp(scope, a) if a.is_a?(Array)
     return [:int, a] if (a.is_a?(Fixnum))
     return [:int, a.to_i] if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
+    return [:int, a.to_s[1..-1].to_i] if (a.is_a?(Symbol) && a.to_s[0] == ?$) # FIXME: Another temporary hack
     if (a.is_a?(Symbol))
       name = a.to_s
       return [:int,intern(name.rest)] if name[0] == ?:
