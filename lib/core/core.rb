@@ -53,3 +53,7 @@ nil = 0      # FIXME: Should be an object of NilClass
 true = 1     # FIXME: Should be an object of TrueClass
 false = 0    # FIXME: Should be an object of FalseClass
 
+# FIXME:
+def range a,b
+  puts "Compiler range construct is not implemented yet"
+end

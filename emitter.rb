@@ -3,9 +3,11 @@
 # If an integer (Fixnum) is given, returns a assembly constant (e.g. 42 -> $42)
 # If a Symbol is given, it should be a register (e.g. :eax -> %eax)
 # Otherwise, returns its string value.
-def to_operand_value(src)
+def to_operand_value(src,flags = nil)
   return int_value(src) if src.is_a?(Fixnum)
   return "%#{src.to_s}" if src.is_a?(Symbol)
+  src = src.to_s
+  return src[1..-1] if flags == :stripdollar && src[0] == ?$
   return src.to_s
 end
 
@@ -295,7 +297,7 @@ class Emitter
   end
 
   def load_indirect(arg, reg = :eax)
-    movl("(#{to_operand_value(arg)})", reg)
+    movl("(#{to_operand_value(arg,:stripdollar)})", reg)
     return reg
   end
 
