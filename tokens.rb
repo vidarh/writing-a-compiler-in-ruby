@@ -156,7 +156,15 @@ module Tokens
         while (e = escaped(s)); buf += e; end
         raise "Unterminated string" if !s.expect('"')
       else
-        while (e = s.get) && e != "'"; buf += e; end
+        while (e = s.get) && e != "'"
+          if e == '"'
+            buf += "\\\""
+          elsif e == "\\" && (s.peek == ?' || s.peek == "\\".ord)
+            buf += "\\" + s.get
+          else
+            buf += e
+          end
+        end
         raise "Unterminated string" if e != "'"
       end
       return buf
