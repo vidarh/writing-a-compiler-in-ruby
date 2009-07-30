@@ -24,6 +24,8 @@ Feature: Compiler
 	| inputs/01trivial.rb       | outputs/01trivial.txt  | Just a puts |
     | inputs/02class.rb         | outputs/02class.txt    | Simple class |
     | inputs/03ivar.rb          | outputs/03ivar.txt     | Setting and retrieving an instance variable |
+    | inputs/04accessor.rb      | outputs/04accessor.txt | Simple use of attr_accessor |
+
    
 
 		
