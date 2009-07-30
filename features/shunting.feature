@@ -13,6 +13,8 @@ Feature: Shunting Yard
 	  | expr                 | tree                                 |
       | "__FILE__"           | :__FILE__                            |
       | "0.5"                | 0.5                                  |
+	  | "$0"                 | :"$0"                                |
+	  | "$foo"               | :"$foo"                              |
 	  | "1 + 2"              | [:add,1,2]                           |
 	  | "1 - 2"              | [:sub,1,2]				            |
       | "1 + 2 * 3"          | [:add,1,[:mul,2,3]]                  |

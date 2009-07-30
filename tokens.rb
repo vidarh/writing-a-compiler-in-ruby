@@ -78,6 +78,9 @@ module Tokens
                                   (?0 .. ?9).member?(c) || ?_ == c)
           tmp += s.get
         end
+      elsif tmp == "$"
+        tmp += s.get # FIXME: Need to check what characters are legal after $ (and not covered above)
+        return tmp.to_sym
       end
       if tmp.size > 0 && (s.peek == ?! || s.peek == ??)
         tmp += s.get
