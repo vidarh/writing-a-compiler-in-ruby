@@ -298,7 +298,7 @@ class Compiler
       @e.load_instance_var(ret, aparam)
       return @e.result_value
     elsif atype == :possible_callm
-      return compile_callm(scope,:self,aparam,[])
+      return compile_eval_arg(scope,[:callm,:self,aparam,[]])
     end
     return @e.load(atype, aparam)
   end
