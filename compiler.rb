@@ -298,7 +298,7 @@ class Compiler
       @e.load_instance_var(ret, aparam)
       return @e.result_value
     elsif atype == :possible_callm
-      return compile_eval_arg(scope, [:callm, :self, arg,[]])
+      return compile_callm(scope,:self,aparam,[])
     end
     return @e.load(atype, aparam)
   end
@@ -347,6 +347,12 @@ class Compiler
       # %eax is the result of a yield we've not done... Temporary hack
       return [:subexpr]
     end
+
+    # This is a bit of a hack. get_arg will also be called from
+    # compile_eval_arg below, but we need to know if it's a callm
+    fargs = get_arg(scope, func)
+    return compile_callm(scope,:self, func, args) if fargs[0] == :possible_callm
+
     args = [args] if !args.is_a?(Array)
     @e.with_stack(args.length, true) do
       args.each_with_index do |a, i|
@@ -484,13 +490,29 @@ class Compiler
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
     # FIXME: Need to be able to handle re-opening of classes
-    # FIXME: Fill in all unused vtable slots with __method_missing
     # FIXME: Need to generate "thunks" for __method_missing that knows the name of the slot they are in, and
     #        then jump into __method_missing.
     exps.each do |l2|
       l2.each do |e|
-        if e.is_a?(Array) && e[0] == :defun
-          cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
+        if e.is_a?(Array) 
+          if e[0] == :defun
+            cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
+          elsif e[0] == :call && e[1] == :attr_accessor
+            # This is a bit presumptious, assuming noone are stupid enough to overload
+            # attr_accessor, attr_reader without making them do more or less the same thing.
+            # but the right thing to do is actually to call the method.
+            #
+            # In any case there is no actual harm in allocating the vtable
+            # entry.`
+            #
+            # We may do a quick temporary hack to synthesize the methods,
+            # though, as otherwise we need to implement the full define_method
+            # etc.
+            arr = e[1].is_a?(Array) ? e[2] : [e[2]]
+            arr.each {|entry|
+              cscope.add_vtable_entry(entry.to_s[1..-1].to_sym) 
+            }
+          end
         end
       end
     end

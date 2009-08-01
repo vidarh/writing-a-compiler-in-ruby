@@ -114,6 +114,7 @@ class VTableOffsets
       @vtable[name] = @vtable_max
       @vtable_max += 1
     end
+    @vtable[name]
   end
 
 
@@ -257,7 +258,7 @@ class ClassScope
     @vtable[name] ||= VTableEntry.new
     v = @vtable[name]
     v.name = name.to_s
-    v.offset = @vtableoffsets.get_offset(name) if !v.offset
+    v.offset = @vtableoffsets.alloc_offset(name) if !v.offset
     return v
   end
 
