@@ -30,15 +30,39 @@ class Class
     ob
   end
 
+  # FIXME
+  # &block will be a "bare" %s(lambda) (that needs to be implemented),
+  # define_method needs to attach that to the vtable (for now) and/or
+  # to a hash table for "overflow" (methods lacking vtable slots).
+  # This requires a painful decision:
+  #
+  # - To type-tag Symbol or not to type-tag
+  #
+  # It also means adding a function to look up a vtable offset from
+  # a symbol, which effetively means a simple hash table implementation
+  #
+  def define_method sym, &block
+    %s(puts "define_method")
+  end
+
+  # FIXME: Should handle multiple symbols
   def attr_accessor sym
-    %s(printf "attr_accessor %d" sym)
-    %s(puts "")
+    attr_reader sym
+    attr_writer sym
   end
   
   def attr_reader sym
+    %s(printf "attr_reader %d\n" sym)
+    define_method sym do
+       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
+    end
   end
 
   def attr_writer sym
+    %s(printf "attr_writer %d\n" sym)
+    define_method "#{sym.to_s}=".to_sym do |val|
+      %s(assign (ivar self sym) val)
+    end
   end
 end
 
