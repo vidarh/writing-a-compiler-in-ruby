@@ -93,6 +93,10 @@ class VTableOffsets
     # __send__ is our fallback if no vtable
     # offset was found, so it *must* have a slot
     alloc_offset(:__send__)
+
+    # Must be defined to prevent non-terminating recursion
+    # in Compiler#compile_callm
+    alloc_offset(:__get_symbol)
   end
 
 
