@@ -39,7 +39,7 @@ class Class
   # - To type-tag Symbol or not to type-tag
   #
   # It also means adding a function to look up a vtable offset from
-  # a symbol, which effetively means a simple hash table implementation
+  # a symbol, which effectively means a simple hash table implementation
   #
   def define_method sym, &block
     %s(puts "define_method")
