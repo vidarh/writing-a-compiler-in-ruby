@@ -60,14 +60,12 @@ class Compiler
   end
 
 
-  # Allocate an integer value to a symbol. We'll "cheat" for now and just
-  # use the "host" system. The symbol table needs to eventually get
-  # reflected in the compiled program -- you need to be able to retrieve the
-  # name etc.. We also need to either create a "real" object for each of them
-  # *or* use a typetag like MRI (in other words: we can't just treat it as an
-  # arbitrary integer like this code does.
-  def intern(sym)
-    sym.to_sym.to_i
+  # Allocate a symbol
+  def intern(scope,sym)
+    # FIXME: Do this once, and add an :assign to a global var, and use that for any
+    # later static occurrences of symbols.
+    args = get_arg(scope,sym.to_s.rest)
+    get_arg(scope,[:callm, :Symbol, :__get_symbol, args[1]])
   end
 
   # Returns an argument with its type identifier.
@@ -83,7 +81,7 @@ class Compiler
     return [:int, a.to_s[1..-1].to_i] if (a.is_a?(Symbol) && a.to_s[0] == ?$) # FIXME: Another temporary hack
     if (a.is_a?(Symbol))
       name = a.to_s
-      return [:int,intern(name.rest)] if name[0] == ?:
+      return intern(scope,name.rest) if name[0] == ?:
       return scope.get_arg(a)
     end
 
@@ -380,7 +378,7 @@ class Compiler
     if !off
       # Argh. Ok, then. Lets do send
       off = @vtableoffsets.get_offset(:__send__)
-      args = [intern(method)] + args
+      args = [":#{method}".to_sym] + args
       warning("WARNING: No vtable offset for '#{method}' -- you're likely to get a method_missing")
       #error(err_msg, scope, [:callm, ob, method, args])
     end
