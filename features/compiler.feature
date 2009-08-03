@@ -25,6 +25,7 @@ Feature: Compiler
     | inputs/02class.rb         | outputs/02class.txt    | Simple class |
     | inputs/03ivar.rb          | outputs/03ivar.txt     | Setting and retrieving an instance variable |
     | inputs/04accessor.rb      | outputs/04accessor.txt | Simple use of attr_accessor |
+    | inputs/05cvar.rb          | outputs/05cvar.txt     | Simple use of class variable |
 
    
 
