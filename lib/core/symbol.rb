@@ -17,11 +17,11 @@ class Symbol
   # Using class instance var instead of class var
   # because the latter is not properly implemented yet,
   # though in this case it may not make a difference
-  @symbols = {}
+#  @symbols = {} # FIXME: Adding values to a class ivar like this is broken
 
   # FIXME: Should be private, but we don't support that yet
   def initialize(name)
-    @name = name
+    @name = "foo" #name FIXME: Doesn't support passing arguments along yet.
   end
 
   def to_s
@@ -32,12 +32,17 @@ class Symbol
   # The compiler should turn ":foo" into Symbol.__get_symbol("foo").
   # Alternatively, the compiler can do this _once_ at the start for
   # any symbol encountered in the source text, and store the result.
-  def self.__get_symbol(name)
-    sym = @symbols[name]
-    if !sym
-      sym = Symbol.new(name)
-    end
-    sym
-  end
+#  def self.__get_symbol(name)
+#    Symbol.new(name)
+#    sym = @symbols[name]
+#    if !sym
+#      sym = Symbol.new(name)
+#    end
+#    sym
+#  end
 end
 
+def __get_symbol(name)
+  # FIXME: At this point, Symbol.instance_size appears to contain the wrong value.
+  Symbol.new(name)
+end

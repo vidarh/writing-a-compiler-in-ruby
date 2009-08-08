@@ -65,7 +65,7 @@ class Compiler
     # FIXME: Do this once, and add an :assign to a global var, and use that for any
     # later static occurrences of symbols.
     args = get_arg(scope,sym.to_s.rest)
-    get_arg(scope,[:callm, :Symbol, :__get_symbol, args[1]])
+    get_arg(scope,[:call,:__get_symbol, args[1]])
   end
 
   # Returns an argument with its type identifier.
@@ -522,11 +522,12 @@ class Compiler
     compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]])
     @global_constants << name
 
+    compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
+
     exps.each do |e|
       addr = compile_do(cscope, *e)
     end
 
-    compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
     @e.comment("=== end class #{name} ===")
     return [:global, name]
   end
