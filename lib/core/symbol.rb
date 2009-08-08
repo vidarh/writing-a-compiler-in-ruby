@@ -21,7 +21,7 @@ class Symbol
 
   # FIXME: Should be private, but we don't support that yet
   def initialize(name)
-    @name = "foo" #name FIXME: Doesn't support passing arguments along yet.
+    @name = name
   end
 
   def to_s
@@ -43,6 +43,5 @@ class Symbol
 end
 
 def __get_symbol(name)
-  # FIXME: At this point, Symbol.instance_size appears to contain the wrong value.
   Symbol.new(name)
 end
