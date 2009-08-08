@@ -383,6 +383,15 @@ class Compiler
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
+    # FIXME: If any of the arguments is a :rest node,
+    # it needs to be turned into a loop to push the remaining
+    # arguments onto the stack, and args.length needs to be
+    # adjusted accordingly. (needs to be applied to compile_call as
+    # well, so the arg handling code should probably be separated
+    # out.
+    #
+    # Also need to make sure "*arg" is actually turned into
+    # [:rest, :arg] instead of just :arg.
     @e.with_stack(args.length+1, true) do
       ret = compile_eval_arg(scope, ob)
       @e.save_to_stack(ret, 0)
