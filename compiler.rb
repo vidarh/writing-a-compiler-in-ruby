@@ -64,7 +64,7 @@ class Compiler
   def intern(scope,sym)
     # FIXME: Do this once, and add an :assign to a global var, and use that for any
     # later static occurrences of symbols.
-    args = get_arg(scope,sym.to_s.rest)
+    args = get_arg(scope,sym.to_s)
     get_arg(scope,[:call,:__get_symbol, args[1]])
   end
 
@@ -385,16 +385,14 @@ class Compiler
 
     @e.with_stack(args.length+1, true) do
       ret = compile_eval_arg(scope, ob)
-      @e.save_register(ret) do
-        @e.save_to_stack(ret, 0)
-        args.each_with_index do |a, i|
-          param = compile_eval_arg(scope, a)
-          @e.save_to_stack(param, i+1)
-        end
+      @e.save_to_stack(ret, 0)
+      args.each_with_index do |a, i|
+        param = compile_eval_arg(scope, a)
+        @e.save_to_stack(param, i+1)
       end
       @e.with_register do |reg|
-        @e.load_indirect(ret, reg)
-
+        @e.load_indirect(:esp, reg) # self
+        @e.load_indirect(reg, reg)  # self.class
         @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
         @e.call(@e.result_value)
       end
