@@ -116,9 +116,9 @@ describe VTableOffsets do
     ClassScope::CLASS_IVAR_NUM + offset
   end
 
-  it "should have an offset of 2 when created (:new and :__send__)" do
+  it "should have an offset of 3 when created (:new and :__send__)" do
     vto = VTableOffsets.new
-    vto.max.should == with_ivar_offset(2)
+    vto.max.should == with_ivar_offset(3)
   end
 
   it "should return the correct clean_name when given an array" do
@@ -130,18 +130,17 @@ describe VTableOffsets do
   it "should allocate the correct offset" do
     vto = VTableOffsets.new
 
-    # :new & :__send__ predefined
-    vto.max.should == with_ivar_offset(2)
+    empty = vto.max
 
     vto.alloc_offset(:foo)
-    vto.max.should == with_ivar_offset(3)
+    vto.max.should == empty + 1
 
     vto.alloc_offset(:bar)
-    vto.max.should == with_ivar_offset(4)
+    vto.max.should == empty + 2
 
     # should not change when allocating twice
     vto.alloc_offset(:foo)
-    vto.max.should == with_ivar_offset(4)
+    vto.max.should == empty + 2
   end
 
   it "should get the correct offset" do
@@ -150,8 +149,8 @@ describe VTableOffsets do
     vto.get_offset(:new).should == with_ivar_offset(0)
     vto.get_offset(:__send__).should ==  with_ivar_offset(1)
 
-    vto.alloc_offset(:foo)
-    vto.get_offset(:foo).should == with_ivar_offset(2)
+    off = vto.alloc_offset(:foo)
+    vto.get_offset(:foo).should == off
   end
 
 end
@@ -180,12 +179,12 @@ describe ClassScope do
 
   it "should not find an undefined arg" do
     cs = class_scope
-    cs.get_arg(:undefined_var).should == [:addr, :undefined_var]
+    cs.get_arg(:undefined_var)[0].should == :possible_callm
   end
 
   it "should find a global variable" do
     cs = class_scope
-    cs.get_arg(:my_global).should == [:global, :my_global]
+    cs.get_arg(:my_global).should == [:possible_callm, :my_global]
   end
 
   it "should find a class variable" do
