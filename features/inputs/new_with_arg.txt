@@ -1,0 +1,8 @@
+
+class Foo
+  def initialize arg
+    %s(printf "hello " arg)
+  end
+end
+
+Foo.new("world")
