@@ -362,6 +362,15 @@ class Compiler
     return [:subexpr]
   end
 
+  # If adding type-tagging, this is the place to do it
+  # self_reg and dest_reg *can* be the same.
+  # In the case of type tagging, the self_reg value
+  # would be matched against the suitable type tags
+  # to determine the class, instead of loading the class
+  # from the first long of the object.
+  def load_class self_reg, dest_reg
+    @e.load_indirect(self_reg, dest_reg)  # self.class
+  end
 
   # Compiles a method call to an object.
   # Similar to compile_call but with an additional object parameter
@@ -383,7 +392,7 @@ class Compiler
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
-    # FIXME: If any of the arguments is a :rest node,
+    # FIXME: If any of the arguments is a :splat node,
     # it needs to be turned into a loop to push the remaining
     # arguments onto the stack, and args.length needs to be
     # adjusted accordingly. (needs to be applied to compile_call as
@@ -393,6 +402,9 @@ class Compiler
     # Also need to make sure "*arg" is actually turned into
     # [:splat, :arg] instead of just :arg.
     @e.with_stack(args.length+1, true) do
+      # FIXME: Is it safe to just prepend "ob" to args,
+      # and treat this exactly the same as for call?
+      # FIXME: Review how g++ handles virtual method calls.
       ret = compile_eval_arg(scope, ob)
       @e.save_to_stack(ret, 0)
       args.each_with_index do |a, i|
@@ -401,7 +413,7 @@ class Compiler
       end
       @e.with_register do |reg|
         @e.load_indirect(:esp, reg) # self
-        @e.load_indirect(reg, reg)  # self.class
+        load_class(reg,reg)
         @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
         @e.call(@e.result_value)
       end
