@@ -392,24 +392,37 @@ class Compiler
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
-    # FIXME: If any of the arguments is a :splat node,
-    # it needs to be turned into a loop to push the remaining
-    # arguments onto the stack, and args.length needs to be
-    # adjusted accordingly. (needs to be applied to compile_call as
-    # well, so the arg handling code should probably be separated
-    # out.
-    #
-    # Also need to make sure "*arg" is actually turned into
-    # [:splat, :arg] instead of just :arg.
+    # FIXME: Quick and dirty splat handling:
+    # - If the last node has a splat, we cheat and assume it's
+    #   from the arguments rather than a proper Ruby Array.
+    # - We assume we can just allocate args.length+1+numargs
+    # - We wastefully do it in two rounds and muck directly
+    #   with %esp for now until I figure out how to do this
+    #   more cleanly.
+    splat = args.last.is_a?(Array) && args.last.first == :splat
+    # FIXME: Problem: %ebx gets clobbered with any method call
+    # meaning numargs is currently unreliable. Ouch.
     @e.with_stack(args.length+1, true) do
+
       # FIXME: Is it safe to just prepend "ob" to args,
       # and treat this exactly the same as for call?
       # FIXME: Review how g++ handles virtual method calls.
       ret = compile_eval_arg(scope, ob)
       @e.save_to_stack(ret, 0)
-      args.each_with_index do |a, i|
-        param = compile_eval_arg(scope, a)
-        @e.save_to_stack(param, i+1)
+      i = 1
+      args.each do |a|
+        if a.is_a?(Array) && a[0] == :splat
+          res = compile_eval_arg(scope,:numarg)
+          movl(res,:edx)
+          arg = get_arg(scope,a[1])
+          
+          # Loop to copy [:lvar,a[1]+i] to stack
+          # until a[1]+i == ebx
+        else
+          param = compile_eval_arg(scope, a)
+          @e.save_to_stack(param, i+1)
+          i+= 1
+        end
       end
       @e.with_register do |reg|
         @e.load_indirect(:esp, reg) # self
