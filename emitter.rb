@@ -323,10 +323,12 @@ class Emitter
       end
     end
 
+    pushl(:ebx) if numargs
     subl(adj,:esp)
     movl(args, :ebx) if numargs
     yield
     addl(adj, :esp)
+    popl(:ebx) if numargs
   end
 
   def with_register
