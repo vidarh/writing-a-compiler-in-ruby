@@ -1,7 +1,7 @@
 
 class Foo
   def initialize arg
-    %s(printf "hello " arg)
+    %s(printf "hello %s\n" arg)
   end
 end
 
