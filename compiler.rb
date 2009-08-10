@@ -391,7 +391,7 @@ class Compiler
     # out.
     #
     # Also need to make sure "*arg" is actually turned into
-    # [:rest, :arg] instead of just :arg.
+    # [:splat, :arg] instead of just :arg.
     @e.with_stack(args.length+1, true) do
       ret = compile_eval_arg(scope, ob)
       @e.save_to_stack(ret, 0)
