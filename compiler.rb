@@ -64,8 +64,7 @@ class Compiler
   def intern(scope,sym)
     # FIXME: Do this once, and add an :assign to a global var, and use that for any
     # later static occurrences of symbols.
-    args = get_arg(scope,sym.to_s)
-    get_arg(scope,[:call,:__get_symbol, args[1]])
+    get_arg(scope,[:call,:__get_symbol, sym.to_s])
   end
 
   # Returns an argument with its type identifier.
@@ -322,8 +321,13 @@ class Compiler
       @global_scope.globals << aparam
       @global_constants << aparam
     elsif atype == :ivar
-      ret = compile_eval_arg(scope, :self)
-      @e.save_to_instance_var(source, ret, aparam)
+      # FIXME:  The register allocation here
+      # probably ought to happen in #save_to_instance_var
+      @e.with_register do |reg|
+        @e.movl(source,reg)
+        ret = compile_eval_arg(scope, :self)
+        @e.save_to_instance_var(reg, ret, aparam)
+      end
       return [:subexpr]
     end
 
