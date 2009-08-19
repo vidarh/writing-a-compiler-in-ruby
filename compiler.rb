@@ -400,29 +400,45 @@ class Compiler
     #   with %esp for now until I figure out how to do this
     #   more cleanly.
     splat = args.last.is_a?(Array) && args.last.first == :splat
-    # FIXME: Problem: %ebx gets clobbered with any method call
-    # meaning numargs is currently unreliable. Ouch.
+
+    if splat
+      # FIXME: This is just a disaster waiting to happen
+      # (needs proper register allocation)
+      @e.comment("*#{args.last.last.to_s}")
+      reg = compile_eval_arg(scope,:numargs)
+      @e.sall(2,reg)
+      @e.subl(reg,:esp)
+      @e.movl(reg,:edx)
+      reg = compile_eval_arg(scope,args.last.last)
+      @e.addl(reg,:edx)
+      @e.movl(:esp,:ecx)
+      l = @e.local
+      @e.movl("(%eax)",:ebx)
+      @e.movl(:ebx,"(%ecx)")
+      @e.addl(4,:eax)
+      @e.addl(4,:ecx)
+      @e.cmpl(reg,:edx)
+      @e.jne(l)
+      @e.subl(:esp,:ecx)
+      @e.sarl(2,:ecx)
+      @e.comment("*#{args.last.last.to_s} end")
+
+      args = args[0..-2]
+    end
+
     @e.with_stack(args.length+1, true) do
+      if splat
+        @e.addl(:ecx,:ebx)
+      end
 
       # FIXME: Is it safe to just prepend "ob" to args,
       # and treat this exactly the same as for call?
       # FIXME: Review how g++ handles virtual method calls.
       ret = compile_eval_arg(scope, ob)
       @e.save_to_stack(ret, 0)
-      i = 1
-      args.each do |a|
-        if a.is_a?(Array) && a[0] == :splat
-          res = compile_eval_arg(scope,:numarg)
-          movl(res,:edx)
-          arg = get_arg(scope,a[1])
-          
-          # Loop to copy [:lvar,a[1]+i] to stack
-          # until a[1]+i == ebx
-        else
-          param = compile_eval_arg(scope, a)
-          @e.save_to_stack(param, i+1)
-          i+= 1
-        end
+      args.each_with_index do |a,i|
+        param = compile_eval_arg(scope, a)
+        @e.save_to_stack(param, i+1)
       end
       @e.with_register do |reg|
         @e.load_indirect(:esp, reg) # self
@@ -431,6 +447,13 @@ class Compiler
         @e.call(@e.result_value)
       end
     end
+
+    if splat
+      reg = compile_eval_arg(scope,:numargs)
+      @e.sall(2,reg)
+      @e.addl(reg,:esp)
+    end
+
     @e.comment("callm #{ob.to_s}.#{method.to_s} END")
     return [:subexpr]
   end

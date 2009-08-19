@@ -308,8 +308,10 @@ class Emitter
   end
 
   def with_stack(args, numargs = false)
-    # gcc does 4 bytes regardless of arguments, and then jumps up 16 at a time
-    # We will do the same, but assume its tied to pointer size
+    # We normally aim to make the stack frame aligned to 16
+    # bytes. This however fails in the presence of the splat operator
+    # If a splat is present, we instead allocate exact space, and use
+    # %ebx to adjust %esp back again afterwards
     adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
 
     # If we're messing with the stack, any registers marked for saving will be
@@ -323,12 +325,10 @@ class Emitter
       end
     end
 
-    pushl(:ebx) if numargs
     subl(adj,:esp)
     movl(args, :ebx) if numargs
     yield
     addl(adj, :esp)
-    popl(:ebx) if numargs
   end
 
   def with_register
