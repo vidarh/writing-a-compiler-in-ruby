@@ -64,7 +64,7 @@ class Compiler
   def intern(scope,sym)
     # FIXME: Do this once, and add an :assign to a global var, and use that for any
     # later static occurrences of symbols.
-    get_arg(scope,[:call,:__get_symbol, sym.to_s])
+    get_arg(scope,[:sexp,[:call,:__get_symbol, sym.to_s]])
   end
 
   # Returns an argument with its type identifier.
