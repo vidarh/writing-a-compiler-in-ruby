@@ -40,7 +40,7 @@ class Class
   # a symbol, which effectively means a simple hash table implementation
   #
   def define_method sym, &block
-    %s(puts "define_method")
+    %s(printf "define_method %s\n" (callm sym to_s))
   end
 
   # FIXME: Should handle multiple symbols
@@ -50,14 +50,14 @@ class Class
   end
   
   def attr_reader sym
-    %s(printf "attr_reader %d\n" sym)
+    %s(printf "attr_reader %s\n" (callm sym to_s))
     define_method sym do
        %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
     end
   end
 
   def attr_writer sym
-    %s(printf "attr_writer %d\n" sym)
+    %s(printf "attr_writer %s\n" (callm sym to_s))
     define_method "#{sym.to_s}=".to_sym do |val|
       %s(assign (ivar self sym) val)
     end
