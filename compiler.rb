@@ -313,7 +313,9 @@ class Compiler
     atype = nil
     aparam = nil
     @e.save_register(source) do
-      atype, aparam = get_arg(scope, left)
+      args = get_arg(scope,left)
+      atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
+      aparam = args[1]
       atype = :addr if atype == :possible_callm
     end
 
