@@ -1,12 +1,15 @@
 
 def __method_missing
   %s(puts "default method missing")
+  0
 end
 
 def array size
   malloc(size*4)
 end
 
+# FIXME: Need to bootstrap Object in first, so that Class inherits
+#  the appropriate methods.
 # Must be the first file to be require'd, in order to initialize the Class constant.
 require 'core/class'
 
