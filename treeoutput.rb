@@ -43,11 +43,16 @@ module OpPrec
       if ra and rightv[0] == :call and o.sym == :callm
         @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
       elsif la and leftv[0] == :callm and o.sym == :call
+        block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && rightv[2][0] == :block
         comma = ra && rightv[0] == :comma
-        args = comma ? flatten(rightv[1..-1]) : rightv
-        args = [args] if !comma && args.is_a?(Array)
+        args = comma || block ? flatten(rightv[1..-1]) : rightv
+        args = [args] if !comma && !block && args.is_a?(Array)
         args = [args]
-        @vstack << leftv + args
+        if block
+          @vstack << leftv.concat(*args)
+        else
+          @vstack << leftv + args
+        end
       elsif la and leftv[0] == :callm and o.sym == :assign
         rightv = [rightv] if !ra
         args = leftv[3] ? leftv[3]+rightv : rightv
