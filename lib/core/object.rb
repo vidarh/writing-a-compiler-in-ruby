@@ -6,6 +6,10 @@ class Object
     # Default. Empty on purpose
   end
 
+  def class
+    @__class__
+  end
+
   def respond_to?
     %s(puts "Object#respond_to not implemented")
   end
