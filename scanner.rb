@@ -81,10 +81,12 @@ class Scanner
     end
     @buf += c
   end
-
-  def expect(str)
+  
+  # If &block is passed, it is a callback to parse an expression
+  # that will be passed on to the method.
+  def expect(str,&block)
     return buf if str == ""
-    return str.expect(self) if str.respond_to?(:expect)
+    return str.expect(self,&block) if str.respond_to?(:expect)
     return Tokens::Keyword.expect(self, str) if str.is_a?(Symbol)
     buf = ScannerString.new
     buf.position = self.position

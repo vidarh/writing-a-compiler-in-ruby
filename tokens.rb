@@ -152,6 +152,7 @@ module Tokens
     def self.expect(s)
       q = s.expect('"') || s.expect("'") or return nil
       buf = ""
+      ret = nil
       if q == '"'
         while (e = escaped(s)); 
           if e == "#" && s.peek == ?{
@@ -159,7 +160,15 @@ module Tokens
             #
             # We'll need to do something dirty here:
             #
-            # We will call back into the main parser.
+            # We will call back into the main parser... UGLY.
+            # 
+            # We need to do this because you need to do a full
+            # parse to actually know when the string interpolation
+            # ends, since it can be recursive (!)
+            #
+            # This has an ugly impact: We need to get the parser
+            # object from somewhere. We'll pass that as a block.
+            #
             # We will also need to return something other than a plain
             # string. We'll return [:concat, string, fragments, one, by, one]
             # where the fragments can be strings or expressions.
@@ -174,11 +183,27 @@ module Tokens
             #  but for correctness we also need to be able to turn the
             #  :concat into [:callm, original-string, :concat] or similar.
             #
-            STDERR.puts "WARNING: String interpolation not yet supported"
+            if !block_given?
+              STDERR.puts "WARNING: String interpolation requires passing block to Quoted.expect"
+            else
+              ret ||= [:concat]
+              ret << buf 
+              buf = ""
+              s.get
+              ret << yield
+              s.expect("}")
+            end
+          else
+            buf += e
           end
-          buf += e
         end
         raise "Unterminated string" if !s.expect('"')
+        if ret
+          ret << buf if buf != ""
+          return ret
+        else
+          return buf
+        end
       else
         while (e = s.get) && e != "'"
           if e == '"'
@@ -198,8 +223,9 @@ module Tokens
   class Tokenizer
     attr_accessor :keywords
 
-    def initialize(scanner)
+    def initialize(scanner,parser)
       @s = scanner
+      @parser = parser
       @keywords = Keywords.dup
       @lastop = false
     end
@@ -220,7 +246,7 @@ module Tokens
     def get_raw
       case @s.peek
       when ?",?'
-        return [@s.expect(Quoted), nil]
+        return [@s.expect(Quoted) { @parser.parse_defexp }, nil]
       when ?0 .. ?9
         return [@s.expect(Number), nil]
       when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_

@@ -129,7 +129,7 @@ module OpPrec
   end
 
   def self.parser(scanner, parser)
-     ShuntingYard.new(TreeOutput.new,Tokens::Tokenizer.new(scanner), parser)
+     ShuntingYard.new(TreeOutput.new,Tokens::Tokenizer.new(scanner,parser), parser)
   end
 
 end
