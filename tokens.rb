@@ -153,7 +153,31 @@ module Tokens
       q = s.expect('"') || s.expect("'") or return nil
       buf = ""
       if q == '"'
-        while (e = escaped(s)); buf += e; end
+        while (e = escaped(s)); 
+          if e == "#" && s.peek == ?{
+            # Uh-oh. String interpolation
+            #
+            # We'll need to do something dirty here:
+            #
+            # We will call back into the main parser.
+            # We will also need to return something other than a plain
+            # string. We'll return [:concat, string, fragments, one, by, one]
+            # where the fragments can be strings or expressions.
+            # 
+            # NOTE: There's a semi-obvious optimization here that is
+            #  NOT universally safe: Any seeming constant expression
+            #  could result in the concatenation done at compile time.
+            #  For 99.99% of apps this would be safe, but in Ruby some
+            #  moron *could* overload methods and make the seemingly
+            #  constant expression have side effects. We'll likely have
+            #  an option to do this optimization (with some safety checks,
+            #  but for correctness we also need to be able to turn the
+            #  :concat into [:callm, original-string, :concat] or similar.
+            #
+            STDERR.puts "WARNING: String interpolation not yet supported"
+          end
+          buf += e
+        end
         raise "Unterminated string" if !s.expect('"')
       else
         while (e = s.get) && e != "'"
