@@ -43,6 +43,7 @@ Feature: Parser
       | "{:a => foo(1), :b => foo(2)}" |  [:do, [:hash, [:pair, :":a", [:call, :foo, 1]], [:pair, :":b", [:call, :foo, 2]]]] | Hash where value is a function call | 
 
 
+	@interpol
 	Scenario Outline: String interpolation
 		Given the expression <expr>
 		When I parse it with the full parser
