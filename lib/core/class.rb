@@ -58,6 +58,8 @@ class Class
 
   def attr_writer sym
     %s(printf "attr_writer %s\n" (callm sym to_s))
+    # FIXME: Ouch: Requires both String, string interpolation and String#to_sym to
+    # be implemented on top of define_method and "ivar"
     define_method "#{sym.to_s}=".to_sym do |val|
       %s(assign (ivar self sym) val)
     end
