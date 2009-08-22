@@ -53,7 +53,7 @@ Feature: Parser
 	  | expr                 | tree                                          | notes                                              |
 	  | '"#{1}"'             | [:do,[:concat,"",1]]                          | Basic case                                         |
       | '"#{""}"'            | [:do,[:concat,"",""]]                         | Interpolated expression containing a string        |
-      | '"Parsing #{"Ruby #{"is #{ %(hard)}"}"}."' | [:do,[:concat,"Parsing ",[:concat,"Ruby ",[:concat,"is ","hard"]]]] | Courtesy of http://www.jbarnette.com/2009/01/22/parsing-ruby-is-hard.html |
+      | '"Parsing #{"Ruby #{"is #{ %(hard)}"}"}."' |  [:do, [:concat, "Parsing ", [:concat, "Ruby ", [:concat, "is ", "hard"]], "."]] | Courtesy of http://www.jbarnette.com/2009/01/22/parsing-ruby-is-hard.html |
 
 
 	Scenario Outline: Function definition
