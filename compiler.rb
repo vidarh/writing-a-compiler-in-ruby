@@ -85,6 +85,11 @@ class Compiler
     end
 
     warning("nil received by get_arg") if !a
+
+    # FIXME: 
+    # String constants needs to be dealt with "earlier".
+    # String constants occuring outside %s() blocks then need to be
+    # rewritten to %s(call __get_string <string constant>) 
     lab = @string_constants[a]
     if !lab
       lab = @e.get_local
