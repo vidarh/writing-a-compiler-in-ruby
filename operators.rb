@@ -78,10 +78,12 @@ Operators = {
   "<<"        => Oper.new(  7, :<<,       :infix),
 
   "<"         => Oper.new(  9, :lt,       :infix),
+  "<="        => Oper.new(  9, :le,       :infix),
   ">"         => Oper.new(  9, :gt,       :infix),
+  ">="        => Oper.new(  9, :ge,       :infix),
   "=="        => Oper.new(  9, :eq,       :infix),
   "!="        => Oper.new(  9, :ne,       :infix),
-
+  "<=>"       => Oper.new(  9, :cmp,      :infix),
 
   "+"         => Oper.new( 10, :add,      :infix),
   "-"         => Oper.new( 10, :sub,      :infix),
