@@ -85,19 +85,16 @@ class Compiler
     end
 
     warning("nil received by get_arg") if !a
-
-    # FIXME: 
-    # String constants needs to be dealt with "earlier".
-    # String constants occuring outside %s() blocks then need to be
-    # rewritten to %s(call __get_string <string constant>) 
-    lab = @string_constants[a]
-    if !lab
-      lab = @e.get_local
-      @string_constants[a] = lab
-    end
-    return [:strconst,lab]
+    return [:strconst,strconst(a)]
   end
 
+  def strconst str
+    lab = @string_constants[str]
+    return lab if lab
+    lab = @e.get_local
+    @string_constants[str] = lab
+    return lab
+  end
 
   # Outputs all constants used within the code generated so far.
   # Outputs them as string and global constants, respectively.
@@ -665,10 +662,27 @@ class Compiler
     #warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
 
+  # Create a table of string constants to reuse common
+  # string buffers.
+  #
+  # Re-write string constants outside %s() to 
+  # %s(call __get_string [original string constant])
+  def alloc_strconst(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      e.each do |s|
+        if s.is_a?(String)
+          lab = strconst(s)
+          # FIXME: Rewrite to %s(call __get_string <constant>)
+        end
+      end
+    end
+  end
 
   # Starts the actual compile process.
   def compile(exp)
     alloc_vtable_offsets(exp)
+    alloc_strconst(exp)
     compile_main(exp)
   end
 end
