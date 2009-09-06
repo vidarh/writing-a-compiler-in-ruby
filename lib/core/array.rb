@@ -1,55 +1,94 @@
 
-class Array < Object
-  # still need to make including modules work
-  include Enumerable
+class Array
+  # FIXME: still need to make including modules work
+  # include Enumerable
 
+  # Let's start with the basics:
+
+  # FIXME: initialize should take an optional argument,
+  # but we don't yet handle initializers, so not supporting that
+  # for now.
+  def initialize
+    @len = 0
+    @ptr = 0
+    @capacity = 0
+  end
+
+  def __grow newlen
+    # FIXME: This is just a guestimate of a reasonable rule for
+    # growing. Too rapid growth and it wastes memory; to slow and
+    # it is, well, slow to append to.
+    @capacity = (newlen * 4 / 3) + 4 
+    if @ptr
+      %s(assign @ptr (realloc @ptr @capacity))
+    else
+      %s(assign @ptr (malloc @capacity))
+    end
+  end
+
+  #FIXME: Private. Assumes idx < @len && idx >= 0
+  def __set(idx, obj)
+    %s(assign (index @ptr @len) obj)
+  end
+
+  #FIXME: Private. Assumes idx < @len && idx >= 0
+  def __get(idx)
+    %s(index @ptr idx)
+  end
+
+  # --------------------------------------------------
 
   # Set Intersection.
   # Returns a new array containing elements common to the two arrays, with no duplicates.
-  def &(other_array)
-    return self.uniq.select{|item| other_array.include?(item)}
-  end
+#  def &(other_array)
+#    return self.uniq.select{|item| other_array.include?(item)}
+#  end
 
   # Repetition.
   # With a String argument, equivalent to self.join(str).
   # Otherwise, returns a new array built by concatenating the int copies of self.
-  def *(amount)
-    if amount.is_a?(String)
-      return self.join(amount)
-    elsif amount.is_a?(Fixnum)
-      mul_array = Array.new(self)
-      amount.times do
-        mul_array += self
-      end
-      return mul_array
-    end
-  end
+#  def *(amount)
+#    if amount.is_a?(String)
+#      return self.join(amount)
+#    elsif amount.is_a?(Fixnum)
+#      mul_array = Array.new(self)
+#      amount.times do
+#        mul_array += self
+#      end
+#      return mul_array
+#    end
+#  end
 
 
   # Concatenation.
   # Returns a new array built by concatenating the two arrays together
   # to produce a third array.
-  def +(other_array)
-    added = Array.new(self)
-    other_array.each do |item|
-      added << item
-    end
-    return added
-  end
+#  def +(other_array)
+#    added = Array.new(self)
+#    other_array.each do |item|
+#      added << item
+#    end
+#    return added
+#  end
 
   # Array Difference.
   # Returns a new array that is a copy of the original array,
   # removing any items that also appear in other_array.
   # (If you need set-like behavior, see the library class Set.)
-  def -(other_array)
-    return self.reject{|item| other_array.include?(item)}
-  end
-
+#  def -(other_array)
+#    return self.reject{|item| other_array.include?(item)}
+#  end
 
   # Append—Pushes the given object on to the end of this array. This expression
   # returns the array itself, so several appends may be chained together.
-  def <<(obj)
-    # add obj at the end of array
+  def append(obj) # FIXME: <<
+    # FIXME: Currently this
+    if @len >= @capacity
+      __grow(@len+1)
+    end
+    __set(@len, obj)
+    @len += 1
+    self
   end
 
 
@@ -62,36 +101,36 @@ class Array < Object
   # of the array lengths. Thus, two arrays are ``equal’’ according to Array#<=>
   # if and only if they have the same length and the value of each element is
   # equal to the value of the corresponding element in the other array.
-  def <=>(other_array)
-    if self.size == other_array.size
-      self.each_index do |i|
-        cmp_val = (self[i] <=> other_array[i])
-        if cmp_val != 0
-          return cmp_val
-        end
-      end
-    else
-      return self.size <=> other_array.size
-    end
-  end
+ # def <=>(other_array)
+ #   if self.size == other_array.size
+ #     self.each_index do |i|
+#        cmp_val = (self[i] <=> other_array[i])
+#        if cmp_val != 0
+#          return cmp_val
+#        end
+#      end
+#    else
+#      return self.size <=> other_array.size
+#    end
+#  end
 
 
   # Equality.
   # Two arrays are equal if they contain the same number of elements and if each
   # element is equal to (according to Object.==) the corresponding element in the
   # other array.
-  def ==(other_array)
-    if self.size == other_array.size
-      self.each_index do |i|
-        unless self[i] == other_array[i]
-          return false
-        end
-      end
-      return true
-    end
-
-    return false
-  end
+#  def ==(other_array)
+#    if self.size == other_array.size
+#      self.each_index do |i|
+#        unless self[i] == other_array[i]
+#          return false
+#        end
+#      end
+#      return true
+#    end#
+#
+#    return false
+#  end
 
 
   def [](*elements)
@@ -100,7 +139,15 @@ class Array < Object
 
   def [](idx)
     # return element at given index
-    %s(puts "Array#[] not implemented")
+    # FIXME: Negative indices not implemented
+    # FIXME: Range support not implemented
+    if idx < 0
+      idx = @len - idx
+    end
+    if @ptr == nil || idx > @len || idx < 0
+      return nil
+    end
+    __get(idx)
   end
 
 
@@ -118,9 +165,22 @@ class Array < Object
   # Inserts elements if length is zero. If nil is used in the second and third form,
   # deletes elements from self. An IndexError is raised if a negative index points
   # past the beginning of the array. See also Array#push, and Array#unshift.
-  def []=(idx, obj)
+#  def []=(idx, obj)
     # assign position/range at given index with object/array
-  end
+#    if idx < 0
+#      idx = @len - idx
+#    end
+#    if idx < 0
+#      # FIXME Oops. Error.
+#      return nil
+#    end
+#    if idx >= @len
+#      __grow(idx)
+#      # FIXME: Clear any space _between_ @len and idx
+#      @len = idx + 1
+#    end
+#    %s(assign %(index @ptr idx) obj)
+#  end
 
 
   # Calculates the set of unambiguous abbreviations for the strings in self.
@@ -192,6 +252,7 @@ class Array < Object
 
   # Appends the elements in other_array to self.
   def concat(other_array)
+    # FIXME: This is wrong; concat mutates the array
     return self + other_array
   end
 
@@ -449,8 +510,8 @@ class Array < Object
   # Append.
   # Pushes the given object(s) on to the end of this array.
   # This expression returns the array itself, so several appends may be chained together.
-  def push(*objects)
-    self += objects
+  def push(objects) # FIXME: * objects
+    self << objects
   end
 
 
@@ -646,7 +707,7 @@ class Array < Object
 
   # Set Union.
   # Returns a new array by joining this array with other_array, removing duplicates.
-  def |(other_array)
-    return (self + other_array).uniq
-  end
+#  def |(other_array)
+#    return (self + other_array).uniq
+#  end
 end

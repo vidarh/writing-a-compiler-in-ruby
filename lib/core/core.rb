@@ -21,9 +21,7 @@ __FILE__ = "[filename]"
 require 'core/kernel'
 require 'core/object'
 require 'core/enumerable'
-#require 'core/array'
-class Array
-end
+require 'core/array'
 
 require 'core/hash'
 require 'core/string'
