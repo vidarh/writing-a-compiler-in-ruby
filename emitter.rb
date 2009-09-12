@@ -391,6 +391,10 @@ class Emitter
     end
   end
 
+  def long(val)
+    emit(".long #{val.to_s}")
+  end
+
   def bsslong(l)
     label(l)
     emit(".long 0")
