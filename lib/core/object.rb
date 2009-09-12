@@ -17,4 +17,8 @@ class Object
   def is_a?
     %s(puts "Object#is_a? not implemented")
   end
+
+  def __send__ sym, *args
+    %s(printf "WARNING: __send__ bypassing vtable not yet implemented. Called with %s\n" (callm sym to_s))
+  end
 end
