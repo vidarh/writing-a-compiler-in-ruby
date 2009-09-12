@@ -638,10 +638,6 @@ class Compiler
       compile_eval_arg(FuncScope.new(@main, @global_scope), exp)
     end
 
-    # after the main function, we ouput all functions and constants
-    # used and defined so far.
-    output_functions
-    output_constants
   end
 
 
@@ -661,6 +657,37 @@ class Compiler
     exp.depth_first(:class) { |c| classes += 1; :skip }
     #warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
+  
+  # When we hit a vtable slot for a method that doesn't exist for
+  # the current object/class, we call method_missing. However, method
+  # missing needs the symbol of the method that was being called.
+  # 
+  # To handle that, we insert the address of a "thunk" instead of
+  # the real method missing. The thunk is a not-quite-function that
+  # adjusts the stack to prepend the symbol matching the current
+  # vtable slot and then jumps straight to __method_missing, instead
+  # of wasting extra stack space and time on copying the objects.
+  def output_vtable_thunks
+    @vtableoffsets.vtable.each do |name,_|
+      @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
+      # FIXME: Call get_symbol for these during initalization
+      # and then load them from a table instead.
+      compile_eval_arg(GlobalScope.new, ":#{name.to_s}".to_sym)
+      @e.popl(:edx) # The return address
+      @e.pushl(:eax)
+      @e.pushl(:edx)
+      @e.jmp("__method_missing")
+    end
+    @e.label("__base_vtable")
+    # For ease of implementation of __new_class_object we
+    # pad this with the number of class ivar slots so that the
+    # vtable layout is identical as for a normal class
+    ClassScope::CLASS_IVAR_NUM.times { @e.long(0) }
+    @vtableoffsets.vtable.to_a.sort_by {|e| e[1] }.each do |e|
+      @e.long("__vtable_missing_thunk_#{clean_method_name(e[0])}")
+    end
+  end
+  
 
   # Create a table of string constants to reuse common
   # string buffers.
@@ -684,6 +711,12 @@ class Compiler
     alloc_vtable_offsets(exp)
     alloc_strconst(exp)
     compile_main(exp)
+
+    # after the main function, we ouput all functions and constants
+    # used and defined so far.
+    output_functions
+    output_vtable_thunks
+    output_constants
   end
 end
 
