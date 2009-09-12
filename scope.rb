@@ -84,6 +84,8 @@ VTableEntry = Struct.new(:name, :realname, :offset, :function)
 # we can't usually statically determine what class
 # an object belongs to.
 class VTableOffsets
+  attr_reader :vtable
+
   def initialize
     @vtable = {}
     # Start at CLASS_IVAR_NUM to allow convenient allocation of ivar space for the Class object
