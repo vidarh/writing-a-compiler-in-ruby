@@ -1,6 +1,7 @@
 
-def __method_missing
-  %s(puts "default method missing")
+def __method_missing sym
+  %s(printf "Method missing: %s\n" (callm sym to_s))
+  %s(exit 1)
   0
 end
 

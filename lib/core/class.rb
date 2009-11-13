@@ -9,7 +9,10 @@ def __new_class_object(size,superclass,ssize)
        (assign i (add i 1))
   ))
   %s(while (lt i size) (do
-       (assign (index ob i) __method_missing)
+       # Installing a pointer to a thunk to method_missing
+       # that adds a symbol matching the vtable entry as the 
+       # first argument and then jumps straight into __method_missing
+       (assign (index ob i) (index __base_vtable i))
        (assign i (add i 1))
   ))
   %s(assign (index ob 0) Class)
