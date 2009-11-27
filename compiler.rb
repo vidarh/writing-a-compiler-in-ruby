@@ -85,15 +85,16 @@ class Compiler
     end
 
     warning("nil received by get_arg") if !a
-    return [:strconst,strconst(a)]
+    return strconst(a)
   end
 
-  def strconst str
-    lab = @string_constants[str]
-    return lab if lab
-    lab = @e.get_local
-    @string_constants[str] = lab
-    return lab
+  def strconst(a)
+    lab = @string_constants[a]
+    if !lab # For any constants in s-expressions
+      lab = @e.get_local
+      @string_constants[a] = lab
+    end
+    return [:addr,lab]
   end
 
   # Outputs all constants used within the code generated so far.
@@ -687,29 +688,32 @@ class Compiler
       @e.long("__vtable_missing_thunk_#{clean_method_name(e[0])}")
     end
   end
-  
 
-  # Create a table of string constants to reuse common
-  # string buffers.
   #
   # Re-write string constants outside %s() to 
   # %s(call __get_string [original string constant])
-  def alloc_strconst(exp)
+  def rewrite_strconst(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
-      e.each do |s|
+      is_call = e[0] == :call
+      e.each_with_index do |s,i|
         if s.is_a?(String)
-          lab = strconst(s)
-          # FIXME: Rewrite to %s(call __get_string <constant>)
+          lab = @string_constants[s]
+          if !lab
+            lab = @e.get_local
+            @string_constants[s] = lab
+          end
+          e[i] = [:sexp, [:call, :__get_string, lab.to_sym]]
+          e[i] = [e[i]] if is_call && i > 1 # FIXME: This is a horrible workaround to deal with a parser inconsistency that leaves calls with a single argument with the argument "bare" if it's not an array, which breaks with this rewrite.
         end
       end
     end
   end
-
+  
   # Starts the actual compile process.
   def compile(exp)
     alloc_vtable_offsets(exp)
-    alloc_strconst(exp)
+    rewrite_strconst(exp)
     compile_main(exp)
 
     # after the main function, we ouput all functions and constants
