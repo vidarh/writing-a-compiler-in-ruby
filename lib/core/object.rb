@@ -31,6 +31,6 @@ class Object
 
   # FIXME: Belongs in Kernel
   def puts str
-    %s(puts str)
+    %s(puts (callm str __get_raw))
   end
 end
