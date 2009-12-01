@@ -25,7 +25,8 @@ class Symbol
   end
 
   def to_s
-    @name
+    name = @name
+    %s(__get_string name)
   end
 
   # FIXME
