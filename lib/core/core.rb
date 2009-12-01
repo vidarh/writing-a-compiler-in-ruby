@@ -1,13 +1,11 @@
 
-def __method_missing sym
-  %s(printf "Method missing: %s\n" (callm sym to_s))
-  %s(exit 1)
-  0
-end
+%s(defun __method_missing (sym) (do
+  (printf "Method missing: %s\n" (callm (callm sym to_s) __get_raw))
+  (exit 1)
+  0)
+)
 
-def array size
-  malloc(size*4)
-end
+%s(defun array (size) (malloc ((mul size 4))))
 
 # FIXME: Need to bootstrap Object in first, so that Class inherits
 #  the appropriate methods.
@@ -57,6 +55,6 @@ true = 1     # FIXME: Should be an object of TrueClass
 false = 0    # FIXME: Should be an object of FalseClass
 
 # FIXME:
-def range a,b
-  %s(puts "Compiler range construct is not implemented yet")
-end
+%s(defun range (a b)
+  (puts "Compiler range construct is not implemented yet")
+)
