@@ -1,23 +1,24 @@
 # size <= ssize *always* or something is severely wrong.
-def __new_class_object(size,superclass,ssize)
-  ob = 0
-  %s(assign ob (malloc (mul size 4))) # Assumes 32 bit
-  i = 1
-#  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
-  %s(while (lt i ssize) (do
+%s(defun __new_class_object (size superclass ssize)
+  (let (ob)
+   (assign ob 0)
+   (assign ob (malloc (mul size 4))) # Assumes 32 bit
+   (assign i 1)
+ #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
+  (while (lt i ssize) (do
        (assign (index ob i) (index superclass i))
        (assign i (add i 1))
   ))
-  %s(while (lt i size) (do
+  (while (lt i size) (do
        # Installing a pointer to a thunk to method_missing
        # that adds a symbol matching the vtable entry as the 
        # first argument and then jumps straight into __method_missing
        (assign (index ob i) (index __base_vtable i))
        (assign i (add i 1))
   ))
-  %s(assign (index ob 0) Class)
+  (assign (index ob 0) Class)
   ob
-end
+))
 
 class Class
 
