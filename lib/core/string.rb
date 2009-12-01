@@ -20,6 +20,10 @@ class String
     @buffer = str
   end
 
+  def __get_raw
+    @buffer
+  end
+
   def each_byte
   end
 
