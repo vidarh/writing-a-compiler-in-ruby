@@ -21,7 +21,8 @@ class Parser < ParserBase
 
   # fname ::= name | "[]"
   def parse_fname
-    expect("[]") || expect(Methodname) || expect(Oper)
+    name = expect("[]") || expect(Methodname) || expect(Oper)
+    name.is_a?(String) ? name.to_sym : name
   end
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
