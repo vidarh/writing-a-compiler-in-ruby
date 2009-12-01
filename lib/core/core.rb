@@ -14,18 +14,19 @@ end
 # Must be the first file to be require'd, in order to initialize the Class constant.
 require 'core/class'
 
-# Should auto-generate this so it actually has the correct value...
-__FILE__ = "[filename]"
-
 # FIXME: Should probably add "autoload" of all but the
 # most basic of these
 require 'core/kernel'
 require 'core/object'
 require 'core/enumerable'
 require 'core/array'
+require 'core/string'  # "string" must be early on for __get_string calls not to fail
+
+# Should auto-generate this so it actually has the correct value...
+__FILE__ = "[filename]"
+
 
 require 'core/hash'
-require 'core/string'
 require 'core/io'
 require 'core/file'
 require 'core/symbol'
@@ -57,5 +58,5 @@ false = 0    # FIXME: Should be an object of FalseClass
 
 # FIXME:
 def range a,b
-  puts "Compiler range construct is not implemented yet"
+  %s(puts "Compiler range construct is not implemented yet")
 end
