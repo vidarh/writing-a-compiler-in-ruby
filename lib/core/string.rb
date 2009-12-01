@@ -69,8 +69,8 @@ end
 # Another alternative is to implement
 #
 # pragma compiler-only
-def __get_string(str)
-  s = String.new
-  %s(callm s __set_raw (str))
+%s(defun __get_string (str) (let (s)
+  (assign s (callm String new))
+  (callm s __set_raw (str))
   s
-end
+))
