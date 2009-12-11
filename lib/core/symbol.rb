@@ -43,6 +43,5 @@ class Symbol
 #  end
 end
 
-def __get_symbol(name)
-  Symbol.new(name)
-end
+%s(defun __get_symbol (name) (callm Symbol new (name)))
+
