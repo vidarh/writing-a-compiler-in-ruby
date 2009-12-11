@@ -23,14 +23,13 @@ end
 # Represents a function.
 # Takes arguments and a body of code.
 class Function
-  attr_reader :args, :body, :cscope
+  attr_reader :args, :body, :scope
 
   # Constructor for functions.
-  # Takes an argument list, a body of expressions as well as an
-  # optional class scope, if the function is defined within a class.
-  # The class scope is needed to refer to instance & class variables
-  # inside the method.
-  def initialize(args, body, class_scope = nil)
+  # Takes an argument list, a body of expressions as well as
+  # the scope the function was defined in. For methods this is a
+  # class scope.
+  def initialize(args, body, scope)
     @body = body
     @rest = false
     @args = args.collect do |a|
@@ -39,16 +38,11 @@ class Function
       arg
     end
 
-    @cscope = class_scope
+    @scope = scope
   end
 
   def rest?
     @rest
-  end
-
-  # A function is a method, if its class scope isn't nil.
-  def is_method?
-    @cscope != nil
   end
 
   def get_arg(a)
@@ -62,12 +56,6 @@ class Function
       return [arg.type, i] if arg.name == a
     end
 
-    # if we have a method, let's check first,
-    # if the class scope has the argument defined.
-    if is_method?
-      return @cscope.get_arg(a)
-    end
-
-    return nil
+    return @scope.get_arg(a)
   end
 end
