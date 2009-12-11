@@ -584,7 +584,7 @@ class Compiler
     sscope = name == superclass ? nil : @classes[superclass]
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
-    compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]])
+    compile_exp(scope, [:assign, name.to_sym, [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]])
     @global_constants << name
 
     compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
