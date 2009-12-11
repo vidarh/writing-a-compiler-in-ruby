@@ -114,7 +114,7 @@ class Compiler
       # also pass it the current global scope for further lookup of variables used
       # within the functions body that aren't defined there (global variables and those,
       # that are defined in the outer scope of the function's)
-      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func, @global_scope), func.body) }
+      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func), func.body) }
 
     end
   end
@@ -637,9 +637,8 @@ class Compiler
       # We should allow arguments to main
       # so argc and argv get defined, but
       # that is for later.
-      @main = Function.new([],[])
-      @global_scope = GlobalScope.new
-      compile_eval_arg(FuncScope.new(@main, @global_scope), exp)
+      @global_scope = GlobalScope.new(@vtableoffsets)
+      compile_eval_arg(@global_scope, exp)
     end
 
   end
@@ -676,7 +675,7 @@ class Compiler
       @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
       # FIXME: Call get_symbol for these during initalization
       # and then load them from a table instead.
-      compile_eval_arg(GlobalScope.new, ":#{name.to_s}".to_sym)
+      compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
       @e.popl(:edx) # The return address
       @e.pushl(:eax)
       @e.pushl(:edx)
