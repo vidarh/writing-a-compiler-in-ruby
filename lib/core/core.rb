@@ -16,6 +16,10 @@ require 'core/class'
 # most basic of these
 require 'core/kernel'
 require 'core/object'
+
+# OK, so perhaps this is a bit ugly...
+self = Object.new
+
 require 'core/enumerable'
 require 'core/array'
 require 'core/string'  # "string" must be early on for __get_string calls not to fail

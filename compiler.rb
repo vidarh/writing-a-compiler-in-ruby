@@ -17,7 +17,7 @@ class Compiler
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
   @@keywords = Set[
-                   :do, :class, :defun, :if, :lambda,
+                   :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                   ]
@@ -114,7 +114,7 @@ class Compiler
       # also pass it the current global scope for further lookup of variables used
       # within the functions body that aren't defined there (global variables and those,
       # that are defined in the outer scope of the function's)
-      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func, @global_scope), func.body) }
+      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func), func.body) }
 
     end
   end
@@ -134,38 +134,11 @@ class Compiler
   # Takes the current scope, in which the function is defined,
   # the name of the function, its arguments as well as the body-expression that holds
   # the actual code for the function's body.
+  #
+  # Note that compile_defun is now only accessed via s-expressions
   def compile_defun(scope, name, args, body)
-    if scope.is_a?(ClassScope) # Ugly. Create a default "register_function" or something. Have it return the global name
-
-      # since we have a class scope,
-      # we also pass the class scope to the function, since it's actually a method.
-      f = Function.new([:self]+args, body, scope) # "self" is "faked" as an argument to class methods.
-
-      @e.comment("method #{name}")
-
-      body.depth_first do |exp|
-        exp.each do |n| 
-          scope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
-        end
-      end
-
-      cleaned = clean_method_name(name)
-      fname = "__method_#{scope.name}_#{cleaned}"
-      scope.set_vtable_entry(name, fname, f)
-      @e.load_address(fname)
-      @e.with_register do |reg|
-        @e.movl(scope.name.to_s, reg)
-        v = scope.vtable[name]
-        @e.addl(v.offset*Emitter::PTR_SIZE, reg) if v.offset > 0
-        @e.save_to_indirect(@e.result_value, reg)
-      end
-      name = fname
-    else
-      # function isn't within a class (which would mean, it's a method)
-      # so it must be global
-      f = Function.new(args, body)
-      name = clean_method_name(name)
-    end
+    f = Function.new(args, body,scope)
+    name = clean_method_name(name)
 
     # add function to the global list of functions defined so far
     @global_functions[name] = f
@@ -176,6 +149,36 @@ class Compiler
     return [:addr, clean_method_name(name)]
   end
 
+  # Compiles a method definition and updates the
+  # class vtable.
+  def compile_defm(scope, name, args, body)
+    scope = scope.class_scope
+
+    f = Function.new([:self]+args, body, scope) # "self" is "faked" as an argument to class methods.
+
+    @e.comment("method #{name}")
+
+    body.depth_first do |exp|
+      exp.each do |n| 
+        scope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
+      end
+    end
+
+    cleaned = clean_method_name(name)
+    fname = "__method_#{scope.name}_#{cleaned}"
+    scope.set_vtable_entry(name, fname, f)
+
+    # Save to the vtable.
+    v = scope.vtable[name]
+    compile_eval_arg(scope,[:sexp, [:call, :__set_vtable, [:self,v.offset, fname.to_sym]]])
+    
+    # add the method to the global list of functions defined so far
+    # with its "munged" name.
+    @global_functions[fname] = f
+    
+    # This is taken from compile_defun - it does not necessarily make sense for defm
+    return [:addr, clean_method_name(fname)]
+  end
 
   # Compiles an if expression.
   # Takes the current (outer) scope and two expressions representing
@@ -552,12 +555,10 @@ class Compiler
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
     # FIXME: Need to be able to handle re-opening of classes
-    # FIXME: Need to generate "thunks" for __method_missing that knows the name of the slot they are in, and
-    #        then jump into __method_missing.
     exps.each do |l2|
       l2.each do |e|
         if e.is_a?(Array) 
-          if e[0] == :defun
+          if e[0] == :defm
             cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
           elsif e[0] == :call && e[1] == :attr_accessor
             # This is a bit presumptious, assuming noone are stupid enough to overload
@@ -583,7 +584,7 @@ class Compiler
     sscope = name == superclass ? nil : @classes[superclass]
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
-    compile_exp(scope, [:assign, name.to_sym, [:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]])
+    compile_exp(scope, [:assign, name.to_sym, [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]])
     @global_constants << name
 
     compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
@@ -634,9 +635,8 @@ class Compiler
       # We should allow arguments to main
       # so argc and argv get defined, but
       # that is for later.
-      @main = Function.new([],[])
-      @global_scope = GlobalScope.new
-      compile_eval_arg(FuncScope.new(@main, @global_scope), exp)
+      @global_scope = GlobalScope.new(@vtableoffsets)
+      compile_eval_arg(@global_scope, exp)
     end
 
   end
@@ -649,7 +649,7 @@ class Compiler
   # Consider whether to check :call/:callm nodes as well, though they
   # will likely hit method_missing
   def alloc_vtable_offsets(exp)
-    exp.depth_first(:defun) do |defun|
+    exp.depth_first(:defm) do |defun|
       @vtableoffsets.alloc_offset(defun[1])
       :skip
     end
@@ -673,7 +673,7 @@ class Compiler
       @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
       # FIXME: Call get_symbol for these during initalization
       # and then load them from a table instead.
-      compile_eval_arg(GlobalScope.new, ":#{name.to_s}".to_sym)
+      compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
       @e.popl(:edx) # The return address
       @e.pushl(:eax)
       @e.pushl(:edx)

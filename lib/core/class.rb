@@ -1,7 +1,6 @@
 # size <= ssize *always* or something is severely wrong.
 %s(defun __new_class_object (size superclass ssize)
   (let (ob)
-   (assign ob 0)
    (assign ob (malloc (mul size 4))) # Assumes 32 bit
    (assign i 1)
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
@@ -19,6 +18,15 @@
   (assign (index ob 0) Class)
   ob
 ))
+
+# FIXME: This only works correctly for the initial
+# class definition. On subsequent re-opens of the class
+# it will fail to correctly propagate vtable changes 
+# downwards in the class hierarchy if the class has
+# since been overloaded.
+%s(defun __set_vtable (vtable off ptr)
+  (assign (index vtable off) ptr)
+)
 
 class Class
 

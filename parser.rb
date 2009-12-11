@@ -243,7 +243,7 @@ class Parser < ParserBase
     ret = parse_block_exps
     exps = E[:let, ret[0]].concat(ret[1])
     expect(:end) or expected("expression or 'end' for open def '#{name.to_s}'")
-    return E[pos, :defun, name, args, exps]
+    return E[pos, :defm, name, args, exps]
   end
 
   def parse_sexp; @sexp.parse; end
