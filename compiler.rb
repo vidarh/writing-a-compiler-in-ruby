@@ -17,7 +17,7 @@ class Compiler
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
   @@keywords = Set[
-                   :do, :class, :defun, :if, :lambda,
+                   :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                   ]
