@@ -1,0 +1,8 @@
+#!/usr/bin/ruby
+fname = ARGV[0]
+dir = File.dirname(__FILE__)
+bname = File.basename(fname).split(".")[0..-2].join(".")
+system("ruby #{dir}/compiler.rb #{fname} 2>&1 >/tmp/#{bname}.s")
+system("gcc -gstabs -o /tmp/#{bname} /tmp/#{bname}.s  #{dir}/runtime.o")
+
+puts "Compiled to /tmp/#{bname}"
