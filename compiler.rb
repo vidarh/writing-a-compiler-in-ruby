@@ -555,12 +555,10 @@ class Compiler
     cscope = ClassScope.new(scope, name, @vtableoffsets)
 
     # FIXME: Need to be able to handle re-opening of classes
-    # FIXME: Need to generate "thunks" for __method_missing that knows the name of the slot they are in, and
-    #        then jump into __method_missing.
     exps.each do |l2|
       l2.each do |e|
         if e.is_a?(Array) 
-          if e[0] == :defun
+          if e[0] == :defm
             cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
           elsif e[0] == :call && e[1] == :attr_accessor
             # This is a bit presumptious, assuming noone are stupid enough to overload
@@ -651,7 +649,7 @@ class Compiler
   # Consider whether to check :call/:callm nodes as well, though they
   # will likely hit method_missing
   def alloc_vtable_offsets(exp)
-    exp.depth_first(:defun) do |defun|
+    exp.depth_first(:defm) do |defun|
       @vtableoffsets.alloc_offset(defun[1])
       :skip
     end
