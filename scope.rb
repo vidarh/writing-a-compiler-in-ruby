@@ -6,16 +6,19 @@
 # not. For now, we'll treat all of them as global variables.
 class GlobalScope
   attr_accessor :globals
+  attr_reader :class_scope
 
-  def initialize
+  def initialize(offsets)
+    @vtableoffsets = offsets
     @globals = Set.new
+    @class_scope = ClassScope.new(self,"Object",@vtableoffsets)
   end
-
 
   # Returns an argument within the global scope, if defined here.
   # Otherwise returns it as an address (<tt>:addr</tt>)
   def get_arg(a)
     return [:global, a] if @globals.member?(a)
+    return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
     return [:addr, a]
   end
 end
@@ -25,9 +28,8 @@ end
 # Holds variables defined within function, as well as all arguments
 # part of the function.
 class FuncScope
-  def initialize(func, next_scope = nil)
+  def initialize(func)
     @func = func
-    @next = next_scope
   end
 
 
@@ -37,15 +39,14 @@ class FuncScope
 
 
   # Returns an argument within the function scope, if defined here.
-  # Otherwise tries to return it from the next (outer) scope of this function scope.
-  # If this also doesn't contain the argument, return it as an adress.
+  # A function holds it's own scope chain, so if the function doens't
+  # return anything, we fall back to just an addr.
   def get_arg(a)
     a = a.to_sym
     if @func
       arg = @func.get_arg(a)
       return arg if arg
     end
-    return @next.get_arg(a) if @next
     return [:addr, a]
   end
 end
@@ -188,6 +189,10 @@ class ClassScope
     @vtableoffsets = offsets
     @instance_vars = [:@__class__] # FIXME: Do this properly
     @class_vars = {}
+  end
+
+  def class_scope
+    self
   end
 
   def rest?
