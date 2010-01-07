@@ -19,7 +19,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr, :block,
+                   :hash, :return,:sexp, :module, :rescue, :incr
                   ]
 
   @@oper_methods = Set[ :<< ]
@@ -108,8 +108,12 @@ class Compiler
   # Similar to output_constants, but for functions.
   # Compiles all functions, defined so far and outputs the appropriate assembly code.
   def output_functions
-    @global_functions.each do |name, func|
-
+    # This is a bit ugly, but handles the case of lambdas or inner
+    # functions being added during the compilation... Should probably
+    # refactor.
+    while f = @global_functions.shift
+      name = f[0]
+      func = f[1]
       # create a function scope for each defined function and compile it appropriately.
       # also pass it the current global scope for further lookup of variables used
       # within the functions body that aren't defined there (global variables and those,
@@ -154,7 +158,8 @@ class Compiler
   def compile_defm(scope, name, args, body)
     scope = scope.class_scope
 
-    f = Function.new([:self]+args, body, scope) # "self" is "faked" as an argument to class methods.
+    # FIXME: Replace "__closure__" with the block argument name if one is present
+    f = Function.new([:self,:__closure__]+args, body, scope) # "self" is "faked" as an argument to class methods
 
     @e.comment("method #{name}")
 
@@ -272,12 +277,14 @@ class Compiler
     return [:subexpr]
   end
 
-
   # Compiles an anonymous function ('lambda-expression').
   # Simply calls compile_defun, only, that the name gets generated
   # by the emitter via Emitter#get_local.
-  def compile_lambda(scope, args, body)
-    compile_defun(scope, @e.get_local, args,body)
+  def compile_lambda(scope, args=nil, body=nil)
+    e = @e.get_local
+    body ||= []
+    r = compile_defun(scope, e, args,[:let,[]]+body)
+    r
   end
 
 
@@ -350,18 +357,13 @@ class Compiler
   # Compiles a function call.
   # Takes the current scope, the function to call as well as the arguments
   # to call the function with.
-  def compile_call(scope, func, args)
-    if func == :yield
-      warning("YIELD is NOT IMPLEMENTED")
-      # FIXME: Yeah, we're pretending whatever happens to be in 
-      # %eax is the result of a yield we've not done... Temporary hack
-      return [:subexpr]
-    end
+  def compile_call(scope, func, args, block = nil)
+    return compile_yield(scope, args, block) if func == :yield
 
     # This is a bit of a hack. get_arg will also be called from
     # compile_eval_arg below, but we need to know if it's a callm
     fargs = get_arg(scope, func)
-    return compile_callm(scope,:self, func, args) if fargs[0] == :possible_callm
+    return compile_callm(scope,:self, func, args,block) if fargs && fargs[0] == :possible_callm
 
     args = [args] if !args.is_a?(Array)
     @e.with_stack(args.length, true) do
@@ -384,16 +386,103 @@ class Compiler
     @e.load_indirect(self_reg, dest_reg)  # self.class
   end
 
+  # compile_yield
+  # Yield to the supplied block
+  def compile_yield(scope, args, block)
+    @e.comment("yield begin")
+    args ||= []
+    args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
+    args = [0] + args # FIXME: No chaining of blocks. Is chaining of blocks legal? Never used it. Anyway, we don't support it
+
+    splat = handle_splat(scope,args)
+    args = splat if splat
+
+    compile_callm_args(scope, :self, splat, args) do
+      reg = @e.load(:arg, 1) # The block parameter
+      @e.call(reg)
+    end
+    @e.comment("yield end")
+    return [:subexpr]
+  end
+
+  def handle_splat(scope,args)
+    # FIXME: Quick and dirty splat handling:
+    # - If the last node has a splat, we cheat and assume it's
+    #   from the arguments rather than a proper Ruby Array.
+    # - We assume we can just allocate args.length+1+numargs
+    # - We wastefully do it in two rounds and muck directly
+    #   with %esp for now until I figure out how to do this
+    #   more cleanly.
+    splat = args.last.is_a?(Array) && args.last.first == :splat
+
+    return nil if !splat
+
+    # FIXME: This is just a disaster waiting to happen
+    # (needs proper register allocation)
+    @e.comment("*#{args.last.last.to_s}")
+    reg = compile_eval_arg(scope,:numargs)
+    @e.sall(2,reg)
+    @e.subl(reg,:esp)
+    @e.movl(reg,:edx)
+    reg = compile_eval_arg(scope,args.last.last)
+    @e.addl(reg,:edx)
+    @e.movl(:esp,:ecx)
+    l = @e.local
+    @e.movl("(%eax)",:ebx)
+    @e.movl(:ebx,"(%ecx)")
+    @e.addl(4,:eax)
+    @e.addl(4,:ecx)
+    @e.cmpl(reg,:edx)
+    @e.jne(l)
+    @e.subl(:esp,:ecx)
+    @e.sarl(2,:ecx)
+    @e.comment("*#{args.last.last.to_s} end")
+
+    return args[0..-2]
+  end
+
+  def compile_callm_args(scope, ob, splat, args)
+    @e.with_stack(args.length+1, true) do
+      if splat
+        @e.addl(:ecx,:ebx)
+      end
+
+      ret = compile_eval_arg(scope, ob)
+      @e.save_to_stack(ret, 0)
+      args.each_with_index do |a,i|
+        param = compile_eval_arg(scope, a)
+        @e.save_to_stack(param, i+1)
+      end
+
+      # This is where the actual call gets done
+      # This differs depending on whether it's a normal
+      # method call or a closure call.
+      yield
+    end
+
+    if splat
+      reg = compile_eval_arg(scope,:numargs)
+      @e.sall(2,reg)
+      @e.addl(reg,:esp)
+    end
+  end
+  
+
   # Compiles a method call to an object.
   # Similar to compile_call but with an additional object parameter
   # representing the object to call the method on.
   # The object gets passed to the method, which is just another function,
   # as the first parameter.
-  def compile_callm(scope, ob, method, args)
+  def compile_callm(scope, ob, method, args, block = nil)
+    # FIXME: Shouldn't trigger - probably due to the callm rewrites
+    return compile_yield(scope, args, block) if method == :yield and ob == :self
+
     @e.comment("callm #{ob.inspect}.#{method.inspect}")
 
     args ||= []
     args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
+
+    args = [block ? block : 0] + args
 
     off = @vtableoffsets.get_offset(method)
     if !off
@@ -404,66 +493,16 @@ class Compiler
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
-    # FIXME: Quick and dirty splat handling:
-    # - If the last node has a splat, we cheat and assume it's
-    #   from the arguments rather than a proper Ruby Array.
-    # - We assume we can just allocate args.length+1+numargs
-    # - We wastefully do it in two rounds and muck directly
-    #   with %esp for now until I figure out how to do this
-    #   more cleanly.
-    splat = args.last.is_a?(Array) && args.last.first == :splat
+    splat = handle_splat(scope,args)
+    args = splat if splat
 
-    if splat
-      # FIXME: This is just a disaster waiting to happen
-      # (needs proper register allocation)
-      @e.comment("*#{args.last.last.to_s}")
-      reg = compile_eval_arg(scope,:numargs)
-      @e.sall(2,reg)
-      @e.subl(reg,:esp)
-      @e.movl(reg,:edx)
-      reg = compile_eval_arg(scope,args.last.last)
-      @e.addl(reg,:edx)
-      @e.movl(:esp,:ecx)
-      l = @e.local
-      @e.movl("(%eax)",:ebx)
-      @e.movl(:ebx,"(%ecx)")
-      @e.addl(4,:eax)
-      @e.addl(4,:ecx)
-      @e.cmpl(reg,:edx)
-      @e.jne(l)
-      @e.subl(:esp,:ecx)
-      @e.sarl(2,:ecx)
-      @e.comment("*#{args.last.last.to_s} end")
-
-      args = args[0..-2]
-    end
-
-    @e.with_stack(args.length+1, true) do
-      if splat
-        @e.addl(:ecx,:ebx)
-      end
-
-      # FIXME: Is it safe to just prepend "ob" to args,
-      # and treat this exactly the same as for call?
-      # FIXME: Review how g++ handles virtual method calls.
-      ret = compile_eval_arg(scope, ob)
-      @e.save_to_stack(ret, 0)
-      args.each_with_index do |a,i|
-        param = compile_eval_arg(scope, a)
-        @e.save_to_stack(param, i+1)
-      end
+    compile_callm_args(scope, ob, splat, args) do
       @e.with_register do |reg|
         @e.load_indirect(:esp, reg) # self
         load_class(reg,reg)
         @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
         @e.call(@e.result_value)
       end
-    end
-
-    if splat
-      reg = compile_eval_arg(scope,:numargs)
-      @e.sall(2,reg)
-      @e.addl(reg,:esp)
     end
 
     @e.comment("callm #{ob.to_s}.#{method.to_s} END")
@@ -524,7 +563,6 @@ class Compiler
     end
     return [:subexpr]
   end
-
 
   # Compiles a let expression.
   # Takes the current scope, a list of variablenames as well as a list of arguments.
@@ -617,8 +655,8 @@ class Compiler
     elsif @@oper_methods.member?(exp[0])
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
-      return compile_call(scope, exp[1], exp[2]) if (exp[0] == :call)
-      return compile_callm(scope, exp[1], exp[2], exp[3]) if (exp[0] == :callm)
+      return compile_call(scope, exp[1], exp[2],exp[3]) if (exp[0] == :call)
+      return compile_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :callm)
       return compile_call(scope, exp[0], exp.rest) if (exp.is_a? Array)
     end
 
@@ -638,7 +676,6 @@ class Compiler
       @global_scope = GlobalScope.new(@vtableoffsets)
       compile_eval_arg(@global_scope, exp)
     end
-
   end
 
 
@@ -709,11 +746,27 @@ class Compiler
       end
     end
   end
+
+  # We want to:
+  # - Find all lambda nodes
+  # - Find all variables used in the lambda
+  # - Create an enclosing environment as far out as the outermost
+  #   variable used inside the lambda
+  # - Make copies of all the variables
+  def rewrite_closures(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+    end
+  end
+
+  def preprocess exp
+    rewrite_strconst(exp)
+    rewrite_closures(exp)
+  end
   
   # Starts the actual compile process.
-  def compile(exp)
+  def compile exp
     alloc_vtable_offsets(exp)
-    rewrite_strconst(exp)
     compile_main(exp)
 
     # after the main function, we ouput all functions and constants
@@ -762,14 +815,17 @@ if __FILE__ == $0
     STDERR.puts buf
   end
   
-  if prog && dump
-    PP.pp prog
-    exit
-  end
-  
   if prog
     c = Compiler.new
     c.trace = true if trace
+
+    c.preprocess(prog)
+
+    if dump
+      PP.pp prog
+      exit
+    end
+    
     c.compile(prog)
   end
 end

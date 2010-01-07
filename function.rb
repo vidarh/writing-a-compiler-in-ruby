@@ -30,8 +30,9 @@ class Function
   # the scope the function was defined in. For methods this is a
   # class scope.
   def initialize(args, body, scope)
-    @body = body
+    @body = body || []
     @rest = false
+    args ||= []
     @args = args.collect do |a|
       arg = Arg.new(*[a].flatten)
       @rest = true if arg.rest?

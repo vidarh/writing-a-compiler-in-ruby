@@ -64,7 +64,7 @@ class Class
   def attr_reader sym
     %s(printf "attr_reader %s\n" (callm sym to_s))
     define_method sym do
-       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
+#       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
     end
   end
 
@@ -73,7 +73,7 @@ class Class
     # FIXME: Ouch: Requires both String, string interpolation and String#to_sym to
     # be implemented on top of define_method and "ivar"
     define_method "#{sym.to_s}=".to_sym do |val|
-      %s(assign (ivar self sym) val)
+#      %s(assign (ivar self sym) val)
     end
   end
 end

@@ -171,13 +171,22 @@ class Parser < ParserBase
     return ret
   end
 
+  # lambda ::= "lambda" *ws block
+  def parse_lambda
+    pos = position
+    expect(:lambda) or return
+    ws
+    block = parse_block or expected("do .. end block")
+    return E[pos, :lambda, *block[1..-1]]
+  end
+
   # Later on "defexp" will allow anything other than "def"
   # and "class".
-  # defexp ::= sexp | while | begin | case | if | subexp
+  # defexp ::= sexp | while | begin | case | if | lambda | subexp
   def parse_defexp
     pos = position
     ws
-    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_subexp
+    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_lambda || parse_subexp
     ret.position = pos if pos.respond_to?(:position)
     nolfws
     if sym = expect(:if, :while, :rescue)
@@ -223,8 +232,8 @@ class Parser < ParserBase
     exps = parse_block_exps
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
-    return E[pos, :block] if args.size == 0 and !exps[1] || exps[1].size == 0
-    return E[pos, :block, args, exps[1]]
+    return E[pos, :lambda] if args.size == 0 and !exps[1] || exps[1].size == 0
+    return E[pos, :lambda, args, exps[1]]
   end
 
   # def ::= "def" ws* name args? block_body
