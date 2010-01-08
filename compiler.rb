@@ -19,7 +19,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr
+                   :hash, :return,:sexp, :module, :rescue, :incr, :block
                   ]
 
   @@oper_methods = Set[ :<< ]
@@ -394,10 +394,7 @@ class Compiler
     args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
     args = [0] + args # FIXME: No chaining of blocks. Is chaining of blocks legal? Never used it. Anyway, we don't support it
 
-    splat = handle_splat(scope,args)
-    args = splat if splat
-
-    compile_callm_args(scope, :self, splat, args) do
+    compile_callm_args(scope, :self, args) do
       reg = @e.load(:arg, 1) # The block parameter
       @e.call(reg)
     end
@@ -441,7 +438,10 @@ class Compiler
     return args[0..-2]
   end
 
-  def compile_callm_args(scope, ob, splat, args)
+  def compile_callm_args(scope, ob, args)
+    splat = handle_splat(scope,args)
+    args = splat if splat
+
     @e.with_stack(args.length+1, true) do
       if splat
         @e.addl(:ecx,:ebx)
@@ -493,10 +493,7 @@ class Compiler
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
-    splat = handle_splat(scope,args)
-    args = splat if splat
-
-    compile_callm_args(scope, ob, splat, args) do
+    compile_callm_args(scope, ob, args) do
       @e.with_register do |reg|
         @e.load_indirect(:esp, reg) # self
         load_class(reg,reg)
