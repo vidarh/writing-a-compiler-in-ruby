@@ -283,7 +283,13 @@ class Compiler
   def compile_lambda(scope, args=nil, body=nil)
     e = @e.get_local
     body ||= []
-    r = compile_defun(scope, e, args,[:let,[]]+body)
+    args ||= []
+    # FIXME: Need to use a special scope object for the environment,
+    # including handling of self. 
+    # Note that while compiled with compile_defun, the calling convetion
+    # is that of a method. However we have the future complication of
+    # handling instance variables in closures, which is rather painful.
+    r = compile_defun(scope, e, [:self,:__closure__]+args,[:let,[]]+body)
     r
   end
 
