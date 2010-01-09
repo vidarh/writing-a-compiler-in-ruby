@@ -207,6 +207,8 @@ class Parser < ParserBase
     pos = position
     ws
     exps = zero_or_more(:defexp)
+    # FIXME: This is too agressive. Variables in blocks are local if they
+    # have not been assigned to prior to the start of the block.
     vars = deep_collect(exps, Array) {|node| node[0] == :assign && node[1].to_s[0] != ?@ ? node[1] : nil}
     return E[pos, vars, exps]
   end
@@ -250,6 +252,7 @@ class Parser < ParserBase
     args = parse_args || []
     expect(";")
     ret = parse_block_exps
+    ret[0] = ret[0] - args
     exps = E[:let, ret[0]].concat(ret[1])
     expect(:end) or expected("expression or 'end' for open def '#{name.to_s}'")
     return E[pos, :defm, name, args, exps]
