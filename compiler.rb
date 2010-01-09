@@ -573,7 +573,7 @@ class Compiler
     vars = {}
     varlist.each_with_index {|v, i| vars[v]=i}
     ls = LocalVarScope.new(vars, scope)
-    if vars.size
+    if vars.size > 0
       @e.with_local(vars.size) { compile_do(ls, *args) }
     else
       compile_do(ls, *args)
@@ -755,10 +755,23 @@ class Compiler
   # - Find all variables used in the lambda
   # - Create an enclosing environment as far out as the outermost
   #   variable used inside the lambda
-  # - Make copies of all the variables
   def rewrite_closures(exp)
-    exp.depth_first do |e|
-      next :skip if e[0] == :sexp
+    exp.depth_first(:defm) do |e|
+      env_vars = []
+      e.depth_first(:lambda) do |l|
+        vars = deep_collect(l, Array) {|node| node[0] == :assign && node[1].to_s[0] != ?@ ? node[1] : nil}
+        env_vars += vars
+      end
+
+      if env_vars.size > 0
+        if e[3] && e[3][0] != :env
+          env = [:env,[],e[3]]
+          e[3] = env
+        else
+          env = e[3]
+        end
+        env[1] = env_vars
+      end
     end
   end
 
