@@ -16,6 +16,7 @@ require 'core/class'
 # most basic of these
 require 'core/kernel'
 require 'core/object'
+require 'core/proc'   # Proc is required before blocks can be used
 
 # OK, so perhaps this is a bit ugly...
 self = Object.new
