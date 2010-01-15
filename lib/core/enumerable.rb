@@ -2,9 +2,9 @@
 module Enumerable
   def all?
     self.each do |item|
-      unless yield(item)
-        return false
-      end
+#      unless yield(item)
+#        return false
+#      end
     end
     return true
   end
@@ -119,9 +119,9 @@ module Enumerable
 
 
   def inject(initial = nil, &block)
-    unless initial
-      return self[1..-1].inject(self.first, &block)
-    end
+#    unless initial
+#      return self[1..-1].inject(self.first, &block)
+#    end
 
     acc = initial
     self.each do |item|
@@ -156,9 +156,9 @@ module Enumerable
   def reject
     items = Array.new
     self.each do |item|
-      unless yield(item)
-        items << item
-      end
+#      unless yield(item)
+#        items << item
+#      end
     end
     return items
   end

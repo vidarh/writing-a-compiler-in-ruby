@@ -654,9 +654,9 @@ class Array
   def uniq
     uniq_arr = Array.new
     self.each do |item|
-      unless uniq_arr.include?(item)
-        uniq_arr << item
-      end
+#      unless uniq_arr.include?(item)
+#        uniq_arr << item
+#      end
     end
   end
 
