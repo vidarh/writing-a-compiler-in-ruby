@@ -6,7 +6,7 @@ require 'scope'
 require 'function'
 require 'extensions'
 require 'ast'
-
+require 'transform'
 require 'set'
 
 class Compiler
@@ -21,6 +21,8 @@ class Compiler
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block
                   ]
+
+  Keywords = @@keywords
 
   @@oper_methods = Set[ :<< ]
 
@@ -729,57 +731,6 @@ class Compiler
     end
   end
 
-  #
-  # Re-write string constants outside %s() to 
-  # %s(call __get_string [original string constant])
-  def rewrite_strconst(exp)
-    exp.depth_first do |e|
-      next :skip if e[0] == :sexp
-      is_call = e[0] == :call
-      e.each_with_index do |s,i|
-        if s.is_a?(String)
-          lab = @string_constants[s]
-          if !lab
-            lab = @e.get_local
-            @string_constants[s] = lab
-          end
-          e[i] = [:sexp, [:call, :__get_string, lab.to_sym]]
-          e[i] = [e[i]] if is_call && i > 1 # FIXME: This is a horrible workaround to deal with a parser inconsistency that leaves calls with a single argument with the argument "bare" if it's not an array, which breaks with this rewrite.
-        end
-      end
-    end
-  end
-
-  # We want to:
-  # - Find all lambda nodes
-  # - Find all variables used in the lambda
-  # - Create an enclosing environment as far out as the outermost
-  #   variable used inside the lambda
-  def rewrite_closures(exp)
-    exp.depth_first(:defm) do |e|
-      env_vars = []
-      e.depth_first(:lambda) do |l|
-        vars = deep_collect(l, Array) {|node| node[0] == :assign && node[1].to_s[0] != ?@ ? node[1] : nil}
-        env_vars += vars
-      end
-
-      if env_vars.size > 0
-        if e[3] && e[3][0] != :env
-          env = [:env,[],e[3]]
-          e[3] = env
-        else
-          env = e[3]
-        end
-        env[1] = env_vars
-      end
-    end
-  end
-
-  def preprocess exp
-    rewrite_strconst(exp)
-    rewrite_closures(exp)
-  end
-  
   # Starts the actual compile process.
   def compile exp
     alloc_vtable_offsets(exp)

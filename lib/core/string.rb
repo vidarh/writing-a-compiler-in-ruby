@@ -34,7 +34,8 @@ class String
   end
 
   def to_sym
-    __get_symbol(@buffer)
+    buffer = @buffer
+    %s(call __get_symbol buffer)
   end
 
   def to_i

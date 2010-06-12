@@ -1,6 +1,6 @@
 # size <= ssize *always* or something is severely wrong.
 %s(defun __new_class_object (size superclass ssize)
-  (let (ob)
+  (let (ob i)
    (assign ob (malloc (mul size 4))) # Assumes 32 bit
    (assign i 1)
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
@@ -52,7 +52,7 @@ class Class
   # a symbol, which effectively means a simple hash table implementation
   #
   def define_method sym, &block
-    %s(printf "define_method %s\n" (callm sym to_s))
+    %s(printf "define_method %s\n" (callm (callm sym to_s) __get_raw))
   end
 
   # FIXME: Should handle multiple symbols
@@ -62,14 +62,14 @@ class Class
   end
   
   def attr_reader sym
-    %s(printf "attr_reader %s\n" (callm sym to_s))
+    %s(printf "attr_reader %s\n" (callm (callm sym to_s) __get_raw))
     define_method sym do
 #       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
     end
   end
 
   def attr_writer sym
-    %s(printf "attr_writer %s\n" (callm sym to_s))
+    %s(printf "attr_writer %s\n" (callm (callm sym to_s) __get_raw))
     # FIXME: Ouch: Requires both String, string interpolation and String#to_sym to
     # be implemented on top of define_method and "ivar"
     define_method "#{sym.to_s}=".to_sym do |val|

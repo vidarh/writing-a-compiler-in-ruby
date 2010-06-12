@@ -26,7 +26,7 @@ class Symbol
 
   def to_s
     name = @name
-    %s(__get_string name)
+    %s(call __get_string name)
   end
 
   # FIXME
