@@ -13,11 +13,11 @@ Feature: Parser
 	Examples:
 	  | expr                            | tree                                                 | notes                                              |
 	  | "1 + 2"                         | [:do,[:add,1,2]]                                     | The full parser wraps a [:do] around everything    |
-	  | "foo { }"                       | [:do,[:call,:foo,[], [:block]]]                      | Testing empty blocks                               |
-	  | "foo(1) { }"                    | [:do,[:call,:foo,1, [:block]]]                       | Testing empty blocks                               |
-	  | "foo(1) { bar }"                | [:do,[:call,:foo,1, [:block, [],[:bar]]]]            | Testing function calls inside a block              |
-	  | "foo(1) { bar 1 }"              | [:do,[:call,:foo,1, [:block, [],[[:call,:bar,1]]]]]  | Testing function calls inside a block              |
-	  | "foo { bar[0] }"                | [:do,[:call,:foo,[],[:block, [],[[:callm,:bar,:[],[0]]]]]]| Testing index operator inside a block         |
+	  | "foo { }"                       | [:do,[:call,:foo,[], [:lambda]]]                      | Testing empty blocks                               |
+	  | "foo(1) { }"                    | [:do,[:call,:foo,1, [:lambda]]]                       | Testing empty blocks                               |
+	  | "foo(1) { bar }"                | [:do,[:call,:foo,1, [:lambda, [],[:bar]]]]            | Testing function calls inside a block              |
+	  | "foo(1) { bar 1 }"              | [:do,[:call,:foo,1, [:lambda, [],[[:call,:bar,1]]]]]  | Testing function calls inside a block              |
+	  | "foo { bar[0] }"                | [:do,[:call,:foo,[],[:lambda, [],[[:callm,:bar,:[],[0]]]]]]| Testing index operator inside a block         |
 	  | "while foo do end"              | [:do, [:while, :foo, [:do]]]                         | while with "do ... end" instead of just "end"      |
       | "Keywords=Set[1]\nfoo"          | [:do,[:assign,:Keywords,[:callm,:Set,:[],[1]]],:foo] | :rp before linefeed should terminate an expression |
 	  | "expect(',') or return args"    | [:do,[:or,[:call,:expect,","],[:return,:args]]]      | Priority of "or" vs. call/return                   |
@@ -63,15 +63,15 @@ Feature: Parser
 
     Examples:
 	  | expr                          | tree                                          | notes                                         |
-	  | "def foo(bar=nil)\nend\n"     | [:do, [:defun, :foo, [:bar], [:let, []]]]    | Default value for arguments                   |
-	  | "def foo(bar = nil)\nend\n"   | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
-	  | "def foo(bar = [])\nend\n"    | [:do, [:defun, :foo, [:bar], [:let, []]]]     | Default value for arguments - with whitespace |
-	  | "def foo(&bar)\nend\n  "      | [:do, [:defun, :foo, [[:bar,:block]], [:let, []]]] | Block as named argument                  |
-	  | "def foo(a = :b, c = :d)\nend\n  " | [:do, [:defun, :foo, [:a,:c], [:let, []]]] | Second argument following argument with initializer |
-	  | "def foo(a = :b, &bar)\nend\n  " | [:do, [:defun, :foo, [:a,[:bar,:block]], [:let, []]]] | Second argument following argument with initializer |
-	  | "def self.foo\nend\n"         | [:do, [:defun, [:self,:foo], [], [:let, []]]] | Class method etc.                             |
-	  | "def *(other_array)\nend\n"         | [:do, [:defun, :*, [:other_array], [:let, []]]] | *-Operator overloading                |
-	  | "def foo=(bar)\nend\n"         | [:do, [:defun, :foo=, [:bar], [:let, []]]] | setter    	       		                  |
+	  | "def foo(bar=nil)\nend\n"     | [:do, [:defm, :foo, [:bar], []]]    | Default value for arguments                   |
+	  | "def foo(bar = nil)\nend\n"   | [:do, [:defm, :foo, [:bar], []]]     | Default value for arguments - with whitespace |
+	  | "def foo(bar = [])\nend\n"    | [:do, [:defm, :foo, [:bar], []]]     | Default value for arguments - with whitespace |
+	  | "def foo(&bar)\nend\n  "      | [:do, [:defm, :foo, [[:bar,:block]], []]] | Block as named argument                  |
+	  | "def foo(a = :b, c = :d)\nend\n  " | [:do, [:defm, :foo, [:a,:c], []]] | Second argument following argument with initializer |
+	  | "def foo(a = :b, &bar)\nend\n  " | [:do, [:defm, :foo, [:a,[:bar,:block]], []]] | Second argument following argument with initializer |
+	  | "def self.foo\nend\n"         | [:do, [:defm, [:self,:foo], [], []]] | Class method etc.                             |
+	  | "def *(other_array)\nend\n"         | [:do, [:defm, :*, [:other_array], []]] | *-Operator overloading                |
+	  | "def foo=(bar)\nend\n"         | [:do, [:defm, :foo=, [:bar], []]] | setter    	       		                  |
 
     @class
     Scenario Outline: Classes

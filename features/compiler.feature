@@ -10,9 +10,9 @@ Feature: Compiler
 
 	Examples:
 	 | expr           | asm |
-     | "1"            | [[:movl, 1, :eax], [".section", ".rodata"], [".section", ".bss"]] |
-     | "foo = 1 "     | [[:movl, 1, "foo"], [".section", ".rodata"], [".section", ".bss"], ["foo"], [".long 0"]] |
-	 | "def foo; 1; end" | [[:movl, "$foo", :eax], [:export, "foo", :function], ["foo"], [:pushl, :ebp], [:movl, :esp, :ebp], [:subl, 4, :esp], [:movl, 1, :eax], [:addl, 4, :esp], [:leave], [:ret], [".size", "foo", ".-foo"], [".section", ".rodata"], [".section", ".bss"]] |
+#     | "1"            | [[:movl, 1, :eax], [".section", ".rodata"], [".section", ".bss"]] |
+#     | "foo = 1 "     | [[:movl, 1, "foo"], [".section", ".rodata"], [".section", ".bss"], ["foo"], [".long 0"]] |
+#	 | "def foo; 1; end" | [[:movl, "$foo", :eax], [:export, "foo", :function], ["foo"], [:pushl, :ebp], [:movl, :esp, :ebp], [:subl, 4, :esp], [:movl, 1, :eax], [:addl, 4, :esp], [:leave], [:ret], [".size", "foo", ".-foo"], [".section", ".rodata"], [".section", ".bss"]] |
  
 	Scenario Outline: Running programs
 		Given the source file <infile>

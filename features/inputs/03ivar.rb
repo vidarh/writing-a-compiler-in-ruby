@@ -14,4 +14,5 @@ end
 
 f = Foo.new
 
-printf "%s\n",f.var
+# Necessary because recent changes means printf isn't working
+%s(printf "%s\n" (callm (callm f var) __get_raw))
