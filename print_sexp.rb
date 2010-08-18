@@ -11,7 +11,8 @@ class SexpPrinter
     @nest = 0
     @indent = 2
     @col = 0
-    @maxcol = 80
+    @maxcol = 120
+    @line = 0
   end
 
   def indent
@@ -22,8 +23,7 @@ class SexpPrinter
   def print str
     str = str.to_s
     if @col > @maxcol
-      @out.puts
-      @col = 0
+      puts
     end
     indent if @col == 0
     @col += str.length
@@ -32,9 +32,10 @@ class SexpPrinter
 
   def puts str = ""
     str = str.to_s
-    print str
+    print str if str != ""
+    @out.puts if str[-1] != ?\n && @col > 0
     @col = 0
-    @out.puts if str[-1] != ?\n
+    @line += 1
   end
 
   def print_tree(data, out = STDOUT)
@@ -47,20 +48,20 @@ class SexpPrinter
   def print_node node
     if node.is_a?(Array)
       puts if @col > @maxcol * 0.7 or
-        @col > 0 && [:defun,:class].include?(node.first)
+        @col > 0 && [:defun,:defm,:class,:if,:let].include?(node.first)
       print "("
+      old_line = @line
       node.each_with_index do |n,i|
         print " " if i > 0 && @col > 0
         @nest += 1
         puts if n.is_a?(Array) && i == 0
         print_node(n)
         @nest -= 1
-        if n == :sexp && i > 0 or
-          node.first == :do
+        if n == :sexp && i > 0 or node.first == :do or node.first == :let && i > 0
           puts 
         end
       end
-      puts if [:defun,:class].include?(node.first)
+      puts if [:defun,:defm,:class].include?(node.first) && @line > old_line
       print ")"
     else
       print node
