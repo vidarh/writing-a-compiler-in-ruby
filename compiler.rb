@@ -749,6 +749,7 @@ if __FILE__ == $0
   dump = ARGV.include?("--parsetree")
   norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
   trace = ARGV.include?("--trace")
+  transform = !ARGV.include?("--notransform")
 
   # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
   OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
@@ -787,7 +788,7 @@ if __FILE__ == $0
     c = Compiler.new
     c.trace = true if trace
 
-    c.preprocess(prog)
+    c.preprocess(prog) if transform
 
     if dump
       print_sexp prog
