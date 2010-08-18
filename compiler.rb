@@ -8,6 +8,7 @@ require 'extensions'
 require 'ast'
 require 'transform'
 require 'set'
+require 'print_sexp'
 
 class Compiler
   attr_reader :global_functions
@@ -789,7 +790,7 @@ if __FILE__ == $0
     c.preprocess(prog)
 
     if dump
-      PP.pp prog
+      print_sexp prog
       exit
     end
     
