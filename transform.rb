@@ -1,4 +1,3 @@
-
 # 
 # Parts of the compiler class that mainly transform the source tree
 #
@@ -7,6 +6,8 @@
 #
 
 class Compiler
+  include AST
+
   # This replaces the old lambda handling with a rewrite.
   # The advantage of handling it as a rewrite phase is that it's
   # much easier to debug - it can be turned on and off to 
@@ -15,16 +16,16 @@ class Compiler
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       if e[0] == :lambda
-        args = e[1] || []
+        args = e[1] || E[]
         body = e[2] || nil
         e.clear
         e[0] = :do
-        e[1] = [:assign, :__tmp_proc, 
-          [:defun, @e.get_local,
-            [:self,:__closure__,:__env__]+args,
+        e[1] = E[:assign, :__tmp_proc, 
+          E[:defun, @e.get_local,
+            E[:self,:__closure__,:__env__]+args,
             body]
         ]
-        e[2] = [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__]]]
+        e[2] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__]]]
       end
     end
   end
@@ -43,13 +44,13 @@ class Compiler
             lab = @e.get_local
             @string_constants[s] = lab
           end
-          e[i] = [:sexp, [:call, :__get_string, lab.to_sym]]
+          e[i] = E[:sexp, E[:call, :__get_string, lab.to_sym]]
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
           # the argument "bare" if it's not an array, which breaks with
           # this rewrite.
-          e[i] = [e[i]] if is_call && i > 1
+          e[i] = E[e[i]] if is_call && i > 1
         end
       end
     end
@@ -91,7 +92,7 @@ class Compiler
           vars.each {|v| push_var(scopes,env,v) }
         elsif n[0] == :lambda
           vars, env = find_vars(n[2], scopes + [Set.new],env, true)
-          n[2] = [:let, vars, *n[2]]
+          n[2] = E[n.position,:let, vars, *n[2]] if n[2]
         else
           if    n[0] == :callm then sub = n[3..-1]
           elsif n[0] == :call  then sub = n[2..-1]
@@ -120,7 +121,7 @@ class Compiler
       e.each_with_index do |ex, i|
         num = env.index(ex)
         if num
-          e[i] = [:index, :__env__, num]
+          e[i] = E[:index, :__env__, num]
         end
       end
     end
@@ -155,9 +156,9 @@ class Compiler
         notargs = env - Set[*e[2]]
         aenv = env.to_a
         extra_assigns = (env - notargs).to_a.collect do |a|
-          [:assign, [:index, :__env__, aenv.index(a)], a]
+          E[e.position,:assign, E[e.position,:index, :__env__, aenv.index(a)], a]
         end
-        e[3] = [[:sexp,[:assign, :__env__, [:call, :malloc,  [env.size * 4]]]]]
+        e[3] = [E[:sexp,E[:assign, :__env__, E[:call, :malloc,  [env.size * 4]]]]]
         e[3].concat(extra_assigns)
         e[3].concat(body)
       end
@@ -167,7 +168,7 @@ class Compiler
       vars << :__env__
       vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
 
-      e[3] = [:let, vars,*e[3]]
+      e[3] = E[e.position,:let, vars,*e[3]]
       :skip
     end
   end

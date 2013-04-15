@@ -1,7 +1,10 @@
+require 'ast'
 
 module OpPrec
 
   class TreeOutput
+    include AST
+
     def initialize
       reset
     end
@@ -19,8 +22,8 @@ module OpPrec
       return r if !r.is_a?(Array)
       return r if r[0] != :comma and r[0] != :flatten
       return r[1..2] if !r[2].is_a?(Array) or r[2][0] == :array
-      return [r[1], flatten(r[2])] if r[2][0] != :comma
-      return [r[1]] + flatten(r[2])
+      return E[r[1], flatten(r[2])] if r[2][0] != :comma
+      return E[r[1]] + flatten(r[2])
     end
 
     def oper(o)
@@ -30,51 +33,51 @@ module OpPrec
       raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
       leftv = @vstack.pop if o.arity > 1
 
-      leftv = [] if !leftv && o.sym == :flatten # Empty argument list. :flatten is badly named
+      leftv = E[] if !leftv && o.sym == :flatten # Empty argument list. :flatten is badly named
 
       la = leftv.is_a?(Array)
       ra = rightv.is_a?(Array)
 
 
       # Debug option: Output the tree without rewriting.
-      return @vstack << [o.sym, leftv, rightv] if @@dont_rewrite
+      return @vstack << E[o.sym, leftv, rightv] if @@dont_rewrite
 
       # Rewrite rules to simplify the tree
       if ra and rightv[0] == :call and o.sym == :callm
-        @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
+        @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
       elsif la and leftv[0] == :callm and o.sym == :call
         block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && rightv[2][0] == :block
         comma = ra && rightv[0] == :comma
         args = comma || block ? flatten(rightv[1..-1]) : rightv
-        args = [args] if !comma && !block && args.is_a?(Array)
-        args = [args]
+        args = E[args] if !comma && !block && args.is_a?(Array)
+        args = E[args]
         if block
           @vstack << leftv.concat(*args)
         else
           @vstack << leftv + args
         end
       elsif la and leftv[0] == :callm and o.sym == :assign
-        rightv = [rightv] if !ra
+        rightv = E[rightv] if !ra
         args = leftv[3] ? leftv[3]+rightv : rightv
         eq = "#{leftv[2].to_s}="
-        @vstack << [:callm, leftv[1], eq.to_sym,args]
+        @vstack << E[:callm, leftv[1], eq.to_sym,args]
       elsif o.sym == :index
         if ra and rightv[0] == :array
-          @vstack << [:callm, leftv, :[], flatten(rightv[1..-1])]
+          @vstack << E[:callm, leftv, :[], flatten(rightv[1..-1])]
         else
-          @vstack << [:callm, leftv, :[], [rightv]]
+          @vstack << E[:callm, leftv, :[], [rightv]]
         end
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
-        @vstack << [o.sym, leftv].compact + flatten(rightv)
+        @vstack << E[o.sym, leftv].compact + flatten(rightv)
       elsif ra and rightv[0] == :comma and o.sym != :comma
-        @vstack << [o.sym, leftv, flatten(rightv)].compact
+        @vstack << E[o.sym, leftv, flatten(rightv)].compact
       elsif ra and rightv[0] == :flatten
-        @vstack << [o.sym, leftv] + flatten(rightv[1..-1])
+        @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
       else
         if o.sym == :call || o.sym == :callm and ra and rightv[0] != :flatten and rightv[0] != :comma
-          rightv = [rightv]
+          rightv = E[rightv]
         end
-        @vstack << [o.sym, flatten(leftv), rightv].compact
+        @vstack << E[o.sym, flatten(leftv), rightv].compact
       end
       return
     end
