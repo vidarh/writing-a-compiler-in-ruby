@@ -82,6 +82,7 @@ class Emitter
     @seq = 0
     @out = out
     @basic_main = false
+    @section = 0 # Are we in a stabs section?
   end
 
 
@@ -423,9 +424,18 @@ class Emitter
     local(br)
   end
 
-  def func(name, save_numargs = false)
+  def func(name, save_numargs = false, position = nil)
+    @out.emit(".stabs  \"#{name}:F(0,0)\",36,0,0,#{name}")
     export(name, :function) if name.to_s[0] != ?.
     label(name)
+
+    @funcnum ||= 1
+    @curfunc = @funcnum
+    @funcnum += 1
+
+    lineno(position) if position
+    @out.label(".LFBB#{@curfunc}")
+
     pushl(:ebp)
     movl(:esp, :ebp)
     pushl(:ebx) if save_numargs
@@ -433,21 +443,61 @@ class Emitter
     leave
     ret
     emit(".size", name.to_s, ".-#{name}")
+    @scopenum ||= 0
+    @scopenum += 1
+    label(".Lscope#{@scopenum}")
+    @out.emit(".stabs  \"\",36,0,0,.Lscope#{@scopenum}-.LFBB#{@curfunc}")    
+    @curfunc = nil
   end
 
+  def include(filename)
+    @section += 1
+    @out.emit(".stabs  \"#{filename}\",130,0,0,0")
+    ret = yield
+    @out.emit(".stabn  162,0,0,0")
+    @section -= 1
+    comment ("End include \"#{filename}\"")
+    ret
+  end
+
+  def lineno(position)
+    @lineno ||= nil
+    @linelabel ||= 0
+    if position.lineno != @lineno
+      # Annoyingly, the linenumber stabs use relative addresses inside include sections
+      # and absolute addresses outside of them.
+      #
+      if @section == 0
+        @out.emit(".stabn  68,0,#{position.lineno},.LM#{@linelabel}")
+      else
+        @out.emit(".stabn  68,0,#{position.lineno},.LM#{@linelabel} -.LFBB#{@curfunc}")
+      end
+      @out.label(".LM#{@linelabel}")
+      @linelabel += 1
+      @lineno = position.lineno
+    end
+  end
 
   # Generates assembly code for the main-function,
   # that gets called when starting the executable.
   # Takes a block, that gets called after some initialization code
   # and before the end of the main-function.
-  def main
+  def main(filename)
+    @funcnum = 1
+    @curfunc = 0
     if @basic_main
       return yield
     end
 
+    @out.emit(".file \"#{filename}\"")
+    @out.emit(".stabs \"#{File.dirname(filename)}/\",100,0,2,.Ltext0")
+    @out.emit(".stabs \"#{File.basename(filename)}\",100,0,2,.Ltext0")
     @out.emit(".text")
+    @files = [filename]
+    label(".Ltext0")
     export(:main, :function)
     label(:main)
+    @out.label(".LFBB0")
     leal("4(%esp)", :ecx)
     andl(-16, :esp)
     pushl("-4(%ecx)")

@@ -20,7 +20,8 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr, :block
+                   :hash, :return,:sexp, :module, :rescue, :incr, :block,
+                   :required
                   ]
 
   Keywords = @@keywords
@@ -121,8 +122,15 @@ class Compiler
       # also pass it the current global scope for further lookup of variables used
       # within the functions body that aren't defined there (global variables and those,
       # that are defined in the outer scope of the function's)
-      @e.func(name, func.rest?) { compile_eval_arg(FuncScope.new(func), func.body) }
 
+      # FIXME: Would it be better to output these grouped by source file?
+      if func.body.is_a?(AST::Expr)
+        @e.include(func.body.position.filename) do
+          @e.func(name, func.rest?, func.body.position) { compile_eval_arg(FuncScope.new(func), func.body) }
+        end
+      else
+        @e.func(name, func.rest?, nil) { compile_eval_arg(FuncScope.new(func), func.body) }
+      end
     end
   end
 
@@ -302,7 +310,7 @@ class Compiler
     if arg.respond_to?(:position) && arg.position != nil
       pos = arg.position.inspect
       if pos != @lastpos
-        @e.comment(arg.position.inspect)
+        @e.lineno(arg.position)
         if @trace
           compile_exp(scope,[:call,:puts,arg.position.inspect])
         end
@@ -372,6 +380,7 @@ class Compiler
     # This is a bit of a hack. get_arg will also be called from
     # compile_eval_arg below, but we need to know if it's a callm
     fargs = get_arg(scope, func)
+
     return compile_callm(scope,:self, func, args,block) if fargs && fargs[0] == :possible_callm
 
     args = [args] if !args.is_a?(Array)
@@ -641,6 +650,13 @@ class Compiler
     return [:global, name]
   end
 
+  # Put at the start of a required file, to allow any special processing
+  # before/after 
+  def compile_required(scope,exp)
+    @e.include(exp.position.filename) do
+      compile_exp(scope,exp)
+    end
+  end
 
   # General method for compiling expressions.
   # Calls the specialized compile methods depending of the
@@ -654,6 +670,8 @@ class Compiler
       compile_exp(scope,[:call,:puts,exp[0..1].inspect]) 
       @trace = true
     end
+
+    @e.lineno(exp.position) if exp.respond_to?(:position) && exp.position
 
     # check if exp is within predefined keywords list
     if(@@keywords.include?(exp[0]))
@@ -675,7 +693,7 @@ class Compiler
 
   # Compiles the main function, where the compiled programm starts execution.
   def compile_main(exp)
-    @e.main do
+    @e.main(exp.position.filename) do
       # We should allow arguments to main
       # so argc and argv get defined, but
       # that is for later.

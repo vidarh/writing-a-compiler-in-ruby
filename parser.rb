@@ -67,6 +67,7 @@ class Parser < ParserBase
     # :do is needed in the inhibited set because of ugly constructs like
     # "while cond do end" where the "do .. end" block belongs to "while",
     # not to any function in the condition.
+    pos = position
     ret = @sexp.parse || @shunting.parse([:do])
     return ret
   end
@@ -166,7 +167,12 @@ class Parser < ParserBase
 
   # subexp ::= exp nolfws*
   def parse_subexp
+    pos = position
     ret = @shunting.parse
+    STDERR.puts "**** #{ret.inspect}"
+    if ret.is_a?(Array)
+      ret = E[pos] + ret
+    end
     nolfws
     return ret
   end
@@ -187,7 +193,7 @@ class Parser < ParserBase
     pos = position
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_lambda || parse_subexp
-    ret.position = pos if pos.respond_to?(:position)
+    ret.position = pos if ret.respond_to?(:position)
     nolfws
     if sym = expect(:if, :while, :rescue)
       # FIXME: This is likely the wrong way to go in some situations involving blocks
@@ -284,7 +290,7 @@ class Parser < ParserBase
   # as opposed to being handled as post-processing later -
   # may refactor this as a separate tree-rewriting step later.
   def require q
-    return @@requires[q] if @@requires[q]
+    return true if @@requires[q]
     STDERR.puts "NOTICE: Statically requiring '#{q}'"
     # FIXME: Handle include path
     paths = rel_include_paths(q)
@@ -292,7 +298,9 @@ class Parser < ParserBase
     paths.detect { |path| f = File.open(path) rescue nil }
     error("Unable to load '#{q}'") if !f
     s = Scanner.new(f)
-    @@requires[q] = Parser.new(s, @opts).parse(false)
+    pos = position
+    expr = Parser.new(s, @opts).parse(false)
+    @@requires[q] = E[pos,:required, expr]
   end
 
   # require ::= "require" ws* subexp
@@ -324,7 +332,10 @@ class Parser < ParserBase
   # exp ::= ws* (class | def | sexp)
   def parse_exp
     ws
+    pos = position
     ret = parse_class || parse_def || parse_require || parse_include || parse_defexp
+    ret = E[pos].concat(ret) if ret.is_a?(Array)
+    ret.position = pos if ret.respond_to?(:position) && !ret.position
     ws; expect(";"); ws
     return ret
   end
