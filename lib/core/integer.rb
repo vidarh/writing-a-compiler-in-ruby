@@ -1,0 +1,3 @@
+
+class Integer < Numeric
+end

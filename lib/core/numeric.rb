@@ -1,0 +1,3 @@
+
+class Numeric
+end
