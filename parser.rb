@@ -169,7 +169,7 @@ class Parser < ParserBase
   def parse_subexp
     pos = position
     ret = @shunting.parse
-    STDERR.puts "**** #{ret.inspect}"
+#    STDERR.puts "**** #{ret.inspect}"
     if ret.is_a?(Array)
       ret = E[pos] + ret
     end
