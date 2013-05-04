@@ -74,6 +74,7 @@ Feature: Parser
 	  | "def self.foo;end;"         | [:do, [:defm, [:self,:foo], [], []]] | Class method etc.                             |
 	  | "def *(other_array); end;"         | [:do, [:defm, :*, [:other_array], []]] | *-Operator overloading                |
 	  | "def foo=(bar);end;"         | [:do, [:defm, :foo=, [:bar], []]] | setter    	       		                  |
+          | "def == bar; end"             | [:do, [:defm, :==, [:bar], []]]              | Handle operator method name            |
 
     @class
     Scenario Outline: Classes
