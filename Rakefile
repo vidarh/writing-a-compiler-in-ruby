@@ -15,7 +15,12 @@ end
 
 desc "run cucumber features in features/"
 task :features do |t|
-  system("cucumber features")
+  system("cd features && cucumber -r . -e compiler.feature .")
+end
+
+task :failing do |t|
+  system("cd features && cucumber -r . -e compiler.feature . --format rerun --out rerun.txt")
+  system("cd features && cucumber -r . @rerun.txt")
 end
 
 desc "create rdoc in /doc"
