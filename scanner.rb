@@ -103,10 +103,10 @@ class Scanner
 
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
   def ws
-    while (c = peek) && [9,10,13,32,?#].member?(c) do
+    while (c = peek) && [9,10,13,32,?#,?;].member?(c) do
       get
       if c == ?#
-        while (c = get) && c != "\n" do end
+        while (c = get) && c != "\n" && c != ';' do end
       end
     end
   end
