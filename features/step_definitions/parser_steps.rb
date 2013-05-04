@@ -4,7 +4,7 @@ require 'tokens'
 require 'shunting'
 require 'parser'
 require 'treeoutput'
-require 'spec/expectations'
+#require 'spec/expectations'
 
 # The rest is shared with the shunting yard steps
 

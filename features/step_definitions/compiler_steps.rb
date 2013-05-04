@@ -1,6 +1,6 @@
 $: << File.expand_path(File.dirname(__FILE__)+"/../..")
 require 'compiler'
-require 'spec/expectations'
+#require 'spec/expectations'
 require 'tempfile'
 require 'pathname'
 

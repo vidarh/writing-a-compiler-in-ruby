@@ -3,7 +3,7 @@ require 'operators'
 require 'tokens'
 require 'shunting'
 require 'parser'
-require 'spec/expectations'
+#require 'spec/expectations'
 
 class DummyParser
   def initialize s

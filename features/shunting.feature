@@ -29,7 +29,7 @@ Feature: Shunting Yard
       | "return"             | [:return]                            |
       | "5"                  | 5                                    |
       | "?A"                 | 65                                   |
-      | "foo +\nbar"         | [:add,:foo,:bar]                     |
+      | "foo +"+10.chr+"bar"         | [:add,:foo,:bar]                     |
       | ":sym"               | :":sym"                              |
       | ":[]"                | :":[]"                               |
       | "self.class"         | [:callm,:self,:class]                |

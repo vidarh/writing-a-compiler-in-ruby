@@ -1,14 +1,14 @@
 require 'rubygems'
 require "rake"
 require "rake/rdoctask"
-require 'spec/rake/spectask'
+require 'rspec/core/rake_task'
 
 task :default => [ :test ]
 task :test    => [ :specs, :features ]
 
 
 desc "run rspec tests in test/"
-Spec::Rake::SpecTask.new(:specs) do |t|
+RSpec::Core::RakeTask.new(:specs) do |t|
   t.spec_files = FileList['test/*.rb']
   t.verbose = true
 end
