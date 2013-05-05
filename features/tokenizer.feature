@@ -18,3 +18,15 @@ Feature: Tokenizers
       | "&&"                   | :"&&"    |
       | "+"                    | :"+"     |
       | "+="                   | :"+="    |
+
+
+    @methodname
+    Scenario Outline: Method names
+        Given the expression <expr>
+        When I tokenize it with the Tokens::Methodname tokenizer
+        Then the result should be <result>
+
+    Examples:
+      | expr                   | result   |
+      | "="                    | nil      |
+      | "=="                   | nil      |
