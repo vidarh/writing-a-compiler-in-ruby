@@ -95,9 +95,9 @@ module Tokens
   class Methodname
     def self.expect(s)
       pre_name = s.expect(Atom)
-      suff_name = MethodEndings.select{ |me| s.expect(me) }.first
+      if pre_name
+        suff_name = MethodEndings.select{ |me| s.expect(me) }.first
 
-      if pre_name || suff_name
         pre_name = pre_name ? pre_name.to_s : nil
         suff_name = suff_name ? suff_name.to_s : nil
         # methodname is prefix + suffix
