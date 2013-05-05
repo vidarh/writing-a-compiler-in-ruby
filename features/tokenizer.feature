@@ -11,7 +11,10 @@ Feature: Tokenizers
         Then the result should be <result>
 
     Examples:
-      | expr                   | result                     |
-      | "="                    | :"="                       |
-      | "=="                   | :"=="                      |
-
+      | expr                   | result   |
+      | "="                    | :"="     |
+      | "=="                   | :"=="    |
+      | "&"                    | :"&"     |
+      | "&&"                   | :"&&"    |
+      | "+"                    | :"+"     |
+      | "+="                   | :"+="    |
