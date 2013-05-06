@@ -18,6 +18,7 @@ Feature: Tokenizers
       | "&&"                   | :"&&"    |
       | "+"                    | :"+"     |
       | "+="                   | :"+="    |
+      | ">="                   | :">="    |
 
 
     @methodname
@@ -30,3 +31,4 @@ Feature: Tokenizers
       | expr                   | result   |
       | "="                    | nil      |
       | "=="                   | nil      |
+      | ">="                   | nil      |
