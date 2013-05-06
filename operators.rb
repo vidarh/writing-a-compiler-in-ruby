@@ -36,7 +36,12 @@ class Oper
     # if operator found, return it's symbol (e.g. "*" -> :*)
     # otherwise simply return nil,
     # as no operator was found by scanner
-    Operators.keys.each do |op|
+    #
+    # FIXME: Sorting on descending length to ensure longest
+    # match. Eventually should replace this by more efficient
+    # search, as there are only a handful of possible multi-character
+    # operators that collide with single character ones.
+    Operators.keys.sort_by {|op| -op.to_s.length}.each do |op|
       if s.expect(op)
         return op.to_sym
       end
