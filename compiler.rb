@@ -138,9 +138,25 @@ class Compiler
   # Strictly speaking we don't *need* to use a sensible name at all,
   # but it makes me a lot happier when debugging the asm.
   def clean_method_name(name)
-    cleaned = name.to_s.gsub("?", "__Q") # FIXME: Needs to do more.
-    cleaned = cleaned.to_s.gsub("[]", "__NDX")
-    cleaned = cleaned.to_s.gsub("!", "__X")
+    dict = {
+      "?" => "__Q",     "!"  => "__X", 
+      "[]" => "__NDX",  "==" => "__eq",  
+      ">=" => "__ge",   "<=" => "__le", 
+      "<"  => "__lt",   ">"  => "__gt",
+      "/"  => "__div",  "*"  => "__mul",
+      "+"  => "__plus", "-"  => "__minus"}
+
+    cleaned = name.to_s.gsub />=|<=|==|[\?!=<>+\-\/\*]/ do |match|
+      dict[match.to_s]
+    end
+
+    cleaned = cleaned.split(//).collect do |c|
+      if c.match(/[a-zA-Z0-9_]/)
+        c
+      else
+        "__#{c[0].to_s(16)}"
+      end
+    end.join
     return cleaned
   end
 
