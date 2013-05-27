@@ -19,12 +19,6 @@ class Parser < ParserBase
     expect(Atom)
   end
 
-  # fname ::= name | "[]"
-  def parse_fname
-    name = expect("[]") || expect(Methodname) || expect(Oper)
-    name.is_a?(String) ? name.to_sym : name
-  end
-
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist
     prefix = expect("*") || expect("&")
@@ -246,10 +240,10 @@ class Parser < ParserBase
     pos = position
     expect(:def) or return
     ws
-    name = parse_fname || @shunting.parse or expected("function name")
+    name = expect(Methodname) || @shunting.parse or expected("function name")
     if (expect("."))
       name = [name]
-      ret = parse_fname or expected("name following '#{name}.'")
+      ret = expect(Methodname) or expected("name following '#{name}.'")
       name << ret
     end
     args = parse_args || []

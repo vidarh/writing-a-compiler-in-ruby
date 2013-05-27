@@ -29,6 +29,6 @@ Feature: Tokenizers
 
     Examples:
       | expr                   | result   |
-      | "="                    | nil      |
-      | "=="                   | nil      |
-      | ">="                   | nil      |
+      | "="                    | nil       |
+      | "=="                   | :"=="    |
+      | ">="                   | :">="    |

@@ -93,7 +93,16 @@ module Tokens
   # A methodname can be an atom followed by one of the method endings
   # defined in MethodEndings (see top).
   class Methodname
+    # Operators that are allowed as method names
+    OPER_METHOD = %w{=== []= [] == <=> <= >= ** << >> != !~ =~ ! ~ + - * / % & | ^ < >}
+
     def self.expect(s)
+      # FIXME: This is horribly inefficient.
+      name = nil
+      OPER_METHOD.each do |op|
+        return name.to_sym if name = s.expect(op)
+      end
+
       pre_name = s.expect(Atom)
       if pre_name
         suff_name = MethodEndings.select{ |me| s.expect(me) }.first
@@ -359,11 +368,20 @@ module Tokens
 
     def get
       @lasttoken = @curtoken
-      @lastop ? @s.ws : @s.nolfws
-      @lastop = false
-      @lastpos = @s.position
-      res = get_raw
+
+      if @last.is_a?(Array) && @last[1].is_a?(Oper) && @last[1].sym == :callm
+        @lastop = false
+        @lastpos = @s.position
+        res = Methodname.expect(@s)
+        res = [res,nil] if res
+      else
+        @lastop ? @s.ws : @s.nolfws
+        @lastop = false
+        @lastpos = @s.position
+        res = get_raw
+      end
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
+      @last = res
       @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
       @curtoken = res
       return res
