@@ -101,3 +101,15 @@ Feature: Parser
       | "begin; puts 'foo';rescue Exception => e; end; " |  [:do, [:block, [], [[:call, :puts, "foo"]], [:rescue, :Exception, :e, []]]] | begin/rescue |
       | "unless foo; bar; else; baz; end" | [:do, [:unless, :foo, [:do, :bar], [:do, :baz]]] | |
 
+
+
+    @operatorcalls
+    Scenario Outline: Operator method calls
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+      | expr     | tree                      | notes |
+      | "1.+(2)" | [:do, [:callm, 1, :+, 2]] |       |
+
