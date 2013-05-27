@@ -1,6 +1,18 @@
 
 class Fixnum < Integer
 
+  def initialize
+    %s(assign @value 0)
+  end
+
+  def __set_raw(value)
+    @value = value
+  end
+
+  def __get_raw
+    @value
+  end
+
   def + other
 
   end
@@ -47,3 +59,10 @@ class Fixnum < Integer
   end
   
 end
+
+
+%s(defun __get_fixnum (val) (let (num)
+  (assign num (callm Fixnum new))
+  (callm num __set_raw (val))
+  num
+))
