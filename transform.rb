@@ -56,6 +56,29 @@ class Compiler
     end
   end
 
+
+  # Rewrite a numeric constant outside %s() to
+  # %s(call __get_fixnum val)
+  def rewrite_fixnumconst(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      is_call = e[0] == :call
+      e.each_with_index do |v,i|
+        if v.is_a?(Integer)
+          e[i] = E[:sexp, E[:call, :__get_fixnum, v]]
+
+          # FIXME: This is a horrible workaround to deal with a parser
+          # inconsistency that leaves calls with a single argument with
+          # the argument "bare" if it's not an array, which breaks with
+          # this rewrite.
+          e[i] = E[e[v]] if is_call && i > 1
+        end
+      end
+    end
+  end
+
+
+
   # 1. If I see an assign node, the variable on the left hand is defined
   #    for the remainder of this scope and on any sub-scope.
   # 2. If a sub-scope is lambda, any variable that is _used_ within it
@@ -175,6 +198,7 @@ class Compiler
 
   def preprocess exp
     rewrite_strconst(exp)
+    rewrite_fixnumconst(exp)
     rewrite_let_env(exp)
     rewrite_lambda(exp)
   end
