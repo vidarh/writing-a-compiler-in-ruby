@@ -10,31 +10,31 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr                 | tree                                 |
-      | "__FILE__"           | :__FILE__                            |
-      | "0.5"                | 0.5                                  |
-	  | "$0"                 | :"$0"                                |
-	  | "$foo"               | :"$foo"                              |
-	  | "1 + 2"              | [:add,1,2]                           |
-	  | "1 - 2"              | [:sub,1,2]				            |
-      | "1 + 2 * 3"          | [:add,1,[:mul,2,3]]                  |
-	  | "1 * 2 + 3"          | [:add,[:mul,1,2],3]		   	        |
-	  | "(1+2)*3"            | [:mul,[:add,1,2],3]                  |
-	  | "1 , 2"              | [:comma,1,2]                         |
-	  | "a << b"             | [:<<,:a,:b]                          |
-	  | "1 .. 2"             | [:range,1,2]	                        |
-      | "a == b"             | [:eq,:a,:b]                          |
-      | "a = 1 or foo + bar" | [:or,[:assign,:a,1],[:add,:foo,:bar]]|
-      | "foo and !bar"       | [:and,:foo,[:not,:bar]]              |
-      | "return 1"           | [:return,1]                          |
-      | "return"             | [:return]                            |
-      | "5"                  | 5                                    |
-      | "?A"                 | 65                                   |
-      | "foo +"+10.chr+"bar"         | [:add,:foo,:bar]                     |
-      | ":sym"               | :":sym"                              |
-      | ":[]"                | :":[]"                               |
-      | "self.class"         | [:callm,:self,:class]                |
-      | 'return :":[]"'      | [:return, :"::[]"]                   |
+      | expr                 | tree                                  |
+      | "__FILE__"           | :__FILE__                             |
+      | "0.5"                | 0.5                                   |
+      | "$0"                 | :"$0"                                 |
+      | "$foo"               | :"$foo"                               |
+      | "1 + 2"              | [:+,1,2]                              |
+      | "1 - 2"              | [:-,1,2]                              |
+      | "1 + 2 * 3"          | [:+,1,[:*,2,3]]                       |
+      | "1 * 2 + 3"          | [:+,[:*,1,2],3]                       |
+      | "(1+2)*3"            | [:*,[:+,1,2],3]                       |
+      | "1 , 2"              | [:comma,1,2]                          |
+      | "a << b"             | [:<<,:a,:b]                           |
+      | "1 .. 2"             | [:range,1,2]                          |
+      | "a == b"             | [:"==",:a,:b]                         |
+      | "a = 1 or foo + bar" | [:or,[:assign,:a,1],[:+,:foo,:bar]]   |
+      | "foo and !bar"       | [:and,:foo,[:"!",:bar]]               |
+      | "return 1"           | [:return,1]                           |
+      | "return"             | [:return]                             |
+      | "5"                  | 5                                     |
+      | "?A"                 | 65                                    |
+      | "foo +"+10.chr+"bar" | [:+,:foo,:bar]                        |
+      | ":sym"               | :":sym"                               |
+      | ":[]"                | :":[]"                                |
+      | "self.class"         | [:callm,:self,:class]                 |
+      | 'return :":[]"'      | [:return, :"::[]"]                    |
 
     @callm
 	Scenario Outline: Method calls
@@ -55,9 +55,9 @@ Feature: Shunting Yard
       | "foo(*arg)"          | [:call,:foo,[[:splat, :arg]]]            |
       | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
 	  | "foo.bar(*arg)"      | [:callm, :foo, :bar, [[:splat, :arg]]]   |
-	  | "foo.bar(!arg)"      | [:callm, :foo, :bar, [[:not, :arg]]]     |
-      | "foo(1 + arg)"       | [:call,:foo,[[:add, 1, :arg]]]           |
-      | "foo(1 * arg,bar)"   | [:call,:foo,[[:mul, 1, :arg],:bar]]      |
+	  | "foo.bar(!arg)"      | [:callm, :foo, :bar, [[:"!", :arg]]]     |
+      | "foo(1 + arg)"       | [:call,:foo,[[:+, 1, :arg]]]             |
+      | "foo(1 * arg,bar)"   | [:call,:foo,[[:*, 1, :arg],:bar]]        |
       | "(ret.flatten).uniq" | [:callm,[:callm,:ret,:flatten],:uniq]    |
       | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]    |
       | "foo.bar = 123"      | [:callm,:foo,:bar=, [123]]               |
@@ -75,7 +75,7 @@ Feature: Shunting Yard
 	  | expr        | tree                                     |
       | "[]"        | [:array]                                 |
       | "[1,2]"     | [:array,1,2]                             |
-      | "[1,2] + [3]"| [:add,[:array,1,2],[:array,3]]          |
+      | "[1,2] + [3]"| [:+,[:array,1,2],[:array,3]]            |
       | "[1,[2,3]]" | [:array,1,[:array,2,3]]                  |
       | "a = [1,2]" | [:assign,:a,[:array,1,2]]                |
       | "a = []"    | [:assign,:a,[:array]]                    |
@@ -116,8 +116,8 @@ Feature: Shunting Yard
 
 	Examples:
 	  | expr        | tree                     | remainder                   |
-      | "1 + 2 end" | [:add,1,2]               | "end"                       |
-      | "1 + 2 if"  | [:add,1,2]               | "if"                        |
+      | "1 + 2 end" | [:+,1,2]                 | "end"                       |
+      | "1 + 2 if"  | [:+,1,2]                 | "if"                        |
 
 
 	Scenario Outline: Handling variable arity expressions
@@ -142,7 +142,7 @@ Feature: Shunting Yard
 	  | expr              | tree                                    |
       | "foo ? 1 : 0"     | [:ternif, :foo, [:ternalt, 1, 0]]       |
       | "(rest? ? 1 : 0)" | [:ternif, :rest?, [:ternalt, 1, 0]]     |
-      | "@locals[a] + (rest? ? 1 : 0)" | [:add, [:callm, :@locals,:[], [:a]], [:ternif, :rest?, [:ternalt, 1, 0]]] |
+      | "@locals[a] + (rest? ? 1 : 0)" | [:+, [:callm, :@locals,:[], [:a]], [:ternif, :rest?, [:ternalt, 1, 0]]]   |
 
     @blocks
 	Scenario Outline: Blocks

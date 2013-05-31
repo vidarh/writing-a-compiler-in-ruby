@@ -12,7 +12,7 @@ Feature: Parser
 
 	Examples:
 	  | expr                            | tree                                                 | notes                                              |
-	  | "1 + 2"                         | [:do,[:add,1,2]]                                     | The full parser wraps a [:do] around everything    |
+	  | "1 + 2"                         | [:do,[:+,1,2]]                                       | The full parser wraps a [:do] around everything    |
 	  | "foo { }"                       | [:do,[:call,:foo,[], [:lambda]]]                      | Testing empty blocks                               |
 	  | "foo(1) { }"                    | [:do,[:call,:foo,1, [:lambda]]]                       | Testing empty blocks                               |
 	  | "foo(1) { bar }"                | [:do,[:call,:foo,1, [:lambda, [],[:bar]]]]            | Testing function calls inside a block              |
@@ -21,9 +21,9 @@ Feature: Parser
 	  | "while foo do end"              | [:do, [:while, :foo, [:do]]]                         | while with "do ... end" instead of just "end"      |
       | "Keywords=Set[1]"+10.chr+"foo"          | [:do,[:assign,:Keywords,[:callm,:Set,:[],[1]]],:foo] | :rp before linefeed should terminate an expression |
 	  | "expect(',') or return args"    | [:do,[:or,[:call,:expect,","],[:return,:args]]]      | Priority of "or" vs. call/return                   |
-      | "require File.dirname() + '/../spec_helper'" | [:do, [:require, [:add, [:callm, :File, :dirname, nil], "/../spec_helper"]]]  |              |
-      | "File.dirname() + '/../spec_helper'" | [:do, [:add, [:callm, :File, :dirname, nil], "/../spec_helper"]] |                                   |
-      | "dirname() + '/../spec_helper'" | [:do, [:add,[:call, :dirname],"/../spec_helper"]]    | |
+      | "require File.dirname() + '/../spec_helper'" | [:do, [:require, [:+, [:callm, :File, :dirname, nil], "/../spec_helper"]]]    |              |
+      | "File.dirname() + '/../spec_helper'" | [:do, [:+, [:callm, :File, :dirname, nil], "/../spec_helper"]]   |                                   |
+      | "dirname() + '/../spec_helper'" | [:do, [:+,[:call, :dirname],"/../spec_helper"]]      | |
       | "return rest? ? foo : bar"      | [:do, [:return, [:ternif, :rest?, [:ternalt, :foo, :bar]]]] | |
 
     @hash
