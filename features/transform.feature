@@ -10,7 +10,7 @@ Feature: Transformations
     Then the parse tree should become <tree>
 
     Examples:
-    | expr    | tree                                                                               | notes |
-    | "1 + 2" | [:do,[:add, [:sexp,[:call, :__get_fixnum, 1]], [:sexp,[:call, :__get_fixnum, 2]]]] |       |
+    | expr    | tree                                                                                      | notes |
+    | "1 + 2" | [:do,[:callm, [:sexp,[:call, :__get_fixnum, 1]], :+ , [:sexp,[:call, :__get_fixnum, 2]]]] |       |
 
 
