@@ -29,7 +29,7 @@ class Compiler
       end
     end
   end
-  
+
 
   # Re-write string constants outside %s() to 
   # %s(call __get_string [original string constant])
@@ -78,6 +78,20 @@ class Compiler
   end
 
 
+  # Rewrite operators that should be treated as method calls
+  # so that e.g. (+ 1 2) is turned into (callm 1 + 2)
+  #
+  def rewrite_operators(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+
+      if OPER_METHOD.member?(e[0].to_s)
+        e[3] = e[2]
+        e[2] = e[0]
+        e[0] = :callm
+      end
+    end
+  end
 
   # 1. If I see an assign node, the variable on the left hand is defined
   #    for the remainder of this scope and on any sub-scope.
@@ -199,6 +213,7 @@ class Compiler
   def preprocess exp
     rewrite_strconst(exp)
     rewrite_fixnumconst(exp)
+    rewrite_operators(exp)
     rewrite_let_env(exp)
     rewrite_lambda(exp)
   end
