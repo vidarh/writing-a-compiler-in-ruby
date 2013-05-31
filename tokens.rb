@@ -93,8 +93,6 @@ module Tokens
   # A methodname can be an atom followed by one of the method endings
   # defined in MethodEndings (see top).
   class Methodname
-    # Operators that are allowed as method names
-    OPER_METHOD = %w{=== []= [] == <=> <= >= ** << >> != !~ =~ ! ~ + - * / % & | ^ < >}
 
     def self.expect(s)
       # FIXME: This is horribly inefficient.

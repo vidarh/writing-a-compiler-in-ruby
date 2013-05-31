@@ -51,6 +51,7 @@ class Oper
 end
 
 
+
 # A hash of all operators within the language.
 # The keys are the actual identifiers for each operator.
 # The values are the operators themself (instances of the Oper class).
@@ -82,22 +83,20 @@ Operators = {
   ":"         => Oper.new(  7, :ternalt,  :infix),
   "<<"        => Oper.new(  7, :<<,       :infix),
 
-  "<"         => Oper.new(  9, :lt,       :infix),
-  "<="        => Oper.new(  9, :le,       :infix),
-  ">"         => Oper.new(  9, :gt,       :infix),
-  ">="        => Oper.new(  9, :ge,       :infix),
-  "=="        => Oper.new(  9, :eq,       :infix),
-  "!="        => Oper.new(  9, :ne,       :infix),
-  "<=>"       => Oper.new(  9, :cmp,      :infix),
+  "<"         => Oper.new(  9, :<,       :infix),
+  "<="        => Oper.new(  9, :<=,       :infix),
+  ">"         => Oper.new(  9, :>,       :infix),
+  ">="        => Oper.new(  9, :>=,       :infix),
+  "=="        => Oper.new(  9, :==,       :infix),
+  "!="        => Oper.new(  9, :"!=",       :infix),
+  "<=>"       => Oper.new(  9, :"<=>",      :infix),
 
-  "+"         => Oper.new( 10, :add,      :infix),
-  "-"         => Oper.new( 10, :sub,      :infix),
-  "!"         => Oper.new( 10, :not,      :prefix),
-
-
-  "/"         => Oper.new( 20, :div,      :infix),
+  "+"         => Oper.new( 10, :+,      :infix),
+  "-"         => Oper.new( 10, :-,      :infix),
+  "!"         => Oper.new( 10, :"!",      :prefix),
+  "/"         => Oper.new( 20, :/,      :infix),
   "*"         => {
-    :infix_or_postfix => Oper.new( 20, :mul,   :infix),
+    :infix_or_postfix => Oper.new( 20, :"*",   :infix),
     :prefix           => Oper.new(100, :splat, :prefix)
   },
 
@@ -126,4 +125,7 @@ Operators = {
   ")"         => Oper.new(  0, nil,       :rp),
 
 }
+
+# Operators that are allowed as method names
+OPER_METHOD = %w{=== []= [] == <=> <= >= ** << >> != !~ =~ ! ~ + - * / % & | ^ < >}
 
