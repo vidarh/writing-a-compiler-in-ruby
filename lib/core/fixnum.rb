@@ -14,7 +14,7 @@ class Fixnum < Integer
   end
 
   def + other
-
+    %s(call add (@value (callm other __get_raw))) 
   end
 
   def - other
