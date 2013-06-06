@@ -86,7 +86,7 @@ class Compiler
       next :skip if e[0] == :sexp
 
       if OPER_METHOD.member?(e[0].to_s)
-        e[3] = e[2]
+        e[3] = E[e[2]]
         e[2] = e[0]
         e[0] = :callm
       end
