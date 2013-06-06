@@ -23,7 +23,7 @@ class SEXParser < ParserBase
 
   def parse_exp
     ws
-    ret = expect(Atom, Int, Quoted) || parse_sexp
+    ret = expect(Atom, Int, Quoted, Methodname) || parse_sexp
     ws
     return ret
   end
