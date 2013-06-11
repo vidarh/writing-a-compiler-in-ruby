@@ -83,6 +83,7 @@ class Emitter
     @out = out
     @basic_main = false
     @section = 0 # Are we in a stabs section?
+    @free_registers = [:edx,:ecx]
   end
 
 
@@ -333,9 +334,16 @@ class Emitter
   end
 
   def with_register
-    # FIXME: This is a hack - for now we just hand out :edx,
-    # we don't actually do any allocation
-    yield(:edx)
+    # FIXME: This is a hack - for now we just hand out :edx or :ecx
+    # and we don't handle spills.
+
+    @allocated_registers ||= Set.new
+    free = @free_registers.shift
+    raise "Register allocation FAILED" if !free
+    @allocated_registers << free
+    yield(free)
+    @allocated_registers.delete(free)
+    @free_registers << free
   end
 
   def save_register(reg)
