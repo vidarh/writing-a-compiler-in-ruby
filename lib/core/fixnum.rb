@@ -45,6 +45,7 @@ class Fixnum < Integer
   end
 
   def mul other
+    %s(call __get_fixnum ((mul @value (callm other __get_raw))))
   end
 
   # These two definitions are only acceptable temporarily,

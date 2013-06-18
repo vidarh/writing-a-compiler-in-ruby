@@ -23,7 +23,7 @@ class Compiler
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
-                   :required, :add, :sub
+                   :required, :add, :sub, :mul
                   ]
 
   Keywords = @@keywords

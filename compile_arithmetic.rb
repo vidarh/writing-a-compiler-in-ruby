@@ -25,4 +25,9 @@ class Compiler
     end
   end
 
+  def compile_mul(scope, left, right)
+    compile_2(scope,left,right) do |reg|
+      @e.imull(reg,:eax)
+    end
+  end
 end
