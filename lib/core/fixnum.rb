@@ -42,6 +42,7 @@ class Fixnum < Integer
   end
 
   def div other
+    %s(call __get_fixnum ((div @value (callm other __get_raw))))
   end
 
   def mul other

@@ -1,9 +1,4 @@
 
-signed int div(signed int a, signed int b)
-{
-  return a / b;
-}
-
 signed int ne(signed int a, signed int b)
 {
   return a != b;
