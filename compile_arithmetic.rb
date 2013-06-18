@@ -12,4 +12,14 @@ class Compiler
     [:subexpr]
   end
 
+  def compile_sub(scope, left, right)
+    @e.with_register do |reg|
+      src = compile_eval_arg(scope,left)
+      @e.movl(src,reg)
+      @e.save_result(compile_eval_arg(scope,right))
+      @e.subl(reg, :eax)
+    end
+    [:subexpr]
+  end
+
 end
