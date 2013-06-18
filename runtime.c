@@ -1,16 +1,4 @@
 
-/*
-signed int add(signed int a, signed int b)
-{
-  return a + b;
-}
-*/
-
-signed int sub(signed int a, signed int b)
-{
-  return a - b;
-}
-
 signed int div(signed int a, signed int b)
 {
   return a / b;
