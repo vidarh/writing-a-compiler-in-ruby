@@ -22,23 +22,27 @@ class Fixnum < Integer
   end
 
   def <= other
-
+    %s(le @value (callm other __get_raw))
   end
 
   def == other
+    %s(eq @value (callm other __get_raw))
+  end
 
+  def != other
+    %s(ne @value (callm other __get_raw))
   end
 
   def < other
-
+    %s(lt @value (callm other __get_raw))
   end
 
   def > other
-
+    %s(gt @value (callm other __get_raw))
   end
 
   def >= other
-
+    %s(ge @value (callm other __get_raw))
   end
 
   def div other
