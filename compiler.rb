@@ -11,6 +11,7 @@ require 'set'
 require 'print_sexp'
 
 require 'compile_arithmetic'
+require 'compile_comparisons'
 
 class Compiler
   attr_reader :global_functions
@@ -23,7 +24,8 @@ class Compiler
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
-                   :required, :add, :sub, :mul, :div
+                   :required, :add, :sub, :mul, :div, :eq, :ne,
+                   :lt, :le, :gt, :ge
                   ]
 
   Keywords = @@keywords
