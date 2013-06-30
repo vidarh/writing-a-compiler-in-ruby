@@ -3,6 +3,6 @@ fname = ARGV[0]
 dir = File.dirname(__FILE__)
 bname = File.basename(fname).split(".")[0..-2].join(".")
 system("ruby #{dir}/compiler.rb #{fname} 2>&1 >/tmp/#{bname}.s")
-system("gcc -o /tmp/#{bname} /tmp/#{bname}.s  #{dir}/runtime.o")
+system("gcc -o /tmp/#{bname} /tmp/#{bname}.s")
 
 puts "Compiled to /tmp/#{bname}"

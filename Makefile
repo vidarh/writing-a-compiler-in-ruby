@@ -10,5 +10,5 @@ compiler.s: *.rb
 	ruby compiler.rb compiler.rb >compiler.s
 
 compiler: compiler.s runtime.o
-	gcc -gstabs -o compiler compiler.s runtime.o
+	gcc -gstabs -o compiler compiler.s
 
