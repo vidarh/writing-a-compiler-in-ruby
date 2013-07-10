@@ -13,6 +13,10 @@ class Fixnum < Integer
     @value
   end
 
+  def to_s
+    "Fixnum#to_s is not implemented"
+  end
+
   def + other
     %s(call __get_fixnum ((add @value (callm other __get_raw))))
   end

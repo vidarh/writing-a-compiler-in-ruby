@@ -31,6 +31,7 @@ class String
   end
 
   def to_s
+    self
   end
 
   def to_sym

@@ -31,6 +31,17 @@ class Object
 
   # FIXME: Belongs in Kernel
   def puts str
-    %s(puts (callm str __get_raw))
+    raw = str.to_s.__get_raw
+    %s(if raw
+         (puts raw)
+         (puts "")
+         )
+  end
+
+  def print str
+    raw = str.to_s.__get_raw
+    %s(if raw
+         (printf "%s" raw)
+         )
   end
 end
