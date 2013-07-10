@@ -71,7 +71,7 @@ class Compiler
           # inconsistency that leaves calls with a single argument with
           # the argument "bare" if it's not an array, which breaks with
           # this rewrite.
-          e[i] = E[e[v]] if is_call && i > 1
+          e[i] = E[e[i]] if is_call && i > 1
         end
       end
     end
