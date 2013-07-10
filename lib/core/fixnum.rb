@@ -14,7 +14,11 @@ class Fixnum < Integer
   end
 
   def to_s
-    "Fixnum#to_s is not implemented"
+    %s(let (buf)
+       (assign buf (malloc 16))
+       (snprintf buf 16 "%ld" @value)
+       (__get_string buf)
+       )
   end
 
   def + other
