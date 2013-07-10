@@ -11,6 +11,6 @@ Feature: Transformations
 
     Examples:
     | expr    | tree                                                                                      | notes |
-    | "1 + 2" | [:do,[:callm, [:sexp,[:call, :__get_fixnum, 1]], :+ , [:sexp,[:call, :__get_fixnum, 2]]]] |       |
+    | "1 + 2" | [:do,[:callm, [:sexp,[:call, :__get_fixnum, 1]], :+ , [[:sexp,[:call, :__get_fixnum, 2]]]]] |       |
 
 
