@@ -29,5 +29,5 @@ Feature: Compiler
     | inputs/new_with_arg.txt   | outputs/new_with_arg.txt | Foo.new(some arg) |
     | inputs/string_to_sym.rb   | outputs/string_to_sym.txt| "foo".to_sym.to_s |
     | inputs/04accessor.rb      | outputs/04accessor.txt | Simple use of attr_accessor |
+    | inputs/06print.rb         | outputs/06print.txt    | Basic print/puts support |
 
-		
