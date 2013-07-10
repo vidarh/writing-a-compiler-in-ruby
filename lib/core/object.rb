@@ -19,7 +19,10 @@ class Object
   end
 
   def __send__ sym, *args
-    %s(printf "WARNING: __send__ bypassing vtable not yet implemented. Called with %s\n" (callm sym to_s))
+    %s(printf "WARNING: __send__ bypassing vtable not yet implemented.\n")
+    %s(printf "WARNING:    Called with %p\n" sym)
+    %s(printf "WARNING:    self = %p\n" self)
+    %s(if sym (printf "WARNING:    (string: '%s'\n" (callm sym to_s)))
   end
 
   # FIXME: Belongs in Kernel
