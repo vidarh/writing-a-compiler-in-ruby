@@ -5,31 +5,23 @@ require 'set'
 ########### helper methods ###########
 
 def global_scope
-  gs = GlobalScope.new
+  gs = GlobalScope.new(VTableOffsets.new)
   gs.globals << :my_global
   gs
 end
 
 def empty_global_scope
-  GlobalScope.new
+  GlobalScope.new(VTableOffsets.new)
 end
 
 def function
   args = [:arg1, :arg2, :arg3]
   body = [[:printf, "hello, world"]]
-  f = Function.new(args, body)
-end
-
-def method
-  args = [:arg1, :arg2, :arg3]
-  body = [[:printf, "hello, world"]]
-  gs = global_scope
-  cscope = ClassScope.new(gs, "TestClass", 0)
-  f = Function.new(args, body, cscope)
+  f = Function.new(args, body, empty_global_scope)
 end
 
 def func_scope
-  FuncScope.new(function, global_scope)
+  FuncScope.new(function)
 end
 
 def local_scope
@@ -54,12 +46,12 @@ describe GlobalScope do
   it "should contain a global" do
     gs = empty_global_scope
     gs.globals << :some_global
-    gs.get_arg(:some_global).should == [:global, :some_global]
+    gs.get_arg(:some_global).should match_array([:global, :some_global])
   end
 
   it "should not contain a certain global" do
     gs = empty_global_scope
-    gs.get_arg(:some_global).should == [:addr, :some_global]
+    gs.get_arg(:some_global).should_not match_array([:addr, :some_global])
   end
 
 end
@@ -68,21 +60,24 @@ describe FuncScope do
 
   it "should not have a variable amount of arguments" do
     f = function
-    fs = FuncScope.new(f, global_scope)
-    fs.rest?.should == false
+    fs = func_scope
+    fs.rest?.should be false
   end
 
   it "should find an argument within its function scope" do
     f = function
-    fs = FuncScope.new(f, nil)
-    fs.get_arg(:arg3).should == [:arg, 2]
+    fs = FuncScope.new(f)
+    fs.get_arg(:arg3).should match_array([:arg, 2])
   end
 
   it "should find an argument in the outer (global) scope" do
     f = function
-    fs = FuncScope.new(f, global_scope)
-    fs.get_arg(:my_global).should == [:global, :my_global]
-    fs.get_arg(:undefined_arg).should == [:addr, :undefined_arg]
+    fs = FuncScope.new(f)
+    fs.get_arg(:my_global).should match_array([:possible_callm, :my_global])
+    fs.get_arg(:undefined_arg).should match_array([:possible_callm, :undefined_arg])
+
+    fs.func.scope.globals << :MY_GLOBAL
+    fs.get_arg(:MY_GLOBAL).should match_array([:global, :MY_GLOBAL])
   end
 
 end
@@ -91,19 +86,19 @@ describe LocalVarScope do
 
   it "should have no locals when none given" do
     ls = LocalVarScope.new([], nil)
-    ls.get_arg(:some_var).should == [:addr, :some_var]
+    ls.get_arg(:some_var).should match_array([:addr, :some_var])
   end
 
   it "should find arguments in local scope" do
     ls = local_scope
-    ls.get_arg(:local1).should == [:lvar, 0]
-    ls.get_arg(:local2).should == [:lvar, 1]
+    ls.get_arg(:local1).should match_array([:lvar, 0])
+    ls.get_arg(:local2).should match_array([:lvar, 1])
   end
 
-  it "should not find arguments in local scope, but in global" do
+  it "should not find undefined variables/arguments or global variables in local scope, but in global" do
     ls = local_scope
-    ls.get_arg(:undefined_arg).should == [:addr, :undefined_arg]
-    ls.get_arg(:my_global).should == [:global, :my_global]
+    ls.get_arg(:undefined_arg).should match_array([:possible_callm, :undefined_arg])
+    ls.get_arg(:my_global).should match_array([:possible_callm, :my_global])
   end
 
 end

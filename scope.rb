@@ -28,6 +28,8 @@ end
 # Holds variables defined within function, as well as all arguments
 # part of the function.
 class FuncScope
+  attr_reader :func
+
   def initialize(func)
     @func = func
   end
