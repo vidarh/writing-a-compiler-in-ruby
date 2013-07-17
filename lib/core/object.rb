@@ -40,19 +40,32 @@ class Object
       %s(puts "")
       return
     end
-    
-    %s(assign raw (index str 0))
-    raw = raw.to_s.__get_raw
-    %s(if raw
-         (puts raw)
-         (puts "")
-         )
+
+    na = na - 2
+    i = 0
+    while i < na
+      %s(assign raw (index str (callm i __get_raw)))
+      raw = raw.to_s.__get_raw
+      %s(if raw (puts raw))
+      i = i + 1
+    end
   end
 
-  def print str
-    raw = str.to_s.__get_raw
-    %s(if raw
-         (printf "%s" raw)
-         )
+  def print *str
+    %s(assign na (__get_fixnum numargs))
+    
+    if na == 2
+      %s(puts "")
+      return
+    end
+
+    na = na - 2
+    i = 0
+    while i < na
+      %s(assign raw (index str (callm i __get_raw)))
+      raw = raw.to_s.__get_raw
+      %s(if raw (printf "%s" raw))
+      i = i + 1
+    end
   end
 end
