@@ -55,7 +55,7 @@ class Object
     %s(assign na (__get_fixnum numargs))
     
     if na == 2
-      %s(puts "")
+      %s(printf "nil")
       return
     end
 
