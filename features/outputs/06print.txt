@@ -1,7 +1,9 @@
+42
 
 Should be one line down due to linefeed above
-42
 Hello World
+Foo
+Bar
 Thisis1test
 This
 is
