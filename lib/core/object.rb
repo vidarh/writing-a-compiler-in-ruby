@@ -33,8 +33,16 @@ class Object
 #  end
 
   # FIXME: Belongs in Kernel
-  def puts str
-    raw = str.to_s.__get_raw
+  def puts *str
+    %s(assign na (__get_fixnum numargs))
+    
+    if na == 2
+      %s(puts "")
+      return
+    end
+    
+    %s(assign raw (index str 0))
+    raw = raw.to_s.__get_raw
     %s(if raw
          (puts raw)
          (puts "")
