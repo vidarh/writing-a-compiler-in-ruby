@@ -458,8 +458,8 @@ class Compiler
     reg = compile_eval_arg(scope,:numargs)
     @e.sall(2,reg)
     @e.subl(reg,:esp)
-    @e.movl(reg,:edx)
-    reg = compile_eval_arg(scope,args.last.last)
+    @e.movl(reg,:edx) 
+   reg = compile_eval_arg(scope,args.last.last)
     @e.addl(reg,:edx)
     @e.movl(:esp,:ecx)
     l = @e.local
@@ -484,17 +484,25 @@ class Compiler
       if splat
         @e.addl(:ecx,:ebx)
       end
+      
+      # we're for now going to assume that %ebx is likely
+      # to get clobbered later, so in the case of a splat,
+      # we so we store it here until it's time to call the method.
+      @e.pushl(:ebx)
 
       ret = compile_eval_arg(scope, ob)
-      @e.save_to_stack(ret, 0)
+      @e.save_to_stack(ret, 1)
       args.each_with_index do |a,i|
         param = compile_eval_arg(scope, a)
-        @e.save_to_stack(param, i+1)
+        @e.save_to_stack(param, i+2)
       end
-
+      
       # This is where the actual call gets done
       # This differs depending on whether it's a normal
       # method call or a closure call.
+
+      # But first we pull the number of arguments off the stack.
+      @e.popl(:ebx)
       yield
     end
 
