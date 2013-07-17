@@ -486,8 +486,8 @@ class Compiler
       end
       
       # we're for now going to assume that %ebx is likely
-      # to get clobbered later, so in the case of a splat,
-      # we so we store it here until it's time to call the method.
+      # to get clobbered later in the case of a splat,
+      # so we store it here until it's time to call the method.
       @e.pushl(:ebx)
 
       ret = compile_eval_arg(scope, ob)
