@@ -20,16 +20,17 @@ Feature: Compiler
 		Then the output should match <outfile>
 
 	Examples:
-    | infile                  | outfile                   | notes                                       |
-    | inputs/01trivial.rb     | outputs/01trivial.txt     | Just a puts                                 |
-    | inputs/01btrivial.rb    | outputs/01btrivial.txt    | Method call with single numeric argument.   |
-    | inputs/01ctrivial.rb    | outputs/01ctrivial.txt    | A puts with no argument                     |
-    | inputs/02class.rb       | outputs/02class.txt       | Simple class                                |
-    | inputs/03ivar.rb        | outputs/03ivar.txt        | Setting and retrieving an instance variable |
-    | inputs/05cvar.rb        | outputs/05cvar.txt        | Simple use of class variable                |
-    | inputs/symbol_to_s.rb   | outputs/symbol_to_s.txt   | :hello.to_s                                 |
-    | inputs/new_with_arg.txt | outputs/new_with_arg.txt  | Foo.new(some arg)                           |
-    | inputs/string_to_sym.rb | outputs/string_to_sym.txt | "foo".to_sym.to_s                           |
-    | inputs/04accessor.rb    | outputs/04accessor.txt    | Simple use of attr_accessor                 |
-    | inputs/06print.rb       | outputs/06print.txt       | Basic print/puts support                    |
+    | infile                  | outfile                   | notes                                         |
+    | inputs/01trivial.rb     | outputs/01trivial.txt     | Just a puts                                   |
+    | inputs/01btrivial.rb    | outputs/01btrivial.txt    | Method call with single numeric argument.     |
+    | inputs/01ctrivial.rb    | outputs/01ctrivial.txt    | A puts with no argument                       |
+    | inputs/02class.rb       | outputs/02class.txt       | Simple class                                  |
+    | inputs/03ivar.rb        | outputs/03ivar.txt        | Setting and retrieving an instance variable   |
+    | inputs/05cvar.rb        | outputs/05cvar.txt        | Simple use of class variable                  |
+    | inputs/symbol_to_s.rb   | outputs/symbol_to_s.txt   | :hello.to_s                                   |
+    | inputs/new_with_arg.txt | outputs/new_with_arg.txt  | Foo.new(some arg)                             |
+    | inputs/string_to_sym.rb | outputs/string_to_sym.txt | "foo".to_sym.to_s                             |
+    | inputs/04accessor.rb    | outputs/04accessor.txt    | Simple use of attr_accessor                   |
+    | inputs/06print.rb       | outputs/06print.txt       | Basic print/puts support                      |
+    | inputs/interpolate.rb   | outputs/interpolate.txt   | Simple string interpolation                   |
 
