@@ -210,7 +210,24 @@ class Compiler
     end
   end
 
+  def create_concat(sub)
+    right = sub.pop
+    right = E[:callm,right,:to_s] if !right.is_a?(Array)
+    return right if sub.size == 0
+    E[:callm, create_concat(sub), :concat, [right]]
+  end
+
+  def rewrite_concat(exp)
+    exp.depth_first do |e|
+      if e[0] == :concat
+        e.replace(create_concat(e[1..-1]))
+      end
+      :next
+    end
+  end
+
   def preprocess exp
+    rewrite_concat(exp)
     rewrite_strconst(exp)
     rewrite_fixnumconst(exp)
     rewrite_operators(exp)
