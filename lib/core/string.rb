@@ -53,6 +53,23 @@ class String
 
   def count
   end
+
+  # FIXME: This is horrible: Need to keep track of capacity separate from length,
+  # and need to store length to be able to handle strings with \0 in the middle.
+  def concat(other)
+    %s(do
+         (assign ro (callm other __get_raw))
+         (assign osize (strlen ro))
+         (assign bsize (strlen @buffer))
+         (assign size (add bsize osize))
+         (assign size (add size 1))
+         (assign newb (malloc size))
+         (strcpy newb @buffer)
+         (strcat newb ro)
+         (assign @buffer newb)
+   )
+    self
+  end
 end
 
 # FIXME: This is an interesting bootstrapping problem
