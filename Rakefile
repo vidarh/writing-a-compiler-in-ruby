@@ -19,8 +19,8 @@ task :features do |t|
 end
 
 task :failing do |t|
-  system("cd features && cucumber -r . . --format rerun --out rerun.txt")
-  system("cd features && cucumber -r . @rerun.txt")
+  system("cd features && cucumber -r . -e inputs -e outputs . --format rerun --out rerun.txt")
+  system("cd features && cucumber -r . -e inputs -e outputs @rerun.txt")
 end
 
 desc "create rdoc in /doc"
