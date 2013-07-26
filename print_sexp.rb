@@ -70,5 +70,5 @@ class SexpPrinter
 end
 
 def print_sexp data, out = STDOUT
-  SexpPrinter.new.print_tree(data)
+  SexpPrinter.new.print_tree(data,out)
 end
