@@ -13,6 +13,10 @@ class Scanner
     def inspect
       "line #{self.lineno}, col #{self.col} in #{self.filename}"
     end
+
+    def short
+      "#{File.basename(self.filename)}, @#{self.lineno},#{self.col}"
+    end
   end
 
   class ScannerString < String
