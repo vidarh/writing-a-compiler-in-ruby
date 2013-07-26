@@ -396,6 +396,8 @@ class Emitter
   def string(l, str)
     local(l)
     if str # nil here is bizarre and probably a bug - it means get_arg() was called with nil
+      # FIXME: Should rewrite a lot more thoroughly here...
+      str = str.gsub("\"","\\\"").gsub("\n","\\n")
       emit(".string", "\"#{str}\"")
     end
   end
