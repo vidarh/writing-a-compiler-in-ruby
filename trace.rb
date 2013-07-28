@@ -27,7 +27,7 @@ class Compiler
         @e.save_to_stack(ret,0)
         @e.movl([:stderr],:eax)
         @e.save_to_stack(:eax,1)
-        @e.call("fputs") #compile_eval_arg(scope,:puts))
+        @e.call("fputs")
       end
       @trace = true
   end
