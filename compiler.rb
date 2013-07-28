@@ -1,5 +1,7 @@
 #!/bin/env ruby
 
+require 'set'
+
 require 'emitter'
 require 'parser'
 require 'scope'
@@ -7,15 +9,15 @@ require 'function'
 require 'extensions'
 require 'ast'
 require 'transform'
-require 'set'
 require 'print_sexp'
 
 require 'compile_arithmetic'
 require 'compile_comparisons'
+require 'trace'
 
 class Compiler
   attr_reader :global_functions
-  attr_accessor :trace
+  attr_writer :trace
 
   # list of all predefined keywords with a corresponding compile-method
   # call & callm are ignored, since their compile-methods require
@@ -331,9 +333,7 @@ class Compiler
       pos = arg.position.inspect
       if pos != @lastpos
         @e.lineno(arg.position)
-        if @trace
-          compile_exp(scope,[:call,:puts,arg.position.inspect])
-        end
+        trace(arg.position,arg)
       end
       @lastpos = pos
     end
@@ -524,18 +524,18 @@ class Compiler
     return compile_yield(scope, args, block) if method == :yield and ob == :self
 
     @e.comment("callm #{ob.inspect}.#{method.inspect}")
+    trace(nil,"=> callm #{ob.inspect}.#{method.inspect}\n")
 
     args ||= []
     args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
-
-    args = [block ? block : 0] + args
+    args = block ? [block] + args : args
 
     off = @vtableoffsets.get_offset(method)
     if !off
       # Argh. Ok, then. Lets do send
       off = @vtableoffsets.get_offset(:__send__)
       args = [":#{method}".to_sym] + args
-      warning("WARNING: No vtable offset for '#{method}' -- you're likely to get a method_missing")
+      warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
       #error(err_msg, scope, [:callm, ob, method, args])
     end
 
@@ -549,6 +549,7 @@ class Compiler
     end
 
     @e.comment("callm #{ob.to_s}.#{method.to_s} END")
+    trace(nil,"<= callm #{ob.to_s}.#{method.to_s}\n")
     return [:subexpr]
   end
 
@@ -692,14 +693,9 @@ class Compiler
   def compile_exp(scope, exp)
     return [:subexpr] if !exp || exp.size == 0
 
-    if @trace
-      @trace = false # A bit ugly, but prevents infinite recursion
-      @e.comment(exp[0..1].inspect)
-      compile_exp(scope,[:call,:puts,exp[0..1].inspect]) 
-      @trace = true
-    end
-
-    @e.lineno(exp.position) if exp.respond_to?(:position) && exp.position
+    pos = exp.position rescue nil
+    @e.lineno(pos) if pos
+    trace(pos,exp)
 
     # check if exp is within predefined keywords list
     if(@@keywords.include?(exp[0]))
@@ -822,7 +818,7 @@ if __FILE__ == $0
     STDERR.puts "#{e.message}"
     # FIXME: The position ought to come from the parser, as should the rest, since it could come
     # from a 'require'd file, in which case the fragment below means nothing.
-    STDERR.puts "Failed at line #{s.lineno} / col #{s.col}  before:\n"
+    STDERR.puts "Failed at line #{s.lineno} / col #{s.col} / #{s.filename}  before:\n"
     buf = ""
     while s.peek && buf.size < 100
       buf += s.get
