@@ -7,12 +7,14 @@
 
 # Class encapsulates some minor state, such as indentation level
 class SexpPrinter
-  def initialize
+  def initialize opts = {}
     @nest = 0
     @indent = 2
     @col = 0
     @maxcol = 120
     @line = 0
+
+    @prune = opts[:prune]
   end
 
   def indent
@@ -40,17 +42,24 @@ class SexpPrinter
 
   def print_tree(data, out = STDOUT)
     @out = out
-    print "%s"
     print_node(data)
     puts
   end
 
-  def print_node node
+  def print_node node, nest = 0
     if node.is_a?(Array)
       puts if @col > @maxcol * 0.7 or
         @col > 0 && [:defun,:defm,:class,:if,:let].include?(node.first)
       print "("
       old_line = @line
+
+      if @prune
+        if node.first == :class || node.first == :defun || node.first == :module
+          node = node[0..2]
+          node << "..."
+        end
+      end
+
       node.each_with_index do |n,i|
         print " " if i > 0 && @col > 0
         @nest += 1
@@ -69,6 +78,6 @@ class SexpPrinter
   end
 end
 
-def print_sexp data, out = STDOUT
-  SexpPrinter.new.print_tree(data,out)
+def print_sexp data, out = STDOUT, opts = {}
+  SexpPrinter.new(opts).print_tree(data,out)
 end
