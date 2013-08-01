@@ -4,7 +4,7 @@
 # If a Symbol is given, it should be a register (e.g. :eax -> %eax)
 # Otherwise, returns its string value.
 def to_operand_value(src,flags = nil)
-  return int_value(src) if src.is_a?(Fixnum)
+  return int_value(src) if src.is_a?(Integer)
   return "%#{src.to_s}" if src.is_a?(Symbol)
   src = src.to_s
   return src[1..-1] if flags == :stripdollar && src[0] == ?$
@@ -13,7 +13,7 @@ end
 
 # Returns assembly constant for integer-value.
 def int_value(param)
-  return "$#{param.to_i}"
+  return "$#{param.to_s}"
 end
 
 
