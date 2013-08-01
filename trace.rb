@@ -4,11 +4,12 @@ class Compiler
 
   # Generating trace output for debugging purposes
 
-  def trace(pos,data)
-    return false if !@trace
+  def trace(pos,data,force=false)
+    return false if !@trace && !force
     
     # A bit ugly, but prevents infinite recursion
     # if we accidentally calls anything "traceworthy":
+    oldtrace = @trace
     @trace = false 
 
     # Save, to minimize risk of interfering with the
@@ -34,7 +35,7 @@ class Compiler
         @e.call("fputs")
     end
     @e.popl(:eax)
-    @trace = true
+    @trace = oldtrace
   end
 
 end

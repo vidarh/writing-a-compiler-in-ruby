@@ -25,7 +25,7 @@ class Compiler
     @e.cmpl("$#{val}","(%esp)")
     l = @e.get_local
     @e.jz(l)
-    trace(nil,"ERROR: Stack fence violation. Expected 0x#{val.to_s(16)}")
+    trace(nil,"ERROR: Stack fence violation. Expected 0x#{val.to_s(16)}",:force)
     @e.local(l)
     @e.addl(4,:esp)
     r
