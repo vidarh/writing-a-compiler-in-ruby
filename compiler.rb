@@ -14,10 +14,11 @@ require 'print_sexp'
 require 'compile_arithmetic'
 require 'compile_comparisons'
 require 'trace'
+require 'stackfence'
 
 class Compiler
   attr_reader :global_functions
-  attr_writer :trace
+  attr_writer :trace, :stackfence
 
   # list of all predefined keywords with a corresponding compile-method
   # call & callm are ignored, since their compile-methods require
@@ -526,25 +527,27 @@ class Compiler
     @e.comment("callm #{ob.inspect}.#{method.inspect}")
     trace(nil,"=> callm #{ob.inspect}.#{method.inspect}\n")
 
-    args ||= []
-    args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
-    args = block ? [block] + args : args
+    stackfence do
+      args ||= []
+      args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
+      args = block ? [block] + args : args
 
-    off = @vtableoffsets.get_offset(method)
-    if !off
-      # Argh. Ok, then. Lets do send
-      off = @vtableoffsets.get_offset(:__send__)
-      args = [":#{method}".to_sym] + args
-      warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
-      #error(err_msg, scope, [:callm, ob, method, args])
-    end
-
-    compile_callm_args(scope, ob, args) do
-      @e.with_register do |reg|
-        @e.load_indirect(:esp, reg) # self
-        load_class(reg,reg)
-        @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
-        @e.call(@e.result_value)
+      off = @vtableoffsets.get_offset(method)
+      if !off
+        # Argh. Ok, then. Lets do send
+        off = @vtableoffsets.get_offset(:__send__)
+        args = [":#{method}".to_sym] + args
+        warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
+        #error(err_msg, scope, [:callm, ob, method, args])
+      end
+      
+      compile_callm_args(scope, ob, args) do
+        @e.with_register do |reg|
+          @e.load_indirect(:esp, reg) # self
+          load_class(reg,reg)
+          @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
+          @e.call(@e.result_value)
+        end
       end
     end
 
@@ -791,6 +794,7 @@ if __FILE__ == $0
   dump = ARGV.include?("--parsetree")
   norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
   trace = ARGV.include?("--trace")
+  stackfence = ARGV.include?("--stackfence")
   transform = !ARGV.include?("--notransform")
 
   # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
@@ -829,6 +833,7 @@ if __FILE__ == $0
   if prog
     c = Compiler.new
     c.trace = true if trace
+    c.stackfence = true if stackfence
 
     c.preprocess(prog) if transform
 
