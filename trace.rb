@@ -11,6 +11,9 @@ class Compiler
     # if we accidentally calls anything "traceworthy":
     @trace = false 
 
+    # Save, to minimize risk of interfering with the
+    # code.
+    @e.pushl(:eax)
     @e.with_stack(2,true) do
         if pos
           pos = pos.short
@@ -29,8 +32,9 @@ class Compiler
         @e.movl([:stderr],:eax)
         @e.save_to_stack(:eax,1)
         @e.call("fputs")
-      end
-      @trace = true
+    end
+    @e.popl(:eax)
+    @trace = true
   end
 
 end
