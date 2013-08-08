@@ -36,7 +36,7 @@ class Compiler
   def rewrite_strconst(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
-      is_call = e[0] == :call
+      is_call = e[0] == :call || e[0] == :callm
       e.each_with_index do |s,i|
         if s.is_a?(String)
           lab = @string_constants[s]
