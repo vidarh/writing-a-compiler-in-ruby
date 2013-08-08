@@ -15,6 +15,7 @@ require 'compile_arithmetic'
 require 'compile_comparisons'
 require 'trace'
 require 'stackfence'
+require 'saveregs'
 
 class Compiler
   attr_reader :global_functions
@@ -28,7 +29,7 @@ class Compiler
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
-                   :lt, :le, :gt, :ge
+                   :lt, :le, :gt, :ge,:saveregs
                   ]
 
   Keywords = @@keywords
@@ -166,7 +167,6 @@ class Compiler
     end.join
     return cleaned
   end
-
 
   # Compiles a function definition.
   # Takes the current scope, in which the function is defined,
