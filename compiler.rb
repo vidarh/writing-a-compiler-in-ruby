@@ -530,7 +530,7 @@ class Compiler
     stackfence do
       args ||= []
       args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
-      args = block ? [block] + args : args
+      args = [block ? block : 0] + args
 
       off = @vtableoffsets.get_offset(method)
       if !off
