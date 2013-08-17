@@ -510,9 +510,14 @@ class Compiler
     end
 
     if splat
+      @e.pushl(:eax)
       reg = compile_eval_arg(scope,:numargs)
+      @e.subl(args.size,reg)
       @e.sall(2,reg)
-      @e.addl(reg,:esp)
+      # We assume :ebx has been trashed at this point anyway
+      @e.movl(reg,:ebx)
+      @e.popl(:eax)
+      @e.addl(:ebx,:esp)
     end
   end
   
