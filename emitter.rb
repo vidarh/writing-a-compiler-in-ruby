@@ -314,7 +314,11 @@ class Emitter
     # bytes. This however fails in the presence of the splat operator
     # If a splat is present, we instead allocate exact space, and use
     # %ebx to adjust %esp back again afterwards
-    adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
+    if numargs
+      adj = PTR_SIZE * args
+    else
+      adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
+    end
 
     # If we're messing with the stack, any registers marked for saving will be
     # saved to avoid having to mess with the stack offsets later
