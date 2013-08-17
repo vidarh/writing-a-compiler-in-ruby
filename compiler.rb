@@ -457,6 +457,7 @@ class Compiler
     # (needs proper register allocation)
     @e.comment("*#{args.last.last.to_s}")
     reg = compile_eval_arg(scope,:numargs)
+    @e.subl(args.size-1,reg)
     @e.sall(2,reg)
     @e.subl(reg,:esp)
     @e.movl(reg,:edx) 
@@ -472,6 +473,7 @@ class Compiler
     @e.jne(l)
     @e.subl(:esp,:ecx)
     @e.sarl(2,:ecx)
+    @e.subl(1,:ecx)
     @e.comment("*#{args.last.last.to_s} end")
 
     return args[0..-2]
