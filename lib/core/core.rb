@@ -80,7 +80,7 @@ false = 0    # FIXME: Should be an object of FalseClass
    (index regs 7))
 
   (assign sp (index regs 6))
-  (printf "(ebp): %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
+  (printf "(ebp): %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
    (index sp 0)
    (index sp 1)
    (index sp 2)
@@ -88,7 +88,10 @@ false = 0    # FIXME: Should be an object of FalseClass
    (index sp 4)
    (index sp 5)
    (index sp 6)
-   (index sp 7))
+   (index sp 7)
+   (index sp 8)
+   (index sp 9)
+)
 
   (assign sp (index regs 7))
   (printf "(esp): %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
