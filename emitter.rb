@@ -267,7 +267,7 @@ class Emitter
   end
 
   def load_instance_var(ob, aparam)
-    STDERR.puts "load_instance_var: #{aparam}"
+    #STDERR.puts "load_instance_var: #{aparam}"
     movl("#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})", result_value)
     return result_value
   end
