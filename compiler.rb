@@ -551,7 +551,7 @@ class Compiler
       
       compile_callm_args(scope, ob, args) do
         @e.with_register do |reg|
-          @e.load_indirect(:esp, reg) # self
+          @e.load_indirect(@e.sp, reg) # self
           load_class(reg,reg)
           @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
           @e.call(@e.result_value)
