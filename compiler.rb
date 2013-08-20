@@ -460,18 +460,21 @@ class Compiler
     @e.subl(args.size-1,reg)
     @e.sall(2,reg)
     @e.subl(reg,@e.sp)
-    @e.movl(reg,:edx) 
+
+    argend = :edx
+    @e.movl(reg,argend) 
+
     reg = compile_eval_arg(scope,args.last.last)
-    @e.addl(reg,:edx)
+    @e.addl(reg,argend)
 
     dest = :ecx
     @e.movl(@e.sp,dest)
     l = @e.local
-    @e.load_indirect(@e.result,@e.scratch)
+    @e.load_indirect(reg,@e.scratch)
     @e.save_indirect(@e.scratch,dest)
     @e.addl(4,@e.result)
     @e.addl(4,dest)
-    @e.cmpl(reg,:edx)
+    @e.cmpl(reg,argend)
     @e.jne(l)
     @e.subl(@e.sp,dest)
     @e.sarl(2,dest)
