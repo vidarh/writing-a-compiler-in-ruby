@@ -1,3 +1,4 @@
+require 'register'
 
 # Returns the operand-value for a given element.
 # If an integer (Fixnum) is given, returns a assembly constant (e.g. 42 -> $42)
@@ -5,7 +6,7 @@
 # Otherwise, returns its string value.
 def to_operand_value(src,flags = nil)
   return int_value(src) if src.is_a?(Integer)
-  return "%#{src.to_s}" if src.is_a?(Symbol)
+  return "%#{src.to_s}" if src.is_a?(Symbol) || src.is_a?(Register)
   src = src.to_s
   return src[1..-1] if flags == :stripdollar && src[0] == ?$
   return src.to_s
@@ -161,7 +162,19 @@ class Emitter
   end
 
   def result_value
-    return :eax
+    return :eax # ster.new(:eax)
+  end
+
+  def scratch
+    return :ebx #Register.new(:ebx)
+  end
+
+  def result
+    result_value
+  end
+
+  def sp
+    return :esp # Register.new(:esp)
   end
 
 
@@ -231,15 +244,15 @@ class Emitter
 
   # Loads an argument into %eax register for further use.
   def load_arg(aparam)
-    movl(local_arg(aparam), :eax)
-    return :eax
+    movl(local_arg(aparam), result_value)
+    return result_value
   end
 
 
   # Loads an arguments adress into %eax register for further use.
   def load_arg_address(aparam)
-    leal(local_arg(aparam), :eax)
-    return :eax
+    leal(local_arg(aparam), result_value)
+    return result_value
   end
 
 
@@ -249,8 +262,8 @@ class Emitter
   end
 
   def load_local_var(aparam)
-    movl(local_var(aparam), :eax)
-    return :eax
+    movl(local_var(aparam), result_value)
+    return result_value
   end
 
   def load_instance_var(ob, aparam)
@@ -291,7 +304,7 @@ class Emitter
 
   def load_address(label)
     save_result(addr_value(label))
-    return :eax
+    return result_value
   end
 
   def save_to_indirect(src, dest)
@@ -301,6 +314,11 @@ class Emitter
   def load_indirect(arg, reg = :eax)
     movl("(#{to_operand_value(arg,:stripdollar)})", reg)
     return reg
+  end
+
+  def save_indirect(reg,arg)
+    movl(reg, "(#{to_operand_value(arg,:stripdollar)})")
+    nil
   end
 
 
@@ -388,7 +406,7 @@ class Emitter
 
   # Generates a assembly subroutine call.
   def call(loc)
-    if loc.is_a?(Symbol)
+    if loc.is_a?(Symbol) || loc.is_a?(Register)
       emit(:call, "*"+to_operand_value(loc))
     else
       emit(:call, loc)
@@ -437,6 +455,11 @@ class Emitter
     jmp(l)
     local(br)
   end
+
+  def load_ptr areg,off
+    movl("#{off*Emitter::PTR_SIZE}(%#{areg.to_s})", result_value)
+  end
+
 
   def func(name, save_numargs = false, position = nil)
     @out.emit(".stabs  \"#{name}:F(0,0)\",36,0,0,#{name}")

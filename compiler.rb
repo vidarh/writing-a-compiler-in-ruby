@@ -459,21 +459,23 @@ class Compiler
     reg = compile_eval_arg(scope,:numargs)
     @e.subl(args.size-1,reg)
     @e.sall(2,reg)
-    @e.subl(reg,:esp)
+    @e.subl(reg,@e.sp)
     @e.movl(reg,:edx) 
-   reg = compile_eval_arg(scope,args.last.last)
+    reg = compile_eval_arg(scope,args.last.last)
     @e.addl(reg,:edx)
-    @e.movl(:esp,:ecx)
+
+    dest = :ecx
+    @e.movl(@e.sp,dest)
     l = @e.local
-    @e.movl("(%eax)",:ebx)
-    @e.movl(:ebx,"(%ecx)")
-    @e.addl(4,:eax)
-    @e.addl(4,:ecx)
+    @e.load_indirect(@e.result,@e.scratch)
+    @e.save_indirect(@e.scratch,dest)
+    @e.addl(4,@e.result)
+    @e.addl(4,dest)
     @e.cmpl(reg,:edx)
     @e.jne(l)
-    @e.subl(:esp,:ecx)
-    @e.sarl(2,:ecx)
-    @e.subl(1,:ecx)
+    @e.subl(@e.sp,dest)
+    @e.sarl(2,dest)
+    @e.subl(1,dest)
     @e.comment("*#{args.last.last.to_s} end")
 
     return args[0..-2]
@@ -485,13 +487,13 @@ class Compiler
 
     @e.with_stack(args.length+1, true) do
       if splat
-        @e.addl(:ecx,:ebx)
+        @e.addl(:ecx,@e.scratch)
       end
       
       # we're for now going to assume that %ebx is likely
       # to get clobbered later in the case of a splat,
       # so we store it here until it's time to call the method.
-      @e.pushl(:ebx)
+      @e.pushl(@e.scratch)
 
       ret = compile_eval_arg(scope, ob)
       @e.save_to_stack(ret, 1)
@@ -505,19 +507,18 @@ class Compiler
       # method call or a closure call.
 
       # But first we pull the number of arguments off the stack.
-      @e.popl(:ebx)
+      @e.popl(@e.scratch)
       yield
     end
 
     if splat
-      @e.pushl(:eax)
+      @e.pushl(@e.result)
       reg = compile_eval_arg(scope,:numargs)
       @e.subl(args.size,reg)
       @e.sall(2,reg)
-      # We assume :ebx has been trashed at this point anyway
-      @e.movl(reg,:ebx)
-      @e.popl(:eax)
-      @e.addl(:ebx,:esp)
+      @e.movl(reg,@e.scratch)
+      @e.popl(@e.result)
+      @e.addl(@e.scratch,@e.sp)
     end
   end
   
@@ -768,9 +769,9 @@ class Compiler
       @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
       # FIXME: Call get_symbol for these during initalization
       # and then load them from a table instead.
-      compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
+      res = compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
       @e.popl(:edx) # The return address
-      @e.pushl(:eax)
+      @e.pushl(res)
       @e.pushl(:edx)
       @e.jmp("__method_missing")
     end
