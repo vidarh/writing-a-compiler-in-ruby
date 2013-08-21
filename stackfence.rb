@@ -22,12 +22,12 @@ class Compiler
     val = (rand * (2**32)).floor
     @e.pushl(val)
     r = yield
-    @e.cmpl(val,"(%esp)")
+    @e.cmpl(val,"(#{@e.sp.to_s})")
     l = @e.get_local
     @e.jz(l)
     trace(nil,"ERROR: Stack fence violation. Expected 0x#{val.to_s(16)}",:force)
     @e.local(l)
-    @e.addl(4,:esp)
+    @e.addl(4,@e.sp)
     r
   end
 
