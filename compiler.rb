@@ -450,8 +450,11 @@ class Compiler
     #   with %esp for now until I figure out how to do this
     #   more cleanly.
     splat = args.last.is_a?(Array) && args.last.first == :splat
+    numargs = nil
 
-    return nil if !splat
+    if !splat
+      return yield(args)
+    end
 
     # FIXME: This is just a disaster waiting to happen
     # (needs proper register allocation)
@@ -460,68 +463,62 @@ class Compiler
     @e.subl(args.size-1,reg)
     @e.sall(2,reg)
     @e.subl(reg,@e.sp)
+    
+    @e.with_register do |argend|
+      @e.movl(reg,argend) 
+      
+      reg = compile_eval_arg(scope,args.last.last)
+      @e.addl(reg,argend)
+      
+      @e.with_register do |dest|
+        @e.movl(@e.sp,dest)
+        l = @e.local
+        @e.load_indirect(reg,@e.scratch)
+        @e.save_indirect(@e.scratch,dest)
+        @e.addl(4,@e.result)
+        @e.addl(4,dest)
+        @e.cmpl(reg,argend)
+        @e.jne(l)
+        @e.subl(@e.sp,dest)
+        @e.sarl(2,dest)
+        @e.subl(1,dest)
+        @e.addl(dest,@e.scratch)
+        @e.comment("*#{args.last.last.to_s} end")
+        
+        args.pop
+      end
+    end
 
-    argend = :edx
-    @e.movl(reg,argend) 
+    yield(args)
 
-    reg = compile_eval_arg(scope,args.last.last)
-    @e.addl(reg,argend)
-
-    dest = :ecx
-    @e.movl(@e.sp,dest)
-    l = @e.local
-    @e.load_indirect(reg,@e.scratch)
-    @e.save_indirect(@e.scratch,dest)
-    @e.addl(4,@e.result)
-    @e.addl(4,dest)
-    @e.cmpl(reg,argend)
-    @e.jne(l)
-    @e.subl(@e.sp,dest)
-    @e.sarl(2,dest)
-    @e.subl(1,dest)
-    @e.comment("*#{args.last.last.to_s} end")
-
-    return args[0..-2]
+    @e.pushl(@e.result)
+    reg = compile_eval_arg(scope,:numargs)
+    @e.subl(args.size,reg)
+    @e.sall(2,reg)
+    @e.movl(reg,@e.scratch)
+    @e.popl(@e.result)
+    @e.addl(@e.scratch,@e.sp)
   end
 
   def compile_callm_args(scope, ob, args)
-    splat = handle_splat(scope,args)
-    args = splat if splat
-
-    @e.with_stack(args.length+1, true) do
-      if splat
-        @e.addl(:ecx,@e.scratch)
+    handle_splat(scope,args) do |args|
+      @e.with_stack(args.length+1, true) do
+        # we're for now going to assume that %ebx is likely
+        # to get clobbered later in the case of a splat,
+        # so we store it here until it's time to call the method.
+        @e.pushl(@e.scratch)
+        
+        ret = compile_eval_arg(scope, ob)
+        @e.save_to_stack(ret, 1)
+        args.each_with_index do |a,i|
+          param = compile_eval_arg(scope, a)
+          @e.save_to_stack(param, i+2)
+        end
+        
+        # Pull the number of arguments off the stack
+        @e.popl(@e.scratch)
+        yield  # And give control back to the code that actually does the call.
       end
-      
-      # we're for now going to assume that %ebx is likely
-      # to get clobbered later in the case of a splat,
-      # so we store it here until it's time to call the method.
-      @e.pushl(@e.scratch)
-
-      ret = compile_eval_arg(scope, ob)
-      @e.save_to_stack(ret, 1)
-      args.each_with_index do |a,i|
-        param = compile_eval_arg(scope, a)
-        @e.save_to_stack(param, i+2)
-      end
-      
-      # This is where the actual call gets done
-      # This differs depending on whether it's a normal
-      # method call or a closure call.
-
-      # But first we pull the number of arguments off the stack.
-      @e.popl(@e.scratch)
-      yield
-    end
-
-    if splat
-      @e.pushl(@e.result)
-      reg = compile_eval_arg(scope,:numargs)
-      @e.subl(args.size,reg)
-      @e.sall(2,reg)
-      @e.movl(reg,@e.scratch)
-      @e.popl(@e.result)
-      @e.addl(@e.scratch,@e.sp)
     end
   end
   
@@ -773,9 +770,11 @@ class Compiler
       # FIXME: Call get_symbol for these during initalization
       # and then load them from a table instead.
       res = compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
-      @e.popl(:edx) # The return address
-      @e.pushl(res)
-      @e.pushl(:edx)
+      @e.with_register do |reg|
+        @e.popl(reg)
+        @e.pushl(res)
+        @e.pushl(reg)
+      end
       @e.jmp("__method_missing")
     end
     @e.label("__base_vtable")
