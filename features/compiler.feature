@@ -36,4 +36,5 @@ Feature: Compiler
     | inputs/04accessor.rb    | outputs/04accessor.txt    | Simple use of attr_accessor                        |
     | inputs/06print.rb       | outputs/06print.txt       | Basic print/puts support                           |
     | inputs/interpolate.rb   | outputs/interpolate.txt   | Simple string interpolation                        |
+    | inputs/div.rb           | outputs/div.txt           | Repeated divs to check register alloc.             |
 

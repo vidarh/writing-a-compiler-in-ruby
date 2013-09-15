@@ -3,8 +3,8 @@
 class Compiler
 
   def compile_2(scope, left, right)
+    src = compile_eval_arg(scope,left)
     @e.with_register do |reg|
-      src = compile_eval_arg(scope,left)
       @e.movl(src,reg)
       @e.save_result(compile_eval_arg(scope,right))
       yield reg
@@ -14,7 +14,7 @@ class Compiler
 
   def compile_add(scope, left, right)
     compile_2(scope,left,right) do |reg|
-      @e.addl(reg, :eax)
+      @e.addl(reg, @e.result)
     end
   end
 
@@ -33,35 +33,19 @@ class Compiler
 
 
   def compile_div(scope, left, right)
-    # FIXME: We really want to be able to request
-    # %edx specifically here, as we need it for idivl.
-    # Instead we work around that below if we for some
-    # reason don't get %edx.
-    @e.with_register do |reg|
-      src = compile_eval_arg(scope,left)
-      @e.movl(:eax,reg)
-      @e.save_result(compile_eval_arg(scope,right))
-      @e.with_register do |r2|
-        if (reg == :edx)
-          @e.movl(:eax,r2)
-          @e.movl(:edx,:eax)
-          divby = r2
-        else
-          divby = reg
-          if (r2 != :edx)
-            save = true
-            @e.pushl(:edx) 
-          end
-          @e.movl(reg, :edx)
-          @e.movl(:eax,reg)
-          @e.movl(:edx,:eax)
-        end
-        @e.sarl(31, :edx)
-        @e.idivl(divby)
-
-        # NOTE: This clobber the remainder made available by idivl,
-        # which we'll likely want to be able to save in the future
-        @e.popl(:edx) if save
+    @e.pushl(compile_eval_arg(scope,left))
+    
+    res = compile_eval_arg(scope,right)
+    @e.with_register(:edx) do |dividend|
+      @e.with_register do |divisor|
+        @e.movl(res,divisor)
+        
+        # We need the dividend in %eax *and* sign extended into %edx, so 
+        # it doesn't matter which one of them we pop it into:
+        @e.popl(@e.result) 
+        @e.movl(@e.result, dividend)
+        @e.sarl(31, dividend)
+        @e.idivl(divisor)
       end
     end
     [:subexpr]    

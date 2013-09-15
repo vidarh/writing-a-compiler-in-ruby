@@ -355,12 +355,18 @@ class Emitter
     addl(adj, :esp)
   end
 
-  def with_register
+  def with_register(required_reg = nil)
     # FIXME: This is a hack - for now we just hand out :edx or :ecx
     # and we don't handle spills.
 
     @allocated_registers ||= Set.new
-    free = @free_registers.shift
+
+    if required_reg
+      free = @free_registers.delete(required_reg)
+    else
+      free = @free_registers.shift
+    end
+
     raise "Register allocation FAILED" if !free
     @allocated_registers << free
     yield(free)
