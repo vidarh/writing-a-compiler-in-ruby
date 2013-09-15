@@ -5,9 +5,9 @@ class Compiler
   # FIXME: Split these helpers out in separate file
   def compile_comparison(scope, op, left, right)
     compile_2(scope,left,right) do |reg|
-      @e.cmpl(:eax,reg)
+      @e.cmpl(@e.result,reg)
       @e.emit("set#{op.to_s}".to_sym, :al)
-      @e.movzbl(:al,:eax)
+      @e.movzbl(:al,@e.result)
     end
   end
 
