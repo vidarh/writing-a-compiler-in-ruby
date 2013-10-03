@@ -19,8 +19,8 @@ module AST
   # call-seq:
   #   Expr[1,2,3]
   #
-  # FIXME: When called with tokens from the scanner, it is the
-  # intention that these tokens will *also* hav a position
+  # When called with tokens from the scanner, it is the
+  # intention that these tokens will *also* have a position
   # and carry position information, and that Expr's constructor
   # will default to take the position information of the first
   # node it is passed that respond_to?(:position).
@@ -55,6 +55,6 @@ module AST
     end
   end
 
-  # For convience
+  # For convenience
   E = Expr
 end
