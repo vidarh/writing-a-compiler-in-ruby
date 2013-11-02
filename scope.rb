@@ -14,6 +14,10 @@ class GlobalScope
     @class_scope = ClassScope.new(self,"Object",@vtableoffsets)
   end
 
+  def rest?
+    false
+  end
+
   # Returns an argument within the global scope, if defined here.
   # Otherwise returns it as an address (<tt>:addr</tt>)
   def get_arg(a)
