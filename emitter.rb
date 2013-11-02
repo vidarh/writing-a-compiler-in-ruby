@@ -1,4 +1,5 @@
 require 'register'
+require 'regalloc'
 
 # Returns the operand-value for a given element.
 # If an integer (Fixnum) is given, returns a assembly constant (e.g. 42 -> $42)
@@ -84,7 +85,7 @@ class Emitter
     @out = out
     @basic_main = false
     @section = 0 # Are we in a stabs section?
-    @free_registers = [:edx,:ecx]
+    @allocator = RegisterAllocator.new
   end
 
 
@@ -191,8 +192,16 @@ class Emitter
     end
   end
 
+  def save_to_reg(param)
+    return param if param.is_a?(Symbol)
+    movl(param, result_value)
+    result_value
+  end
+
   def save(atype, source, dest)
     case atype
+    when :reg
+      emit(:movl, source,dest) if source != dest
     when :indirect
       emit(:movl,source, "(%#{dest})")
     when :global
@@ -213,7 +222,7 @@ class Emitter
     return true
   end
 
-  def load(atype, aparam)
+  def load(atype, aparam,reg = nil)
     case atype
     when :int
       return aparam
@@ -226,15 +235,20 @@ class Emitter
     when :indirect
       return load_indirect(aparam)
     when :arg
-      return load_arg(aparam)
+      return load_arg(aparam,reg || result_value)
     when :lvar
-      return load_local_var(aparam)
+      return load_local_var(aparam,reg || result_value)
 #    when :ivar
 #      return load_instance_var(aparam)
     when :cvar
       return load_class_var(aparam)
     when :global
-      return load_global_var(aparam)
+      return load_global_var(aparam, reg || result_value)
+    when :reg
+      return aparam if !reg
+      comment("LOAD #{aparam}, #{reg}")
+      movl(aparam,reg)
+      return reg
     when :subexpr
       return result_value
     else
@@ -243,9 +257,9 @@ class Emitter
   end
 
   # Loads an argument into %eax register for further use.
-  def load_arg(aparam)
-    movl(local_arg(aparam), result_value)
-    return result_value
+  def load_arg(aparam,reg = result_value)
+    movl(local_arg(aparam), reg)
+    return reg
   end
 
 
@@ -256,14 +270,14 @@ class Emitter
   end
 
 
-  def load_global_var(aparam)
-    movl(aparam.to_s, result_value)
-    return result_value
+  def load_global_var(aparam, reg = result_value)
+    movl(aparam.to_s, reg)
+    return reg
   end
 
-  def load_local_var(aparam)
-    movl(local_var(aparam), result_value)
-    return result_value
+  def load_local_var(aparam, reg = result_value)
+    movl(local_var(aparam), reg)
+    return reg
   end
 
   def load_instance_var(ob, aparam)
@@ -355,25 +369,49 @@ class Emitter
     addl(adj, :esp)
   end
 
-  def with_register(required_reg = nil)
-    # FIXME: This is a hack - for now we just hand out :edx or :ecx
-    # and we don't handle spills.
-
-    @allocated_registers ||= Set.new
-
-    if required_reg
-      free = @free_registers.delete(required_reg)
-    else
-      free = @free_registers.shift
-    end
-
-    raise "Register allocation FAILED" if !free
-    @allocated_registers << free
-    yield(free)
-    @allocated_registers.delete(free)
-    @free_registers << free
+  def cached_reg(var)
+    @allocator.cached_reg(var)
   end
 
+  def cache_reg!(var, atype, aparam, save = false)
+    reg = @allocator.cached_reg(var)
+
+    if (save)
+      mark_dirty(var, atype, aparam) if reg
+      return reg
+    end
+
+    comment("RA: Already cached '#{reg.to_s}' for #{var}") if reg
+    return reg if reg
+    reg = @allocator.cache_reg!(var)
+    return nil if !reg
+    comment("RA: Allocated reg '#{reg.to_s}' for #{var}") if reg
+    comment([atype,aparam,reg].inspect)
+    load(atype,aparam,reg)
+    return reg
+  end
+
+  def evict_regs_for(vars)
+    evicted = @allocator.evict(vars)
+    comment("RA: Evicted #{evicted.join(",")}") if !evicted.empty?
+  end
+
+  def with_register(required_reg = nil)
+    @allocator.with_register(required_reg) do |reg|
+      yield reg
+    end
+  end
+
+  def mark_dirty(var, type, src)
+    reg = cached_reg(var)
+    return if !reg
+    comment("Marked #{reg} dirty (#{type.to_s},#{src.to_s})")
+    @allocator.mark_dirty(reg, lambda do
+                            comment("Saving #{reg} to #{type.to_s},#{src.to_s}")
+                            save(type, reg, src)
+                          end)
+  end
+  
   def save_register(reg)
     @save_register ||= []
     @save_register << [reg, false]
@@ -406,12 +444,14 @@ class Emitter
   #   e.emit(:movl, :esp, :ebp)
   #   e.emit(:popl, :ecx)
   def method_missing(sym, *args)
+    raise if sym == :reg
     emit(sym, *args)
   end
 
 
   # Generates a assembly subroutine call.
   def call(loc)
+    @allocator.evict_caller_saved
     if loc.is_a?(Symbol) || loc.is_a?(Register)
       emit(:call, "*"+to_operand_value(loc))
     else
@@ -466,8 +506,7 @@ class Emitter
     movl("#{off*Emitter::PTR_SIZE}(%#{areg.to_s})", result_value)
   end
 
-
-  def func(name, save_numargs = false, position = nil)
+  def func(name, save_numargs = false, position = nil,varfreq= nil)
     @out.emit(".stabs  \"#{name}:F(0,0)\",36,0,0,#{name}")
     export(name, :function) if name.to_s[0] != ?.
     label(name)
@@ -479,12 +518,17 @@ class Emitter
     lineno(position) if position
     @out.label(".LFBB#{@curfunc}")
 
+    @allocator.evict_all
+    @allocator.order(varfreq)
     pushl(:ebp)
     movl(:esp, :ebp)
     pushl(:ebx) if save_numargs
     yield
     leave
     ret
+
+    @allocator.evict_all
+
     emit(".size", name.to_s, ".-#{name}")
     @scopenum ||= 0
     @scopenum += 1
@@ -494,6 +538,7 @@ class Emitter
   end
 
   def include(filename)
+    return yield if !filename
     @section += 1
     @out.emit(".stabs  \"#{filename}\",130,0,0,0")
     ret = yield

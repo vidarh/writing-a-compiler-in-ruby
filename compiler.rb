@@ -86,7 +86,7 @@ class Compiler
   # If a Fixnum is given, it's an int ->   [:int, a]
   # If it's a Symbol, its a variable identifier and needs to be looked up within the given scope.
   # Otherwise, we assume it's a string constant and treat it like one.
-  def get_arg(scope, a)
+  def get_arg(scope, a, save = false)
     return compile_exp(scope, a) if a.is_a?(Array)
     return [:int, a] if (a.is_a?(Fixnum))
     return [:int, a.to_i] if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
@@ -94,7 +94,23 @@ class Compiler
     if (a.is_a?(Symbol))
       name = a.to_s
       return intern(scope,name.rest) if name[0] == ?:
-      return scope.get_arg(a)
+
+      arg = scope.get_arg(a)
+
+      # If this is a local variable or argument, we either
+      # obtain the argument it is cached in, or we cache it
+      # if possible. If we are calling #get_arg to get
+      # a target to *save* a value to (assignment), we need
+      # to mark it as dirty to ensure we save it back to memory
+      # (spill it) if we need to evict the value from the
+      # register to use it for something else.
+
+      if arg.first == :lvar || arg.first == :arg
+        reg = @e.cache_reg!(name, arg.first, arg.last, save)
+        return [:reg,reg] if reg
+      end
+
+      return arg
     end
 
     warning("nil received by get_arg") if !a
@@ -132,13 +148,18 @@ class Compiler
       # within the functions body that aren't defined there (global variables and those,
       # that are defined in the outer scope of the function's)
 
-      # FIXME: Would it be better to output these grouped by source file?
-      if func.body.is_a?(AST::Expr)
-        @e.include(func.body.position.filename) do
-          @e.func(name, func.rest?, func.body.position) { compile_eval_arg(FuncScope.new(func), func.body) }
+      fscope = FuncScope.new(func)
+
+      pos = func.body.respond_to?(:position) ? func.body.position : nil
+      fname = pos ? pos.filename : nil
+
+      @e.include(fname) do
+        # We extra the usage frequency information and pass it to the emitter
+        # to inform the register allocation.
+        varfreq = func.body.respond_to?(:extra) ? func.body.extra[:varfreq] : []
+        @e.func(name, func.rest?, pos, varfreq) do
+          compile_eval_arg(fscope, func.body)
         end
-      else
-        @e.func(name, func.rest?, nil) { compile_eval_arg(FuncScope.new(func), func.body) }
       end
     end
   end
@@ -225,10 +246,10 @@ class Compiler
   # the if and else arm.
   # If no else arm is given, it defaults to nil.
   def compile_if(scope, cond, if_arm, else_arm = nil)
-    compile_eval_arg(scope, cond)
+    res = compile_eval_arg(scope, cond)
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
-    @e.jmp_on_false(l_else_arm)
+    @e.jmp_on_false(l_else_arm, res)
     compile_eval_arg(scope, if_arm)
     @e.jmp(l_end_if_arm) if else_arm
     @e.local(l_else_arm)
@@ -365,7 +386,7 @@ class Compiler
     atype = nil
     aparam = nil
     @e.save_register(source) do
-      args = get_arg(scope,left)
+      args = get_arg(scope,left,:save)
       atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
       aparam = args[1]
       atype = :addr if atype == :possible_callm
@@ -565,10 +586,17 @@ class Compiler
   # Takes the current scope, a list of variablenames as well as a list of arguments.
   def compile_let(scope, varlist, *args)
     vars = {}
+    
     varlist.each_with_index {|v, i| vars[v]=i}
     ls = LocalVarScope.new(vars, scope)
     if vars.size > 0
+      # We brutally handle aliasing (for now) by
+      # simply evicting / spilling all allocated
+      # registers with overlapping names. An alternative
+      # is to give each variable a unique id
+      @e.evict_regs_for(varlist)
       @e.with_local(vars.size) { compile_do(ls, *args) }
+      @e.evict_regs_for(varlist)
     else
       compile_do(ls, *args)
     end
