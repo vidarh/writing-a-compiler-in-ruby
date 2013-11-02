@@ -106,40 +106,60 @@ class Compiler
     scopes.reverse.collect {|s| s.member?(n) ? s : nil}.compact
   end
 
+  def is_special_name?(v)
+    Compiler::Keywords.member?(v) || v == :nil || v == :self ||
+      v.to_s[0] == ?@ ||
+      v == :true || v == :false  || v.to_s[0] < ?a
+  end
+
   def push_var(scopes, env, v)
     sc = in_scopes(scopes,v)
-    if sc.size == 0 && !env.member?(v) && v.to_s[0] != ?@ &&
-        !Compiler::Keywords.member?(v) && v != :nil && v != :self &&
-        v!= :true && v != :false  && v.to_s[0] >= ?a
+    if sc.size == 0 && !env.member?(v) && !is_special_name?(v)
       scopes[-1] << v 
     end
   end
 
   # FIXME: Rewrite using "depth first"?
-  def find_vars(e, scopes, env, in_lambda = false, in_assign = false)
+  def find_vars(e, scopes, env, freq, in_lambda = false, in_assign = false)
     return [],env, false if !e
     e = [e] if !e.is_a?(Array)
     e.each do |n|
       if n.is_a?(Array)
         if n[0] == :assign
-          vars1, env1 = find_vars(n[1],     scopes + [Set.new],env, in_lambda, true)
-          vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, in_lambda)
+          vars1, env1 = find_vars(n[1],     scopes + [Set.new],env, freq, in_lambda, true)
+          vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, freq, in_lambda)
           env = env1 + env2
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) }
         elsif n[0] == :lambda
-          vars, env = find_vars(n[2], scopes + [Set.new],env, true)
+          vars, env = find_vars(n[2], scopes + [Set.new],env, freq, true)
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
         else
-          if    n[0] == :callm then sub = n[3..-1]
-          elsif n[0] == :call  then sub = n[2..-1]
-          else sub = n[1..-1]
+          if    n[0] == :callm 
+            vars, env = find_vars(n[1], scopes, env, freq, in_lambda)
+            if n[3]
+              nodes = n[3]
+              nodes = [nodes] if !nodes.is_a?(Array)
+              nodes.each do |n2|
+                vars2, env2 = find_vars(n2, scopes, env, freq, in_lambda)
+                vars += vars2
+                env  += env2
+              end
+            end
+          else
+            if n[0] == :call
+              sub = n[2..-1]
+            else 
+              sub = n[1..-1]
+            end
+            vars, env = find_vars(sub, scopes, env, freq, in_lambda)
           end
-          vars, env = find_vars(sub, scopes, env, in_lambda)
-          vars.each {|v| push_var(scopes,env,v) }
+
+          vars.each {|v| push_var(scopes,env,v); }
         end
       elsif n.is_a?(Symbol)
         sc = in_scopes(scopes,n)
+        freq[n] += 1 if !is_special_name?(n)
         if sc.size == 0
           push_var(scopes,env,n) if in_assign
         elsif in_lambda
@@ -184,8 +204,15 @@ class Compiler
 
   def rewrite_let_env(exp)
     exp.depth_first(:defm) do |e|
-      vars,env= find_vars(e[3],[Set[*e[2]]],Set.new)
-      vars -= Set[*e[2]].to_a
+      args   = Set[*e[2]]
+      scopes = [args.dup] # We don't want "args" above to get updated 
+
+      # We use this to assign registers
+      freq   = Hash.new(0)
+
+      vars,env= find_vars(e[3],scopes,Set.new, freq)
+
+      vars -= args.to_a
       if env.size > 0
         body = e[3]
 
@@ -206,6 +233,11 @@ class Compiler
       vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
 
       e[3] = E[e.position,:let, vars,*e[3]]
+
+      # We store the variables by descending frequency for future use in register
+      # allocation.
+      e[3].extra[:varfreq] = freq.sort_by {|k,v| -v }.collect{|a| a.first }
+
       :skip
     end
   end
