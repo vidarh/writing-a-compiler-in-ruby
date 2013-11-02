@@ -53,6 +53,10 @@ module AST
       update_position
       return self
     end
+
+    def extra
+      @extra ||= {}
+    end
   end
 
   # For convenience
