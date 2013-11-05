@@ -4,8 +4,8 @@ class Compiler
 
   def compile_2(scope, left, right)
     src = compile_eval_arg(scope,left)
-    @e.with_register do |reg|
-      @e.movl(src,reg)
+    @e.with_register_for(src) do |reg|
+#      @e.emit(:movl, src, reg)
       @e.save_result(compile_eval_arg(scope,right))
       yield reg
     end

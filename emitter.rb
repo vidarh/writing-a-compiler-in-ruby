@@ -402,6 +402,18 @@ class Emitter
     end
   end
 
+  def with_register_for(maybe_reg)
+    c = @allocator.lock_reg(maybe_reg)
+    if c
+      comment("Locked register #{c.reg}")
+      r = yield c.reg
+      comment("Unlocked register #{c.reg}")
+      c.locked = false
+      return r
+    end
+    with_register {|r| emit(:movl, maybe_reg, r); yield(r) }
+  end
+
   def mark_dirty(var, type, src)
     reg = cached_reg(var)
     return if !reg
