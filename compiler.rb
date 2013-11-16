@@ -159,6 +159,10 @@ class Compiler
         varfreq = func.body.respond_to?(:extra) ? func.body.extra[:varfreq] : []
         @e.func(name, func.rest?, pos, varfreq) do
           compile_eval_arg(fscope, func.body)
+
+          @e.comment("Reloading self if evicted:")
+          # Ensure %esi is intact on exit, if needed:
+          reload_self(fscope)
         end
       end
     end
@@ -434,17 +438,25 @@ class Compiler
       end
       @e.call(compile_eval_arg(scope, func))
     end
+    @e.evict_regs_for(:self)
+    reload_self(scope)
     return [:subexpr]
   end
 
-  # If adding type-tagging, this is the place to do it
-  # self_reg and dest_reg *can* be the same.
-  # In the case of type tagging, the self_reg value
+  # If adding type-tagging, this is the place to do it.
+  # In the case of type tagging, the value in %esi
   # would be matched against the suitable type tags
   # to determine the class, instead of loading the class
   # from the first long of the object.
-  def load_class self_reg, dest_reg
-    @e.load_indirect(self_reg, dest_reg)  # self.class
+  def load_class(scope)
+    @e.load_indirect(:esi, :eax)
+  end
+
+  # if we called a method on something other than self,
+  # or a function, we have or may have clobbered %esi,
+  # so lets reload it.
+  def reload_self(scope)
+    t,a = get_arg(scope,:self)
   end
 
   # compile_yield
@@ -513,11 +525,17 @@ class Compiler
       end
       
       compile_callm_args(scope, ob, args) do
-        @e.with_register do |reg|
-          @e.load_indirect(@e.sp, reg) # self
-          load_class(reg,reg)
-          @e.movl("#{off*Emitter::PTR_SIZE}(%#{reg.to_s})", @e.result_value)
-          @e.call(@e.result_value)
+        if ob != :self
+          @e.load_indirect(@e.sp, :esi) 
+        else
+          @e.comment("Reload self?")
+          reload_self(scope)
+        end
+        load_class(scope) # Load self.class into %eax
+        @e.callm(off)
+        if ob != :self
+          @e.comment("Evicting self") 
+          @e.evict_regs_for(:self) 
         end
       end
     end
@@ -616,6 +634,8 @@ class Compiler
     @e.comment("=== class #{name} ===")
 
     cscope = ClassScope.new(scope, name, @vtableoffsets)
+
+    @e.evict_regs_for(:self)
 
     # FIXME: Need to be able to handle re-opening of classes
     exps.each do |l2|

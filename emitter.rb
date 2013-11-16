@@ -384,8 +384,9 @@ class Emitter
     comment("RA: Already cached '#{reg.to_s}' for #{var}") if reg
     return reg if reg
     reg = @allocator.cache_reg!(var)
+    comment("RA: No available register for #{var}") if !reg
     return nil if !reg
-    comment("RA: Allocated reg '#{reg.to_s}' for #{var}") if reg
+    comment("RA: Allocated reg '#{reg.to_s}' for #{var}")
     comment([atype,aparam,reg].inspect)
     load(atype,aparam,reg)
     return reg
@@ -471,6 +472,12 @@ class Emitter
     end
   end
 
+  # Call an entry in a vtable, by default held in %eax
+  def callm(off, reg=:eax)
+    @allocator.evict_caller_saved
+    emit(:call, "*#{off*Emitter::PTR_SIZE}(%#{reg.to_s})")
+  end
+
 
   # Generates assembl for defining a string constant.
   def string(l, str)
@@ -532,6 +539,7 @@ class Emitter
 
     @allocator.evict_all
     @allocator.order(varfreq)
+    @allocator.cache_reg!(:self)
     pushl(:ebp)
     movl(:esp, :ebp)
     pushl(:ebx) if save_numargs

@@ -88,6 +88,9 @@ class RegisterAllocator
   class Cache
     # The register this cache entry is for
     attr_accessor :reg
+
+    # The variable it is cached for
+    attr_accessor :var
     
     # The block to call to spill this register if the register is dirty (nil if the register is not dirty)
     attr_accessor :spill
@@ -95,8 +98,9 @@ class RegisterAllocator
     # True if this cache item can not be evicted because the register is in use.
     attr_accessor :locked
 
-    def initialize reg
+    def initialize reg, var
       @reg = reg.to_sym
+      @var = var.to_sym
     end
 
     # Spill the (presumed dirty) value in the register in question,
@@ -114,6 +118,12 @@ class RegisterAllocator
     # This is the list of registers that are available to be allocated
     @registers      = [:edx,:ecx, :edi]
 
+    # Register reserved for "self"
+    @selfreg        = :esi
+
+    # Caller saved
+    @caller_saved   = [:edx, :ecx, :edi]
+
     # Initially, all registers start out as free.
     @free_registers = @registers.dup
 
@@ -128,6 +138,18 @@ class RegisterAllocator
     @order = f || {}
   end
 
+
+  def evict_by_cache cache
+    return if !cache
+    @cached.delete(cache.var)
+    r = cache.reg
+    debug_is_register?(r)
+    cache.spill!
+    @by_reg.delete(r)
+    @free_registers << r if r != @selfreg
+    r ? cache.var : nil
+  end
+
   # Remove any of the variables specified from the set of cached
   # variables, if necessary spilling dirty variables back to memory.
   #
@@ -136,15 +158,7 @@ class RegisterAllocator
   #
   def evict vars
     Array(vars).collect do |v|
-      cache = @cached.delete(v.to_sym)
-      if cache
-        r = cache.reg
-        debug_is_register?(r)
-        cache.spill!
-        @by_reg.delete(r)
-        @free_registers << r
-      end
-      r ? v : nil
+      evict_by_cache(@cached[v.to_sym])
     end.compact
   end
   
@@ -155,7 +169,9 @@ class RegisterAllocator
   # FIXME: For now, we're not doing anything special with
   # the registers that should be callee saved (%edi in effect)
   def evict_caller_saved
-    evict_all
+    @caller_saved.each do |r|
+      evict_by_cache(@by_reg[r])
+    end
   end
 
   # Mark this cached register as "dirty". That is, the variable has been
@@ -167,6 +183,7 @@ class RegisterAllocator
   end
 
   def debug_is_register?(reg)
+    return if reg.to_sym == @selfreg
     raise "NOT A REGISTER: #{reg.to_s}" if !@registers.member?(reg.to_sym)
   end
 
@@ -174,13 +191,18 @@ class RegisterAllocator
   # available, the emitter will use its scratch register (e.g. %eax)
   # instead
   def cache_reg!(var)
-    if !@order.member?(var.to_sym)
+    var = var.to_sym
+    if var == :self
+      free = @selfreg
+    elsif !@order.member?(var)
       return nil 
+    else
+      free = @free_registers.shift
     end
-    free = @free_registers.shift
+
     if free
       debug_is_register?(free)
-      c = Cache.new(free)
+      c = Cache.new(free,var)
       @cached[var.to_sym] = c
       @by_reg[free] = c
     else
