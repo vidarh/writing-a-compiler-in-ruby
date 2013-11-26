@@ -66,21 +66,36 @@ class Parser < ParserBase
     return ret
   end
 
-  # if_unless ::= ("if"|"unless") ws* condition "then"? defexp* "end"
+  # if_unless ::= ("if"|"unless") if_body
   def parse_if_unless
     pos = position
     type = expect(:if) || expect(:unless) or return
+    parse_if_body(type.to_sym)
+  end
+  
+  # FIXME: Weird parser bug: If '"then' appears together in the comment
+  # line before, it causes a parse failure
+  # if_body ::= ws* condition nolfws* ";"? nolfws* "the
+  #n"? ws* defexp* ws* ("elsif" if_body | ("else" defexp*)? "end") .
+  def parse_if_body(type)
+    pos = position
     ws
     cond = parse_condition or expected("condition for '#{type.to_s}' block")
     nolfws; expect(";")
     nolfws; expect(:then); ws;
     exps = zero_or_more(:defexp)
     ws
-    if expect(:else)
-      ws
-      elseexps = zero_or_more(:defexp)
+
+    if expect(:elsif)
+      # We treat "if ... elif ... else ... end" as shorthand for "if ... else if ... else ... end; end"
+      elseexps = [parse_if_body(:if)]
+    else
+      if expect(:else)
+        ws
+        elseexps = zero_or_more(:defexp)
+      end
+      expect(:end) or expected("expression or 'end' for open 'if'")
     end
-    expect(:end) or expected("expression or 'end' for open 'if'")
     ret = E[pos,type.to_sym, cond, E[:do].concat(exps)]
     ret << E[:do].concat(elseexps) if elseexps
     return  ret

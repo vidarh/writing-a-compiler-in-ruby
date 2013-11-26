@@ -6,7 +6,7 @@ module Tokens
 
   Keywords = Set[
     :begin, :case, :class, :def, :do, :else, :end, :if, :include,
-    :module, :require, :rescue, :then, :unless, :when
+    :module, :require, :rescue, :then, :unless, :when, :elsif
   ]
 
   # Methods can end with one of these.
@@ -45,14 +45,42 @@ module Tokens
           return :":[]"
         end
         s.unget("[")
+      elsif s.peek == ?/
+        s.get
+        return :":/"
+      elsif s.peek == ?-
+        s.get
+        return :":-"
+      elsif s.peek == ?+
+        s.get
+        return :":+"
+      elsif s.peek == ?=
+        s.get
+        if s.peek == ?=
+          s.get
+          return :":=="
+        end
+        return :":="
       elsif s.peek == ?<
         s.get
         if s.peek == ?<
           s.get
           return :":<<"
+        elsif s.peek == ?=
+          s.get
+          return :":<="
         end
-        s.unget("<")
         return :":<"
+      elsif s.peek == ?>
+        s.get
+        if s.peek == ?>
+          s.get
+          return :":>>"
+        elsif s.peek == ?=
+          s.get
+          return :":>="
+        end
+        return :":>"
       end
       s.unget(":")
       return nil
@@ -146,7 +174,7 @@ module Tokens
 
 
   class Quoted
-    def self.escaped(s,q = '"'.ord)
+    def self.escaped(s,q = '"'[0])
       return nil if s.peek == q
       if s.expect("\\")
         raised "Unexpected EOF" if !s.peek
@@ -215,7 +243,7 @@ module Tokens
       while (e = s.get) && e != q
         if e == '"'
           buf += "\\\""
-        elsif e == "\\" && (s.peek == ?' || s.peek == "\\".ord)
+        elsif e == "\\" && (s.peek == ?' || s.peek == "\\"[0])
           buf += "\\" + s.get
         else
           buf += e
@@ -252,7 +280,11 @@ module Tokens
         case c
         when ?q
           dquoted = false
+          s.get
         when ?Q
+          s.get
+        when ?w
+          s.get
         when ?a .. ?z, ?A .. ?Z, ?0..?9
           s.unget(c)
           return nil
@@ -338,7 +370,19 @@ module Tokens
 
         first = @s.get
         if second = @s.get
-          return [second[0], nil] if first == "?" and !([32, 10, 9, 13].member?(second[0])) #FIXME: Handle escaped characters, such as ?\s etc.
+          if first == "?" and !([32, 10, 9, 13].member?(second[0]))
+            # FIXME: This changed in Ruby 1.9 to return a string, which is just plain idiotic.
+            if second == "\\"
+              third = @s.get
+
+              # FIXME: Handle the rest of the escapes
+              if third == "n"
+                return [10,nil]
+              end
+            else
+              return [second[0],nil]
+            end
+          end
 
           buf = first + second
           if third = @s.get

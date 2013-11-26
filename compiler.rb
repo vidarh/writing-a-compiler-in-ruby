@@ -180,12 +180,12 @@ class Compiler
       "/"  => "__div",  "*"  => "__mul",
       "+"  => "__plus", "-"  => "__minus"}
 
-    cleaned = name.to_s.gsub />=|<=|==|[\?!=<>+\-\/\*]/ do |match|
+    cleaned = name.to_s.gsub(Regexp.new('>=|<=|==|[\?!=<>+\-\/\*]')) do |match|
       dict[match.to_s]
     end
 
-    cleaned = cleaned.split(//).collect do |c|
-      if c.match(/[a-zA-Z0-9_]/)
+    cleaned = cleaned.split(Regexp.new('')).collect do |c|
+      if c.match(Regexp.new('[a-zA-Z0-9_]'))
         c
       else
         "__#{c[0].to_s(16)}"
