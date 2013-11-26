@@ -63,6 +63,18 @@ Feature: Parser
       | "a = {'foo' => :bar}"          | [:do, [:assign, :a, [:hash, [:pair, "foo", :":bar"]]]]                             |                                     |
 
 
+    @comments
+    Scenario Outline: Comments
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+    Examples:
+      | expr                                         | tree             | notes                 |
+      | '#comment'                                   | [:do]            | Basic comment         |
+      | '#comment'+10.chr+'5 + 2'+10.chr+'#and more' | [:do,[:+,5 , 2]] | Sandwiched expression |
+      | '# ";"'                                      | [:do]            | "Weird" comments      |
+      
 	@interpol
 	Scenario Outline: String interpolation
 		Given the expression <expr>

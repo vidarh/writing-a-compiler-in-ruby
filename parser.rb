@@ -75,8 +75,8 @@ class Parser < ParserBase
   
   # FIXME: Weird parser bug: If '"then' appears together in the comment
   # line before, it causes a parse failure
-  # if_body ::= ws* condition nolfws* ";"? nolfws* "the
-  #n"? ws* defexp* ws* ("elsif" if_body | ("else" defexp*)? "end") .
+  # if_body ::= ws* condition nolfws* ";"? nolfws* "then"? ws* 
+  #             defexp* ws* ("elsif" if_body | ("else" defexp*)? "end") .
   def parse_if_body(type)
     pos = position
     ws
