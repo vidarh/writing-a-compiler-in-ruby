@@ -37,7 +37,7 @@ When /^I compile it and run it$/ do
       Tempfile.open('ruby-compiler') do |exe|
         STDERR.puts "Asm file is in #{tmp.path}.s"
         `gcc -gstabs -o #{exe.path}-binary #{tmp.path}.s ./runtime.o`
-        @output = `#{exe.path}-binary`
+        @output = `echo test | #{exe.path}-binary`
       end
     end
   end
