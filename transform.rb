@@ -62,7 +62,7 @@ class Compiler
   def rewrite_fixnumconst(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
-      is_call = e[0] == :call
+      is_call = e[0] == :call || e[0] == :callm
       e.each_with_index do |v,i|
         if v.is_a?(Integer)
           e[i] = E[:sexp, E[:call, :__get_fixnum, v]]
