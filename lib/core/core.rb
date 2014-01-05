@@ -56,6 +56,7 @@ Node = 8
 #  - The ones that fails because they haven't been implemented
 STDIN=0
 STDERR = 1
+STDOUT = IO.new
 ARGV=7
 Enumerable=8 #Here because modules doesn't work yet
 nil = 0      # FIXME: Should be an object of NilClass

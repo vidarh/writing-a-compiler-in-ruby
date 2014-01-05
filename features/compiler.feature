@@ -37,4 +37,6 @@ Feature: Compiler
     | inputs/06print.rb       | outputs/06print.txt       | Basic print/puts support                           |
     | inputs/interpolate.rb   | outputs/interpolate.txt   | Simple string interpolation                        |
     | inputs/div.rb           | outputs/div.txt           | Repeated divs to check register alloc.             |
+    | inputs/stdout.rb        | outputs/stdout.txt        | Test basic STDIN/STDOUT                            |
+
 
