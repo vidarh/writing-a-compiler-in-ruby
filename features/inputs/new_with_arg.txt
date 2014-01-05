@@ -1,7 +1,7 @@
 
 class Foo
   def initialize arg
-    %s(printf "hello %s\n" arg)
+    %s(printf "hello %s\n" (callm arg __get_raw))
   end
 end
 
