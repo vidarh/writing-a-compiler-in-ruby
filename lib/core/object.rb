@@ -14,15 +14,19 @@ class Object
     puts "Object#respond_to not implemented"
   end
 
-  def is_a?
-    puts "Object#is_a? not implemented"
+  def is_a?(c)
+    false
   end
 
   def __send__ sym, *args
     %s(printf "WARNING: __send__ bypassing vtable not yet implemented.\n")
     %s(printf "WARNING:    Called with %p\n" sym)
     %s(printf "WARNING:    self = %p\n" self)
-    %s(if sym (printf "WARNING:    (string: '%s'\n" (callm sym to_s)))
+    %s(if sym (printf "WARNING:    (string: '%s')\n" (callm (callm sym to_s) __get_raw)))
+  end
+
+  def false
+    %s(sexp 0)
   end
 
   # FIXME: Belongs in Kernel
