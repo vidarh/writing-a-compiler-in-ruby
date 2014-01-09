@@ -145,3 +145,16 @@ Feature: Parser
       | expr     | tree                      | notes |
       | "1.+(2)" | [:do, [:callm, 1, :+, 2]] |       |
 
+
+    @logic
+    Scenario Outline: Logical operators
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+      | expr                             | tree                                                                    | notes  |
+      | "a && b"                         | [:do, [:and, :a, :b]]                                                   | Simple |
+
+
+           

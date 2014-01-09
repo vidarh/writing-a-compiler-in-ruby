@@ -41,3 +41,12 @@ Feature: Compiler
     | inputs/stdin.rb         | outputs/stdin.txt         | Test basic STDIN                                   |
 
 
+    @logic
+	Scenario Outline: Running programs
+		Given the source file <infile>
+		When I compile it and run it
+		Then the output should match <outfile>
+
+	Examples:
+    | infile                 | outfile                  | notes                                          |             |
+    | inputs/shortcircuit.rb | outputs/shortcircuit.txt | Test that "&&" actuall shortcircuits execution | Just a puts |

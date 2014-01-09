@@ -13,6 +13,7 @@ require 'print_sexp'
 
 require 'compile_arithmetic'
 require 'compile_comparisons'
+
 require 'trace'
 require 'stackfence'
 require 'saveregs'
@@ -30,7 +31,7 @@ class Compiler
                    :assign, :while, :index, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
-                   :lt, :le, :gt, :ge,:saveregs
+                   :lt, :le, :gt, :ge,:saveregs, :and
                   ]
 
   Keywords = @@keywords
@@ -105,7 +106,7 @@ class Compiler
       # (spill it) if we need to evict the value from the
       # register to use it for something else.
 
-      if arg.first == :lvar || arg.first == :arg
+      if arg.first == :lvar || arg.first == :arg || (arg.first == :global && arg.last == :self)
         reg = @e.cache_reg!(name, arg.first, arg.last, save)
         return [:reg,reg] if reg
       end
@@ -276,6 +277,11 @@ class Compiler
 
   def compile_incr(scope, left, right)
     compile_exp(scope, [:assign, left, [:add, left, right]])
+  end
+
+  # Shortcircuit 'left && right' is equivalent to 'if left; right; end'
+  def compile_and scope, left, right
+    compile_if(scope, left, right)
   end
 
   # Compiles the ternary if form (cond ? then : else) 
