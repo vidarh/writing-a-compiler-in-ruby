@@ -224,11 +224,6 @@ class Compiler
 
     @e.comment("method #{name}")
 
-    body.depth_first do |exp|
-      exp.each do |n| 
-        scope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
-      end
-    end
 
     cleaned = clean_method_name(name)
     fname = "__method_#{scope.name}_#{cleaned}"
@@ -649,6 +644,13 @@ class Compiler
         if e.is_a?(Array) 
           if e[0] == :defm
             cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
+
+            e[3].depth_first do |exp|
+              exp.each do |n| 
+                cscope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
+              end
+            end
+
           elsif e[0] == :call && e[1] == :attr_accessor
             # This is a bit presumptious, assuming noone are stupid enough to overload
             # attr_accessor, attr_reader without making them do more or less the same thing.
