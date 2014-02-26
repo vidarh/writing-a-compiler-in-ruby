@@ -380,7 +380,7 @@ module Tokens
                 return [10,nil]
               end
             else
-              return [second[0],nil]
+              return [second[0].chr.ord,nil]
             end
           end
 
