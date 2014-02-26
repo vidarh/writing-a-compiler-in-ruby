@@ -107,7 +107,7 @@ class Scanner
 
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
   def ws
-    while (c = peek) && [9,10,13,32,?#,?;].member?(c) do
+    while (c = peek) && [9,10,13,32,?#,?;].member?(c.ord) do
       get
       if c == ?#
         while (c = get) && c != "\n" do; end
@@ -117,6 +117,6 @@ class Scanner
 
   # nolfws ::= [\t\r ]*
   def nolfws
-    while (c = peek) && [9, 13, 32].member?(c) do get; end
+    while (c = peek) && [9, 13, 32].member?(c.ord) do get; end
   end
 end
