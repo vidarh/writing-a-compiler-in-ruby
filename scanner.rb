@@ -96,7 +96,7 @@ class Scanner
     buf.position = self.position
     str.each_byte do |s|
       c = peek
-      if !c || c.to_i != s
+      if !c || c.chr.ord != s
         unget(buf) if !buf.empty?
         return false
       end
