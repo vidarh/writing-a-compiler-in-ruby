@@ -2,6 +2,8 @@
 
 require 'set'
 
+$: << File.dirname(__FILE__)
+
 require 'emitter'
 require 'parser'
 require 'scope'
