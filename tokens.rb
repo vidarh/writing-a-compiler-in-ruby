@@ -370,7 +370,7 @@ module Tokens
 
         first = @s.get
         if second = @s.get
-          if first == "?" and !([32, 10, 9, 13].member?(second[0]))
+          if first == "?" and !([32, 10, 9, 13].member?(second[0].chr.ord))
             # FIXME: This changed in Ruby 1.9 to return a string, which is just plain idiotic.
             if second == "\\"
               third = @s.get
