@@ -96,7 +96,7 @@ class Compiler
     return [:int, a.to_s[1..-1].to_i] if (a.is_a?(Symbol) && a.to_s[0] == ?$) # FIXME: Another temporary hack
     if (a.is_a?(Symbol))
       name = a.to_s
-      return intern(scope,name.rest) if name[0] == ?:
+      return intern(scope,name[1..-1]) if name[0] == ?:
 
       arg = scope.get_arg(a)
 
@@ -191,7 +191,7 @@ class Compiler
       if c.match(Regexp.new('[a-zA-Z0-9_]'))
         c
       else
-        "__#{c[0].to_s(16)}"
+        "__#{c[0].ord.to_s(16)}"
       end
     end.join
     return cleaned
