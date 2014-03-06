@@ -85,7 +85,7 @@ class Compiler
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
 
-      if OPER_METHOD.member?(e[0].to_s)
+      if e[0].is_a?(Symbol) && OPER_METHOD.member?(e[0].to_s)
         e[3] = E[e[2]]
         e[2] = e[0]
         e[0] = :callm
