@@ -580,15 +580,14 @@ class Compiler
   # Takes the current scope, the array as well as the index number to access.
   def compile_index(scope, arr, index)
     source = compile_eval_arg(scope, arr)
-    reg = nil #This is needed to retain |reg|
-    @e.with_register do |reg|
+    r = @e.with_register do |reg|
       @e.movl(source, reg)
       source = compile_eval_arg(scope, index)
       @e.save_result(source)
       @e.sall(2, @e.result_value)
       @e.addl(@e.result_value, reg)
     end
-    return [:indirect, reg]
+    return [:indirect, r]
   end
 
 

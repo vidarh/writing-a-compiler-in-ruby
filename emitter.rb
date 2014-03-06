@@ -398,9 +398,12 @@ class Emitter
   end
 
   def with_register(required_reg = nil)
+    r = nil
     @allocator.with_register(required_reg) do |reg|
+      r = reg
       yield reg
     end
+    r
   end
 
   def with_register_for(maybe_reg)
@@ -460,7 +463,6 @@ class Emitter
     raise if sym == :reg
     emit(sym, *args)
   end
-
 
   # Generates a assembly subroutine call.
   def call(loc)
