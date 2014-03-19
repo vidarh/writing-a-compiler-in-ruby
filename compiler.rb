@@ -257,6 +257,11 @@ class Compiler
     @e.local(l_else_arm)
     compile_eval_arg(scope, else_arm) if else_arm
     @e.local(l_end_if_arm) if else_arm
+
+    # At the moment, we're not keeping track of exactly what might have gone on
+    # in the if vs. else arm, so we need to assume all bets are off.
+    @e.evict_all
+
     return [:subexpr]
   end
 

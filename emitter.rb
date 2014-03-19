@@ -401,6 +401,10 @@ class Emitter
     return reg
   end
 
+  def evict_all
+    @allocator.evict_all
+  end
+
   def evict_regs_for(vars)
     evicted = @allocator.evict(vars)
     comment("RA: Evicted #{evicted.join(",")}") if !evicted.empty?
