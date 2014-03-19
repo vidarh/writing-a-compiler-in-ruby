@@ -49,8 +49,12 @@ class Object
     i = 0
     while i < na
       %s(assign raw (index str (callm i __get_raw)))
-      raw = raw.to_s.__get_raw
-      %s(if raw (puts raw))
+      if raw
+        raw = raw.to_s.__get_raw
+        %s(if raw (puts raw))
+      else
+        puts
+      end
       i = i + 1
     end
   end
