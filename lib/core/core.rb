@@ -1,7 +1,7 @@
 
-%s(defun __method_missing (sym) (do
-  (printf "Method missing: %s\n" (callm (callm sym to_s) __get_raw))
-  (exit 1)
+%s(defun __method_missing (sym ob) (do
+  (printf "Method missing: %s#%s\n" (index (index ob 0) 2) (callm (callm sym to_s) __get_raw))
+  (exit 1)                                  
   0)
 )
 
