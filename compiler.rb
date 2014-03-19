@@ -183,7 +183,7 @@ class Compiler
       "/"  => "__div",  "*"  => "__mul",
       "+"  => "__plus", "-"  => "__minus"}
 
-    cleaned = name.to_s.gsub(Regexp.new('>=|<=|==|[\?!=<>+\-\/\*]')) do |match|
+    cleaned = name.to_s.gsub(Regexp.new('>=|<=|==|[\?!<>+\-\/\*]')) do |match|
       dict[match.to_s]
     end
 
