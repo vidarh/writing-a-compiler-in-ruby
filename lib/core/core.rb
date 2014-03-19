@@ -54,7 +54,7 @@ OpPrec = 6
 AST = 7
 Node = 8
 #  - The ones that fails because they haven't been implemented
-STDIN=0
+STDIN= IO.new
 STDERR = 1
 STDOUT = IO.new
 ARGV=7
