@@ -21,6 +21,14 @@ class Fixnum < Integer
        )
   end
 
+  def chr
+   %s(let (buf)
+       (assign buf (malloc 2))
+       (snprintf buf 2 "%c" @value)
+       (__get_string buf)
+       )
+  end
+
   def + other
     %s(call __get_fixnum ((add @value (callm other __get_raw))))
   end
