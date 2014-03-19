@@ -24,6 +24,11 @@ class String
     @buffer
   end
 
+  def empty?
+    # FIXME: horribly inefficient while length is calculated with strlen...
+    length == 0
+  end
+
   def each_byte
   end
 
