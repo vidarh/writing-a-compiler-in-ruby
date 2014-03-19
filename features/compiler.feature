@@ -41,6 +41,7 @@ Feature: Compiler
     | inputs/stdin.rb         | outputs/stdin.txt         | Test basic STDIN                                   |
     | inputs/ivar.rb          | outputs/ivar.txt          | Test instance vars in subclasses                   |
     | inputs/methodnames.rb   | outputs/methodnames.txt   | foo= is a valid method name, and distinct from foo |
+    | inputs/classname.rb     | outputs/classname.txt     | Class#name                                         |
 
     @logic
 	Scenario Outline: Running programs

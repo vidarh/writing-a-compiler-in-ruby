@@ -40,6 +40,10 @@ class Class
     ob
   end
 
+  def name
+    %s(__get_string @name)
+  end
+
   # FIXME
   # &block will be a "bare" %s(lambda) (that needs to be implemented),
   # define_method needs to attach that to the vtable (for now) and/or
