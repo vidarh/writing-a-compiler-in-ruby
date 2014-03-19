@@ -39,6 +39,7 @@ Feature: Compiler
     | inputs/div.rb           | outputs/div.txt           | Repeated divs to check register alloc.             |
     | inputs/stdout.rb        | outputs/stdout.txt        | Test basic STDOUT                                  |
     | inputs/stdin.rb         | outputs/stdin.txt         | Test basic STDIN                                   |
+    | inputs/ivar.rb          | outputs/ivar.txt          | Test instance vars in subclasses                   |
 
 
     @logic

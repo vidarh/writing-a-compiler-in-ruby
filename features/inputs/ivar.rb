@@ -13,9 +13,28 @@ class Ivar
   def test
     puts @foo
     puts @bar
-#    puts @baz
+    puts @baz
+  end
+end
+
+class IvarSub < Ivar
+
+  def initialize
+    @a = "A"
+    @b = "B"
+    @c = "C"
+  end
+
+  def test2
+    puts @a
+    puts @b
+    puts @c
   end
 end
 
 i = Ivar.new
 i.test
+
+i = IvarSub.new
+i.test
+i.test2
