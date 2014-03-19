@@ -11,7 +11,7 @@ class GlobalScope
   def initialize(offsets)
     @vtableoffsets = offsets
     @globals = Set.new
-    @class_scope = ClassScope.new(self,"Object",@vtableoffsets)
+    @class_scope = ClassScope.new(self,"Object",@vtableoffsets,nil)
   end
 
   def rest?
@@ -24,6 +24,14 @@ class GlobalScope
     return [:global, a] if @globals.member?(a)
     return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
     return [:addr, a]
+  end
+
+  def name
+    ""
+  end
+
+  def instance_size
+    0
   end
 end
 
@@ -186,14 +194,17 @@ class ClassScope
   #
   # slot 0 is reserved for the vtable pointer for _all_ classes.
   # slot 1 is reserved for @instance_size for objects of class Class
-  CLASS_IVAR_NUM = 2
+  # slot 2 is reserved for @name
+  CLASS_IVAR_NUM = 3
 
-  def initialize(next_scope, name, offsets)
+  def initialize(next_scope, name, offsets, superclass)
     @next = next_scope
+    @superclass = superclass
     @name = name
     @vtable = {}
     @vtableoffsets = offsets
-    @instance_vars = [:@__class__] # FIXME: Do this properly
+    @ivaroff = @superclass ? @superclass.instance_size : 0
+    @instance_vars = !@superclass ? [:@__class__]  : [] # FIXME: Do this properly
     @class_vars = {}
   end
 
@@ -210,7 +221,7 @@ class ClassScope
   end
 
   def instance_size
-    @instance_vars.size
+    @instance_vars.size + @ivaroff
   end
 
 
@@ -239,7 +250,14 @@ class ClassScope
       offset = @instance_vars.index(a)
       add_ivar(a) if !offset
       offset = @instance_vars.index(a)
-      return [:ivar, offset]
+
+      # This will show the name of the current class, the superclass name, the instance variable 
+      # name, the offset of the instance variable relative to the current class "base", and the
+      # instance variable offset for the current class which comes in quite handy when debugging
+      # object layout:
+      #
+      # STDERR.puts [:ivar, @name, @superclass ? @superclass.name : "",a, offset, @ivaroff].inspect
+      return [:ivar, offset + @ivaroff]
     end
 
     # if not in class scope, check next (outer) scope.

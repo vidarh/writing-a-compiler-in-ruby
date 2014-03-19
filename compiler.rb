@@ -635,7 +635,9 @@ class Compiler
   def compile_class(scope, name,superclass, *exps)
     @e.comment("=== class #{name} ===")
 
-    cscope = ClassScope.new(scope, name, @vtableoffsets)
+    superc = @classes[superclass]
+
+    cscope = ClassScope.new(scope, name, @vtableoffsets, superc)
 
     @e.evict_regs_for(:self)
 
@@ -679,7 +681,17 @@ class Compiler
     compile_exp(scope, [:assign, name.to_sym, [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]])
     @global_constants << name
 
-    compile_exp(cscope, [:assign, :@instance_size, cscope.instance_size])
+    # In the context of "cscope", "self" refers to the Class object of the newly instantiated class.
+    # Previously we used "@instance_size" directly instead of [:index, :self, 1], but when fixing instance
+    # variable handling and adding offsets to avoid overwriting instance variables in the superclass,
+    # this broke, as obviously we should not be able to directly mess with the superclass's instance
+    # variables, so we're intentionally violating encapsulation here.
+
+    compile_exp(cscope, [:assign, [:index, :self, 1], cscope.instance_size])
+
+    # We need to store the "raw" name here, rather than a String object,
+    # as String may not have been initialized yet
+    compile_exp(cscope, [:assign, [:index, :self, 2], name.to_s])
 
     exps.each do |e|
       addr = compile_do(cscope, *e)
@@ -854,3 +866,4 @@ if __FILE__ == $0
     c.compile(prog)
   end
 end
+
