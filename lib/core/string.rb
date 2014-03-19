@@ -16,6 +16,23 @@ class String
     %s(assign @buffer 0)
   end
 
+  def [] index
+    l = length
+    if index < 0
+      index = l + index
+      if index < 0
+        return nil
+      end
+    end
+
+    if index >= l
+      return nil
+    end
+    %s(assign index (callm index __get_raw))
+    %s(assign c (bindex @buffer index))
+    %s(__get_fixnum c)
+  end
+
   def __set_raw(str)
     @buffer = str
   end

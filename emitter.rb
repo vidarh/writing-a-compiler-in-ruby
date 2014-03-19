@@ -234,6 +234,8 @@ class Emitter
       return load_address(aparam)
     when :indirect
       return load_indirect(aparam)
+    when :indirect8
+      return load_indirect8(aparam)
     when :arg
       return load_arg(aparam,reg || result_value)
     when :lvar
@@ -323,6 +325,13 @@ class Emitter
 
   def save_to_indirect(src, dest)
     movl(src,"(%#{dest.to_s})")
+  end
+
+  def load_indirect8(arg)
+    movzbl("(#{to_operand_value(arg,:stripdollar)})", :eax)
+    # FIXME: gcc includes this second movzbl; why is it needed?
+    movzbl(:al,:eax)
+    :eax
   end
 
   def load_indirect(arg, reg = :eax)

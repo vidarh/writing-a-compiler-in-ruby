@@ -30,7 +30,7 @@ class Compiler
   # a special calling convention
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :lambda,
-                   :assign, :while, :index, :let, :case, :ternif,
+                   :assign, :while, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and
@@ -576,7 +576,20 @@ class Compiler
   end
 
 
-  # Compiles a array indexing-expression.
+  # Compiles an 8-bit array indexing-expression.
+  # Takes the current scope, the array as well as the index number to access.
+  def compile_bindex(scope, arr, index)
+    source = compile_eval_arg(scope, arr)
+    r = @e.with_register do |reg|
+      @e.movl(source, reg)
+      source = compile_eval_arg(scope, index)
+      @e.save_result(source)
+      @e.addl(@e.result_value, reg)
+    end
+    return [:indirect8, r]
+  end
+
+  # Compiles a 32-bit array indexing-expression.
   # Takes the current scope, the array as well as the index number to access.
   def compile_index(scope, arr, index)
     source = compile_eval_arg(scope, arr)
