@@ -10,6 +10,13 @@ class Object
     @__class__
   end
 
+  def inspect
+    %s(assign buf (malloc 20))
+    %s(snprintf buf 20 "%p" self)
+    %s(assign buf (__get_string buf))
+    "#<#{self.class.name}:#{buf}>"
+  end
+
   def respond_to?
     puts "Object#respond_to not implemented"
   end
