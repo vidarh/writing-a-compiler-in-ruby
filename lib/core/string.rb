@@ -54,6 +54,10 @@ class String
   end
 
   def length
+    # FIXME: yes, we should not assume C-strings
+    # FIXME: Also, this is not nice if @buffer == -
+    %s(assign l (strlen @buffer))
+    %s(__get_fixnum l)
   end
 
   def count
