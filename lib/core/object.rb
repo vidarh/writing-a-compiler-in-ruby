@@ -19,10 +19,11 @@ class Object
   end
 
   def __send__ sym, *args
-    %s(printf "WARNING: __send__ bypassing vtable not yet implemented.\n")
-    %s(printf "WARNING:    Called with %p\n" sym)
+    %s(printf "WARNING: __send__ bypassing vtable (name not statically known at compile time) not yet implemented.\n")
+    %s(if sym (printf "WARNING:    Method: '%s'\n" (callm (callm sym to_s) __get_raw)))
+    %s(printf "WARNING:    symbol address = %p\n" sym)
     %s(printf "WARNING:    self = %p\n" self)
-    %s(if sym (printf "WARNING:    (string: '%s')\n" (callm (callm sym to_s) __get_raw)))
+    %s(printf "WARNING:    class '%s'\n" (callm (callm (callm self class) name) __get_raw))
   end
 
   def false
