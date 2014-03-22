@@ -48,7 +48,7 @@ module OpPrec
       elsif la and leftv[0] == :callm and o.sym == :call
         block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && rightv[2][0] == :block
         comma = ra && rightv[0] == :comma
-        args = comma || block ? flatten(rightv[1..-1]) : rightv
+        args = comma || block ? flatten(rightv) : rightv
         args = E[args] if !comma && !block && args.is_a?(Array)
         args = E[args]
         if block

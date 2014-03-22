@@ -135,15 +135,17 @@ Feature: Parser
 
 
 
-    @operatorcalls
-    Scenario Outline: Operator method calls
+    @methodcalls
+    Scenario Outline: Method calls
 		Given the expression <expr>
 		When I parse it with the full parser
 		Then the parse tree should become <tree>
 
 	Examples:
-      | expr     | tree                      | notes |
-      | "1.+(2)" | [:do, [:callm, 1, :+, 2]] |       |
+      | expr                                   | tree                                                                  | notes |
+      | "1.+(2)"                               | [:do, [:callm, 1, :+, 2]]                                             |       |
+      | "Position.new(@filename)"              | [:do, [:callm, :Position, :new, :"@filename"]]                        |       |
+      | "Position.new(@filename,@lineno,@col)" | [:do, [:callm, :Position, :new, [:"@filename", :"@lineno", :"@col"]]] |       |
 
 
     @logic
