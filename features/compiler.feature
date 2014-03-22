@@ -42,6 +42,7 @@ Feature: Compiler
     | inputs/ivar.rb          | outputs/ivar.txt          | Test instance vars in subclasses                   |
     | inputs/methodnames.rb   | outputs/methodnames.txt   | foo= is a valid method name, and distinct from foo |
     | inputs/classname.rb     | outputs/classname.txt     | Class#name                                         |
+    | inputs/strcmp.rb        | outputs/strcmp.txt        | Basic String#== tests                              |
 
     @logic
 	Scenario Outline: Running programs

@@ -33,6 +33,12 @@ class Object
     %s(printf "WARNING:    class '%s'\n" (callm (callm (callm self class) name) __get_raw))
   end
 
+  def true
+    # Note that the *value* does not matter here. All objects are truth-y, So until we 
+    # sort out a proper TrueClass, this is better than nothing
+    "true" 
+   end
+
   def false
     %s(sexp 0)
   end

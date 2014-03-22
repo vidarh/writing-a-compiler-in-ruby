@@ -33,6 +33,18 @@ class String
     %s(__get_fixnum c)
   end
 
+  def == other
+    %s(assign res (strcmp @buffer (callm other __get_raw)))
+    # !res 
+    return res ? false : true
+  end
+
+  def __copy_raw(str,len)
+    %s(assign len (callm len __get_raw))
+    %s(assign @buffer (malloc len))
+    %s(memmove @buffer str len)
+   end
+
   def __set_raw(str)
     @buffer = str
   end
@@ -64,8 +76,35 @@ class String
   def to_i
   end
 
-  def slice!
-  end
+  def slice!(b,e)
+
+    l = length
+    # Negative offset?
+    if b < 0
+      b = l + b
+    end
+    
+    if b < 0
+      return nil
+    end
+
+    endp = b + e
+    if endp > l
+      e = l - b
+    end
+
+    n = String.new
+    %s(assign src (add @buffer (callm b __get_raw)))
+    n.__copy_raw(src, e)
+
+    endp = b + e + 1
+    %s(assign dest (add @buffer (callm b __get_raw)))
+    %s(assign src (add @buffer (callm endp __get_raw)))
+    %s(memmove dest src (callm e __get_raw))
+
+    n
+   end
+
 
   def reverse
   end
