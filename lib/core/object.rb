@@ -17,6 +17,10 @@ class Object
     "#<#{self.class.name}:#{buf}>"
   end
 
+  def nil?
+    false
+  end
+
   def respond_to?
     puts "Object#respond_to not implemented"
   end
