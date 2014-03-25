@@ -30,7 +30,7 @@ def local_scope
 end
 
 def class_scope
-  ClassScope.new(global_scope, "SampleClass", VTableOffsets.new)
+  ClassScope.new(global_scope, "SampleClass", VTableOffsets.new, nil)
 end
 
 
