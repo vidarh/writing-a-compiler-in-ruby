@@ -140,7 +140,16 @@ class RegisterAllocator
 
   # This is primarily for testing, by making the test set of registers
   # independent of the "real"
-  attr_writer :registers
+  def registers= reg
+    @registers = reg
+    @free_registers = @registers.dup
+  end
+
+  def free_registers
+    @free_registers.dup
+  end
+
+  attr_writer :caller_saved
 
 
   def evict_by_cache cache
@@ -261,6 +270,7 @@ class RegisterAllocator
             reg = c.reg
             evict(v)
             free = reg
+            @free_registers.delete(free)
             break
           end
         end
