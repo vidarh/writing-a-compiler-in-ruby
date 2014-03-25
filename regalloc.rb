@@ -138,6 +138,10 @@ class RegisterAllocator
     @order = f || {}
   end
 
+  # This is primarily for testing, by making the test set of registers
+  # independent of the "real"
+  attr_writer :registers
+
 
   def evict_by_cache cache
     return if !cache
@@ -192,6 +196,12 @@ class RegisterAllocator
   # instead
   def cache_reg!(var)
     var = var.to_sym
+
+    # Already cached?
+    if r = @cached[var]
+      return r.reg
+    end
+
     if var == :self
       free = @selfreg
     elsif !@order.member?(var)
