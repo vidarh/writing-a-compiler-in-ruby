@@ -266,7 +266,7 @@ class Compiler
   end
 
   def compile_return(scope, arg = nil)
-    compile_eval_arg(scope, arg) if arg
+    @e.save_result(compile_eval_arg(scope, arg)) if arg
     @e.leave
     @e.ret
     [:subexpr]
