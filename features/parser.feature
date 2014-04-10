@@ -95,17 +95,17 @@ Feature: Parser
         Then the parse tree should become <tree>
 
     Examples:
-      | expr                             | tree                                         | notes                                               |
-      | "def foo(bar=nil); end"          | [:do, [:defm, :foo, [:bar], []]]             | Default value for arguments                         |
-      | "def foo(bar = nil); end"        | [:do, [:defm, :foo, [:bar], []]]             | Default value for arguments - with whitespace       |
-      | "def foo(bar = []); end"         | [:do, [:defm, :foo, [:bar], []]]             | Default value for arguments - with whitespace       |
-      | "def foo(&bar);end  "            | [:do, [:defm, :foo, [[:bar,:block]], []]]    | Block as named argument                             |
-      | "def foo(a = :b, c = :d);end;  " | [:do, [:defm, :foo, [:a,:c], []]]            | Second argument following argument with initializer |
-      | "def foo(a = :b, &bar);end;  "   | [:do, [:defm, :foo, [:a,[:bar,:block]], []]] | Second argument following argument with initializer |
-      | "def self.foo;end;"              | [:do, [:defm, [:self,:foo], [], []]]         | Class method etc.                                   |
-      | "def *(other_array); end;"       | [:do, [:defm, :*, [:other_array], []]]       | *-Operator overloading                              |
-      | "def foo=(bar);end;"             | [:do, [:defm, :foo=, [:bar], []]]            | setter                                              |
-      | "def == bar; end"                | [:do, [:defm, :==, [:bar], []]]              | Handle operator method name                         |
+      | expr                             | tree                                                                   | notes                                               |
+      | "def foo(bar=nil); end"          | [:do, [:defm, :foo, [[:bar, :default, :nil]], []]]                     | Default value for arguments                         |
+      | "def foo(bar = nil); end"        | [:do, [:defm, :foo, [[:bar, :default, :nil]], []]]                     | Default value for arguments - with whitespace       |
+      | "def foo(bar = []); end"         | [:do, [:defm, :foo, [[:bar, :default, [:array]]], []]]                 | Default value for arguments - with whitespace       |
+      | "def foo(&bar);end  "            | [:do, [:defm, :foo, [[:bar,:block]], []]]                              | Block as named argument                             |
+      | "def foo(a = :b, c = :d);end;  " | [:do, [:defm, :foo, [[:a,:default, :":b"],[:c,:default, :":d"]], []]]  | Second argument following argument with initializer |
+      | "def foo(a = :b, &bar);end;  "   | [:do, [:defm, :foo, [[:a,:default, :":b"],[:bar,:block]], []]]         | Second argument following argument with initializer |
+      | "def self.foo;end;"              | [:do, [:defm, [:self,:foo], [], []]]                                   | Class method etc.                                   |
+      | "def *(other_array); end;"       | [:do, [:defm, :*, [:other_array], []]]                                 | *-Operator overloading                              |
+      | "def foo=(bar);end;"             | [:do, [:defm, :foo=, [:bar], []]]                                      | setter                                              |
+      | "def == bar; end"                | [:do, [:defm, :==, [:bar], []]]                                        | Handle operator method name                         |
 
     @class
     Scenario Outline: Classes

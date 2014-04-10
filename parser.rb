@@ -29,14 +29,17 @@ class Parser < ParserBase
     end
 
     nolfws
+    default = nil
     if expect("=")
       nolfws
-      @shunting.parse([","])
-      # FIXME: Store
+      default = @shunting.parse([","])
     end
 
     if prefix then args = [[name.to_sym, prefix == "*" ? :rest : :block]]
-    else args = [name.to_sym]
+    elsif default
+      args = [[name.to_sym, :default, default]]
+    else 
+      args = [name.to_sym]
     end
     nolfws
     expect(",") or return args

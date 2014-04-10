@@ -204,7 +204,7 @@ class Compiler
 
   def rewrite_let_env(exp)
     exp.depth_first(:defm) do |e|
-      args   = Set[*e[2]]
+      args   = Set[*e[2].collect{|a| a.kind_of?(Array) ? a[0] : a}]
       scopes = [args.dup] # We don't want "args" above to get updated 
 
       # We use this to assign registers
