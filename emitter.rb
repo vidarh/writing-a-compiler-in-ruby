@@ -420,7 +420,7 @@ class Emitter
   end
 
   def with_register_for(maybe_reg)
-    c = @allocator.lock_reg(maybe_reg)
+    c = @allocator.lock_reg(maybe_reg) rescue nil
     if c
       comment("Locked register #{c.reg}")
       r = yield c.reg
@@ -540,7 +540,7 @@ class Emitter
     movl("#{off*Emitter::PTR_SIZE}(%#{areg.to_s})", result_value)
   end
 
-  def func(name, save_numargs = false, position = nil,varfreq= nil)
+  def func(name, position = nil,varfreq= nil)
     @out.emit(".stabs  \"#{name}:F(0,0)\",36,0,0,#{name}")
     export(name, :function) if name.to_s[0] != ?.
     label(name)
@@ -557,7 +557,8 @@ class Emitter
     @allocator.cache_reg!(:self)
     pushl(:ebp)
     movl(:esp, :ebp)
-    pushl(:ebx) if save_numargs
+
+    pushl(:ebx)  # For numargs
     yield
     leave
     ret

@@ -160,7 +160,22 @@ class Compiler
         # We extra the usage frequency information and pass it to the emitter
         # to inform the register allocation.
         varfreq = func.body.respond_to?(:extra) ? func.body.extra[:varfreq] : []
-        @e.func(name, func.rest?, pos, varfreq) do
+        @e.func(name, pos, varfreq) do
+
+          if func.defaultvars > 0
+            @e.with_stack(func.defaultvars) do 
+              func.process_defaults do |arg, index|
+                @e.comment("Default argument for #{arg.name.to_s} at position #{2 + index}")
+                @e.comment(arg.default.inspect)
+                compile_if(fscope, [:lt, :numargs, 1 + index],
+                           [:assign, ("#"+arg.name.to_s).to_sym, arg.default],
+                           [:assign, ("#"+arg.name.to_s).to_sym, arg.name])
+              end
+            end
+          end
+
+          # FIXME: Also check *minium* and *maximum* number of arguments too.
+
           compile_eval_arg(fscope, func.body)
 
           @e.comment("Reloading self if evicted:")
