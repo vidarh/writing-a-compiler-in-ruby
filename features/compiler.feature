@@ -43,6 +43,7 @@ Feature: Compiler
     | inputs/methodnames.rb   | outputs/methodnames.txt   | foo= is a valid method name, and distinct from foo |
     | inputs/classname.rb     | outputs/classname.txt     | Class#name                                         |
     | inputs/strcmp.rb        | outputs/strcmp.txt        | Basic String#== tests                              |
+    | inputs/defaultargs.rb   | outputs/defaultargs.txt   | Default arguments to methods                       |
 
     @logic
 	Scenario Outline: Running programs
