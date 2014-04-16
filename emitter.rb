@@ -350,12 +350,13 @@ class Emitter
     with_stack(args+1) { yield }
   end
 
-  def with_stack(args, numargs = false)
+  def with_stack(args, reload_numargs = false)
     # We normally aim to make the stack frame aligned to 16
     # bytes. This however fails in the presence of the splat operator
     # If a splat is present, we instead allocate exact space, and use
     # %ebx to adjust %esp back again afterwards
-    if numargs
+
+    if !reload_numargs
       adj = PTR_SIZE * args
     else
       adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
@@ -373,7 +374,11 @@ class Emitter
     end
 
     subl(adj,:esp)
-    movl(args, :ebx) if numargs
+    if !reload_numargs
+      addl(args, :ebx)
+    else
+      movl(args, :ebx)
+    end
     yield
     addl(adj, :esp)
   end
@@ -487,8 +492,23 @@ class Emitter
     end
   end
 
+  def caller_save
+    to_push = @allocator.evict_caller_saved(:will_push)
+    to_push.each do |r| 
+      self.pushl(r)
+      @allocator.free!(r)
+    end
+    yield
+    to_push.reverse.each do |r|
+      self.popl(r) 
+      @allocator.alloc!(r)
+    end
+  end
+
   # Call an entry in a vtable, by default held in %eax
   def callm(off, reg=:eax)
+    # FIXME: If there are caller saved registers here that must be
+    # saved/reloaded, we need to keep track.
     @allocator.evict_caller_saved
     emit(:call, "*#{off*Emitter::PTR_SIZE}(%#{reg.to_s})")
   end

@@ -65,6 +65,13 @@ class Function
     @rest
   end
 
+  def minargs
+    @args.length - (rest? ? 1 : 0) - @defaultvars
+  end
+
+  def maxargs
+    rest? ? 99999 : @args.length
+  end
 
   def process_defaults
     self.args.each_with_index do |arg,index|

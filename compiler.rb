@@ -157,10 +157,24 @@ class Compiler
       fname = pos ? pos.filename : nil
 
       @e.include(fname) do
-        # We extra the usage frequency information and pass it to the emitter
+        # We extract the usage frequency information and pass it to the emitter
         # to inform the register allocation.
         varfreq = func.body.respond_to?(:extra) ? func.body.extra[:varfreq] : []
         @e.func(name, pos, varfreq) do
+          minargs = func.minargs
+
+          compile_if(fscope, [:lt, :numargs, minargs],
+                     [:sexp,[:call, :printf, 
+                             ["ArgumentError: In %s - expected a minimum of %d arguments, got %d\n",
+                              name, minargs - 2, [:sub, :numargs,2]]], [:div,1,0] ])
+
+          if !func.rest?
+            maxargs = func.maxargs
+            compile_if(fscope, [:gt, :numargs, maxargs],
+                       [:sexp,[:call, :printf, 
+                               ["ArgumentError: In %s - expected a maximum of %d arguments, got %d\n",
+                                name, maxargs - 2, [:sub, :numargs,2]]],  [:div,1,0] ])
+          end
 
           if func.defaultvars > 0
             @e.with_stack(func.defaultvars) do 
@@ -173,8 +187,6 @@ class Compiler
               end
             end
           end
-
-          # FIXME: Also check *minium* and *maximum* number of arguments too.
 
           compile_eval_arg(fscope, func.body)
 
@@ -425,9 +437,10 @@ class Compiler
     elsif atype == :ivar
       # FIXME:  The register allocation here
       # probably ought to happen in #save_to_instance_var
+      @e.pushl(source)
+      ret = compile_eval_arg(scope, :self)
       @e.with_register do |reg|
-        @e.movl(source,reg)
-        ret = compile_eval_arg(scope, :self)
+        @e.popl(reg)
         @e.save_to_instance_var(reg, ret, aparam)
       end
       return [:subexpr]
@@ -454,12 +467,15 @@ class Compiler
     return compile_callm(scope,:self, func, args,block) if fargs && fargs[0] == :possible_callm
 
     args = [args] if !args.is_a?(Array)
-    @e.with_stack(args.length, true) do
-      args.each_with_index do |a, i|
-        param = compile_eval_arg(scope, a)
-        @e.save_to_stack(param, i)
+    @e.caller_save do
+      @e.with_stack(args.length, true) do
+        args.each_with_index do |a, i|
+          param = compile_eval_arg(scope, a)
+          @e.save_to_stack(param, i)
+        end
+        @e.movl(args.length, :ebx)
+        @e.call(compile_eval_arg(scope, func))
       end
-      @e.call(compile_eval_arg(scope, func))
     end
     @e.evict_regs_for(:self)
     reload_self(scope)
@@ -499,8 +515,8 @@ class Compiler
   end
 
   def compile_callm_args(scope, ob, args)
-    handle_splat(scope,args) do |args|
-      @e.with_stack(args.length+1, true) do
+    handle_splat(scope,args) do |args, splat|
+      @e.with_stack(args.length+1, !splat) do
         # we're for now going to assume that %ebx is likely
         # to get clobbered later in the case of a splat,
         # so we store it here until it's time to call the method.
@@ -519,7 +535,7 @@ class Compiler
       end
     end
   end
-  
+
 
   # Compiles a method call to an object.
   # Similar to compile_call but with an additional object parameter
@@ -546,19 +562,22 @@ class Compiler
         warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
         #error(err_msg, scope, [:callm, ob, method, args])
       end
-      
-      compile_callm_args(scope, ob, args) do
-        if ob != :self
-          @e.load_indirect(@e.sp, :esi) 
-        else
-          @e.comment("Reload self?")
-          reload_self(scope)
-        end
-        load_class(scope) # Load self.class into %eax
-        @e.callm(off)
-        if ob != :self
-          @e.comment("Evicting self") 
-          @e.evict_regs_for(:self) 
+
+      @e.caller_save do
+        compile_callm_args(scope, ob, args) do
+          if ob != :self
+            @e.load_indirect(@e.sp, :esi) 
+          else
+            @e.comment("Reload self?")
+            reload_self(scope)
+          end
+          load_class(scope) # Load self.class into %eax
+          
+          @e.callm(off)
+          if ob != :self
+            @e.comment("Evicting self") 
+            @e.evict_regs_for(:self) 
+          end
         end
       end
     end
@@ -600,9 +619,10 @@ class Compiler
   # Takes the current scope, the array as well as the index number to access.
   def compile_bindex(scope, arr, index)
     source = compile_eval_arg(scope, arr)
+    @e.pushl(source)
+    source = compile_eval_arg(scope, index)
     r = @e.with_register do |reg|
-      @e.movl(source, reg)
-      source = compile_eval_arg(scope, index)
+      @e.popl(reg)
       @e.save_result(source)
       @e.addl(@e.result_value, reg)
     end
@@ -615,9 +635,12 @@ class Compiler
     source = compile_eval_arg(scope, arr)
     r = @e.with_register do |reg|
       @e.movl(source, reg)
+      @e.pushl(reg)
+      
       source = compile_eval_arg(scope, index)
       @e.save_result(source)
       @e.sall(2, @e.result_value)
+      @e.popl(reg)
       @e.addl(@e.result_value, reg)
     end
     return [:indirect, r]

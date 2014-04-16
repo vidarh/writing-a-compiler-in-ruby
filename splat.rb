@@ -13,7 +13,7 @@ class Compiler
     numargs = nil
 
     if !splat
-      return yield(args)
+      return yield(args,false)
     end
 
     # FIXME: This is just a disaster waiting to happen
@@ -42,14 +42,14 @@ class Compiler
         @e.subl(@e.sp,dest)
         @e.sarl(2,dest)
         @e.subl(1,dest)
-        @e.addl(dest,@e.scratch)
+        @e.movl(dest,@e.scratch)
         @e.comment("*#{args.last.last.to_s} end")
         
         args.pop
       end
     end
 
-    yield(args)
+    yield(args, true)
 
     @e.pushl(@e.result)
     reg = compile_eval_arg(scope,:numargs)

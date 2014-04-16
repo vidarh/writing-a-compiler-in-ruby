@@ -127,6 +127,7 @@ class RegisterAllocator
     # Initially, all registers start out as free.
     @free_registers = @registers.dup
 
+    @allocated_registers ||= Set.new
 
     @cached = {}
     @by_reg = {} # Cache information, by register
@@ -179,12 +180,21 @@ class RegisterAllocator
     evict(@cached.keys)
   end
 
-  # FIXME: For now, we're not doing anything special with
-  # the registers that should be callee saved (%edi in effect)
-  def evict_caller_saved
+  def evict_caller_saved(will_push = false)
+    to_push = will_push ? [] : nil
     @caller_saved.each do |r|
       evict_by_cache(@by_reg[r])
+      yield r if block_given?
+
+      if @allocated_registers.member?(r)
+        if !will_push
+          raise "Allocated via with_register when crossing call boundary: #{r.inspect}"
+        else
+          to_push << r
+        end
+      end
     end
+    return to_push
   end
 
   # Mark this cached register as "dirty". That is, the variable has been
@@ -196,8 +206,8 @@ class RegisterAllocator
   end
 
   def debug_is_register?(reg)
-    return if reg.to_sym == @selfreg
-    raise "NOT A REGISTER: #{reg.to_s}" if !@registers.member?(reg.to_sym)
+    return if reg && reg.to_sym == @selfreg
+    raise "NOT A REGISTER: #{reg.to_s}" if !reg || !@registers.member?(reg.to_sym)
   end
 
   # Called to "cache" a variable in a register. If no register is
@@ -244,12 +254,22 @@ class RegisterAllocator
     c.locked=true if c
     c
   end
-  
+
+  # Low level
+  def free!(free)
+    @allocated_registers.delete(free)
+    debug_is_register?(free)
+    @free_registers << free
+  end
+
+  def alloc!(r)
+    @allocated_registers << r
+    @free_registers.delete(r)
+  end
+
   # Allocate a temporary register. If specified, we try to allocate
   # a specific register.
   def with_register(required_reg = nil)
-    @allocated_registers ||= Set.new
-
     if required_reg
       free = @free_registers.delete(required_reg)
     else
@@ -307,9 +327,7 @@ class RegisterAllocator
     # ... and clean up afterwards:
 
     @allocators.pop
-    @allocated_registers.delete(free)
-    debug_is_register?(free)
-    @free_registers << free
+    free!(free)
   end
 end
 
