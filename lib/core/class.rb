@@ -2,7 +2,7 @@
 %s(defun __new_class_object (size superclass ssize)
   (let (ob i)
    (assign ob (malloc (mul size 4))) # Assumes 32 bit
-   (assign i 1)
+   (assign i 2)
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
   (while (le i ssize) (do
        (assign (index ob i) (index superclass i))
@@ -16,6 +16,7 @@
        (assign i (add i 1))
   ))
   (assign (index ob 0) Class)
+  (assign (index ob 3) superclass)
   ob
 ))
 

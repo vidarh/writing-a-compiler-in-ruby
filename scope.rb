@@ -63,6 +63,10 @@ class FuncScope
     end
     return [:addr, a]
   end
+
+  def method
+    @func
+  end
 end
 
 
@@ -74,6 +78,9 @@ class LocalVarScope
     @locals = locals
   end
 
+  def method
+    @next ? @next.method : nil
+  end
 
   def rest?
     @next ? @next.rest? : false
@@ -195,7 +202,8 @@ class ClassScope
   # slot 0 is reserved for the vtable pointer for _all_ classes.
   # slot 1 is reserved for @instance_size for objects of class Class
   # slot 2 is reserved for @name
-  CLASS_IVAR_NUM = 3
+  # slot 3 is reserved for the superclass pointer
+  CLASS_IVAR_NUM = 4
 
   def initialize(next_scope, name, offsets, superclass)
     @next = next_scope
