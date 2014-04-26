@@ -231,7 +231,7 @@ class Compiler
   #
   # Note that compile_defun is now only accessed via s-expressions
   def compile_defun(scope, name, args, body)
-    f = Function.new(args, body,scope)
+    f = Function.new(name,args, body,scope)
     name = clean_method_name(name)
 
     # add function to the global list of functions defined so far
@@ -249,7 +249,7 @@ class Compiler
     scope = scope.class_scope
 
     # FIXME: Replace "__closure__" with the block argument name if one is present
-    f = Function.new([:self,:__closure__]+args, body, scope) # "self" is "faked" as an argument to class methods
+    f = Function.new(name,[:self,:__closure__]+args, body, scope) # "self" is "faked" as an argument to class methods
 
     @e.comment("method #{name}")
 
@@ -400,6 +400,7 @@ class Compiler
       @lastpos = pos
     end
     args = get_arg(scope,arg)
+    error("Unable to find '#{arg.inspect}'") if !args
     atype = args[0]
     aparam = args[1]
     if atype == :ivar
@@ -464,6 +465,7 @@ class Compiler
     # compile_eval_arg below, but we need to know if it's a callm
     fargs = get_arg(scope, func)
 
+    return compile_super(scope, args,block) if func == :super
     return compile_callm(scope,:self, func, args,block) if fargs && fargs[0] == :possible_callm
 
     args = [args] if !args.is_a?(Array)
@@ -490,6 +492,12 @@ class Compiler
   def load_class(scope)
     @e.load_indirect(:esi, :eax)
   end
+
+  # Load the super-class pointer
+  def load_super(scope)
+    @e.load_instance_var(:eax, 3)
+  end
+                
 
   # if we called a method on something other than self,
   # or a function, we have or may have clobbered %esi,
@@ -537,12 +545,23 @@ class Compiler
   end
 
 
+  # Compiles a super method call
+  #
+  def compile_super(scope, args, block = nil)
+    method = scope.method.name
+    @e.comment("super #{method.inspect}")
+    trace(nil,"=> super #{method.inspect}\n")
+    ret = compile_callm(scope, :self, method, args, block, true)
+    trace(nil,"<= super #{method.inspect}\n")
+    ret
+  end
+
   # Compiles a method call to an object.
   # Similar to compile_call but with an additional object parameter
   # representing the object to call the method on.
   # The object gets passed to the method, which is just another function,
   # as the first parameter.
-  def compile_callm(scope, ob, method, args, block = nil)
+  def compile_callm(scope, ob, method, args, block = nil, do_load_super = false)
     # FIXME: Shouldn't trigger - probably due to the callm rewrites
     return compile_yield(scope, args, block) if method == :yield and ob == :self
 
@@ -571,7 +590,9 @@ class Compiler
             @e.comment("Reload self?")
             reload_self(scope)
           end
+
           load_class(scope) # Load self.class into %eax
+          load_super(scope) if do_load_super
           
           @e.callm(off)
           if ob != :self

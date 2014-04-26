@@ -17,7 +17,7 @@ end
 def function
   args = [:arg1, :arg2, :arg3]
   body = [[:printf, "hello, world"]]
-  f = Function.new(args, body, empty_global_scope)
+  f = Function.new(nil,args, body, empty_global_scope)
 end
 
 def func_scope

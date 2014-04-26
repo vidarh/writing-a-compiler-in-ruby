@@ -26,7 +26,7 @@ describe Function do
   def function_with_args
     args = [:arg1, :arg2, :arg3]
     body = [:let, [:foo], [[:printf, "hello"]]]
-    f = Function.new(args, body, nil)
+    f = Function.new(nil,args, body, nil)
   end
 
   it "should return the correct number of arguments" do
@@ -45,7 +45,7 @@ describe Function do
   end
 
   it "should have a variable argument list" do
-    f = Function.new([:arg1, [:args, :rest]], [], nil)
+    f = Function.new(nil,[:arg1, [:args, :rest]], [], nil)
     f.rest?.should be true
   end
 
