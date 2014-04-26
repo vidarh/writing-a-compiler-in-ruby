@@ -5,7 +5,17 @@
 # At least #concat needs to be implemented for our needed
 # use in #attr_writer.
 class String
-  def initialize
+  # NOTE
+  # Changing this to '= ""' is likely to fail, as it
+  # gets translated into '__get_string("")', which
+  # will do (callm String new), leading to a loop that
+  # will only terminate when the stack blows up.
+  #
+  # Setting it "= <some other default>" may work, but
+  # will be prone to order of bootstrapping the core
+  # classes.
+  #
+  def initialize *str
     # @buffer contains the pointer to raw memory
     # used to contain the string.
     # 
@@ -13,7 +23,13 @@ class String
     # 0 outside of the s-expression eventually will
     # be an FixNum instance instead of the actual
     # value 0.
-    %s(assign @buffer 0)
+
+    %s(if (lt numargs 3)
+         (assign @buffer 0)
+         (do 
+            (assign len (callm (index str 0) length))
+            (callm self __copy_raw ((callm (index str 0) __get_raw) len)))
+        )
   end
 
   def [] index
