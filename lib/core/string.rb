@@ -138,6 +138,7 @@ class String
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
   # and need to store length to be able to handle strings with \0 in the middle.
   def concat(other)
+    other = other.to_s
     %s(do
          (assign ro (callm other __get_raw))
          (assign osize (strlen ro))
