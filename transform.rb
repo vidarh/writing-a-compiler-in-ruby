@@ -130,7 +130,7 @@ class Compiler
           vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, freq, in_lambda)
           env = env1 + env2
           vars = vars1+vars2
-          vars.each {|v| push_var(scopes,env,v) }
+          vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
         elsif n[0] == :lambda
           vars, env = find_vars(n[2], scopes + [Set.new],env, freq, true)
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
@@ -161,7 +161,7 @@ class Compiler
         sc = in_scopes(scopes,n)
         freq[n] += 1 if !is_special_name?(n)
         if sc.size == 0
-          push_var(scopes,env,n) if in_assign
+          push_var(scopes,env,n) if in_assign && !is_special_name?(n)
         elsif in_lambda
           sc.first.delete(n)
           env << n
