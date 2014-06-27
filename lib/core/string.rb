@@ -32,6 +32,10 @@ class String
         )
   end
 
+  def nil?
+    false
+  end
+
   def [] index
     l = length
     if index < 0
