@@ -37,16 +37,6 @@ class Object
     %s(printf "WARNING:    class '%s'\n" (callm (callm (callm self class) name) __get_raw))
   end
 
-  def true
-    # Note that the *value* does not matter here. All objects are truth-y, So until we 
-    # sort out a proper TrueClass, this is better than nothing
-    "true" 
-   end
-
-  def false
-    %s(sexp 0)
-  end
-
   # FIXME: Belongs in Kernel
 # FIXME: Add splat support for s-expressions / call so that
 # the below works
@@ -57,7 +47,7 @@ class Object
   # FIXME: Belongs in Kernel
   def puts *str
     %s(assign na (__get_fixnum numargs))
-    
+
     if na == 2
       %s(puts "")
       return
@@ -67,14 +57,16 @@ class Object
     i = 0
     while i < na
       %s(assign raw (index str (callm i __get_raw)))
-      if raw
+      %s(assign hr (if (ne raw 0) true false))
+      if hr
         raw = raw.to_s.__get_raw
-        %s(if raw (puts raw))
+        %s(if (ne raw 0) (puts raw))
       else
-        puts
+        %s(puts "")
       end
       i = i + 1
     end
+    nil
   end
 
   def print *str

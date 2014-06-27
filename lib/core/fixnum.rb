@@ -38,27 +38,27 @@ class Fixnum < Integer
   end
 
   def <= other
-    %s(le @value (callm other __get_raw))
+    %s(if (le @value (callm other __get_raw)) true false)
   end
 
   def == other
-    %s(eq @value (callm other __get_raw))
+    %s(if (eq @value (callm other __get_raw)) true false)
   end
 
   def != other
-    %s(ne @value (callm other __get_raw))
+    %s(if (ne @value (callm other __get_raw)) true false)
   end
 
   def < other
-    %s(lt @value (callm other __get_raw))
+    %s(if (lt @value (callm other __get_raw)) true false)
   end
 
   def > other
-    %s(gt @value (callm other __get_raw))
+    %s(if (gt @value (callm other __get_raw)) true false)
   end
 
   def >= other
-    %s(ge @value (callm other __get_raw))
+    %s(if (ge @value (callm other __get_raw)) true false)
   end
 
   def div other
