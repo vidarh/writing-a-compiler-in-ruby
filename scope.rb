@@ -12,6 +12,11 @@ class GlobalScope
     @vtableoffsets = offsets
     @globals = Set.new
     @class_scope = ClassScope.new(self,"Object",@vtableoffsets,nil)
+
+    # Despite not following "$name" syntax, these are really global constants.
+    @globals << :false
+    @globals << :true
+    @globals << :nil
   end
 
   def rest?
@@ -271,6 +276,7 @@ class ClassScope
     # if not in class scope, check next (outer) scope.
     n =  @next.get_arg(a) if @next
 
+    return n if n[0] == :global # Prevent e.g. "true" from being treated as method call
     return [:possible_callm, n[1]] if n && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
     return n if n
 
