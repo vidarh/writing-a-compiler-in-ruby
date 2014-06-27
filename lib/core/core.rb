@@ -1,5 +1,5 @@
 
-%s(defun __method_missing (sym ob) (do
+%s(defun __method_missing (sym ob (args rest)) (do
   (printf "Method missing: %s#%s\n" (index (index ob 0) 2) (callm (callm sym to_s) __get_raw))
   (exit 1)                                  
   0)
@@ -17,6 +17,13 @@ require 'core/class'
 require 'core/kernel'
 require 'core/object'
 require 'core/proc'   # Proc is required before blocks can be used
+
+require 'core/true'
+true = TrueClass.new # FIXME: MRI does not allow creating an object of TrueClass
+require 'core/false'
+false = FalseClass.new # FIXME: MRI does not allow creating an object of FalseClass
+require 'core/nil'
+nil  = NilClass.new # FIXME: MRI does not allow creating an object of NilClass.
 
 # OK, so perhaps this is a bit ugly...
 self = Object.new
@@ -59,9 +66,6 @@ STDERR = 1
 STDOUT = IO.new
 ARGV=7
 Enumerable=8 #Here because modules doesn't work yet
-nil = 0      # FIXME: Should be an object of NilClass
-true = 1     # FIXME: Should be an object of TrueClass
-false = 0    # FIXME: Should be an object of FalseClass
 
 # FIXME:
 %s(defun range (a b)
