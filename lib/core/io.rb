@@ -23,6 +23,7 @@ class IO < Object
   end
 
   def file?
+    false
   end
 
   def path
