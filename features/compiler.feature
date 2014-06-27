@@ -44,6 +44,7 @@ Feature: Compiler
     | inputs/classname.rb     | outputs/classname.txt     | Class#name                                         |
     | inputs/strcmp.rb        | outputs/strcmp.txt        | Basic String#== tests                              |
     | inputs/defaultargs.rb   | outputs/defaultargs.txt   | Default arguments to methods                       |
+    | inputs/nil.rb           | outputs/nil.rb            | Basic checks of "nil"                              |
 
     @logic
 	Scenario Outline: Running programs
