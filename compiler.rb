@@ -21,6 +21,8 @@ require 'stackfence'
 require 'saveregs'
 require 'splat'
 
+require 'value'
+
 class Compiler
   attr_reader :global_functions
   attr_writer :trace, :stackfence
@@ -45,6 +47,9 @@ class Compiler
     @global_functions = {}
     @string_constants = {}
     @global_constants = Set.new
+    @global_constants << :false
+    @global_constants << :true
+    @global_constants << :nil
     @classes = {}
     @vtableoffsets = VTableOffsets.new
     @trace = false
@@ -80,7 +85,7 @@ class Compiler
   def intern(scope,sym)
     # FIXME: Do this once, and add an :assign to a global var, and use that for any
     # later static occurrences of symbols.
-    get_arg(scope,[:sexp,[:call,:__get_symbol, sym.to_s]])
+    Value.new(get_arg(scope,[:sexp,[:call,:__get_symbol, sym.to_s]]),:object)
   end
 
   # Returns an argument with its type identifier.
@@ -91,9 +96,9 @@ class Compiler
   # Otherwise, we assume it's a string constant and treat it like one.
   def get_arg(scope, a, save = false)
     return compile_exp(scope, a) if a.is_a?(Array)
-    return [:int, a] if (a.is_a?(Fixnum))
-    return [:int, a.to_i] if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
-    return [:int, a.to_s[1..-1].to_i] if (a.is_a?(Symbol) && a.to_s[0] == ?$) # FIXME: Another temporary hack
+    return Value.new([:int, a]) if (a.is_a?(Fixnum))
+    return Value.new([:int, a.to_i]) if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
+    return Value.new([:int, a.to_s[1..-1].to_i]) if (a.is_a?(Symbol) && a.to_s[0] == ?$) # FIXME: Another temporary hack
     if (a.is_a?(Symbol))
       name = a.to_s
       return intern(scope,name[1..-1]) if name[0] == ?:
@@ -110,10 +115,13 @@ class Compiler
 
       if arg.first == :lvar || arg.first == :arg || (arg.first == :global && arg.last == :self)
         reg = @e.cache_reg!(name, arg.first, arg.last, save)
-        return [:reg,reg] if reg
+        # FIXME: Need to check type
+
+        return Value.new([:reg,reg],:object) if reg
       end
 
-      return arg
+      # FIXME: Check type
+      return Value.new(arg, :object)
     end
 
     warning("nil received by get_arg") if !a
@@ -126,7 +134,7 @@ class Compiler
       lab = @e.get_local
       @string_constants[a] = lab
     end
-    return [:addr,lab]
+    return Value.new([:addr,lab])
   end
 
   # Outputs all constants used within the code generated so far.
@@ -240,7 +248,7 @@ class Compiler
     # a function is referenced by its name (in assembly this is a label).
     # wherever we encounter that name, we really need the adress of the label.
     # so we mark the function with an adress type.
-    return [:addr, clean_method_name(name)]
+    return Value.new([:addr, clean_method_name(name)])
   end
 
   # Compiles a method definition and updates the
@@ -267,7 +275,7 @@ class Compiler
     @global_functions[fname] = f
     
     # This is taken from compile_defun - it does not necessarily make sense for defm
-    return [:addr, clean_method_name(fname)]
+    return Value.new([:addr, clean_method_name(fname)])
   end
 
   # Compiles an if expression.
@@ -278,7 +286,17 @@ class Compiler
     res = compile_eval_arg(scope, cond)
     l_else_arm = @e.get_local
     l_end_if_arm = @e.get_local
-    @e.jmp_on_false(l_else_arm, res)
+
+    if res && res.type == :object
+      @e.save_result(res)
+      @e.cmpl(@e.result_value, "nil")
+      @e.je(l_else_arm)
+      @e.cmpl(@e.result_value, "false")
+      @e.je(l_else_arm)
+    else
+      @e.jmp_on_false(l_else_arm, res)
+    end
+
     compile_eval_arg(scope, if_arm)
     @e.jmp(l_end_if_arm) if else_arm
     @e.local(l_else_arm)
@@ -289,19 +307,19 @@ class Compiler
     # in the if vs. else arm, so we need to assume all bets are off.
     @e.evict_all
 
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
   def compile_return(scope, arg = nil)
     @e.save_result(compile_eval_arg(scope, arg)) if arg
     @e.leave
     @e.ret
-    [:subexpr]
+    Value.new([:subexpr])
   end
 
   def compile_rescue(scope, *args)
     warning("RESCUE is NOT IMPLEMENTED")
-    [:subexpr]
+    Value.new([:subexpr])
   end
 
   def compile_incr(scope, left, right)
@@ -369,7 +387,7 @@ class Compiler
       end
     end
 
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
   # Compiles an anonymous function ('lambda-expression').
@@ -406,11 +424,13 @@ class Compiler
     if atype == :ivar
       ret = compile_eval_arg(scope, :self)
       @e.load_instance_var(ret, aparam)
-      return @e.result_value
+      # FIXME: Verify type of ivar
+      return Value.new(@e.result_value, :object)
     elsif atype == :possible_callm
-      return compile_eval_arg(scope,[:callm,:self,aparam,[]])
+      return Value.new(compile_eval_arg(scope,[:callm,:self,aparam,[]]), :object)
     end
-    return @e.load(atype, aparam)
+
+    return Value.new(@e.load(atype, aparam), args.type)
   end
 
 
@@ -444,14 +464,15 @@ class Compiler
         @e.popl(reg)
         @e.save_to_instance_var(reg, ret, aparam)
       end
-      return [:subexpr]
+      # FIXME: Need to check for "special" ivars
+      return Value.new([:subexpr], :object)
     end
 
     if !(@e.save(atype, source, aparam))
       err_msg = "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
       error(err_msg, scope, [:assign, left, right]) # pass current expression as well
     end
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
 
@@ -481,7 +502,7 @@ class Compiler
     end
     @e.evict_regs_for(:self)
     reload_self(scope)
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
   # If adding type-tagging, this is the place to do it.
@@ -519,7 +540,7 @@ class Compiler
       @e.call(reg)
     end
     @e.comment("yield end")
-    return [:subexpr]
+    return Value.new([:subexpr], :object)
   end
 
   def compile_callm_args(scope, ob, args)
@@ -605,14 +626,15 @@ class Compiler
 
     @e.comment("callm #{ob.to_s}.#{method.to_s} END")
     trace(nil,"<= callm #{ob.to_s}.#{method.to_s}\n")
-    return [:subexpr]
+
+    return Value.new([:subexpr], :object)
   end
 
 
   # Compiles a do-end block expression.
   def compile_do(scope, *exp)
     exp.each { |e| source=compile_eval_arg(scope, e); @e.save_result(source); }
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
   # :sexp nodes are just aliases for :do nodes except
@@ -620,7 +642,8 @@ class Compiler
   # affect %s() escaped code should avoid descending
   # into :sexp nodes.
   def compile_sexp(scope, *exp)
-    compile_do(SexpScope.new(scope), *exp)
+    # We explicitly delete the type information for :sexp nodes for now.
+    Value.new(compile_do(SexpScope.new(scope), *exp), nil)
   end
 
   # :block nodes are "begin .. end" blocks or "do .. end" blocks
@@ -647,7 +670,7 @@ class Compiler
       @e.save_result(source)
       @e.addl(@e.result_value, reg)
     end
-    return [:indirect8, r]
+    return Value.new([:indirect8, r])
   end
 
   # Compiles a 32-bit array indexing-expression.
@@ -664,7 +687,7 @@ class Compiler
       @e.popl(reg)
       @e.addl(@e.result_value, reg)
     end
-    return [:indirect, r]
+    return Value.new([:indirect, r])
   end
 
 
@@ -673,10 +696,20 @@ class Compiler
   def compile_while(scope, cond, body)
     @e.loop do |br|
       var = compile_eval_arg(scope, cond)
-      @e.jmp_on_false(br)
+    if var && var.type == :object
+      @e.save_result(var)
+      @e.cmpl(@e.result_value, "nil")
+      @e.je(br)
+      @e.cmpl(@e.result_value, "false")
+      @e.je(br)
+    else
+      @e.jmp_on_false(br, var)
+    end
+
+#      @e.jmp_on_false(br)
       compile_exp(scope, body)
     end
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
   # Compiles a let expression.
@@ -697,7 +730,7 @@ class Compiler
     else
       compile_do(ls, *args)
     end
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
   def compile_module(scope,name, *exps)
@@ -775,7 +808,7 @@ class Compiler
     end
 
     @e.comment("=== end class #{name} ===")
-    return [:global, name]
+    return Value.new([:global, name], :object)
   end
 
   # Put at the start of a required file, to allow any special processing
@@ -790,7 +823,7 @@ class Compiler
   # Calls the specialized compile methods depending of the
   # expression to be compiled (e.g. compile_if, compile_call, compile_let etc.).
   def compile_exp(scope, exp)
-    return [:subexpr] if !exp || exp.size == 0
+    return Value.new([:subexpr]) if !exp || exp.size == 0
 
     pos = exp.position rescue nil
     @e.lineno(pos) if pos
@@ -810,7 +843,7 @@ class Compiler
     warning("Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}")
     res = compile_eval_arg(scope, exp[0])
     @e.save_result(res)
-    return [:subexpr]
+    return Value.new([:subexpr])
   end
 
 

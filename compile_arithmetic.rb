@@ -9,7 +9,7 @@ class Compiler
       @e.save_result(compile_eval_arg(scope,right))
       yield reg
     end
-    [:subexpr]    
+    Value.new([:subexpr], nil)
   end
 
   def compile_add(scope, left, right)
@@ -48,6 +48,6 @@ class Compiler
         @e.idivl(divisor)
       end
     end
-    [:subexpr]    
+    Value.new([:subexpr])
   end
 end
