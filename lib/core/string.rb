@@ -54,9 +54,8 @@ class String
   end
 
   def == other
-    %s(assign res (strcmp @buffer (callm other __get_raw)))
-    # !res 
-    return res ? false : true
+    %s(assign res (if (strcmp @buffer (callm other __get_raw)) false true))
+    return res
   end
 
   def __copy_raw(str,len)
