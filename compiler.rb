@@ -35,7 +35,7 @@ class Compiler
                    :assign, :while, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
-                   :lt, :le, :gt, :ge,:saveregs, :and
+                   :lt, :le, :gt, :ge,:saveregs, :and, :or
                   ]
 
   Keywords = @@keywords
@@ -297,17 +297,26 @@ class Compiler
       @e.jmp_on_false(l_else_arm, res)
     end
 
-    compile_eval_arg(scope, if_arm)
+    ifret = compile_eval_arg(scope, if_arm)
     @e.jmp(l_end_if_arm) if else_arm
     @e.local(l_else_arm)
-    compile_eval_arg(scope, else_arm) if else_arm
+    elseret = compile_eval_arg(scope, else_arm) if else_arm
     @e.local(l_end_if_arm) if else_arm
 
     # At the moment, we're not keeping track of exactly what might have gone on
     # in the if vs. else arm, so we need to assume all bets are off.
     @e.evict_all
 
-    return Value.new([:subexpr])
+    # We only return a specific type if there's either only an "if"
+    # expression, or both the "if" and "else" expressions have the
+    # same type.
+    #
+    type = nil
+    if ifret && (!elseret || ifret.type == elseret.type)
+      type = ifret.type
+    end
+
+    return Value.new([:subexpr], type)
   end
 
   def compile_return(scope, arg = nil)
@@ -329,6 +338,10 @@ class Compiler
   # Shortcircuit 'left && right' is equivalent to 'if left; right; end'
   def compile_and scope, left, right
     compile_if(scope, left, right)
+  end
+
+  def compile_or scope, left, right
+    compile_if(scope, left, false, right)
   end
 
   # Compiles the ternary if form (cond ? then : else) 
