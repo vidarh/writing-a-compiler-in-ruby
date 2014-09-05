@@ -940,6 +940,7 @@ if __FILE__ == $0
   trace = ARGV.include?("--trace")
   stackfence = ARGV.include?("--stackfence")
   transform = !ARGV.include?("--notransform")
+  nostabs = ARGV.include?("--nostabs")
 
   # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
   OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
@@ -975,7 +976,10 @@ if __FILE__ == $0
   end
   
   if prog
-    c = Compiler.new
+    e = Emitter.new
+    e.debug == nil if nostabs
+
+    c = Compiler.new(e)
     c.trace = true if trace
     c.stackfence = true if stackfence
 
