@@ -38,6 +38,10 @@ class GlobalScope
   def instance_size
     0
   end
+
+  def lvaroffset
+    0
+  end
 end
 
 
@@ -54,6 +58,10 @@ class FuncScope
 
   def rest?
     @func ? @func.rest? : false
+  end
+
+  def lvaroffset
+    @func.lvaroffset
   end
 
 
@@ -98,7 +106,7 @@ class LocalVarScope
   # Finally, return it as an adress, if both doesn't work.
   def get_arg(a)
     a = a.to_sym
-    return [:lvar, @locals[a] + (rest? ? 1 : 0)] if @locals.include?(a)
+    return [:lvar, @locals[a] + (rest? ? 1 : 0) + @next.lvaroffset] if @locals.include?(a)
     return @next.get_arg(a) if @next
     return [:addr, a] # Shouldn't get here normally
   end
@@ -177,6 +185,10 @@ class SexpScope
 
   def rest?
     @next.rest?
+  end
+
+  def lvaroffset
+    0
   end
 
   def get_arg(a)

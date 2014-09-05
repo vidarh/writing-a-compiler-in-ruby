@@ -84,6 +84,10 @@ class Function
     @defaults_assigned = true
   end
 
+  def lvaroffset
+    @defaultvars
+  end
+
   # For arguments with defaults only, return the [:lvar, arg.lvar] value
   def get_lvar_arg(a)
     a = a.to_s[1..-1].to_sym if a[0] == ?#
