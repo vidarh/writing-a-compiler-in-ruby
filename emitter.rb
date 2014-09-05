@@ -80,12 +80,18 @@ class Emitter
 
   attr_accessor :basic_main
 
+  # falsy to not output debug data. Symbol to output debug info in a supported format.
+  # Currently only :stabs is supported. Defaults to :stabs
+  attr_accessor :debug   
+
   def initialize out = IOOutput.new
     @seq = 0
     @out = out
     @basic_main = false
     @section = 0 # Are we in a stabs section?
     @allocator = RegisterAllocator.new
+
+    @debug = :stabs
   end
 
 
@@ -510,7 +516,9 @@ class Emitter
     # FIXME: If there are caller saved registers here that must be
     # saved/reloaded, we need to keep track.
     @allocator.evict_caller_saved
-    emit(:call, "*#{off*Emitter::PTR_SIZE}(%#{reg.to_s})")
+    off = "#{off*Emitter::PTR_SIZE}" if off.is_a?(Fixnum)
+
+    emit(:call, "*#{off}(%#{reg.to_s})")
   end
 
 
@@ -561,7 +569,19 @@ class Emitter
   end
 
   def func(name, position = nil,varfreq= nil)
-    @out.emit(".stabs  \"#{name}:F(0,0)\",36,0,0,#{name}")
+    emit("")
+    emit("")
+    emit("")
+
+    lspc = (70 - name.length) / 2
+    rspc = 70 - name.length - lspc
+    
+    emit("#{"#"*lspc} #{name} #{"#"*rspc}")
+    emit("")
+
+
+
+    stabs("\"#{name}:F(0,0)\",36,0,0,#{name}")
     export(name, :function) if name.to_s[0] != ?.
     label(name)
 
@@ -589,16 +609,32 @@ class Emitter
     @scopenum ||= 0
     @scopenum += 1
     label(".Lscope#{@scopenum}")
-    @out.emit(".stabs  \"\",36,0,0,.Lscope#{@scopenum}-.LFBB#{@curfunc}")    
+    stabs("\"\",36,0,0,.Lscope#{@scopenum}-.LFBB#{@curfunc}")
     @curfunc = nil
+
+
+    emit("")
+    emit("#"*72)
+    emit("")
+    emit("")
+    emit("")
+    emit("")
+  end
+
+  def stabs(str)
+    @out.emit(".stabs  #{str}") if @debug == :stabs
+  end
+
+  def stabn(str)
+    @out.emit(".stabn  #{str}") if @debug == :stabs
   end
 
   def include(filename)
     return yield if !filename
     @section += 1
-    @out.emit(".stabs  \"#{filename}\",130,0,0,0")
+    stabs("\"#{filename}\",130,0,0,0")
     ret = yield
-    @out.emit(".stabn  162,0,0,0")
+    stabn("162,0,0,0")
     @section -= 1
     comment ("End include \"#{filename}\"")
     ret
@@ -612,9 +648,9 @@ class Emitter
       # and absolute addresses outside of them.
       #
       if @section == 0
-        @out.emit(".stabn  68,0,#{position.lineno},.LM#{@linelabel}")
+        stabn("68,0,#{position.lineno},.LM#{@linelabel}")
       else
-        @out.emit(".stabn  68,0,#{position.lineno},.LM#{@linelabel} -.LFBB#{@curfunc}")
+        stabn("68,0,#{position.lineno},.LM#{@linelabel} -.LFBB#{@curfunc}")
       end
       @out.label(".LM#{@linelabel}")
       @linelabel += 1
@@ -634,8 +670,8 @@ class Emitter
     end
 
     @out.emit(".file \"#{filename}\"")
-    @out.emit(".stabs \"#{File.dirname(filename)}/\",100,0,2,.Ltext0")
-    @out.emit(".stabs \"#{File.basename(filename)}\",100,0,2,.Ltext0")
+    stabs("\"#{File.dirname(filename)}/\",100,0,2,.Ltext0")
+    stabs("\"#{File.basename(filename)}\",100,0,2,.Ltext0")
     @out.emit(".text")
     @files = [filename]
     label(".Ltext0")
