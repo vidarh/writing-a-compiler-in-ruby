@@ -614,6 +614,9 @@ class Compiler
         args.insert(1,":#{method}".to_sym)
         warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
         #error(err_msg, scope, [:callm, ob, method, args])
+        m = off
+      else
+        m = "__voff__#{clean_method_name(method)}"
       end
 
       @e.caller_save do
@@ -628,7 +631,7 @@ class Compiler
           load_class(scope) # Load self.class into %eax
           load_super(scope) if do_load_super
           
-          @e.callm(off)
+          @e.callm(m)
           if ob != :self
             @e.comment("Evicting self") 
             @e.evict_regs_for(:self) 
@@ -882,6 +885,10 @@ class Compiler
     exp.depth_first(:defm) do |defun|
       @vtableoffsets.alloc_offset(defun[1])
       :skip
+    end
+
+    @vtableoffsets.vtable.each do |name, off|
+      @e.emit(".equ   __voff__#{clean_method_name(name)}, #{off*4}")
     end
 
     classes = 0
