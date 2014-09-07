@@ -29,6 +29,11 @@ class Symbol
     %s(call __get_string name)
   end
 
+  def == other
+    return self.to_s == other.to_s
+  end
+
+
   # FIXME
   # The compiler should turn ":foo" into Symbol.__get_symbol("foo").
   # Alternatively, the compiler can do this _once_ at the start for
