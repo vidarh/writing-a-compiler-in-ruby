@@ -20,7 +20,10 @@ class Compiler
     # (needs proper register allocation)
     @e.comment("*#{args.last.last.to_s}")
     reg = compile_eval_arg(scope,:numargs)
-    @e.subl(args.size-1,reg)
+
+    # "reg" is set to numargs - (number of non-splat arguments to the *method we're in*)
+    m = scope.method
+    @e.subl(m.args.size-1,reg)
     @e.sall(2,reg)
     @e.subl(reg,@e.sp)
     
@@ -32,16 +35,25 @@ class Compiler
       
       @e.with_register do |dest|
         @e.movl(@e.sp,dest)
-        l = @e.local
+        lc = @e.get_local
+        @e.jmp(lc) # So we can handle the zero argument case
+
+        ls = @e.local
         @e.load_indirect(reg,@e.scratch)
         @e.save_indirect(@e.scratch,dest)
         @e.addl(4,@e.result)
         @e.addl(4,dest)
+
+        @e.local(lc)  # So we can jump straight to condition
         @e.cmpl(reg,argend)
-        @e.jne(l)
+        @e.jne(ls)
+
+        # At this point, dest points to the position *after* the
+        # splat arguments. Subtracting the stack pointer, and shifting
+        # right twice gives us the number of splat arguments
+
         @e.subl(@e.sp,dest)
         @e.sarl(2,dest)
-        @e.subl(1,dest)
         @e.movl(dest,@e.scratch)
         @e.comment("*#{args.last.last.to_s} end")
         

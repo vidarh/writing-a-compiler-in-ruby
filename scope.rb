@@ -1,10 +1,18 @@
 
+
+class Scope
+  def method
+    nil
+  end
+end
+
+
 # Holds globals, and (for now at least), global constants.
 # Note that Ruby-like "constants" aren't really - they are "assign-once"
 # variables. As such, some of them can be treated as true constants
 # (because their value is known at compile time), but some of them are
 # not. For now, we'll treat all of them as global variables.
-class GlobalScope
+class GlobalScope < Scope
   attr_accessor :globals
   attr_reader :class_scope
 
@@ -48,7 +56,7 @@ end
 # Function Scope.
 # Holds variables defined within function, as well as all arguments
 # part of the function.
-class FuncScope
+class FuncScope < Scope
   attr_reader :func
 
   def initialize(func)
@@ -85,7 +93,7 @@ end
 
 # Local scope.
 # Is used when local variables are defined via <tt>:let</tt> expression.
-class LocalVarScope
+class LocalVarScope < Scope
   def initialize(locals, next_scope)
     @next = next_scope
     @locals = locals
@@ -183,6 +191,10 @@ class SexpScope
     @next = next_scope
   end
 
+  def method
+    @next ? @next.method : nil
+  end
+
   def rest?
     @next.rest?
   end
@@ -204,7 +216,7 @@ end
 # Class scope.
 # Holds name of class, vtable for methods defined within the class
 # as well as all defined instance & class variables.
-class ClassScope
+class ClassScope < Scope
   # class name,
   # method v-table,
   # instance variables
