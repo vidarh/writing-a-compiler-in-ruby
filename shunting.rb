@@ -2,11 +2,15 @@
 require 'pp'
 require 'treeoutput'
 
+require 'tokenizeradapter'
+
 module OpPrec
   class ShuntingYard
     def initialize(output, tokenizer, parser)
       @out = output
-      @tokenizer = tokenizer
+
+      # FIXME: Pass this in instead of storing it.
+      @tokenizer = TokenizerAdapter.new(tokenizer,parser)
       @parser = parser
     end
 
@@ -45,7 +49,7 @@ module OpPrec
       src.each do |token,op,keyword|
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator
-        if inhibit.include?(token) or keyword && (opstate != :prefix || !ostack.last || ostack.last.type != :infix)
+        if inhibit.include?(token) or keyword && (opstate != :prefix || !ostack.last || ostack.last.type != :infix || token == :end)
           src.unget(token)
           break
         end
@@ -99,7 +103,7 @@ module OpPrec
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
-        possible_func = op ? op.type == :lp :  !token.is_a?(Numeric)
+        possible_func = op ? op.type == :lp :  (!token.is_a?(Numeric) || !token.is_a?(Array))
         lastlp = false
         src.ws if lp_on_entry
       end

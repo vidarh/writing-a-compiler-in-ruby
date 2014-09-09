@@ -44,9 +44,9 @@ Feature: Shunting Yard
 
 	Examples:
 	  | expr                 | tree                                     |
-	  | "foo(1)"             | [:call,:foo,1]                           |
+	  | "foo(1)"             | [:call,:foo,[1]]                         |
 	  | "foo(1,2)"           | [:call,:foo,[1,2]]                       |
-	  | "foo 1"              | [:call,:foo,1]                           |
+	  | "foo 1"              | [:call,:foo,[1]]                         |
 	  | "foo 1,2"            | [:call,:foo,[1,2]]                       |
 	  | "self.foo"           | [:callm,:self,:foo]                      |
 	  | "self.foo(1)"        | [:callm,:self,:foo,1]                    |
