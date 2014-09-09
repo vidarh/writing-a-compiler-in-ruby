@@ -130,6 +130,16 @@ class String
 
 
   def reverse
+    buf = ""
+    l = length
+    if l == 0
+      return
+    end
+    while (l > 0)
+      l = l - 1
+      buf << self[l].chr
+    end
+    buf
   end
 
   def length
