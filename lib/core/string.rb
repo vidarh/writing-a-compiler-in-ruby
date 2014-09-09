@@ -81,6 +81,15 @@ class String
     length == 0
   end
 
+
+  def ord
+    # FIXME: On empty string we're obliged to throw an ArgumentError
+
+    # FIXME: This is 1.8.x behaviour; for 1.9.x, String[] behaviur changes, and
+    # we ned to change this accordingly.
+    self[0]
+  end
+
   def each_byte
     i = 0
     len = length

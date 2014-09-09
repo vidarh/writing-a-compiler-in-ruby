@@ -45,6 +45,11 @@ class Fixnum < Integer
     %s(if (eq @value (callm other __get_raw)) true false)
   end
 
+  # FIXME: I don't know why '!' seems to get an argument...
+  def ! *args
+    false
+  end
+
   def != other
     %s(if (ne @value (callm other __get_raw)) true false)
   end
