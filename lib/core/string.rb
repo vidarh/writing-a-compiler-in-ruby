@@ -169,6 +169,11 @@ class String
    )
     self
   end
+
+  def <<(other)
+    concat(other)
+  end
+
 end
 
 # FIXME: This is an interesting bootstrapping problem
