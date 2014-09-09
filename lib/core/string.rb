@@ -149,7 +149,8 @@ class String
     %s(__get_fixnum l)
   end
 
-  def count
+  def count c = nil
+    1
   end
 
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
