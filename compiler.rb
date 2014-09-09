@@ -35,7 +35,8 @@ class Compiler
                    :assign, :while, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
-                   :lt, :le, :gt, :ge,:saveregs, :and, :or
+                   :lt, :le, :gt, :ge,:saveregs, :and, :or,
+                   :preturn, :proc, :stackframe
                   ]
 
   Keywords = @@keywords
@@ -86,6 +87,16 @@ class Compiler
     # FIXME: Do this once, and add an :assign to a global var, and use that for any
     # later static occurrences of symbols.
     Value.new(get_arg(scope,[:sexp,[:call,:__get_symbol, sym.to_s]]),:object)
+  end
+
+  # For our limited typing we will in some cases need to do proper lookup.
+  # For now, we just want to make %s(index __env__ xxx) mostly treated as
+  # objects, in order to ensure that variables accesses that gets rewritten
+  # to indirect via __env__ gets treated as object. The exception is
+  # for now __env__[0] which contains a stackframe pointer used by
+  # :preturn.
+  def lookup_type(var, index = nil)
+    (var == :__env__ && index != 0) ? :object : nil
   end
 
   # Returns an argument with its type identifier.
@@ -420,6 +431,44 @@ class Compiler
   end
 
 
+  def compile_stackframe(scope)
+    @e.comment("Stack frame")
+    Value.new([:reg,:ebp])
+  end
+
+  # "Special" return for `proc` and bare blocks
+  # to exit past Proc#call.
+  def compile_preturn(scope, arg = nil)
+    @e.comment("preturn")
+
+    @e.save_result(compile_eval_arg(scope, arg)) if arg
+    @e.pushl(:eax)
+
+    # We load the return address pre-saved in __stackframe__ on creation of the proc.
+    # __stackframe__ is automatically added to __env__ in `rewrite_let_env`
+
+    ret = compile_eval_arg(scope,[:index,:__env__,0])
+
+    @e.movl(ret,:ebp)
+    @e.popl(:eax)
+    @e.leave
+    @e.ret
+    @e.evict_all
+    return Value.new([:subexpr])
+  end
+
+  # To compile `proc`, and anonymous blocks
+  # See also #compile_lambda
+  def compile_proc(scope, args=nil, body=nil)
+    e = @e.get_local
+    body ||= []
+    args ||= []
+
+    r = compile_defun(scope, e, [:self,:__closure__]+args,[:let,[]]+body)
+    r
+  end
+
+
   # Compiles and evaluates a given argument within a given scope.
   def compile_eval_arg(scope, arg)
     if arg.respond_to?(:position) && arg.position != nil
@@ -709,7 +758,7 @@ class Compiler
       @e.popl(reg)
       @e.addl(@e.result_value, reg)
     end
-    return Value.new([:indirect, r])
+    return Value.new([:indirect, r], lookup_type(arr,index))
   end
 
 

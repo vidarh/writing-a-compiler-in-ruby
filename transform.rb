@@ -8,6 +8,29 @@
 class Compiler
   include AST
 
+  # For 'bare' blocks, or "Proc" objects created with 'proc', we 
+  # replace the standard return with ":preturn", which ensures the
+  # return is forced to exit the defining scope, instead of "just"
+  # exiting the block itself and then Proc#call.
+  #
+  # FIXME: Note that this does *not* attempt to detect an "escaped"
+  # block that is returning outside of where it should. At some point
+  # we need to add a way of handling this (e.g. MRI raises a LocalJumpError),
+  # but that is trickier to do in a sane way (one option would be
+  # to keep track of any blocks that get defined, and for any return
+  # from a scope that have defined this to mark the created "Proc"
+  # objets accordingly).
+  #
+  def rewrite_proc_return(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      if e[0] == :return
+        e[0] = :preturn
+      end
+    end
+    exp
+  end
+
   # This replaces the old lambda handling with a rewrite.
   # The advantage of handling it as a rewrite phase is that it's
   # much easier to debug - it can be turned on and off to 
@@ -15,17 +38,23 @@ class Compiler
   def rewrite_lambda(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
-      if e[0] == :lambda
+      if e[0] == :lambda || e[0] == :proc
         args = e[1] || E[]
         body = e[2] || nil
+
+        if e[0] == :proc && body
+          body = rewrite_proc_return(body)
+        end
+
         e.clear
         e[0] = :do
-        e[1] = E[:assign, :__tmp_proc, 
+        e[1] = E[:assign, [:index, :__env__,0], [:stackframe]]
+        e[2] = E[:assign, :__tmp_proc,
           E[:defun, @e.get_local,
             E[:self,:__closure__,:__env__]+args,
             body]
         ]
-        e[2] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self]]]
+        e[3] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self]]]
       end
     end
   end
@@ -131,7 +160,7 @@ class Compiler
           env = env1 + env2
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
-        elsif n[0] == :lambda
+        elsif n[0] == :lambda || n[0] == :proc
           vars, env = find_vars(n[2], scopes + [Set.new],env, freq, true)
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
         else
@@ -145,6 +174,13 @@ class Compiler
                 vars += vars2
                 env  += env2
               end
+            end
+
+            # If a block is provided, we need to find variables there too
+            if n[4]
+              vars3, env3 = find_vars([n[4]], scopes, env, freq, in_lambda)
+              vars += vars3
+              env  += env3
             end
           else
             if n[0] == :call
@@ -212,17 +248,20 @@ class Compiler
 
       vars,env= find_vars(e[3],scopes,Set.new, freq)
 
+      # For "preturn". see Compiler#compile_preturn
+      aenv = [:__stackframe__] + env.to_a
+      env << :__stackframe__
+
       vars -= args.to_a
       if env.size > 0
         body = e[3]
 
-        rewrite_env_vars(body, env.to_a)
+        rewrite_env_vars(body, aenv)
         notargs = env - Set[*e[2]]
-        aenv = env.to_a
         extra_assigns = (env - notargs).to_a.collect do |a|
           E[e.position,:assign, E[e.position,:index, :__env__, aenv.index(a)], a]
         end
-        e[3] = [E[:sexp,E[:assign, :__env__, E[:call, :malloc,  [env.size * 4]]]]]
+        e[3] = [E[:sexp,E[:assign, :__env__, E[:call, :malloc,  [aenv.size * 4]]]]]
         e[3].concat(extra_assigns)
         e[3].concat(body)
       end
