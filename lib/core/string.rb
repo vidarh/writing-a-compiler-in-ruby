@@ -25,7 +25,7 @@ class String
     # value 0.
 
     %s(if (lt numargs 3)
-         (assign @buffer 0)
+         (assign @buffer "")
          (do 
             (assign len (callm (index str 0) length))
             (callm self __copy_raw ((callm (index str 0) __get_raw) len)))
