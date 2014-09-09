@@ -1,22 +1,34 @@
 
 class Proc
-  # FIXME: Add support for handling arguments (and blocks...)
-  def call
-    %s(call (index self 1) (self 0 (index self 2)))
+  def initialize
+    @addr = nil
+    @env  = nil
+    @s    = nil  # self in block
+  end
+
+  # We do this here rather than allow it to be 
+  # set in initialize because we want to 
+  # eventually "seal" access to this method
+  # away from regular Ruby code
+
+  def __set_raw addr, env, s
+    @addr = addr
+    @env = env
+    @s = s
+  end
+
+
+  def call *arg
+    %s(call @addr (@s 0 @env (splat arg)))
+
+    # WARNING: Do not do extra stuff here. If this is a 'proc'/bare block
+    # code after the %s(call ...) above will not get executed.
   end
 end
 
-# We can't create a Proc from a raw function directly, so we get
-# nasty. The advantage of this rather ugly method is that we
-# don't in any way expose a constructor that takes raw functions
-# to normal Ruby
-#
-%s(defun __new_proc (addr env)
+%s(defun __new_proc (addr env self)
 (let (p)
- # Assuming 3 pointers for the instance size. Need a better way for this
-   (assign p (malloc 12))
-   (assign (index p 0) Proc)
-   (assign (index p 1) addr)
-   (assign (index p 2) env)
+   (assign p (callm Proc new))
+   (callm p __set_raw (addr env self))
    p
 ))

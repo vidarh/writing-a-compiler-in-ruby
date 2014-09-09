@@ -25,7 +25,7 @@ class Compiler
             E[:self,:__closure__,:__env__]+args,
             body]
         ]
-        e[2] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__]]]
+        e[2] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self]]]
       end
     end
   end
