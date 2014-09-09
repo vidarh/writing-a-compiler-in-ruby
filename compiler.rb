@@ -540,20 +540,11 @@ class Compiler
     t,a = get_arg(scope,:self)
   end
 
-  # compile_yield
   # Yield to the supplied block
   def compile_yield(scope, args, block)
-    @e.comment("yield begin")
+    @e.comment("yield")
     args ||= []
-    args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
-    args = [0] + args # FIXME: No chaining of blocks. Is chaining of blocks legal? Never used it. Anyway, we don't support it
-
-    compile_callm_args(scope, :self, args) do
-      reg = @e.load(:arg, 1) # The block parameter
-      @e.call(reg)
-    end
-    @e.comment("yield end")
-    return Value.new([:subexpr], :object)
+    compile_callm(scope, :__closure__, :call, args, block)
   end
 
   def compile_callm_args(scope, ob, args)
