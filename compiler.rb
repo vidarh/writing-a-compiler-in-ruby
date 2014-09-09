@@ -649,6 +649,10 @@ class Compiler
 
   # Compiles a do-end block expression.
   def compile_do(scope, *exp)
+    if exp.length == 0
+      exp = [:nil]
+    end
+
     exp.each { |e| source=compile_eval_arg(scope, e); @e.save_result(source); }
     return Value.new([:subexpr])
   end
