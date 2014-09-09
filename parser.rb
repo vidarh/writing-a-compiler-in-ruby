@@ -216,7 +216,7 @@ class Parser < ParserBase
       nolfws; expect(";")
       ret = E[pos, sym.to_sym, cond, ret]
     end
-    ws; expect(";"); ws
+    #ws; expect(";"); ws
     return ret
   end
 
@@ -249,8 +249,8 @@ class Parser < ParserBase
     exps = parse_block_exps
     ws
     expect(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
-    return E[pos, :lambda] if args.size == 0 and exps.size == 0
-    return E[pos, :lambda, args, exps]
+    return E[pos, :proc ] if args.size == 0 and exps.size == 0
+    return E[pos, :proc, args, exps]
   end
 
   # def ::= "def" ws* name args? block_body
