@@ -489,6 +489,15 @@ class Compiler
   end
 
 
+  # Push arguments onto the stack
+  def push_args(scope,args, offset = 0)
+    args.each_with_index do |a, i|
+      param = compile_eval_arg(scope, a)
+      @e.save_to_stack(param, i + offset)
+    end
+  end
+
+
   # Compiles a function call.
   # Takes the current scope, the function to call as well as the arguments
   # to call the function with.
@@ -504,15 +513,17 @@ class Compiler
 
     args = [args] if !args.is_a?(Array)
     @e.caller_save do
-      @e.with_stack(args.length, true) do
-        args.each_with_index do |a, i|
-          param = compile_eval_arg(scope, a)
-          @e.save_to_stack(param, i)
+      handle_splat(scope, args) do |args,splat|
+        @e.comment("ARGS: #{args.inspect}; #{splat}")
+        @e.with_stack(args.length, !splat) do
+          @e.pushl(@e.scratch)
+          push_args(scope, args,1)
+          @e.popl(@e.scratch)
+          @e.call(compile_eval_arg(scope, func))
         end
-        @e.movl(args.length, :ebx)
-        @e.call(compile_eval_arg(scope, func))
       end
     end
+
     @e.evict_regs_for(:self)
     reload_self(scope)
     return Value.new([:subexpr])
