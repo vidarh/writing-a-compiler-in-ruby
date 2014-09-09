@@ -82,6 +82,13 @@ class String
   end
 
   def each_byte
+    i = 0
+    len = length
+    while i <  len
+      yield(self[i])
+      i = i + 1
+    end
+    self
   end
 
   def uniq
