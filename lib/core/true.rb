@@ -5,6 +5,10 @@ class TrueClass
     false
   end
 
+  def to_s
+    "true"
+  end
+
   def == other
     if other
       true
