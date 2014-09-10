@@ -263,6 +263,9 @@ class Compiler
         end
         e[3] = [E[:sexp,E[:assign, :__env__, E[:call, :malloc,  [aenv.size * 4]]]]]
         e[3].concat(extra_assigns)
+        if body.empty?
+          body = [:nil]
+        end
         e[3].concat(body)
       end
       # Always adding __env__ here is a waste, but it saves us (for now)
