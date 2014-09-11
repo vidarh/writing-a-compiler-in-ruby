@@ -284,6 +284,16 @@ class Compiler
     end
   end
 
+  def rewrite_range(exp)
+    exp.depth_first do |e|
+      if e[0] == :range
+        STDERR.puts e.inspect
+        e.replace(E[:callm, :Range, :new, e[1..-1]])
+      end
+      :next
+    end
+  end
+
   def create_concat(sub)
     right = sub.pop
     right = E[:callm,right,:to_s] if !right.is_a?(Array)
@@ -302,6 +312,7 @@ class Compiler
 
   def preprocess exp
     rewrite_concat(exp)
+    rewrite_range(exp)
     rewrite_strconst(exp)
     rewrite_fixnumconst(exp)
     rewrite_operators(exp)

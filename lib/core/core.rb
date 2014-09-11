@@ -48,6 +48,7 @@ require 'core/float'
 require 'core/struct'
 require 'core/exception'
 require 'core/pp'
+require 'core/range'
 
 # FIXME: This is of course just plain blatantly wrong, but
 # the next goal is to get everything to link (and crash...)
