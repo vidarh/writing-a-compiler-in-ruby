@@ -32,6 +32,11 @@ class String
         )
   end
 
+  # FIXME: Shouldnt need arg
+  def ! *arg
+    false
+  end
+
   def is_a? c
     true
   end
