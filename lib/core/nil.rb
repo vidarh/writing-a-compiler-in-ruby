@@ -5,6 +5,10 @@ class NilClass
     %s(sexp 0)
   end
 
+  def == other
+    return !other.nil?
+  end
+
   def nil?
     true
   end
