@@ -42,6 +42,9 @@ class Fixnum < Integer
   end
 
   def == other
+    if other.nil?
+      return false 
+    end
     %s(if (eq @value (callm other __get_raw)) true false)
   end
 
