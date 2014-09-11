@@ -83,7 +83,7 @@ class Scanner
     else
       #STDERR.puts "unget without position: #{c}"
     end
-    @buf += c
+    @buf << c
   end
   
   # If &block is passed, it is a callback to parse an expression
