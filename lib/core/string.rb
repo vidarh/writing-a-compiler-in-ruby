@@ -118,6 +118,12 @@ class String
   end
 
   def to_i
+    i = 0
+    each_byte do |s|
+      return i if !(?0..?9).member?(s) 
+      i = i*10 + s - ?0
+    end
+    i
   end
 
   def slice!(b,e)
