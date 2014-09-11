@@ -76,7 +76,7 @@ module OpPrec
       else
         # FIXME This seemingly fixes issue where single argument function call does not get its arguments wrapped.
         # FIXME Need to verify that this doesn't fail any other tests than the ones it should
-        if o.sym == :call || o.sym == :callm and o.type == :prefix and rightv[0] != :flatten and rightv[0] != :comma
+        if o.sym == :call || o.sym == :callm and o.type == :prefix and rightv && rightv[0] != :flatten and rightv[0] != :comma
           rightv = E[rightv]
         end
         @vstack << E[o.sym, flatten(leftv), rightv].compact

@@ -43,28 +43,28 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr                 | tree                                     |
-	  | "foo(1)"             | [:call,:foo,[1]]                         |
-	  | "foo(1,2)"           | [:call,:foo,[1,2]]                       |
-	  | "foo 1"              | [:call,:foo,[1]]                         |
-	  | "foo 1,2"            | [:call,:foo,[1,2]]                       |
-	  | "self.foo"           | [:callm,:self,:foo]                      |
-	  | "self.foo(1)"        | [:callm,:self,:foo,1]                    |
-	  | "self.foo(1,2)"      | [:callm,:self,:foo,[1,2]]                |
-	  | "self.foo bar"       | [:callm,:self,:foo,:bar]                 |
-      | "foo(*arg)"          | [:call,:foo,[[:splat, :arg]]]            |
-      | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]       |
-	  | "foo.bar(*arg)"      | [:callm, :foo, :bar, [[:splat, :arg]]]   |
-	  | "foo.bar(!arg)"      | [:callm, :foo, :bar, [[:"!", :arg]]]     |
-      | "foo(1 + arg)"       | [:call,:foo,[[:+, 1, :arg]]]             |
-      | "foo(1 * arg,bar)"   | [:call,:foo,[[:*, 1, :arg],:bar]]        |
-      | "(ret.flatten).uniq" | [:callm,[:callm,:ret,:flatten],:uniq]    |
-      | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]    |
-      | "foo.bar = 123"      | [:callm,:foo,:bar=, [123]]               |
-      | "flatten(r[2])"      | [:call, :flatten, [[:callm, :r, :[], [2]]]] |
+      | expr                 | tree                                               |
+      | "foo(1)"             | [:call,:foo,[1]]                                   |
+      | "foo(1,2)"           | [:call,:foo,[1,2]]                                 |
+      | "foo 1"              | [:call,:foo,[1]]                                   |
+      | "foo 1,2"            | [:call,:foo,[1,2]]                                 |
+      | "self.foo"           | [:callm,:self,:foo]                                |
+      | "self.foo(1)"        | [:callm,:self,:foo,1]                              |
+      | "self.foo(1,2)"      | [:callm,:self,:foo,[1,2]]                          |
+      | "self.foo bar"       | [:callm,:self,:foo,:bar]                           |
+      | "foo(*arg)"          | [:call,:foo,[[:splat, :arg]]]                      |
+      | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]                 |
+      | "foo.bar(*arg)"      | [:callm, :foo, :bar, [[:splat, :arg]]]             |
+      | "foo.bar(!arg)"      | [:callm, :foo, :bar, [[:"!", :arg]]]               |
+      | "foo(1 + arg)"       | [:call,:foo,[[:+, 1, :arg]]]                       |
+      | "foo(1 * arg,bar)"   | [:call,:foo,[[:*, 1, :arg],:bar]]                  |
+      | "(ret.flatten).uniq" | [:callm,[:callm,:ret,:flatten],:uniq]              |
+      | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]              |
+      | "foo.bar = 123"      | [:callm,:foo,:bar=, [123]]                         |
+      | "flatten(r[2])"      | [:call, :flatten, [[:callm, :r, :[], [2]]]]        |
       | "foo.bar(ret[123])"  | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]] |
-      | "Foo::bar(baz)"      | [:callm, :Foo, :bar, :baz]               |
-	  | "foo.bar sym do end" | [:callm, :foo, :bar, :sym, [:block]]     |
+      | "Foo::bar(baz)"      | [:callm, :Foo, :bar, :baz]                         |
+      | "foo.bar sym do end" | [:callm, :foo, :bar, :sym, [:block]]               |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>
@@ -99,15 +99,19 @@ Feature: Shunting Yard
       | "s.foo[0]"   | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
       | "foo[1] = 2" | [:callm, :foo, :[]=, [1,2]]           | Tree rewrite |
 
+    @func
     Scenario Outline: Function calls
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
 		Then the parse tree should become <tree>
 
 	Examples:
-	  | expr                       | tree                                         |
-	  | "attr_reader :args,:body"  | [:call, :attr_reader, [:":args", :":body"]]  |
-
+      | expr                      | tree                                        |   |
+      | "attr_reader :args,:body" | [:call, :attr_reader, [:":args", :":body"]] |   |
+      | "puts 42 == 42"           | [:call, :puts, [[:==,42,42]]]               |   |
+      | "foo.bar() + 'x'"         | [:+, [:callm, :foo, :bar, nil], "x"]        |   | 
+      | "foo.bar + 'x'"           | [:+, [:callm, :foo, :bar], "x"]             |   | 
+  
 	Scenario Outline: Terminating expressions with keywords
 		Given the expression <expr>
 		When I parse it with the shunting yard parser

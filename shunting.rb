@@ -12,6 +12,18 @@ module OpPrec
       # FIXME: Pass this in instead of storing it.
       @tokenizer = TokenizerAdapter.new(tokenizer,parser)
       @parser = parser
+      
+      # Tricky hack:
+      #
+      # We need a call operator with high priority, but *if* parentheses are not used around
+      # the arguments, we need to push an operator with *low* priority onto the operator stack to prevent
+      # binding the call too tightly to the first value encountered. opcall2 below is that second, low priority
+      # call operator
+
+      @opcall  = Operators["#call#"]
+      @opcall2 = Operators["#call2#"] 
+
+      @opcallm = Operators["."]
     end
 
     def keywords
@@ -27,6 +39,7 @@ module OpPrec
       # As a special rule only :rp's are allowed to reduce past an :lp. This is a bit of a hack - since we recurse for :lp's
       # then don't strictly need to go on the stack at all - they could be pushed on after the shunt returns. May
       # do that later.
+
       while  !ostack.empty? && (ostack.last.pri > pri || (ostack.last.pri == pri && op.assoc == :left) || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
         o = ostack.pop
         @out.oper(o) if o.sym
@@ -43,16 +56,17 @@ module OpPrec
                                 # "opstate" is used to handle things like pre-increment and post-increment that
                                 # share the same token.
       lp_on_entry = ostack.first && ostack.first.type == :lp
-      opcall  = Operators["#call#"]
-      opcallm = Operators["."]
+
       lastlp = true
       src.each do |token,op,keyword|
+
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator
         if inhibit.include?(token) or keyword && (opstate != :prefix || !ostack.last || ostack.last.type != :infix || token == :end)
           src.unget(token)
           break
         end
+
         if op
           op = op[opstate] if op.is_a?(Hash)
 
@@ -63,11 +77,12 @@ module OpPrec
           op = Operators["#,#"] if op == Operators[","] and lp_on_entry
 
           if op.sym == :hash_or_block || op.sym == :block
-            if possible_func || ostack.last == opcall || ostack.last == opcallm
-              @out.value([]) if ostack.last != opcall
+            if possible_func || (ostack.last && ostack.last.sym == :call) || ostack.last == @opcallm
+              ocall = ostack.last ? ostack.last.sym == :call : false
+              @out.value([]) if !ocall
               @out.value(parse_block(token))
               @out.oper(Operators["#flatten#"])
-              ostack << opcall if ostack.last != opcall
+              ostack << @opcall if !ocall
             elsif op.sym == :hash_or_block
               op = Operators["#hash#"]
               shunt(src, [op])
@@ -86,7 +101,7 @@ module OpPrec
               shunt(src, [op])
               opstate = :infix_or_postfix
               # Handling function calls and a[1] vs [1]
-              ostack << (op.sym == :array ? Operators["#index#"] : opcall) if possible_func
+              ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
             elsif op.type == :rp
               break
             else
@@ -97,7 +112,7 @@ module OpPrec
         else
           if possible_func
             reduce(ostack)
-            ostack << opcall
+            ostack << @opcall2
           end
           @out.value(token)
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,

@@ -6,7 +6,7 @@ require 'set'
 #
 #  - Priority (pri)
 #  - Unique Name / Identifier (sym)
-#  - Type (prefix, infix or suffix)
+#  - Type (prefix, infix, suffix, left-parenthesis (:lp) or right-parenthesis (:rp))
 #  - Arity (how many arguments? Most operators are either unary or binary)
 #  - Minarity (The minimum arity, for operators with optional arguments)
 #  - Association: Whether the operator binds to the left or right argument first (the default is right)
@@ -105,6 +105,7 @@ Operators = {
 
   # "Fake" operator for function calls
   "#call#"    => Oper.new( 99, :call,     :prefix,2,1),
+  "#call2#"   => Oper.new(  5, :call,     :prefix,2,1),
   ","         => Oper.new( 99, :comma,    :infix, 2,1),
 
   # "Fake" operator for [] following a name
