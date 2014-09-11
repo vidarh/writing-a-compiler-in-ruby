@@ -13,7 +13,7 @@ class NilClass
     true
   end
 
-  def ! *args
+  def !
     true
   end
 

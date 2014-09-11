@@ -115,7 +115,7 @@ class Compiler
       next :skip if e[0] == :sexp
 
       if e[0].is_a?(Symbol) && OPER_METHOD.member?(e[0].to_s)
-        e[3] = E[e[2]]
+        e[3] = E[e[2]] if e[2]
         e[2] = e[0]
         e[0] = :callm
       end
@@ -210,7 +210,6 @@ class Compiler
 
   def rewrite_env_vars(exp, env)
     exp.depth_first do |e|
-      STDERR.puts e.inspect
       e.each_with_index do |ex, i|
         num = env.index(ex)
         if num
@@ -287,7 +286,6 @@ class Compiler
   def rewrite_range(exp)
     exp.depth_first do |e|
       if e[0] == :range
-        STDERR.puts e.inspect
         e.replace(E[:callm, :Range, :new, e[1..-1]])
       end
       :next

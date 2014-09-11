@@ -1,7 +1,7 @@
 
 class TrueClass
 
-  def ! x # FIXME: Why is it called with an argument?
+  def !
     false
   end
 

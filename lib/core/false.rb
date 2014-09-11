@@ -9,8 +9,7 @@ class FalseClass
     "false"
   end
 
-  def ! *args
-    # FIXME: true is a keyword
+  def !
     true
   end
 

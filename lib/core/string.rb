@@ -32,8 +32,7 @@ class String
         )
   end
 
-  # FIXME: Shouldnt need arg
-  def ! *arg
+  def !
     false
   end
 
