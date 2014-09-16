@@ -296,9 +296,10 @@ class Compiler
   # the if and else arm.
   # If no else arm is given, it defaults to nil.
   def compile_if(scope, cond, if_arm, else_arm = nil)
+    @e.comment("if: #{cond.inspect}")
     res = compile_eval_arg(scope, cond)
-    l_else_arm = @e.get_local
-    l_end_if_arm = @e.get_local
+    l_else_arm = @e.get_local + "_else"
+    l_end_if_arm = @e.get_local + "_endif"
 
     if res && res.type == :object
       @e.save_result(res)
@@ -310,8 +311,10 @@ class Compiler
       @e.jmp_on_false(l_else_arm, res)
     end
 
+    @e.comment("then: #{if_arm.inspect}")
     ifret = compile_eval_arg(scope, if_arm)
     @e.jmp(l_end_if_arm) if else_arm
+    @e.comment("else: #{else_arm.inspect}")
     @e.local(l_else_arm)
     elseret = compile_eval_arg(scope, else_arm) if else_arm
     @e.local(l_end_if_arm) if else_arm
@@ -354,7 +357,9 @@ class Compiler
   end
 
   def compile_or scope, left, right
-    compile_if(scope, left, false, right)
+    @e.comment("compile_or: #{left.inspect} || #{right.inspect}")
+    compile_eval_arg(scope,[:assign, :__left, left])
+    compile_if(scope, :__left, :__left, right)
   end
 
   # Compiles the ternary if form (cond ? then : else) 
