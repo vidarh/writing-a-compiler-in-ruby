@@ -144,9 +144,7 @@ class Scanner
     str.each_byte do |s|
       c = peek
 
-      ung = !c || c.chr.ord != s
-      # FIXME: If I inline the expression directly below, it breaks (typing, presumably)
-      if ung
+      if !c || c.chr.ord != s
         if !buf.empty?
           unget(buf) 
         end
