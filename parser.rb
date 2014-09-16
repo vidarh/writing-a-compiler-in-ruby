@@ -309,6 +309,7 @@ class Parser < ParserBase
     f = nil
     paths.detect { |path| f = File.open(path) rescue nil }
     error("Unable to load '#{q}'") if !f
+    @@requires[q] = [] # Prevent include/require loops
     s = Scanner.new(f)
     pos = position
     expr = Parser.new(s, @opts).parse(false)
