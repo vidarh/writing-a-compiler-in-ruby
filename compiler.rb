@@ -36,7 +36,7 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :proc, :stackframe
+                   :preturn, :proc, :stackframe, :deref
                   ]
 
   Keywords = @@keywords
@@ -51,6 +51,7 @@ class Compiler
     @global_constants << :false
     @global_constants << :true
     @global_constants << :nil
+    @global_constants << :__left
     @classes = {}
     @vtableoffsets = VTableOffsets.new
     @trace = false
@@ -245,6 +246,18 @@ class Compiler
     return cleaned
   end
 
+  # Handle e.g. Tokens::Atom, which is parsed as (deref Tokens Atom)
+  #
+  # For now we are assuming statically resolvable chains, and not
+  # tested multi-level dereference (e.g. Foo::Bar::Baz)
+  #
+  def compile_deref(scope, left, right)
+    cscope = scope.find_constant(left)
+    raise "Unable to resolve: #{left}::#{right} statically (FIXME)" if !cscope || !cscope.is_a?(ClassScope)
+    get_arg(cscope,right)
+  end
+
+
   # Compiles a function definition.
   # Takes the current scope, in which the function is defined,
   # the name of the function, its arguments as well as the body-expression that holds
@@ -358,6 +371,7 @@ class Compiler
 
   def compile_or scope, left, right
     @e.comment("compile_or: #{left.inspect} || #{right.inspect}")
+    # FIXME: Eek. need to make sure variables are assigned for these. Turn it into a rewrite?
     compile_eval_arg(scope,[:assign, :__left, left])
     compile_if(scope, :__left, :__left, right)
   end
@@ -522,7 +536,7 @@ class Compiler
     end
 
     if atype == :addr
-      @global_scope.globals << aparam
+      scope.add_constant(aparam)
       @global_constants << aparam
     elsif atype == :ivar
       # FIXME:  The register allocation here
@@ -821,52 +835,27 @@ class Compiler
   # Takes the current scope, the name of the class as well as a list of expressions
   # that belong to the class.
   def compile_class(scope, name,superclass, *exps)
-    @e.comment("=== class #{name} ===")
+    superc = name == :Class ? nil : @classes[superclass]
+    cscope = scope.find_constant(name)
 
-    superc = @classes[superclass]
+    @e.comment("=== class #{cscope.name} ===")
 
-    cscope = ClassScope.new(scope, name, @vtableoffsets, superc)
 
     @e.evict_regs_for(:self)
 
-    # FIXME: Need to be able to handle re-opening of classes
-    exps.each do |l2|
-      l2.each do |e|
-        if e.is_a?(Array) 
-          if e[0] == :defm
-            cscope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
 
-            e[3].depth_first do |exp|
-              exp.each do |n| 
-                cscope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
-              end
-            end
+    name = cscope.name.to_sym
+    # The check for :Class and :Kernel is an "evil" temporary hack to work around the bootstrapping
+    # issue of creating these class objects before Object is initialized. A better solution (to avoid
+    # demanding an explicit order would be to clear the Object constant and make sure __new_class_object
+    #does not try to deref a null pointer
+    #
+    sscope = (name == superclass or name == :Class or name == :Kernel) ? nil : @classes[superclass]
 
-          elsif e[0] == :call && e[1] == :attr_accessor
-            # This is a bit presumptious, assuming noone are stupid enough to overload
-            # attr_accessor, attr_reader without making them do more or less the same thing.
-            # but the right thing to do is actually to call the method.
-            #
-            # In any case there is no actual harm in allocating the vtable
-            # entry.`
-            #
-            # We may do a quick temporary hack to synthesize the methods,
-            # though, as otherwise we need to implement the full define_method
-            # etc.
-            arr = e[1].is_a?(Array) ? e[2] : [e[2]]
-            arr.each {|entry|
-              cscope.add_vtable_entry(entry.to_s[1..-1].to_sym) 
-            }
-          end
-        end
-      end
-    end
-    @classes[name] = cscope
-    @global_scope.globals << name
-    sscope = name == superclass ? nil : @classes[superclass]
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
     compile_exp(scope, [:assign, name.to_sym, [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]])
+
     @global_constants << name
 
     # In the context of "cscope", "self" refers to the Class object of the newly instantiated class.
@@ -931,7 +920,6 @@ class Compiler
       # We should allow arguments to main
       # so argc and argv get defined, but
       # that is for later.
-      @global_scope = GlobalScope.new(@vtableoffsets)
       compile_eval_arg(@global_scope, exp)
     end
   end

@@ -5,18 +5,27 @@
 # (because their value is known at compile time), but some of them are
 # not. For now, we'll treat all of them as global variables.
 class GlobalScope < Scope
-  attr_accessor :globals
   attr_reader :class_scope
 
   def initialize(offsets)
     @vtableoffsets = offsets
-    @globals = Set.new
+    @globals = {}
     @class_scope = ClassScope.new(self,"Object",@vtableoffsets,nil)
 
     # Despite not following "$name" syntax, these are really global constants.
-    @globals << :false
-    @globals << :true
-    @globals << :nil
+    @globals[:false] = true
+    @globals[:true]  = true
+    @globals[:nil]   = true
+
+    @globals[:__left]  = true
+  end
+
+  def add_constant(c,v = true)
+    @globals[c] = v
+  end
+
+  def find_constant(c)
+    @globals[c]
   end
 
   def rest?

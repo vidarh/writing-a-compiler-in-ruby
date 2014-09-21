@@ -111,7 +111,7 @@ Operators = {
   # "Fake" operator for [] following a name
   "#index#"   => Oper.new(100, :index,    :infix),
   "."         => Oper.new(100, :callm,    :infix, 2,2,:left),
-  "::"        => Oper.new(100, :callm,    :infix, 2,2,:left),
+  "::"        => Oper.new(100, :deref,    :infix, 2,2,:left),
   ".."        => Oper.new(100, :range,    :infix), # FIXME: Check pri - probably not right.
 
 

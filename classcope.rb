@@ -10,7 +10,7 @@ class ClassScope < Scope
   # method v-table,
   # instance variables
   # and class variables
-  attr_reader :name, :vtable, :instance_vars, :class_vars
+  attr_reader :vtable, :instance_vars, :class_vars
 
   # This is the number of instance variables allowed for the class
   # Class, and is used for bootstrapping. Note that it could be
@@ -32,6 +32,30 @@ class ClassScope < Scope
     @ivaroff = @superclass ? @superclass.instance_size : 0
     @instance_vars = !@superclass ? [:@__class__]  : [] # FIXME: Do this properly
     @class_vars = {}
+
+    @constants = {}
+  end
+
+  def find_constant(c)
+    const = @constants[c]
+    return const if const
+    return @next.find_constant(@name+"__"+c.to_s) if @next
+    return nil
+  end
+
+  def prefix
+    return "" if !@next
+    n = @next.name
+    return "" if n.empty?
+    return n + "__"
+  end
+
+  def local_name
+    @name
+  end
+
+  def name
+    prefix + @name.to_s
   end
 
   def class_scope
@@ -46,6 +70,10 @@ class ClassScope < Scope
     @instance_vars << a.to_sym if !@instance_vars.include?(a.to_sym)
   end
 
+  def add_constant(c, v = true)
+    @constants[c] = v
+  end
+
   def instance_size
     @instance_vars.size + @ivaroff
   end
@@ -58,7 +86,15 @@ class ClassScope < Scope
   def get_arg(a)
     # Handle self
     if a.to_sym == :self
-      return [:global,@name]
+      return [:global,name]
+    end
+
+    if (?A..?Z).member?(a.to_s[0])
+      if @constants.member?(a.to_sym)
+        return [:global,name + "__" + a.to_s]
+      else
+        return @next.get_arg(a)
+      end
     end
 
     # class variables.

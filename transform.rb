@@ -308,7 +308,83 @@ class Compiler
     end
   end
 
+  # build_class_scopes
+  #
+  # Consider the case where I open a class, define a method that refers to an as yet undefined
+  # class. Then later I re-open the class and defines the earlier class as an inner class:
+  #
+  #     class Foo
+  #         def hello
+  #            Bar.new
+  #         end
+  #     end
+  #
+  #     class Foo
+  #        class Bar
+  #        end
+  #     end
+  #
+  # To handle this case, <tt>ClassScope</tt> objects must persist across open/close of a class,
+  # and they do. However, to compile this to static references, I also must identify any references
+  # and resolve them, to be able to distinguish a possible ::Bar from ::Foo::Bar
+  #
+  # (we still need to be able to fall back to dynamic constant lookup)
+  #
+  def build_class_scopes(exps, scope = nil)
+    scope = @global_scope if !scope
+
+    return if !exps.is_a?(Array)
+
+    exps.each do |e|
+      if e.is_a?(Array)
+        if e[0] == :defm && scope.is_a?(ClassScope)
+          scope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
+
+          e[3].depth_first do |exp|
+            exp.each do |n|
+              scope.add_ivar(n) if n.is_a?(Symbol) and n.to_s[0] == ?@ && n.to_s[1] != ?@
+            end
+          end
+
+        elsif e[0] == :call && e[1] == :attr_accessor
+          # This is a bit presumptious, assuming noone are stupid enough to overload
+          # attr_accessor, attr_reader without making them do more or less the same thing.
+          # but the right thing to do is actually to call the method.
+          #
+          # In any case there is no actual harm in allocating the vtable
+          # entry.`
+          #
+          # We may do a quick temporary hack to synthesize the methods,
+          # though, as otherwise we need to implement the full define_method
+          # etc.
+          arr = e[1].is_a?(Array) ? e[2] : [e[2]]
+          arr.each {|entry|
+            scope.add_vtable_entry(entry.to_s[1..-1].to_sym) 
+          }
+        elsif e[0] == :class || e[0] == :module
+          superclass = e[2]
+          superc = @classes[superclass.to_sym]
+          cscope = @classes[e[1].to_sym]
+          cscope = ClassScope.new(scope, e[1], @vtableoffsets, superc) if !cscope
+          @classes[cscope.name.to_sym] =  cscope
+          @global_scope.add_constant(cscope.name.to_sym,cscope)
+          scope.add_constant(e[1].to_sym,cscope)
+          build_class_scopes(e[3], cscope)
+        elsif e[0] == :sexp
+        else
+          e[1..-1].each do |x|
+            build_class_scopes(x,scope)
+          end
+        end
+      end
+    end
+  end
+
   def preprocess exp
+    # The global scope is needed for some rewrites
+    @global_scope = GlobalScope.new(@vtableoffsets)
+    build_class_scopes(exp)
+
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_strconst(exp)
