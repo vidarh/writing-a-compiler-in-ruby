@@ -1,49 +1,52 @@
 
-class ScannerString < String
-  def position= newp
-    @position = newp
-  end
-
-  def position
-    @position
-  end
-
-  def is_a? c
-    # FIXME:
-    # Temp hack to make Scanner#unget work
-    return true
-  end
-end
-
-class Position
-  def initialize filename,lineno,col
-    @filename = filename
-    @lineno = lineno
-    @col = col
-  end
-
-  def lineno
-    @lineno
-  end
-
-  def col
-    @col
-  end
-
-  def filename
-    @filename
-  end
-
-  def inspect
-    "line #{self.lineno}, col #{self.col} in #{self.filename}"
-  end
-
-  def to_s
-    inspect
-  end
-end
-
 class Scanner
+
+  class ScannerString < String
+    def position= newp
+      @position = newp
+    end
+
+    def position
+      @position
+    end
+
+    def is_a? c
+      # FIXME:
+      # Temp hack to make Scanner#unget work
+      return true
+    end
+  end
+
+  class Position
+    def initialize filename,lineno,col
+      @filename = filename
+      @lineno = lineno
+      @col = col
+    end
+
+    def lineno
+      @lineno
+    end
+
+    def col
+      @col
+    end
+
+    def filename
+      @filename
+    end
+
+    def inspect
+      "line #{self.lineno}, col #{self.col} in #{self.filename}"
+    end
+
+    def to_s
+      inspect
+    end
+  end
+  
+
+
   def initialize(io)
 
     # set filename if io is an actual file (instead of STDIN)
