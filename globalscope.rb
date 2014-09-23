@@ -16,8 +16,6 @@ class GlobalScope < Scope
     @globals[:false] = true
     @globals[:true]  = true
     @globals[:nil]   = true
-
-    @globals[:__left]  = true
   end
 
   def add_constant(c,v = true)
