@@ -17,6 +17,10 @@ class Object
     "#<#{self.class.name}:#{buf}>"
   end
 
+  def == other
+    %s(if (eq self other) true false)
+  end
+
   def nil?
     false
   end
@@ -25,8 +29,14 @@ class Object
     puts "Object#respond_to not implemented"
   end
 
+  # FIXME: This will not handle eigenclasses correctly.
   def is_a?(c)
-    false
+    k = self.class
+    while k != c && k != Object
+      k = k.superclass
+    end
+
+    return (k == c)
   end
 
   def __send__ sym, *args

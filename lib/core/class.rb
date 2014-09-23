@@ -49,6 +49,24 @@ class Class
     @name
   end
 
+  # FIXME: Should inherit this from Object, but current
+  # bootstrapping won't do that
+  def == other
+    %s(if (eq self other) true false)
+  end
+
+  def !=  other
+    !(self == other)
+  end
+
+  # FIXME: The "if" is a workaround due to bootstrap
+  # issues which get any classes that get initialized before
+  # Object set up with the superclass pointer set to 0 at
+  # the moment. A proper fix is needed
+  def superclass
+    %s(if (index self 3) (index self 3) Object)
+  end
+
   # FIXME
   # &block will be a "bare" %s(lambda) (that needs to be implemented),
   # define_method needs to attach that to the vtable (for now) and/or

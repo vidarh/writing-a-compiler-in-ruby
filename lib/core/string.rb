@@ -32,12 +32,9 @@ class String
         )
   end
 
+
   def !
     false
-  end
-
-  def is_a? c
-    true
   end
 
   def nil?
