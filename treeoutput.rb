@@ -67,6 +67,12 @@ module OpPrec
         else
           @vstack << E[:callm, leftv, :[], [rightv]]
         end
+      elsif o.sym == :incr
+        if ra and rightv[0] == :array
+          @vstack << E[:assign, leftv, [:callm, leftv, :"+", flatten(rightv[1..-1])]]
+        else
+          @vstack << E[:assign, leftv, [:callm, leftv, :"+", [rightv]]]
+        end
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
         @vstack << E[o.sym, leftv].compact + flatten(rightv)
       elsif ra and rightv[0] == :comma and o.sym != :comma
