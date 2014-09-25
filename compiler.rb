@@ -583,7 +583,7 @@ class Compiler
       err_msg = "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
       error(err_msg, scope, [:assign, left, right]) # pass current expression as well
     end
-    return Value.new([:subexpr])
+    return Value.new([:subexpr], :object)
   end
 
 
