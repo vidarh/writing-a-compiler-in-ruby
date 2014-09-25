@@ -274,7 +274,6 @@ class Compiler
       vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
 
       e[3] = E[e.position,:let, vars,*e[3]]
-
       # We store the variables by descending frequency for future use in register
       # allocation.
       e[3].extra[:varfreq] = freq.sort_by {|k,v| -v }.collect{|a| a.first }
@@ -346,7 +345,7 @@ class Compiler
             end
           end
 
-        elsif e[0] == :call && e[1] == :attr_accessor
+        elsif e[0] == :call && (e[1] == :attr_accessor || e[1] == :attr_reader || e[1] == :attr_writer)
           # This is a bit presumptious, assuming noone are stupid enough to overload
           # attr_accessor, attr_reader without making them do more or less the same thing.
           # but the right thing to do is actually to call the method.
@@ -354,13 +353,28 @@ class Compiler
           # In any case there is no actual harm in allocating the vtable
           # entry.`
           #
-          # We may do a quick temporary hack to synthesize the methods,
-          # though, as otherwise we need to implement the full define_method
-          # etc.
-          arr = e[1].is_a?(Array) ? e[2] : [e[2]]
+          arr = e[2].is_a?(Array) ? e[2] : [e[2]]
           arr.each {|entry|
             scope.add_vtable_entry(entry.to_s[1..-1].to_sym) 
           }
+
+          # Then let's do the quick hack:
+          #
+
+          type = e[1]
+          syms = e[2]
+
+          e[0] = :do
+          e.slice!(1..-1)
+          syms.each do |mname|
+            mname = mname.to_s[1..-1].to_sym
+            if (type == :attr_reader || type == :attr_accessor)
+              e << E[:defm, mname, [], ["@#{mname}".to_sym]]
+            end
+            if (type == :attr_writer || type == :attr_accessor)
+              e << E[:defm, "#{mname}=".to_sym, [:value], [[:assign, "@#{mname}".to_sym, :value]]]
+            end
+          end
         elsif e[0] == :class || e[0] == :module
           superclass = e[2]
           superc = @classes[superclass.to_sym]
