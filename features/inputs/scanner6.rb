@@ -2,19 +2,7 @@
 class Scanner
 
   class ScannerString < String
-    def position= newp
-      @position = newp
-    end
-
-    def position
-      @position
-    end
-
-    def is_a? c
-      # FIXME:
-      # Temp hack to make Scanner#unget work
-      return true
-    end
+    attr_accessor :position
   end
 
   class Position
@@ -24,17 +12,7 @@ class Scanner
       @col = col
     end
 
-    def lineno
-      @lineno
-    end
-
-    def col
-      @col
-    end
-
-    def filename
-      @filename
-    end
+    attr_reader :lineno, :col, :filename
 
     def inspect
       "line #{self.lineno}, col #{self.col} in #{self.filename}"
@@ -108,8 +86,7 @@ class Scanner
 
     pos = self.position
     ch = @buf.slice!(-1,1)
-# FIXME: += translates to "incr" primitive, which is a low level instrucion
-    @col = @col + 1
+    @col += 1
 
     if ch == "\n"
       @lineno = @lineno + 1
@@ -169,14 +146,18 @@ c = s.get
 puts "Got: #{c} (GET)"
 puts "Got: #{s.get} (GET2)"
 
+puts s.position
+
 #puts
 c = s.expect(:rescue)
 puts c
 
+puts s.position
 s.unget("foo")
+puts s.position
 puts s.get
 puts s.get
 puts s.get
-
+puts s.position
 #puts s.expect(:rescue)
 puts "DONE"
