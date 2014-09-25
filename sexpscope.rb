@@ -7,7 +7,7 @@
 # code, but for embedded s-expressions the purpose
 # is to have explicit control  over the low level
 # constructs
-class SexpScope
+class SexpScope < Scope
   def initialize(next_scope)
     @next = next_scope
   end
