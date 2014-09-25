@@ -36,7 +36,7 @@ module AST
     end
 
     def self.[](*args)
-      if args.size > 0 && args.first.is_a?(Scanner::Position)
+      if args.size > 0 and args.first.is_a?(Scanner::Position) || args.first.nil?
         pos = args.shift
       end
       e = super(*args)
