@@ -198,6 +198,14 @@ class String
     concat(other)
   end
 
+  # FIXME: Horribly inefficient 
+  def + other
+    s = ""
+    s << self
+    s << other
+    s
+  end
+
 end
 
 # FIXME: This is an interesting bootstrapping problem
