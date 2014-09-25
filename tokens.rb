@@ -13,6 +13,42 @@ module Tokens
   # e.g.: empty?, flatten!, foo=
   MethodEndings = Set["?", "=", "!"]
 
+  ALPHA_LOW  = ?a .. ?z
+  ALPHA_HIGH = ?A .. ?Z
+  DIGITS = ?0 .. ?9
+
+  class CharSet
+    def initialize *c
+      @chars = Set[*c]
+    end
+
+    def << c
+      @chars << c
+    end
+
+    def === other
+      @chars.member?(other)
+    end
+
+    def member? other
+      @chars.member?(other)
+    end
+
+    def to_a
+      @chars.to_a
+    end
+  end
+
+  ALPHA = CharSet.new(*ALPHA_LOW.to_a, *ALPHA_HIGH.to_a)
+  ALNUM = CharSet.new(*ALPHA.to_a, *DIGITS.to_a)
+end
+
+require 'atom'
+require 'sym'
+require 'quoted'
+
+
+module Tokens
   # Match a (optionally specific) keyword
   class Keyword
     def self.expect(s,match)
@@ -22,102 +58,9 @@ module Tokens
       return nil
     end
   end
+end
 
-  class Sym
-    def self.expect(s)
-      return nil if s.peek != ?:
-      s.get
-      buf = Atom.expect(s)
-      bs = ":#{buf.to_s}"
-      return bs.to_sym if buf
-      c = s.peek
-      buf = Quoted.expect(s)
-      bs = ":#{buf.to_s}"
-      return bs.to_sym if buf
-
-      # Lots more operators are legal.
-      # FIXME: Need to check which set is legal - it's annoying inconsistent it appears
-      if s.peek == ?[
-        s.get
-        if s.peek == ?]
-          s.get
-          return :":[]=" if s.peek == ?=
-          return :":[]"
-        end
-        s.unget("[")
-      elsif s.peek == ?/
-        s.get
-        return :":/"
-      elsif s.peek == ?-
-        s.get
-        return :":-"
-      elsif s.peek == ?+
-        s.get
-        return :":+"
-      elsif s.peek == ?=
-        s.get
-        if s.peek == ?=
-          s.get
-          return :":=="
-        end
-        return :":="
-      elsif s.peek == ?<
-        s.get
-        if s.peek == ?<
-          s.get
-          return :":<<"
-        elsif s.peek == ?=
-          s.get
-          return :":<="
-        end
-        return :":<"
-      elsif s.peek == ?>
-        s.get
-        if s.peek == ?>
-          s.get
-          return :":>>"
-        elsif s.peek == ?=
-          s.get
-          return :":>="
-        end
-        return :":>"
-      end
-      s.unget(":")
-      return nil
-   end
-  end
-
-  class Atom
-    def self.expect(s)
-      tmp = ""
-      c = s.peek
-      return Sym.expect(s) if c == ?: # This is a hack. Shoud be handled separately
-
-      if c == ?@ || c == ?$
-        tmp << s.get
-        tmp << s.get if c == ?@ && s.peek == ?@
-      end
-
-      if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
-        tmp << s.get
-
-        while (c = s.peek) && ((?a .. ?z).member?(c) ||
-                                  (?A .. ?Z).member?(c) ||
-                                  (?0 .. ?9).member?(c) || ?_ == c)
-          tmp << s.get
-        end
-      elsif tmp == "$"
-        tmp << s.get # FIXME: Need to check what characters are legal after $ (and not covered above)
-        return tmp.to_sym
-      end
-      if tmp.size > 0 && (s.peek == ?! || s.peek == ??)
-        tmp << s.get
-      end
-      return nil if tmp == ""
-      return tmp.to_sym
-    end
-  end
-
+module Tokens
   # A methodname can be an atom followed by one of the method endings
   # defined in MethodEndings (see top).
   class Methodname
@@ -142,7 +85,9 @@ module Tokens
       return nil
     end
   end
+end
 
+module Tokens
   class Int
     def self.expect(s)
       tmp = ""
@@ -171,136 +116,9 @@ module Tokens
       num.to_f
     end
   end
+end
 
-
-  class Quoted
-    def self.escaped(s,q = '"'[0])
-      return nil if s.peek == q
-      if s.expect("\\")
-        raised "Unexpected EOF" if !s.peek
-        return "\\"+s.get
-      end
-      return s.get
-    end
-
-    def self.expect_dquoted(s,q='"')
-      ret = nil
-      buf = ""
-      while (e = escaped(s,q[0])); 
-        if e == "#" && s.peek == ?{
-          # Uh-oh. String interpolation
-          #
-          # We'll need to do something dirty here:
-          #
-          # We will call back into the main parser... UGLY.
-          # 
-          # We need to do this because you need to do a full
-          # parse to actually know when the string interpolation
-          # ends, since it can be recursive (!)
-          #
-          # This has an ugly impact: We need to get the parser
-          # object from somewhere. We'll pass that as a block.
-          #
-          # We will also need to return something other than a plain
-          # string. We'll return [:concat, string, fragments, one, by, one]
-          # where the fragments can be strings or expressions.
-          # 
-          # NOTE: There's a semi-obvious optimization here that is
-          #  NOT universally safe: Any seeming constant expression
-          #  could result in the concatenation done at compile time.
-          #  For 99.99% of apps this would be safe, but in Ruby some
-          #  moron *could* overload methods and make the seemingly
-          #  constant expression have side effects. We'll likely have
-          #  an option to do this optimization (with some safety checks,
-          #  but for correctness we also need to be able to turn the
-          #  :concat into [:callm, original-string, :concat] or similar.
-          #
-          if !block_given?
-            STDERR.puts "WARNING: String interpolation requires passing block to Quoted.expect"
-          else
-            ret ||= [:concat]
-            ret << buf 
-            buf = ""
-            s.get
-            ret << yield
-            s.expect("}")
-          end
-        else
-          buf << e
-        end
-      end
-      raise "Unterminated string" if !s.expect(q)
-      if ret
-        ret << buf if buf != ""
-        return ret
-      else
-        return buf
-      end
-    end
-
-    def self.expect_squoted(s,q = "'" )
-      buf = ""
-      while (e = s.get) && e != q
-        if e == '"'
-          buf << "\\\""
-        elsif e == "\\" && (s.peek == ?' || s.peek == "\\"[0])
-          buf << "\\" + s.get
-        else
-          buf << e
-        end
-      end
-      raise "Unterminated string" if e != "'"
-      return buf
-    end
-
-    def self.expect(s,&block)
-      q = s.expect('"') || s.expect("'") || s.expect("%") or return nil
-
-      # Handle "special" quoted syntaxes. Currently we only handle generalized quoted
-      # strings, no backticks, regexps etc.. Examples:
-      # %()        - double quote
-      # %q/string/ - generalized single quote
-      # %Q|String| - generalized double quote
-      # (etc. - the opening/close characters can be more or less anything. If (,[,{
-      #  the closing char is the counterpart - ),],}.)
-      #
-      # Note that we're explicitly *NOT* handling "%" followed by a whitespace character.
-      # Not sure I ever want to, even though it's valid Ruby. Never seen it in the wild,
-      # and it's horrendously evil: "1 % 2" is an expression. "% 2 " is the string "2".
-      # "'1' + % 2 " is the string "12". 
-      #
-      # For now we're doing % followed by a non-alphanumeric, non-whitespace
-      # character.
-
-      dquoted = true
-      if q == "'"
-        dquoted = false
-      elsif q == "%"
-        c = s.peek
-        case c
-        when ?q
-          dquoted = false
-          s.get
-        when ?Q
-          s.get
-        when ?w
-          s.get
-        when ?a .. ?z, ?A .. ?Z, ?0..?9
-          s.unget(c)
-          return nil
-        end
-        q = s.get
-        if q == "(" then q = ")"
-        elsif q == "{" then q = "}"
-        elsif q == "[" then q = "]"
-        end
-      end
-
-      return expect_dquoted(s,q,&block) if dquoted
-      return expect_squoted(s,q)
-    end
-  end
-
+module Tokens
   class Tokenizer
     attr_accessor :keywords
 
@@ -328,9 +146,9 @@ module Tokens
       case @s.peek
       when ?",?'
         return [@s.expect(Quoted) { @parser.parse_defexp }, nil]
-      when ?0 .. ?9
+      when DIGITS
         return [@s.expect(Number), nil]
-      when ?a .. ?z, ?A .. ?Z, ?@, ?$, ?:, ?_
+      when ALPHA, ?@, ?$, ?:, ?_
         if @s.peek == ?:
           @s.get
           if @s.peek == ?:
@@ -348,7 +166,7 @@ module Tokens
         return [buf, nil]
       when ?-
         @s.get
-        if (?0 .. ?9).member?(@s.peek)
+        if DIGITS.member?(@s.peek)
           @s.unget("-")
           return [@s.expect(Int), nil]
         end
