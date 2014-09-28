@@ -16,12 +16,15 @@ require 'print_sexp'
 require 'compile_arithmetic'
 require 'compile_comparisons'
 require 'compile_calls'
+require 'compile_class'
+require 'compile_control'
 
 require 'trace'
 require 'stackfence'
 require 'saveregs'
 require 'splat'
 require 'value'
+require 'output_functions'
 
 class Compiler
   attr_reader :global_functions
@@ -158,67 +161,6 @@ class Compiler
   end
 
 
-  # Similar to output_constants, but for functions.
-  # Compiles all functions, defined so far and outputs the appropriate assembly code.
-  def output_functions
-    # This is a bit ugly, but handles the case of lambdas or inner
-    # functions being added during the compilation... Should probably
-    # refactor.
-    while f = @global_functions.shift
-      name = f[0]
-      func = f[1]
-      # create a function scope for each defined function and compile it appropriately.
-      # also pass it the current global scope for further lookup of variables used
-      # within the functions body that aren't defined there (global variables and those,
-      # that are defined in the outer scope of the function's)
-
-      fscope = FuncScope.new(func)
-
-      pos = func.body.respond_to?(:position) ? func.body.position : nil
-      fname = pos ? pos.filename : nil
-
-      @e.include(fname) do
-        # We extract the usage frequency information and pass it to the emitter
-        # to inform the register allocation.
-        varfreq = func.body.respond_to?(:extra) ? func.body.extra[:varfreq] : []
-        @e.func(name, pos, varfreq) do
-          minargs = func.minargs
-
-          compile_if(fscope, [:lt, :numargs, minargs],
-                     [:sexp,[:call, :printf, 
-                             ["ArgumentError: In %s - expected a minimum of %d arguments, got %d\n",
-                              name, minargs - 2, [:sub, :numargs,2]]], [:div,1,0] ])
-
-          if !func.rest?
-            maxargs = func.maxargs
-            compile_if(fscope, [:gt, :numargs, maxargs],
-                       [:sexp,[:call, :printf, 
-                               ["ArgumentError: In %s - expected a maximum of %d arguments, got %d\n",
-                                name, maxargs - 2, [:sub, :numargs,2]]],  [:div,1,0] ])
-          end
-
-          if func.defaultvars > 0
-            @e.with_stack(func.defaultvars) do 
-              func.process_defaults do |arg, index|
-                @e.comment("Default argument for #{arg.name.to_s} at position #{2 + index}")
-                @e.comment(arg.default.inspect)
-                compile_if(fscope, [:lt, :numargs, 1 + index],
-                           [:assign, ("#"+arg.name.to_s).to_sym, arg.default],
-                           [:assign, ("#"+arg.name.to_s).to_sym, arg.name])
-              end
-            end
-          end
-
-          compile_eval_arg(fscope, func.body)
-
-          @e.comment("Reloading self if evicted:")
-          # Ensure %esi is intact on exit, if needed:
-          reload_self(fscope)
-        end
-      end
-    end
-  end
-
   # Need to clean up the name to be able to use it in the assembler.
   # Strictly speaking we don't *need* to use a sensible name at all,
   # but it makes me a lot happier when debugging the asm.
@@ -276,80 +218,6 @@ class Compiler
     return Value.new([:addr, clean_method_name(name)])
   end
 
-  # Compiles a method definition and updates the
-  # class vtable.
-  def compile_defm(scope, name, args, body)
-    scope = scope.class_scope
-
-    # FIXME: Replace "__closure__" with the block argument name if one is present
-    f = Function.new(name,[:self,:__closure__]+args, body, scope) # "self" is "faked" as an argument to class methods
-
-    @e.comment("method #{name}")
-
-
-    cleaned = clean_method_name(name)
-    fname = "__method_#{scope.name}_#{cleaned}"
-    scope.set_vtable_entry(name, fname, f)
-
-    # Save to the vtable.
-    v = scope.vtable[name]
-    compile_eval_arg(scope,[:sexp, [:call, :__set_vtable, [:self,v.offset, fname.to_sym]]])
-    
-    # add the method to the global list of functions defined so far
-    # with its "munged" name.
-    @global_functions[fname] = f
-    
-    # This is taken from compile_defun - it does not necessarily make sense for defm
-    return Value.new([:addr, clean_method_name(fname)])
-  end
-
-  def compile_jmp_on_false(scope, r, target)
-    if r && r.type == :object
-      @e.save_result(r)
-      @e.cmpl(@e.result_value, "nil")
-      @e.je(target)
-      @e.cmpl(@e.result_value, "false")
-      @e.je(target)
-    else
-      @e.jmp_on_false(target, r)
-    end
-  end
-
-  # Compiles an if expression.
-  # Takes the current (outer) scope and two expressions representing
-  # the if and else arm.
-  # If no else arm is given, it defaults to nil.
-  def compile_if(scope, cond, if_arm, else_arm = nil)
-    @e.comment("if: #{cond.inspect}")
-
-    res = compile_eval_arg(scope, cond)
-    l_else_arm = @e.get_local + "_else"
-    compile_jmp_on_false(scope, res, l_else_arm)
-
-    @e.comment("then: #{if_arm.inspect}")
-    ifret = compile_eval_arg(scope, if_arm)
-
-    l_end_if_arm = @e.get_local + "_endif"
-    @e.jmp(l_end_if_arm) if else_arm
-    @e.comment("else: #{else_arm.inspect}")
-    @e.local(l_else_arm)
-    elseret = compile_eval_arg(scope, else_arm) if else_arm
-    @e.local(l_end_if_arm) if else_arm
-
-    # At the moment, we're not keeping track of exactly what might have gone on
-    # in the if vs. else arm, so we need to assume all bets are off.
-    @e.evict_all
-
-    combine_types(ifret, elseret)
-  end
-
-  def compile_return(scope, arg = nil)
-    @e.save_result(compile_eval_arg(scope, arg)) if arg
-    @e.leave
-    @e.ret
-    Value.new([:subexpr])
-  end
-
   def compile_rescue(scope, *args)
     warning("RESCUE is NOT IMPLEMENTED")
     Value.new([:subexpr])
@@ -371,37 +239,6 @@ class Compiler
       type = left.type
     end
     return Value.new([:subexpr],type)
-  end
-
-  # Changes to make #compile_if comply with real-life requirements
-  # makes it hard to use it to implement 'or' without introducing a
-  # temporarily variable. First we did that using a global, as a 
-  # hack. This does things more "properly" as a first stage to
-  # either refactoring out the commonalities with compile_if or 
-  # create a "lower level" more generic method to handle conditions
-  #
-  # (for "or" we really only need a way to explicitly say that
-  # the return value of the condition should be left untouched
-  # if the "true" / if-then part of the the if condition should remain
-  # 
-  def compile_or scope, left, right
-    @e.comment("compile_or: #{left.inspect} || #{right.inspect}")
-
-    ret = compile_eval_arg(scope,left)
-    l_or = @e.get_local + "_or"
-    compile_jmp_on_false(scope, ret, l_or)
-
-    l_end_or = @e.get_local + "_end_or"
-    @e.jmp(l_end_or)
-
-    @e.comment(".. or:")
-    @e.local(l_or)
-    or_ret = compile_eval_arg(scope,right)
-    @e.local(l_end_or)
-
-    @e.evict_all
-
-    combine_types(ret,or_ret)
   end
 
   # Compiles the ternary if form (cond ? then : else) 
@@ -651,17 +488,6 @@ class Compiler
   end
 
 
-  # Compiles a while loop.
-  # Takes the current scope, a condition expression as well as the body of the function.
-  def compile_while(scope, cond, body)
-    @e.loop do |br|
-      var = compile_eval_arg(scope, cond)
-      compile_jmp_on_false(scope, var, br)
-      compile_exp(scope, body)
-    end
-    return Value.new([:subexpr])
-  end
-
   # Compiles a let expression.
   # Takes the current scope, a list of variablenames as well as a list of arguments.
   def compile_let(scope, varlist, *args)
@@ -681,59 +507,6 @@ class Compiler
       compile_do(ls, *args)
     end
     return Value.new([:subexpr])
-  end
-
-  def compile_module(scope,name, *exps)
-    # FIXME: This is a cop-out that will cause horrible
-    # crashes - they are not the same (though nearly)
-    compile_class(scope,name, *exps)
-  end
-
-  # Compiles a class definition.
-  # Takes the current scope, the name of the class as well as a list of expressions
-  # that belong to the class.
-  def compile_class(scope, name,superclass, *exps)
-    superc = name == :Class ? nil : @classes[superclass]
-    cscope = scope.find_constant(name)
-
-    @e.comment("=== class #{cscope.name} ===")
-
-
-    @e.evict_regs_for(:self)
-
-
-    name = cscope.name.to_sym
-    # The check for :Class and :Kernel is an "evil" temporary hack to work around the bootstrapping
-    # issue of creating these class objects before Object is initialized. A better solution (to avoid
-    # demanding an explicit order would be to clear the Object constant and make sure __new_class_object
-    #does not try to deref a null pointer
-    #
-    sscope = (name == superclass or name == :Class or name == :Kernel) ? nil : @classes[superclass]
-
-    ssize = sscope ? sscope.klass_size : nil
-    ssize = 0 if ssize.nil?
-    compile_exp(scope, [:assign, name.to_sym, [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]])
-
-    @global_constants << name
-
-    # In the context of "cscope", "self" refers to the Class object of the newly instantiated class.
-    # Previously we used "@instance_size" directly instead of [:index, :self, 1], but when fixing instance
-    # variable handling and adding offsets to avoid overwriting instance variables in the superclass,
-    # this broke, as obviously we should not be able to directly mess with the superclass's instance
-    # variables, so we're intentionally violating encapsulation here.
-
-    compile_exp(cscope, [:assign, [:index, :self, 1], cscope.instance_size])
-
-    # We need to store the "raw" name here, rather than a String object,
-    # as String may not have been initialized yet
-    compile_exp(cscope, [:assign, [:index, :self, 2], name.to_s])
-
-    exps.each do |e|
-      addr = compile_do(cscope, *e)
-    end
-
-    @e.comment("=== end class #{name} ===")
-    return Value.new([:global, name], :object)
   end
 
   # Put at the start of a required file, to allow any special processing
