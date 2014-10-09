@@ -2,7 +2,7 @@
 %s(defun __new_class_object (size superclass ssize)
   (let (ob i)
    (assign ob (malloc (mul size 4))) # Assumes 32 bit
-   (assign i 2)
+   (assign i 6) # Skips the initial instance vars
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
   (while (le i ssize) (do
        (assign (index ob i) (index superclass i))
@@ -17,17 +17,51 @@
   ))
   (assign (index ob 0) Class)
   (assign (index ob 3) superclass)
+# Sub-classes
+  (assign (index ob 4) 0) 
+  (if (eq superclass 0)
+     (assign (index ob 5) 0)
+     (do
+        # Link in as subclass:
+        (assign (index ob 5) (index superclass 4))
+        (assign (index superclass 4) ob)
+        )
+)
   ob
 ))
 
-# FIXME: This only works correctly for the initial
-# class definition. On subsequent re-opens of the class
-# it will fail to correctly propagate vtable changes 
-# downwards in the class hierarchy if the class has
-# since been overloaded.
+# __set_vtable
+#
+# Set the vtable entry. If a subclass has *not*
+# overridden a method, then propagate the override 
+# downwards.
+#
+#  ---
+#
+# Most of this could be turned into pure Ruby. The
+# code is roughly equivalent to this "pseudo-Ruby":
+#
+#   p = vtable.subclasses
+#   while p
+#      if p[off] == vtable[off]; __set_vtable(p,off,ptr); end
+#      p = p.next_sibling
+#   end
+#   vtable[off] = ptr
+#
 %s(defun __set_vtable (vtable off ptr)
+   (let (p) 
+    (assign p (index vtable 4)) 
+    (while (sexp p) 
+       (do 
+          (if (eq (index p off) (index vtable off)) (__set_vtable p off ptr))
+          (assign p (index p 5))
+       )
+    )
   (assign (index vtable off) ptr)
-)
+))
+
+
+
 
 class Class
 

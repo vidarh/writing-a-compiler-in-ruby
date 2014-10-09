@@ -21,7 +21,9 @@ class ClassScope < Scope
   # slot 1 is reserved for @instance_size for objects of class Class
   # slot 2 is reserved for @name
   # slot 3 is reserved for the superclass pointer
-  CLASS_IVAR_NUM = 4
+  # slot 4 is reserved for subclasses
+  # slot 5 is reserved for next_sibling
+  CLASS_IVAR_NUM = 6
 
   def initialize(next_scope, name, offsets, superclass)
     @next = next_scope
