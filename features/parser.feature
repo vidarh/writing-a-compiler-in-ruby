@@ -23,8 +23,8 @@ Feature: Parser
       | "while foo do end"                           | [:do, [:while, :foo, [:do]]]                                               | while with "do ... end" instead of just "end"      |
       | "Keywords=Set[1]"+10.chr+"foo"               | [:do,[:assign,:Keywords,[:callm,:Set,:[],[1]]],:foo]                       | :rp before linefeed should terminate an expression |
       | "expect(',') or return args"                 | [:do,[:or,[:call,:expect,[","]],[:return,:args]]]                          | Priority of "or" vs. call/return                   |
-      | "require File.dirname() + '/../spec_helper'" | [:do, [:require, [:+, [:callm, :File, :dirname, nil], "/../spec_helper"]]] |                                                    |
-      | "File.dirname() + '/../spec_helper'"         | [:do, [:+, [:callm, :File, :dirname, nil], "/../spec_helper"]]             |                                                    |
+      | "require File.dirname() + '/../spec_helper'" | [:do, [:require, [:+, [:callm, :File, :dirname], "/../spec_helper"]]]      |                                                    |
+      | "File.dirname() + '/../spec_helper'"         | [:do, [:+, [:callm, :File, :dirname], "/../spec_helper"]]                  |                                                    |
       | "dirname() + '/../spec_helper'"              | [:do, [:+,[:call, :dirname],"/../spec_helper"]]                            |                                                    |
       | "return rest? ? foo : bar"                   | [:do, [:return, [:ternif, :rest?, [:ternalt, :foo, :bar]]]]                |                                                    |
       | "-1"                                         | [:do, -1]                                                                  | Negative number                                    |
