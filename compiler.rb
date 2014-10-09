@@ -25,6 +25,8 @@ require 'saveregs'
 require 'splat'
 require 'value'
 require 'output_functions'
+require 'globals'
+
 
 class Compiler
   attr_reader :global_functions
@@ -48,7 +50,7 @@ class Compiler
 
   def initialize emitter = Emitter.new
     @e = emitter
-    @global_functions = {}
+    @global_functions = Globals.new
     @string_constants = {}
     @global_constants = Set.new
     @global_constants << :false
@@ -210,7 +212,7 @@ class Compiler
     name = clean_method_name(name)
 
     # add function to the global list of functions defined so far
-    @global_functions[name] = f
+    name = @global_functions.set(name,f)
 
     # a function is referenced by its name (in assembly this is a label).
     # wherever we encounter that name, we really need the adress of the label.

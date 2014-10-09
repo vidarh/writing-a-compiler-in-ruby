@@ -4,12 +4,7 @@ class Compiler
   # Similar to output_constants, but for functions.
   # Compiles all functions, defined so far and outputs the appropriate assembly code.
   def output_functions
-    # This is a bit ugly, but handles the case of lambdas or inner
-    # functions being added during the compilation... Should probably
-    # refactor.
-    while f = @global_functions.shift
-      name = f[0]
-      func = f[1]
+    @global_functions.until_empty! do |name, func|
       # create a function scope for each defined function and compile it appropriately.
       # also pass it the current global scope for further lookup of variables used
       # within the functions body that aren't defined there (global variables and those,

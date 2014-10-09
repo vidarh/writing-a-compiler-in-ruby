@@ -14,15 +14,12 @@ class Compiler
 
     cleaned = clean_method_name(name)
     fname = "__method_#{scope.name}_#{cleaned}"
+    fname = @global_functions.set(fname, f)
     scope.set_vtable_entry(name, fname, f)
 
     # Save to the vtable.
     v = scope.vtable[name]
     compile_eval_arg(scope,[:sexp, [:call, :__set_vtable, [:self,v.offset, fname.to_sym]]])
-    
-    # add the method to the global list of functions defined so far
-    # with its "munged" name.
-    @global_functions[fname] = f
     
     # This is taken from compile_defun - it does not necessarily make sense for defm
     return Value.new([:addr, clean_method_name(fname)])
@@ -58,7 +55,13 @@ class Compiler
 
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
-    compile_exp(scope, [:assign, name.to_sym, [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]])
+    compile_eval_arg(scope, [:if,
+                             [:sexp,[:eq, name, 0]],
+                             # then
+                             [:assign, name.to_sym,
+                              [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]
+                             ]
+                            ])
 
     @global_constants << name
 
