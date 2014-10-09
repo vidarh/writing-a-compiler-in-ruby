@@ -109,7 +109,7 @@ Feature: Shunting Yard
       | expr                      | tree                                        |   |
       | "attr_reader :args,:body" | [:call, :attr_reader, [:":args", :":body"]] |   |
       | "puts 42 == 42"           | [:call, :puts, [[:==,42,42]]]               |   |
-      | "foo.bar() + 'x'"         | [:+, [:callm, :foo, :bar, nil], "x"]        |   | 
+      | "foo.bar() + 'x'"         | [:+, [:callm, :foo, :bar], "x"]             |   | 
       | "foo.bar + 'x'"           | [:+, [:callm, :foo, :bar], "x"]             |   | 
   
 	Scenario Outline: Terminating expressions with keywords
