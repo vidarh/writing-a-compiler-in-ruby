@@ -46,6 +46,7 @@ Feature: Compiler
     | inputs/defaultargs.rb   | outputs/defaultargs.txt   | Default arguments to methods                       |
     | inputs/nil.rb           | outputs/nil.txt           | Basic checks of "nil"                              |
     | inputs/typed_and.rb     | outputs/typed_and.txt     | Regression check for and/or with typing            |
+    | inputs/redefine.rb      | outputs/redefine.txt      | Re-opening classes                                 |
 
     @logic
 	Scenario Outline: Running programs
