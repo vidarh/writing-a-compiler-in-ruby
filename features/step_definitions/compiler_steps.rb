@@ -17,8 +17,8 @@ When /^I compile it$/ do
   @tree = @aout.output
 end
 
-Then /^the output should match (.*)$/ do |f|
-  @output.to_s.should == File.read(f)
+Then /^the output should match(.*)$/ do |f|
+  @output.to_s.should == File.read("outputs/"+@src.split(".")[0]+".txt")
 end
 
 Then /^the output should be (.*)$/ do |tree|
@@ -27,16 +27,18 @@ end
 
 
 Given /^the source file (.*)$/ do |f|
-  @src = f #@scanner = Scanner.new(File.open(f,"r"))
+  @src = f
 end
 
 When /^I compile it and run it$/ do
   Dir.chdir((Pathname.new(File.dirname(__FILE__)) + "../..").to_s) do
     Tempfile.open('ruby-compiler') do |tmp|
-      `ruby compiler.rb features/#{@src} >#{tmp.path}.s 2>#{tmp.path}`
+      src = "inputs/#{@src}"
+      raise "Input '#{src}' does not exist" if !File.exists?("features/#{src}")
+      `ruby compiler.rb features/#{src} >#{tmp.path}.s 2>#{tmp.path}`
       Tempfile.open('ruby-compiler') do |exe|
-        STDERR.puts "Asm file is in #{tmp.path}.s"
-        `gcc -m32 -gstabs -o #{exe.path}-binary #{tmp.path}.s ./runtime.o`
+#        STDERR.puts "Asm file is in #{tmp.path}.s"
+        `gcc -m32 -gstabs -o #{exe.path}-binary #{tmp.path}.s`
         @output = `echo test | #{exe.path}-binary`
       end
     end

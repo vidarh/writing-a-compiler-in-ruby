@@ -17,43 +17,43 @@ Feature: Compiler
 	Scenario Outline: Running programs
 		Given the source file <infile>
 		When I compile it and run it
-		Then the output should match <outfile>
+		Then the output should match the outputs/* file
 
 	Examples:
-    | infile                  | outfile                   | notes                                              |
-    | inputs/01trivial.rb     | outputs/01trivial.txt     | Just a puts                                        |
-    | inputs/01btrivial.rb    | outputs/01btrivial.txt    | Method call with single numeric argument.          |
-    | inputs/01ctrivial.rb    | outputs/01ctrivial.txt    | A puts with no argument                            |
-    | inputs/02class.rb       | outputs/02class.txt       | Simple class                                       |
-    | inputs/method.rb        | outputs/method.txt        | Class w/method with single argument                |
-    | inputs/method2.rb       | outputs/method2.txt       | Class w/method with non-initialize method w/2 args |
-    | inputs/method3.rb       | outputs/method3.txt       | Class w/method with two arguments                  |
-    | inputs/03ivar.rb        | outputs/03ivar.txt        | Setting and retrieving an instance variable        |
-    | inputs/05cvar.rb        | outputs/05cvar.txt        | Simple use of class variable                       |
-    | inputs/symbol_to_s.rb   | outputs/symbol_to_s.txt   | :hello.to_s                                        |
-    | inputs/new_with_arg.txt | outputs/new_with_arg.txt  | Foo.new(some arg)                                  |
-    | inputs/string_to_sym.rb | outputs/string_to_sym.txt | "foo".to_sym.to_s                                  |
-    | inputs/04accessor.rb    | outputs/04accessor.txt    | Simple use of attr_accessor                        |
-    | inputs/06print.rb       | outputs/06print.txt       | Basic print/puts support                           |
-    | inputs/interpolate.rb   | outputs/interpolate.txt   | Simple string interpolation                        |
-    | inputs/div.rb           | outputs/div.txt           | Repeated divs to check register alloc.             |
-    | inputs/stdout.rb        | outputs/stdout.txt        | Test basic STDOUT                                  |
-    | inputs/stdin.rb         | outputs/stdin.txt         | Test basic STDIN                                   |
-    | inputs/ivar.rb          | outputs/ivar.txt          | Test instance vars in subclasses                   |
-    | inputs/methodnames.rb   | outputs/methodnames.txt   | foo= is a valid method name, and distinct from foo |
-    | inputs/classname.rb     | outputs/classname.txt     | Class#name                                         |
-    | inputs/strcmp.rb        | outputs/strcmp.txt        | Basic String#== tests                              |
-    | inputs/defaultargs.rb   | outputs/defaultargs.txt   | Default arguments to methods                       |
-    | inputs/nil.rb           | outputs/nil.txt           | Basic checks of "nil"                              |
-    | inputs/typed_and.rb     | outputs/typed_and.txt     | Regression check for and/or with typing            |
-    | inputs/redefine.rb      | outputs/redefine.txt      | Re-opening classes                                 |
+    | infile           | notes                                              |
+    | 01trivial.rb     | Just a puts                                        |
+    | 01btrivial.rb    | Method call with single numeric argument.          |
+    | 01ctrivial.rb    | A puts with no argument                            |
+    | 02class.rb       | Simple class                                       |
+    | method.rb        | Class w/method with single argument                |
+    | method2.rb       | Class w/method with non-initialize method w/2 args |
+    | method3.rb       | Class w/method with two arguments                  |
+    | 03ivar.rb        | Setting and retrieving an instance variable        |
+    | 05cvar.rb        | Simple use of class variable                       |
+    | symbol_to_s.rb   | :hello.to_s                                        |
+    | new_with_arg.txt | Foo.new(some arg)                                  |
+    | string_to_sym.rb | "foo".to_sym.to_s                                  |
+    | 04accessor.rb    | use of attr_accessor                               |
+    | 06print.rb       | print/puts support                                 |
+    | interpolate.rb   | string interpolation                               |
+    | div.rb           | Repeated divs to check register alloc.             |
+    | stdout.rb        | Test basic STDOUT                                  |
+    | stdin.rb         | Test basic STDIN                                   |
+    | ivar.rb          | Test instance vars in subclasses                   |
+    | methodnames.rb   | foo= is a valid method name, and distinct from foo |
+    | classname.rb     | Class#name                                         |
+    | strcmp.rb        | Basic String#== tests                              |
+    | defaultargs.rb   | Default arguments to methods                       |
+    | nil.rb           | Basic checks of "nil"                              |
+    | typed_and.rb     | Regression check for and/or with typing            |
+    | redefine.rb      | Re-opening classes                                 |
 
     @logic
 	Scenario Outline: Running programs
 		Given the source file <infile>
 		When I compile it and run it
-		Then the output should match <outfile>
+		Then the output should match the outputs/* file
 
 	Examples:
-    | infile                 | outfile                  | notes                                          |             |
-    | inputs/shortcircuit.rb | outputs/shortcircuit.txt | Test that "&&" actuall shortcircuits execution | Just a puts |
+    | infile          | notes                                          |
+    | shortcircuit.rb | Test that "&&" actuall shortcircuits execution |
