@@ -1,5 +1,14 @@
 
 class Object
+  # At this point we have a "fixup to make as part of bootstrapping:
+  #
+  #  Class was created *before* Object existed, which means it is not linked into the
+  #  subclasses array. As a result, unless we do this, Class will not inherit methods
+  #  that are subsquently added to Object below. This *must* be the first thing to happen
+  #  in Object, before defining any methods etc:
+  #
+  %s(assign (index self 4) Class)
+
   # FIXME: Should include "Kernel" here
 
   def initialize
