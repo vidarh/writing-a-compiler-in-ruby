@@ -11,6 +11,7 @@ class ClassScope < Scope
   # instance variables
   # and class variables
   attr_reader :vtable, :instance_vars, :class_vars
+  attr_reader :vtableoffsets
 
   # This is the number of instance variables allowed for the class
   # Class, and is used for bootstrapping. Note that it could be
