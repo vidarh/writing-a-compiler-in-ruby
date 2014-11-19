@@ -80,13 +80,11 @@ class Class
   end
 
   def to_s
-    @name
+    name
   end
 
-  # FIXME: Should inherit this from Object, but current
-  # bootstrapping won't do that
-  def == other
-    %s(if (eq self other) true false)
+  def inspect
+    name
   end
 
   def !=  other
@@ -149,4 +147,7 @@ class Class
   # FIXME: Belongs in Kernel
 
 end
+
+%s(assign (index Class 0) Class)
+%s(assign (index Class 2) "Class")
 
