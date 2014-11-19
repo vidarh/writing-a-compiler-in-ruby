@@ -368,17 +368,6 @@ class Emitter
       adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
     end
 
-    # If we're messing with the stack, any registers marked for saving will be
-    # saved to avoid having to mess with the stack offsets later
-    if @save_register && @save_register.size > 0
-      @save_register.each do |r|
-        if r[1] == false
-          @out.emit(:pushl,r[0])
-          r[1] = true
-        end
-      end
-    end
-
     subl(adj,:esp)
     if !reload_numargs
       addl(args, :ebx)
@@ -452,16 +441,6 @@ class Emitter
                           end)
   end
   
-  def save_register(reg)
-    @save_register ||= []
-    @save_register << [reg, false]
-    yield
-    f = @save_register.pop
-    if f[1]
-      @out.emit(:popl,f[0])
-    end
-  end
-
   # Emits a given operator with possible arguments as an assembly call.
   #
   # Example:
@@ -469,10 +448,6 @@ class Emitter
   #
   # -> <tt>movl %esp, %ebp</tt>
   def emit(op, *args)
-    if @save_register && @save_register.size > 0 && (reg = @save_register.detect{ |r| r[0] == args[1] && r[1] == false })
-      @out.emit(:pushl,args[1])
-      reg[1] = true
-    end
     @out.emit(op, *args)
   end
 

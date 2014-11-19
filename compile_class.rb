@@ -6,6 +6,12 @@ class Compiler
   def compile_defm(scope, name, args, body)
     scope = scope.class_scope
 
+    if name.is_a?(Array)
+      compile_eigenclass(scope, name[0], [[:defm, name[1], args, body]])
+      return Value.new([:subexpr])
+    end
+
+
     # FIXME: Replace "__closure__" with the block argument name if one is present
     f = Function.new(name,[:self,:__closure__]+args, body, scope) # "self" is "faked" as an argument to class methods
 
@@ -31,6 +37,32 @@ class Compiler
     # crashes - they are not the same (though nearly)
     compile_class(scope,name, *exps)
   end
+
+  def compile_eigenclass(scope, expr, exps)
+    @e.comment("=== Eigenclass start")
+
+    ob = [:index, expr, 0]
+    ret = compile_eval_arg(scope, [:assign, ob,
+                                   [:sexp, [:call, :__new_class_object, [scope.klass_size, ob, scope.klass_size]]]
+                                  ])
+    @e.save_result(ret)
+
+    let(scope,:self) do |lscope|
+      @e.save_to_local_var(:eax, 1)
+
+      # FIXME: This uses lexical scoping, which will be wrong in some contexts.
+      compile_exp(lscope, [:sexp, [:assign, [:index, :self ,2], "<#{scope.local_name.to_s} eigenclass>"]])
+
+      exps.each do |e|
+        compile_do(lscope, e)
+      end
+      @e.load_local_var(1)
+    end
+    @e.comment("=== Eigenclass end")
+
+    return Value.new([:subexpr], :object)
+  end
+
 
   # Compiles a class definition.
   # Takes the current scope, the name of the class as well as a list of expressions

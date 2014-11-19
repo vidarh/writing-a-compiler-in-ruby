@@ -395,12 +395,14 @@ class Compiler
     source = compile_eval_arg(scope, right)
     atype = nil
     aparam = nil
-    @e.save_register(source) do
-      args = get_arg(scope,left,:save)
-      atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
-      aparam = args[1]
-      atype = :addr if atype == :possible_callm
-    end
+
+    @e.pushl(source) if source.is_a?(Symbol) # Register
+
+    args = get_arg(scope,left,:save)
+    atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
+    aparam = args[1]
+    atype = :addr if atype == :possible_callm
+    @e.popl(source) if source.is_a?(Symbol)
 
     if atype == :addr
       scope.add_constant(aparam)
@@ -490,22 +492,26 @@ class Compiler
   end
 
 
+
+  def let(scope,*varlist)
+    vars = Hash[*(varlist.zip(1..varlist.size)).flatten]
+    lscope =LocalVarScope.new(vars, scope)
+    if varlist.size > 0
+      @e.evict_regs_for(varlist)
+      @e.with_local(vars.size) do
+        yield(lscope)
+      end
+      @e.evict_regs_for(varlist)
+    else
+      yield(lscope)
+    end
+  end
+
+
   # Compiles a let expression.
   # Takes the current scope, a list of variablenames as well as a list of arguments.
   def compile_let(scope, varlist, *args)
-    vars = {}
-    
-    varlist.each_with_index {|v, i| vars[v]=i}
-    ls = LocalVarScope.new(vars, scope)
-    if vars.size > 0
-      # We brutally handle aliasing (for now) by
-      # simply evicting / spilling all allocated
-      # registers with overlapping names. An alternative
-      # is to give each variable a unique id
-      @e.evict_regs_for(varlist)
-      @e.with_local(vars.size) { compile_do(ls, *args) }
-      @e.evict_regs_for(varlist)
-    else
+    let(scope, *varlist) do |ls|
       compile_do(ls, *args)
     end
     return Value.new([:subexpr])
