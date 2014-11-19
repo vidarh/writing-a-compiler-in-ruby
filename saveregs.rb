@@ -39,6 +39,6 @@ class Compiler
     @e.popl(:ebx)
     @e.movl(:ebx,"28(%eax)")
 
-    [:subexpr]
+    Value.new([:subexpr])
   end
 end
