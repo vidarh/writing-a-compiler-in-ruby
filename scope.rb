@@ -1,6 +1,8 @@
 
 
 class Scope
+  attr_reader :next
+
   def method
     nil
   end
@@ -11,6 +13,26 @@ class Scope
 
   def find_constant(c)
     @next.find_constant(c) if @next
+  end
+
+  def name
+    ""
+  end
+
+  def class_scope
+    self
+  end
+
+  def lvaroffset
+    0
+  end
+
+  def set_vtable_entry(name,realname,f)
+    @next.set_vtable_entry(name,realname,f) if @next
+  end
+
+  def vtable
+    @next ? @next.vtable : {}
   end
 end
 
