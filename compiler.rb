@@ -27,9 +27,10 @@ require 'value'
 require 'output_functions'
 require 'globals'
 
+require 'debugscope'
 
 class Compiler
-  attr_reader :global_functions
+  attr_reader :global_functions, :global_scope
   attr_writer :trace, :stackfence
 
   # list of all predefined keywords with a corresponding compile-method
@@ -196,7 +197,10 @@ class Compiler
   #
   def compile_deref(scope, left, right)
     cscope = scope.find_constant(left)
-    raise "Unable to resolve: #{left}::#{right} statically (FIXME)" if !cscope || !cscope.is_a?(ClassScope)
+    if !cscope || !cscope.is_a?(ClassScope)
+      global_scope.dump
+      error("Unable to resolve: #{left}::#{right} statically (FIXME)",scope) 
+    end
     get_arg(cscope,right)
   end
 

@@ -6,6 +6,7 @@
   stackfence = ARGV.include?("--stackfence")
   transform = !ARGV.include?("--notransform")
   nostabs = ARGV.include?("--nostabs")
+  dumpsymtabs = ARGV.include?("--dumpsymtabs")
 
   # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
   OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
@@ -66,7 +67,11 @@
 
     c.preprocess(prog) if transform
 
-    print_sexp prog if dump
+    if dump || dumpsymtabs
+      print_sexp prog if dump
+      c.global_scope.dump if dumpsymtabs
+      exit(1)
+    end
     
     c.compile(prog)
   end
