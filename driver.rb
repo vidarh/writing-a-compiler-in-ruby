@@ -11,22 +11,38 @@
   OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
 
 
-  # check remaining arguments, if a filename is given.
-  # if not, read from STDIN.
+  # Process remaining arguments
+  #
+  # If a filename is not given, read from STDIN.
   input_source = STDIN
-  ARGV.each do |arg|
-    if File.exists?(arg)
-      input_source = File.open(arg, "r")
-      STDERR.puts "reading from file: #{arg}"
-      break
-    end
+  include_paths = []
+
+  while arg = ARGV.shift
+     if arg[0..1] == "-I"
+       if arg == "-I"
+        path = ARGV.shift
+      else
+        path = arg[2..-1]
+      end
+
+       include_paths << path
+     elsif arg == "-g" # Implemented in ./compile
+     elsif arg[0..1] == "--"
+
+     elsif File.exists?(arg)
+       input_source = File.open(arg, "r")
+       STDERR.puts "reading from file: #{arg}"
+     else
+       STDERR.puts "No such file or argument: #{arg}"
+       exit(1)
+     end
   end
 
   s = Scanner.new(input_source)
   prog = nil
   
   begin
-    parser = Parser.new(s, {:norequire => norequire})
+    parser = Parser.new(s, {:norequire => norequire, :include_paths => include_paths})
     prog = parser.parse
   rescue Exception => e
     STDERR.puts "#{e.message}"
@@ -50,12 +66,10 @@
 
     c.preprocess(prog) if transform
 
-    if dump
-      print_sexp prog
-      exit
-    end
+    print_sexp prog if dump
     
     c.compile(prog)
   end
 
 
+exit(0)

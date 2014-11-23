@@ -7,11 +7,16 @@ require 'operators'
 class Parser < ParserBase
   @@requires = {}
 
+  attr_accessor :include_paths
+
   def initialize(scanner, opts = {})
     super(scanner)
     @opts = opts
     @sexp = SEXParser.new(scanner)
     @shunting = OpPrec::parser(scanner, self)
+    @include_paths = opts[:include_paths].dup
+    @include_paths ||= []
+    @include_paths << File.expand_path(File.dirname(__FILE__)+"/lib")
   end
 
   # name ::= atom
@@ -292,7 +297,17 @@ class Parser < ParserBase
 
   # Returns the include paths relative to a given filename.
   def rel_include_paths(filename)
-    return [filename, "#{filename}.rb", "lib/#{filename}", "lib/#{filename}.rb"]
+    if filename[0] == "/"
+      if filename[-3..-1] != ".rb"
+        return [filename +".rb"]
+      end
+      return [filename]
+    end
+
+    @include_paths.collect do |path|
+      full = File.expand_path("#{path}/#{filename}")
+      full << ".rb" if full[-3..-1] != ".rb"
+    end
   end
 
 
@@ -303,12 +318,19 @@ class Parser < ParserBase
   # may refactor this as a separate tree-rewriting step later.
   def require q
     return true if @@requires[q]
-    STDERR.puts "NOTICE: Statically requiring '#{q}'"
     # FIXME: Handle include path
     paths = rel_include_paths(q)
     f = nil
-    paths.detect { |path| f = File.open(path) rescue nil }
-    error("Unable to load '#{q}'") if !f
+
+    fname = nil
+    paths.detect do |path|
+      fname = path
+      f = File.open(path) rescue nil
+    end
+    error("Unable to load '#{q}'")  if !f
+
+    STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
+
     @@requires[q] = [] # Prevent include/require loops
     s = Scanner.new(f)
     pos = position
@@ -356,7 +378,7 @@ class Parser < ParserBase
   # program ::= exp* ws*
   def parse(require_core = true)
     res = E[position, :do]
-    res << self.require("lib/core/core.rb") if require_core and !@opts[:norequire]
+    res << self.require(File.expand_path(File.dirname(__FILE__)+"/lib/core/core.rb")) if require_core and !@opts[:norequire]
     res.concat(zero_or_more(:exp))
     ws
     error("Expected EOF") if scanner.peek
