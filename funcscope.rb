@@ -7,6 +7,7 @@ class FuncScope < Scope
 
   def initialize(func)
     @func = func
+    @next = @func.scope
   end
 
 

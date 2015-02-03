@@ -410,6 +410,8 @@ class Compiler
 
     if atype == :addr
       scope.add_constant(aparam)
+      prefix = scope.name
+      aparam = prefix + "__" + aparam.to_s if !prefix.empty?
       @global_constants << aparam
     elsif atype == :ivar
       # FIXME:  The register allocation here

@@ -42,7 +42,7 @@ class ClassScope < Scope
   def find_constant(c)
     const = @constants[c]
     return const if const
-    return @next.find_constant(@name+"__"+c.to_s) if @next
+    return @next.find_constant(c) if @next
     return nil
   end
 
