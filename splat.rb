@@ -65,7 +65,7 @@ class Compiler
 
     @e.pushl(@e.result)
     reg = compile_eval_arg(scope,:numargs)
-    @e.subl(args.size,reg)
+    @e.subl(args.size+1,reg)
     @e.sall(2,reg)
     @e.movl(reg,@e.scratch)
     @e.popl(@e.result)
