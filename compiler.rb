@@ -18,6 +18,7 @@ require 'compile_comparisons'
 require 'compile_calls'
 require 'compile_class'
 require 'compile_control'
+require 'compile_include'
 
 require 'trace'
 require 'stackfence'
@@ -42,7 +43,8 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :incr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :proc, :stackframe, :deref
+                   :preturn, :proc, :stackframe, :deref, :include,
+                   :protected
                   ]
 
   Keywords = @@keywords

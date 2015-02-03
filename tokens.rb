@@ -6,7 +6,8 @@ module Tokens
 
   Keywords = Set[
     :begin, :case, :class, :def, :do, :else, :end, :if, :include,
-    :module, :require, :rescue, :then, :unless, :when, :elsif, :lambda
+    :module, :require, :rescue, :then, :unless, :when, :elsif, :lambda,
+    :protected
   ]
 
   # Methods can end with one of these.
