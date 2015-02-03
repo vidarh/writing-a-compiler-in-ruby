@@ -14,7 +14,7 @@ class Parser < ParserBase
     @opts = opts
     @sexp = SEXParser.new(scanner)
     @shunting = OpPrec::parser(scanner, self)
-    @include_paths = opts[:include_paths].dup
+    @include_paths = opts[:include_paths].dup if opts[:include_paths]
     @include_paths ||= []
     @include_paths << File.expand_path(File.dirname(__FILE__)+"/lib")
   end
