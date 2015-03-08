@@ -236,7 +236,14 @@ module Tokens
         res = Methodname.expect(@s)
         res = [res,nil] if res
       else
-        @lastop ? @s.ws : @s.nolfws
+        # FIXME: This rule should likely cover more
+        # cases; may want additional flags
+        if @lastop && @last[0] != :return
+          @s.ws
+        else
+          @s.nolfws
+        end
+
         @lastop = false
         @lastpos = @s.position
         res = get_raw
