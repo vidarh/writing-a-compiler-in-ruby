@@ -532,6 +532,7 @@ class Emitter
   # Generates assembly code for looping.
   # Takes a block, that gets called within the loop.
   def loop
+    evict_all
     br = get_local
     l = local
     yield(br)
