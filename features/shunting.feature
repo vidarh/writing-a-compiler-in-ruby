@@ -31,6 +31,7 @@ Feature: Shunting Yard
       | "5"                  | 5                                     |
       | "?A"                 | 65                                    |
       | "foo +"+10.chr+"bar" | [:+,:foo,:bar]                        |
+      | "return"+10.chr+"foo" | [:return]                            |
       | ":sym"               | :":sym"                               |
       | ":[]"                | :":[]"                                |
       | "self.class"         | [:callm,:self,:class]                 |
@@ -165,5 +166,6 @@ Feature: Shunting Yard
       | "e.foo(vars)"       | [:callm, :e, :foo, :vars]                  |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
+      | "@s.expect(Quoted) { }"    | [:callm, :@s, :expect, :Quoted, [:block]]       |
 	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:block]]]|
       | "&foo"              | [:to_block, :foo]                          |
