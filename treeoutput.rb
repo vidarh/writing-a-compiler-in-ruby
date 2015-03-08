@@ -46,7 +46,7 @@ module OpPrec
       if ra and rightv[0] == :call and o.sym == :callm
         @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
       elsif la and leftv[0] == :callm and o.sym == :call
-        block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && rightv[2][0] == :block
+        block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
         comma = ra && rightv[0] == :comma
         args = comma || block ? flatten(rightv) : rightv
         args = E[args] if !comma && !block && args.is_a?(Array)
