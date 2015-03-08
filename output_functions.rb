@@ -47,6 +47,8 @@ class Compiler
             end
           end
 
+          @e.comment("METHOD BODY:")
+
           compile_eval_arg(fscope, func.body)
 
           @e.comment("Reloading self if evicted:")
