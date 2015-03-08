@@ -75,6 +75,8 @@ class Compiler
 
   def compile_return(scope, arg = nil)
     @e.save_result(compile_eval_arg(scope, arg)) if arg
+    @e.evict_all
+    reload_self(scope)
     @e.leave
     @e.ret
     Value.new([:subexpr])
