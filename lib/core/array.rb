@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 class Array
   # FIXME: still need to make including modules work
