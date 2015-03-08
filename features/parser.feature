@@ -13,10 +13,15 @@ Feature: Parser
 	Examples:
       | expr                                         | tree                                                                       | notes                                              |
       | "1 + 2"                                      | [:do,[:+,1,2]]                                                             | The full parser wraps a [:do] around everything    |
+      | "1 * 2"                                      | [:do,[:*,1,2]]                                                             | |
       | "foo(1)"                                     | [:do,[:call,:foo,[1]]]                                                     | Simple function/method call                        |
+      | "foo(1*2)"                                   | [:do,[:call,:foo,[[:*,1,2]]]]                                              | Simple function/method call                        |
+      | "foo(1*a)"                                   | [:do,[:call,:foo,[[:*,1,:a]]]]                                             | Simple function/method call                        |
+      | "foo(@a*1)"                                  | [:do,[:call,:foo,[[:*,:"@a",1]]]]                                          | Simple function/method call                        |
       | "foo(1,2)"                                   | [:do,[:call,:foo,[1,2]]]                                                   | Simple function/method call                        |
       | "foo { }"                                    | [:do,[:call,:foo,[], [:proc]]]                                             | Testing empty blocks                               |
       | "foo(1) { }"                                 | [:do,[:call,:foo,1, [:proc]]]                                              | Testing empty blocks                               |
+      | "@s.expect(Quoted) { }"    | [:do, [:callm, :@s, :expect, :Quoted, [:proc]]]  | |
       | "foo(1) { bar }"                             | [:do,[:call,:foo,1, [:proc, [],[:bar]]]]                                  | Testing function calls inside a block              |
       | "foo(1) { bar 1 }"                           | [:do,[:call,:foo,1, [:proc, [],[[:call,:bar,[1]]]]]]                      | Testing function calls inside a block              |
       | "foo { bar[0] }"                             | [:do,[:call,:foo,[],[:proc, [],[[:callm,:bar,:[],[0]]]]]]                 | Testing index operator inside a block              |
@@ -148,6 +153,7 @@ Feature: Parser
       | "1.+(2)"                               | [:do, [:callm, 1, :+, 2]]                                             |       |
       | "Position.new(@filename)"              | [:do, [:callm, :Position, :new, :"@filename"]]                        |       |
       | "Position.new(@filename,@lineno,@col)" | [:do, [:callm, :Position, :new, [:"@filename", :"@lineno", :"@col"]]] |       |
+      | "foo.bar(@a*1)"                              | [:do,[:callm,:foo, :bar,[[:*,:"@a",1]]]]                                   | Simple function/method call                        |
 
 
     @logic
