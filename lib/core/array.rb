@@ -302,9 +302,8 @@ class Array
     end
   end
 
-
   # Returns true if self array contains no elements.
-  def empy?
+  def empty?
     return self.size == 0
   end
 
