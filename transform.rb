@@ -386,7 +386,7 @@ class Compiler
           build_class_scopes(e[3], cscope)
         elsif e[0] == :sexp
         else
-          e[1..-1].each do |x|
+          (e[1..-1] || []).each do |x|
             build_class_scopes(x,scope)
           end
         end
