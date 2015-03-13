@@ -64,6 +64,10 @@ class Object
 #    %s(printf format (rest args))
 #  end
 
+  def p ob
+    puts ob.inspect
+  end
+
   # FIXME: Belongs in Kernel
   def puts *str
     na = str.length
