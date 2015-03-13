@@ -242,6 +242,12 @@ class Compiler
       args   = Set[*e[2].collect{|a| a.kind_of?(Array) ? a[0] : a}]
       scopes = [args.dup] # We don't want "args" above to get updated 
 
+      rest = e[2][-1] rescue nil
+      rest = (rest[-1] == :rest ? rest[0] : nil) rescue nil
+      if rest
+        e[2][-1][0] = :__splat
+      end
+
       # We use this to assign registers
       freq   = Hash.new(0)
 
@@ -273,7 +279,17 @@ class Compiler
       vars << :__env__
       vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
 
-      e[3] = E[e.position,:let, vars,*e[3]]
+      if rest
+        vars << rest.to_sym
+        rest_func =
+          [:sexp,
+           [:assign, rest.to_sym, [:__splat_to_Array, :__splat, :numargs]]
+          ]
+      else
+        rest_func = []
+      end
+
+      e[3] = E[e.position,:let, vars, rest_func,*e[3]]
       # We store the variables by descending frequency for future use in register
       # allocation.
       e[3].extra[:varfreq] = freq.sort_by {|k,v| -v }.collect{|a| a.first }

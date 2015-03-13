@@ -54,7 +54,7 @@ class Object
   end
 
   def __send__ sym, *args
-    self.class.__send_for_obj__(self,sym,*__splat)
+    self.class.__send_for_obj__(self,sym,*args)
   end
 
   # FIXME: Belongs in Kernel
@@ -66,19 +66,16 @@ class Object
 
   # FIXME: Belongs in Kernel
   def puts *str
-    %s(assign na (__get_fixnum numargs))
-
-    if na == 2
+    na = str.length
+    if na == 0
       %s(puts "")
       return
     end
 
-    na = na - 2
     i = 0
     while i < na
-      %s(assign raw (index str (callm i __get_raw)))
-      %s(assign hr (if (ne raw 0) true false))
-      if hr
+      raw = str[i]
+      if raw
         raw = raw.to_s.__get_raw
         %s(if (ne raw 0) (puts raw))
       else
@@ -90,19 +87,19 @@ class Object
   end
 
   def print *str
-    %s(assign na (__get_fixnum numargs))
+    na = str.length
     
-    if na == 2
+    if na == 0
       %s(printf "nil")
       return
     end
 
-    na = na - 2
     i = 0
     while i < na
-      %s(assign raw (index str (callm i __get_raw)))
-      raw = raw.to_s.__get_raw
-      %s(if raw (printf "%s" raw))
+      raw = str[i].to_s.__get_raw
+      if raw
+        %s(printf "%s" raw)
+      end
       i = i + 1
     end
   end

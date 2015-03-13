@@ -96,7 +96,7 @@ end
 
 
 %s(defun __get_fixnum (val) (let (num)
-  (assign num (callm Fixnum new))
+  (assign num (callm Fixnum __alloc))
   (callm num __set_raw (val))
   num
 ))

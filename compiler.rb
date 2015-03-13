@@ -44,7 +44,7 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
-                   :protected
+                   :protected, :array, :splat
                   ]
 
   Keywords = @@keywords
@@ -467,6 +467,17 @@ class Compiler
     compile_do(scope, *exp[1])
   end
 
+  # Compile a literal Array initalization
+  #
+  # FIXME: An alternative is another "transform" step
+  #
+  def compile_array(scope, *initializers)
+    compile_eval_arg(scope,
+                     [:sexp,
+                      [:callm, :Array, :[], initializers]
+                      ])
+    return Value.new([:subexpr], :object)
+  end
 
   # Compiles an 8-bit array indexing-expression.
   # Takes the current scope, the array as well as the index number to access.
@@ -506,7 +517,8 @@ class Compiler
     lscope =LocalVarScope.new(vars, scope)
     if varlist.size > 0
       @e.evict_regs_for(varlist)
-      @e.with_local(vars.size) do
+      # FIXME: I'm not actually sure why we need to add 1 here.
+      @e.with_local(vars.size+1) do
         yield(lscope)
       end
       @e.evict_regs_for(varlist)

@@ -27,9 +27,11 @@ class String
     %s(if (lt numargs 3)
          (assign @buffer "")
          (do 
-            (assign len (callm (index str 0) length))
-            (callm self __copy_raw ((callm (index str 0) __get_raw) len)))
-        )
+            (assign first (callm str [] ((__get_fixnum 0))))
+            (assign len (callm first length))
+            (callm self __copy_raw ((callm first __get_raw) len))
+          )
+          )
   end
 
 

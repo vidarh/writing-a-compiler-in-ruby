@@ -6,13 +6,139 @@
 
 class Compiler
 
-  # Push arguments onto the stack
-  def push_args(scope,args, offset = 0)
-    args.each_with_index do |a, i|
-      param = compile_eval_arg(scope, a)
-      @e.save_to_stack(param, i + offset)
+  def compile_args_nosplat(scope, ob, args)
+    @e.with_stack(args.length, true) do
+      @e.pushl(@e.scratch)
+      args.each_with_index do |a, i|
+        param = compile_eval_arg(scope, a)
+        @e.save_to_stack(param, i + 1)
+      end
+      @e.popl(@e.scratch)
+      yield
     end
   end
+
+  # For a splat argument, push it onto the stack,
+  # forwards relative to register "indir".
+  #
+  # FIXME: This method is almost certainly much
+  # less efficient than it could be.
+  #
+  def compile_args_copysplat(scope, a, indir)
+    @e.comment("SPLAT")
+    @e.with_register do |splatcnt|
+      param = compile_eval_arg(scope, a[1])
+      @e.addl(4,param)
+      @e.load_indirect(param, splatcnt)
+      @e.addl(4,param)
+      @e.load_indirect(param, :eax)
+      @e.testl(:eax,:eax)
+      l = @e.get_local
+
+      # If Array class ptr has not been allocated yet:
+      @e.je(l) 
+
+      @e.loop do |br|
+        @e.testl(splatcnt, splatcnt)
+        @e.je(br)
+        # x86 will be the death of me.
+        @e.pushl("(%eax)")
+        @e.popl("(%#{indir.to_s})")
+        @e.addl(4,:eax)
+        @e.addl(4,indir)
+        @e.subl(1,splatcnt)
+      end
+
+      @e.local(l)
+    end
+  end
+
+  def compile_args_splat(scope, ob, args)
+    # Because Ruby evaluation order is left to right,
+    # we need to first figure out how much space we need on
+    # the stack.
+    #
+    # We do that by first building up an expression that
+    # adds up the static elements of the parameter list
+    # and the result of retrieving 'Array#length' from
+    # each splatted array.
+    #
+    # (FIXME: Note that we're not actually type-checking
+    # what is *actually* passed)
+    #
+    num_fixed = 0
+    exprlist = []
+    args.each_with_index do |a, i|
+      if a.is_a?(Array) && a[0] == :splat
+        # We do this, rather than Array#length, because the class may not
+        # have been created yet. This *requires* Array's @len ivar to be
+        # in the first ivar;
+        # FIXME: should enforce this.
+        exprlist << [:index, a[1], 1]
+      else
+        num_fixed += 1
+      end
+    end
+    expr = num_fixed
+    while e = exprlist.pop
+      expr = [:add, e, expr]
+    end
+
+    @e.comment("BEGIN Calculating argument count for splat")
+    ret = compile_eval_arg(scope, expr)
+    @e.movl(@e.result, @e.scratch)
+    @e.comment("END Calculating argument count for splat; numargs is now in #{@e.scratch.to_s}")
+
+    @e.comment("Moving stack pointer to start of argument array:")
+    @e.pushl(@e.scratch) # We assume this may get borked during argument evaluation
+    @e.imull(4,@e.result)
+
+    # esp now points to the start of the arguments; ebx holds numargs,
+    # and end_of_arguments(%esp) also holds numargs
+    @e.subl(@e.result, :esp)
+
+    @e.comment("BEGIN Pushing arguments:")
+    @e.with_register do |indir|
+      # We'll use indir to put arguments onto the stack without clobbering esp:
+      @e.movl(:esp, indir)
+      @e.pushl(@e.scratch)
+      @e.comment("BEGIN args.each do |a|")
+      args.each do |a|
+        @e.comment(a.inspect)
+        if a.is_a?(Array) && a[0] == :splat
+          compile_args_copysplat(scope, a, indir)
+        else
+          param = compile_eval_arg(scope, a)
+          @e.save_indirect(param, indir)
+          @e.addl(4,indir)
+        end
+      end
+      @e.comment("END args.each")
+      @e.popl(@e.scratch)
+    end
+    @e.comment("END Pushing arguments")
+    yield
+    @e.comment("Re-adjusting stack post-call:")
+    @e.imull(4,@e.scratch)
+    @e.addl(@e.scratch, :esp)
+  end
+
+  def compile_args(scope, ob, args, &block)
+    @e.caller_save do
+      splat = args.detect {|a| a.is_a?(Array) && a.first == :splat }
+
+      if !splat
+        compile_args_nosplat(scope,ob,args, &block)
+      else
+        compile_args_splat(scope,ob,args, &block)
+      end
+    end
+  end
+
+  def compile_callm_args(scope, ob, args, &block)
+    compile_args(scope, ob, [ob].concat(args), &block)
+  end
+
 
 
   # Compiles a function call.
@@ -29,16 +155,8 @@ class Compiler
     return compile_callm(scope,:self, func, args,block) if fargs && fargs[0] == :possible_callm
 
     args = [args] if !args.is_a?(Array)
-    @e.caller_save do
-      handle_splat(scope, args) do |args,splat|
-        @e.comment("ARGS: #{args.inspect}; #{splat}")
-        @e.with_stack(args.length, !splat) do
-          @e.pushl(@e.scratch)
-          push_args(scope, args,1)
-          @e.popl(@e.scratch)
-          @e.call(compile_eval_arg(scope, func))
-        end
-      end
+    compile_args(scope, func, args) do
+      @e.call(compile_eval_arg(scope, func))
     end
 
     @e.evict_regs_for(:self)
@@ -76,29 +194,6 @@ class Compiler
     compile_callm(scope, :__closure__, :call, args, block)
   end
 
-  def compile_callm_args(scope, ob, args)
-    handle_splat(scope,args) do |args, splat|
-      @e.with_stack(args.length+1, !splat) do
-        # we're for now going to assume that %ebx is likely
-        # to get clobbered later in the case of a splat,
-        # so we store it here until it's time to call the method.
-        @e.pushl(@e.scratch)
-        
-        ret = compile_eval_arg(scope, ob)
-        @e.save_to_stack(ret, 1)
-        args.each_with_index do |a,i|
-          param = compile_eval_arg(scope, a)
-          @e.save_to_stack(param, i+2)
-        end
-        
-        # Pull the number of arguments off the stack
-        @e.popl(@e.scratch)
-        yield  # And give control back to the code that actually does the call.
-      end
-    end
-  end
-
-
   # Compiles a super method call
   #
   def compile_super(scope, args, block = nil)
@@ -118,6 +213,7 @@ class Compiler
   def compile_callm(scope, ob, method, args, block = nil, do_load_super = false)
     # FIXME: Shouldn't trigger - probably due to the callm rewrites
     return compile_yield(scope, args, block) if method == :yield and ob == :self
+    return compile_super(scope, args,block) if method == :super and ob == :self
 
     @e.comment("callm #{ob.inspect}.#{method.inspect}")
     trace(nil,"=> callm #{ob.inspect}.#{method.inspect}\n")
@@ -139,23 +235,21 @@ class Compiler
         m = "__voff__#{clean_method_name(method)}"
       end
 
-      @e.caller_save do
-        compile_callm_args(scope, ob, args) do
-          if ob != :self
-            @e.load_indirect(@e.sp, :esi) 
-          else
-            @e.comment("Reload self?")
-            reload_self(scope)
-          end
+      compile_callm_args(scope, ob, args) do
+        if ob != :self
+          @e.load_indirect(@e.sp, :esi) 
+        else
+          @e.comment("Reload self?")
+          reload_self(scope)
+        end
 
-          load_class(scope) # Load self.class into %eax
-          load_super(scope) if do_load_super
-          
-          @e.callm(m)
-          if ob != :self
-            @e.comment("Evicting self") 
-            @e.evict_regs_for(:self) 
-          end
+        load_class(scope) # Load self.class into %eax
+        load_super(scope) if do_load_super
+
+        @e.callm(m)
+        if ob != :self
+          @e.comment("Evicting self") 
+          @e.evict_regs_for(:self) 
         end
       end
     end

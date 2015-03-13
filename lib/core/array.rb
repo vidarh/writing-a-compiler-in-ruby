@@ -6,30 +6,21 @@ class Array
 
   # Let's start with the basics:
 
-  # FIXME: initialize should take an optional argument,
+  # FIXME: initialize should take two optional arguments,
   # but we don't yet handle initializers, so not supporting that
   # for now.
-  def initialize
-    @len = 0
-    @ptr = 0
-    @capacity = 0
-  end
-
-  def __grow newlen
-    # FIXME: This is just a guestimate of a reasonable rule for
-    # growing. Too rapid growth and it wastes memory; to slow and
-    # it is, well, slow to append to.
-    @capacity = (newlen * 4 / 3) + 4 
-    if @ptr
-      %s(assign @ptr (realloc @ptr @capacity))
-    else
-      %s(assign @ptr (malloc @capacity))
-    end
-  end
-
-  #FIXME: Private. Assumes idx < @len && idx >= 0
-  def __set(idx, obj)
-    %s(assign (index @ptr @len) obj)
+  def initialize *elements
+    # FIXME: See notes in lib/core/core.rb regarding bootstrapping
+    # of splat handling, which causes the annoyance below:
+    #
+    # This would work better/be simpler with tagger pointers, as in
+    # that case, using Fixnum would not trigger object creation.
+    # A cleaner option (over using low level stuff in Array) may be
+    # to not use Fixnum#new in __get_fixnum, but wire that up specially.
+    #
+    # We'd still be limited in what to do here, but not as strictly.
+    #
+    __initialize
   end
 
   #FIXME: Private. Assumes idx < @len && idx >= 0
@@ -80,15 +71,12 @@ class Array
 #    return self.reject{|item| other_array.include?(item)}
 #  end
 
-  # Append—Pushes the given object on to the end of this array. This expression
+  # Pushes the given object on to the end of this array. This expression
   # returns the array itself, so several appends may be chained together.
-  def append(obj) # FIXME: <<
-    # FIXME: Currently this
-    if @len >= @capacity
-      __grow(@len+1)
-    end
-    __set(@len, obj)
-    @len += 1
+  def <<(obj)
+    %s(if (le @len @capacity) (callm self __grow ((add @len 1))))
+    %s(assign (index @ptr @len) obj)
+    %s(assign @len (add @len 1))
     self
   end
 
@@ -134,27 +122,36 @@ class Array
 #  end
 
 
-  def [](*elements)
-    Array.new(*elements)
+  def self.[](*elements)
+    a = Array.new
+    elements.each do |e|
+      a << e
+    end
+    a
   end
 
   def [](idx)
+    %s(assign idx (callm idx __get_raw))
+
     # return element at given index
     # FIXME: Negative indices not implemented
     # FIXME: Range support not implemented
-    if idx < 0
-      idx = @len - idx
-    end
-    if @ptr == nil || idx > @len || idx < 0
-      return nil
-    end
-    __get(idx)
-  end
 
+    %s(if (ge idx @len)
+         (assign idx (sub @len idx))
+         )
 
-  def [](start, length)
-    # return array with elements from start to start + length
-    %s(puts "Array#[] not implemented")
+    %s(if (or (or 
+               (eq @ptr 0) 
+               (gt idx @len)
+               ) 
+           (lt idx 0))
+         (return nil) 
+         (do
+            (assign tmp (callm self __get (idx)))
+            (if (eq tmp 0) (return nil) (return tmp))
+             )
+         )
   end
 
 
@@ -287,9 +284,20 @@ class Array
   # Calls block once for each element in self,
   # passing that element as a parameter.
   def each
-    # each needs to be defined in order for all of
-    # Enumerable's methods to work.
-    %s(puts "Array#each not implemented")
+    i = 0
+    while i < self.size
+      el = self[i]
+      yield(el)
+      i += 1
+     end
+  end
+
+
+  def member?(val)
+    self.each do |v|
+      return true if v == val
+    end
+    return false
   end
 
 
@@ -420,15 +428,19 @@ class Array
 
   # Returns a string created by converting each element of the array to a string,
   # separated by sep.
-  def join(sep = $,)
+  def join(sep) # = nil)
     join_str = ""
     size = self.size
-    self.each_with_index do |item, idx|
-      join_str += item.to_s
-      if idx != (size - 1)
-        join_str += sep
+    sep = sep.to_s
+    self.each do |item|
+      puts item
+
+      if !join_str.empty?
+        join_str << sep
       end
+      join_str << item.to_s
     end
+    join_str
   end
 
 
@@ -458,7 +470,7 @@ class Array
 
   # Returns the number of elements in self. May be zero.
   def length
-    %s(puts "Array#length not implemented")
+    %s(__get_fixnum @len)
   end
 
 
