@@ -48,12 +48,13 @@ class Object
     return (k == c)
   end
 
+  # FIXME: Private
+  def send sym, *args
+    __send__(sym, *args)
+  end
+
   def __send__ sym, *args
-    %s(printf "WARNING: __send__ bypassing vtable (name not statically known at compile time) not yet implemented.\n")
-    %s(if sym (printf "WARNING:    Method: '%s'\n" (callm (callm sym to_s) __get_raw)))
-    %s(printf "WARNING:    symbol address = %p\n" sym)
-    %s(printf "WARNING:    self = %p\n" self)
-    %s(printf "WARNING:    class '%s'\n" (callm (callm (callm self class) name) __get_raw))
+    self.class.__send_for_obj__(self,sym,*__splat)
   end
 
   # FIXME: Belongs in Kernel

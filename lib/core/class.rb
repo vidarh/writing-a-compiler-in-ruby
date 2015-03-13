@@ -136,12 +136,14 @@ class Class
     end
   end
 
-  def __send__ sym, *args
+  def __send_for_obj__ obj,sym,*args
     %s(printf "WARNING: __send__ bypassing vtable (name not statically known at compile time) not yet implemented.\n")
     %s(if sym (printf "WARNING:    Method: '%s'\n" (callm (callm sym to_s) __get_raw)))
     %s(printf "WARNING:    symbol address = %p\n" sym)
-    %s(printf "WARNING:    self = %p\n" self)
-    %s(printf "WARNING:    class '%s'\n" (callm (callm (callm self class) name) __get_raw))
+    %s(printf "WARNING:    object = %p\n" obj)
+    %s(printf "WARNING:    class '%s'\n" (callm (callm self name) __get_raw))
+
+    nil
   end
 
   # FIXME: Belongs in Kernel
