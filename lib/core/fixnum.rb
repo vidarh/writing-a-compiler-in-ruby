@@ -87,6 +87,10 @@ class Fixnum < Integer
   def / other
     div(other)
   end
+
+  def ord
+    self
+  end
   
 end
 
