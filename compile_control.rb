@@ -3,11 +3,13 @@ class Compiler
   def compile_jmp_on_false(scope, r, target)
     if r && r.type == :object
       @e.save_result(r)
+      @e.evict_all
       @e.cmpl(@e.result_value, "nil")
       @e.je(target)
       @e.cmpl(@e.result_value, "false")
       @e.je(target)
     else
+      @e.evict_all
       @e.jmp_on_false(target, r)
     end
   end
@@ -60,10 +62,13 @@ class Compiler
     ifret = compile_eval_arg(scope, if_arm)
 
     l_end_if_arm = @e.get_local + "_endif"
+    @e.evict_all
     @e.jmp(l_end_if_arm) if else_arm
     @e.comment("else: #{else_arm.inspect}")
     @e.local(l_else_arm)
+    @e.evict_all
     elseret = compile_eval_arg(scope, else_arm) if else_arm
+    @e.evict_all
     @e.local(l_end_if_arm) if else_arm
 
     # At the moment, we're not keeping track of exactly what might have gone on
