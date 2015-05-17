@@ -97,6 +97,7 @@ Operators = {
     :prefix => Oper.new( 20, :-,      :prefix)
   },
   "!"         => Oper.new( 10, :"!",      :prefix),
+  "%"         => Oper.new( 20, :"%",      :infix),
   "/"         => Oper.new( 20, :/,      :infix),
   "*"         => {
     :infix_or_postfix => Oper.new( 20, :"*",   :infix),
