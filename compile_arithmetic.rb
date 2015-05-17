@@ -46,8 +46,16 @@ class Compiler
         @e.movl(@e.result, dividend)
         @e.sarl(31, dividend)
         @e.idivl(divisor)
+
+        yield if block_given?
       end
     end
     Value.new([:subexpr])
+  end
+
+  def compile_mod(scope, left, right)
+    compile_div(scope,left,right) do
+      @e.movl(:edx, @e.result)
+    end
   end
 end
