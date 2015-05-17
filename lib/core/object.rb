@@ -69,6 +69,11 @@ class Object
   end
 
   # FIXME: Belongs in Kernel
+  def exit(code)
+    %s(exit (callm code __get_raw))
+  end
+
+  # FIXME: Belongs in Kernel
   def puts *str
     na = str.length
     if na == 0
