@@ -34,6 +34,14 @@ class String
           )
   end
 
+  # DJB hash
+  def hash
+    h = 5381
+    each_byte do |c|
+      h = h * 33 + c
+    end
+    h
+  end
 
   def !
     false
@@ -63,6 +71,10 @@ class String
   def == other
     %s(assign res (if (strcmp @buffer (callm other __get_raw)) false true))
     return res
+  end
+
+  def eql? other
+    self.== other
   end
 
   def __copy_raw(str,len)
