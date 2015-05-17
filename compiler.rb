@@ -44,7 +44,7 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
-                   :protected, :array, :splat
+                   :protected, :array, :splat, :mod
                   ]
 
   Keywords = @@keywords
