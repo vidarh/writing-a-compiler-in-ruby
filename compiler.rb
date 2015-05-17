@@ -408,7 +408,6 @@ class Compiler
     atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
     aparam = args[1]
     atype = :addr if atype == :possible_callm
-    @e.popl(source) if source.is_a?(Symbol)
 
     if atype == :addr
       scope.add_constant(aparam)
@@ -418,6 +417,7 @@ class Compiler
     elsif atype == :ivar
       # FIXME:  The register allocation here
       # probably ought to happen in #save_to_instance_var
+      @e.popl(source) if source.is_a?(Symbol)
       @e.pushl(source)
       ret = compile_eval_arg(scope, :self)
       @e.with_register do |reg|
@@ -428,7 +428,15 @@ class Compiler
       return Value.new([:subexpr], :object)
     end
 
-    if !(@e.save(atype, source, aparam))
+    # FIXME: Otherwise, "source" register may already have been reused
+    if source.is_a?(Symbol)
+      @e.popl(:eax)
+      source = :eax
+    end
+
+    r = @e.save(atype, source, aparam)
+
+    if !r
       err_msg = "Expected an argument on left hand side of assignment - got #{atype.to_s}, (left: #{left.inspect}, right: #{right.inspect})"
       error(err_msg, scope, [:assign, left, right]) # pass current expression as well
     end
