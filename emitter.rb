@@ -536,6 +536,7 @@ class Emitter
     br = get_local
     l = local
     yield(br)
+    evict_all
     jmp(l)
     local(br)
   end
