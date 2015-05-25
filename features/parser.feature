@@ -191,11 +191,12 @@ Feature: Parser
 		Then the parse tree should become <tree>
 
 	Examples:
-      | expr                                         | tree                                                                       | notes                                              |
-      | "% x "                                       | [:do,"x"]                                                                  | The full parser wraps a [:do] around everything    |
-      | "a + % x "                                   | [:do,[:+,:a,"x"]]                                                          | The full parser wraps a [:do] around everything    |
-      | "1 % 2 "                                     | [:do,[:%,1,2]]                                                             | The full parser wraps a [:do] around everything    |
-      | "1 % 2"                                      | [:do,[:%,1,2]]                                                             | The full parser wraps a [:do] around everything    |
+      | expr       | tree              | notes |
+      | "% x "     | [:do,"x"]         |       |
+      | "a + % x " | [:do,[:+,:a,"x"]] |       |
+      | "1 % 2 "   | [:do,[:%,1,2]]    |       |
+      | "1 % 2"    | [:do,[:%,1,2]]    |       |
+
 
 
     
