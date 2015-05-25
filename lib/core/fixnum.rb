@@ -5,6 +5,16 @@ class Fixnum < Integer
     %s(assign @value 0)
   end
 
+  def % other
+#    %s(printf "%i\n" (callm other __get_raw))
+    %s(assign r (callm other __get_raw))
+    %s(assign m (mod @value r))
+
+    %s(if (eq (gt m 0) (lt r 0))
+         (assign m (add m r)))
+    %s(__get_fixnum m)
+  end
+
   def __set_raw(value)
     @value = value
   end
