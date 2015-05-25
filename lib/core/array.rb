@@ -21,6 +21,13 @@ class Array
     # We'd still be limited in what to do here, but not as strictly.
     #
     __initialize
+    if elements.length > 0
+      __grow(elements[0].__get_raw)
+    end
+  end
+
+  def capacity
+    %s(__get_fixnum @capacity)
   end
 
   #FIXME: Private. Assumes idx < @len && idx >= 0
@@ -163,7 +170,8 @@ class Array
   # Inserts elements if length is zero. If nil is used in the second and third form,
   # deletes elements from self. An IndexError is raised if a negative index points
   # past the beginning of the array. See also Array#push, and Array#unshift.
-#  def []=(idx, obj)
+  def []=(idx, obj)
+    %s(assign idx (callm idx __get_raw))
     # assign position/range at given index with object/array
 #    if idx < 0
 #      idx = @len - idx
@@ -172,13 +180,17 @@ class Array
 #      # FIXME Oops. Error.
 #      return nil
 #    end
-#    if idx >= @len
-#      __grow(idx)
-#      # FIXME: Clear any space _between_ @len and idx
-#      @len = idx + 1
-#    end
-#    %s(assign %(index @ptr idx) obj)
-#  end
+
+    %s(if (ge idx @len)
+
+         (do
+            (callm self __grow (idx))
+            (assign @len (add idx 1))
+            )
+          )
+
+    %s(assign (index @ptr idx) obj)
+  end
 
 
   # Calculates the set of unambiguous abbreviations for the strings in self.
