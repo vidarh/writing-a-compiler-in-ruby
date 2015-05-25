@@ -183,6 +183,21 @@ Feature: Parser
     | "l = lambda do puts 'foo'; end; puts 'bar'" | [:do, [:assign, :l, [:lambda, [], [[:call, :puts, ["foo"]]]]], [:call, :puts, ["bar"]]] |
  
 
+
+    @mod
+	Scenario Outline: Simple expressions
+		Given the expression <expr>
+		When I parse it with the full parser
+		Then the parse tree should become <tree>
+
+	Examples:
+      | expr                                         | tree                                                                       | notes                                              |
+      | "% x "                                       | [:do,"x"]                                                                  | The full parser wraps a [:do] around everything    |
+      | "a + % x "                                   | [:do,[:+,:a,"x"]]                                                          | The full parser wraps a [:do] around everything    |
+      | "1 % 2 "                                     | [:do,[:%,1,2]]                                                             | The full parser wraps a [:do] around everything    |
+      | "1 % 2"                                      | [:do,[:%,1,2]]                                                             | The full parser wraps a [:do] around everything    |
+
+
     
 
 
