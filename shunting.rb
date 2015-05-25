@@ -50,6 +50,10 @@ module OpPrec
       @parser.parse_block(start)
     end
 
+    def parse_quoted_exp
+      @tokenizer.get_quoted_exp
+    end
+
     def shunt(src, ostack = [], inhibit = [])
       possible_func = false     # was the last token a possible function name?
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
@@ -90,6 +94,8 @@ module OpPrec
             else
               raise "Block not allowed here"
             end
+          elsif op.sym == :quoted_exp
+            @out.value(parse_quoted_exp)
           else
             if op.type == :rp
               @out.value(nil) if lastlp

@@ -143,10 +143,15 @@ module Tokens
       @s.unget(s)
     end
 
+    def get_quoted_exp(unget = false)
+      @s.unget("%") if unget
+      @s.expect(Quoted) { @parser.parse_defexp } #, nil]
+    end
+
     def get_raw
       case @s.peek
       when ?",?'
-        return [@s.expect(Quoted) { @parser.parse_defexp }, nil]
+        return [get_quoted_exp, nil]
       when DIGITS
         return [@s.expect(Number), nil]
       when ALPHA, ?@, ?$, ?:, ?_
@@ -181,11 +186,6 @@ module Tokens
         return [nil, nil]
       else
         # Special cases - two/three character operators, and character constants
-
-        if @s.peek == ?%
-          r = @s.expect(Quoted) { @parser.parse_defexp }
-          return [r,nil] if r
-        end
 
         first = @s.get
         if second = @s.get

@@ -28,6 +28,10 @@ class TokenizerAdapter
     end
   end
 
+  def get_quoted_exp(unget=:unget)
+    @tokenizer.get_quoted_exp(unget)
+  end
+
   def ws
     @tokenizer.ws
   end
