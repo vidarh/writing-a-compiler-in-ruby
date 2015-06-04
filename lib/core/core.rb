@@ -115,11 +115,11 @@ __FILE__ = "[filename]"
 require 'core/hash'
 require 'core/io'
 require 'core/file'
-require 'core/symbol'
 
 require 'core/numeric'
 require 'core/integer'
 require 'core/fixnum'
+require 'core/symbol'
 require 'core/float'
 require 'core/struct'
 require 'core/exception'
