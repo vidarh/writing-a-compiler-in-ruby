@@ -31,7 +31,11 @@ class Object
   end
 
   def == other
-    %s(if (eq self other) true false)
+    object_id == other.object_id
+  end
+
+  def != other
+    !(self == other)
   end
 
   def nil?
