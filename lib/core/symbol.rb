@@ -14,11 +14,7 @@
 # use to return the same object for the same symbol literal
 
 class Symbol
-  # FIXME:
-  # Both class variables and class instance variables are currently not
-  # working properly, so for now we store the hash of the already allocated
-  # symbols in a constant:
-  SymHash = {}
+  @symbols = {}
 
   # FIXME: Should be private, but we don't support that yet
   def initialize(name)
@@ -38,10 +34,10 @@ class Symbol
   # Alternatively, the compiler can do this _once_ at the start for
   # any symbol encountered in the source text, and store the result.
   def self.__get_symbol(name)
-    sym = SymHash[name]
+    sym = @symbols[name]
     if sym.nil? ## FIXME: Doing !sym instead fails w/method missing
       sym = Symbol.new(name)
-      SymHash[name] = sym
+      @symbols[name] = sym
     end
     sym
   end
