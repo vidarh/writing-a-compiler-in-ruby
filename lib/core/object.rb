@@ -19,6 +19,10 @@ class Object
     @__class__
   end
 
+  def object_id
+    %s(__get_fixnum self)
+  end
+
   def inspect
     %s(assign buf (malloc 20))
     %s(snprintf buf 20 "%p" self)
