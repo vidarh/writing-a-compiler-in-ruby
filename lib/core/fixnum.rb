@@ -31,6 +31,10 @@ class Fixnum < Integer
        )
   end
 
+  def inspect
+    to_s
+  end
+
   def chr
    %s(let (buf)
        (assign buf (malloc 2))
