@@ -3,3 +3,5 @@ bar
 foo
 OK:   aid == cid
 OK:   aid != bid
+OK:   a == c
+OK:   a != b

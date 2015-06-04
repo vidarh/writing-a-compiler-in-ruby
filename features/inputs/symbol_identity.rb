@@ -22,3 +22,15 @@ if aid != bid
 else
   puts "FAIL: aid == bid"
 end
+
+if a == c
+  puts "OK:   a == c"
+else
+  puts "FAIL: a != c"
+end
+
+if a != b
+  puts "OK:   a != b"
+else
+  puts "FAIL: a == b"
+end
