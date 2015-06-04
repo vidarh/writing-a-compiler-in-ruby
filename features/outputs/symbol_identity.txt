@@ -1,0 +1,5 @@
+foo
+bar
+foo
+OK:   aid == cid
+OK:   aid != bid
