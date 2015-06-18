@@ -283,7 +283,8 @@ class Compiler
         vars << rest.to_sym
         rest_func =
           [:sexp,
-           [:assign, rest.to_sym, [:__splat_to_Array, :__splat, :numargs]]
+           # Corrected to take into account statically provided arguments.
+           [:assign, rest.to_sym, [:__splat_to_Array, :__splat, [:sub, :numargs, args.size-1]]]
           ]
       else
         rest_func = []
