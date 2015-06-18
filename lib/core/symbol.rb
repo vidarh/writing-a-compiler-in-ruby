@@ -21,6 +21,10 @@ class Symbol
     @name = name
   end
 
+  def eql? other
+    self.== other
+  end
+
   def to_s
     @name
   end
