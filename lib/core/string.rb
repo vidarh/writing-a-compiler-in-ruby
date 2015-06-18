@@ -186,6 +186,10 @@ class String
     %s(__get_fixnum l)
   end
 
+  def size
+    length
+  end
+
   def count c = nil
     1
   end
