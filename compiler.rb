@@ -645,6 +645,18 @@ class Compiler
     end
   end
 
+  def output_vtable_names
+    @e.emit(".equ", "__vtable_size, "+@vtableoffsets.max.to_s)
+    @e.label("__vtable_names")
+    ClassScope::CLASS_IVAR_NUM.times { @e.long(0) }
+    @vtableoffsets.vtable.to_a.sort_by {|e| e[1] }.each do |e|
+      sc = strconst(e[0].to_s)
+      @e.emit(".long", sc.last)
+    end
+
+    @e.comment("")
+  end
+
   # Starts the actual compile process.
   def compile exp
     alloc_vtable_offsets(exp)
@@ -654,6 +666,7 @@ class Compiler
     # used and defined so far.
     output_functions
     output_vtable_thunks
+    output_vtable_names
     output_constants
   end
 end
