@@ -1,7 +1,9 @@
 
-%s(defun __method_missing (sym ob (args rest)) (do
-  (printf "Method missing: %s#%s\n" (index (index ob 0) 2) (callm (callm sym to_s) __get_raw))
-  (exit 1)                                  
+%s(defun __method_missing (sym ob (args rest)) (let (k cname)
+  (assign k     (callm ob class))
+  (assign cname (callm ob inspect))
+  (printf "Method missing: %s#%s\n" (callm (callm cname to_s) __get_raw) (callm (callm sym to_s) __get_raw))
+  (div 0 0)
   0)
 )
 
