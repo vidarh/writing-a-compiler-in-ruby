@@ -34,6 +34,10 @@ class String
           )
   end
 
+  def inspect
+    "\""+self+"\""
+  end
+
   # DJB hash
   def hash
     h = 5381
@@ -69,6 +73,7 @@ class String
   end
 
   def == other
+    return false if !other.is_a?(String)
     %s(assign res (if (strcmp @buffer (callm other __get_raw)) false true))
     return res
   end
