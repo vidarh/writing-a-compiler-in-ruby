@@ -42,8 +42,13 @@ class Object
     false
   end
 
-  def respond_to?
-    puts "Object#respond_to not implemented"
+  def respond_to?(method)
+    # FIXME: respond_to? is a bit tricky:
+    # Because we use thunks for method_missing, we can't just check
+    # the vtable. One approach is to "tag" the start of the thunk
+    # with a magic value to indicate if it's a method_missing thunk,
+    # maybe.
+    puts "Object#respond_to? not implemented [#{method.to_s}]"
   end
 
   # FIXME: This will not handle eigenclasses correctly.
