@@ -9,6 +9,10 @@ class TrueClass
     "true"
   end
 
+  def inspect
+    to_s
+  end
+
   def == other
     if other
       true
