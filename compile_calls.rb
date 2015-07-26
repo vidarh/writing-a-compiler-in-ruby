@@ -223,16 +223,22 @@ class Compiler
       args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
       args = [block ? block : 0] + args
 
-      off = @vtableoffsets.get_offset(method)
-      if !off
-        # Argh. Ok, then. Lets do send
-        off = @vtableoffsets.get_offset(:__send__)
-        args.insert(1,":#{method}".to_sym)
-        warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
-        #error(err_msg, scope, [:callm, ob, method, args])
-        m = off
+      off = nil
+      if method.is_a?(Symbol)
+        off = @vtableoffsets.get_offset(method)
+        if !off
+          # Argh. Ok, then. Lets do send
+          off = @vtableoffsets.get_offset(:__send__)
+          args.insert(1,":#{method}".to_sym)
+          warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
+          #error(err_msg, scope, [:callm, ob, method, args])
+          m = off
+        else
+          m = "__voff__#{clean_method_name(method)}"
+        end
       else
-        m = "__voff__#{clean_method_name(method)}"
+        # In this case, the method is provided as an expression
+        # generating the *address*, which is evaluated beow.
       end
 
       compile_callm_args(scope, ob, args) do
@@ -246,7 +252,15 @@ class Compiler
         load_class(scope) # Load self.class into %eax
         load_super(scope) if do_load_super
 
-        @e.callm(m)
+        if off
+          @e.callm(m)
+        else
+          # NOTE: The expression in "method" can not
+          # include a function call, as it'll clobber
+          # %ebx
+          @e.call(compile_eval_arg(scope,method))
+        end
+
         if ob != :self
           @e.comment("Evicting self") 
           @e.evict_regs_for(:self) 
