@@ -9,6 +9,10 @@ class FalseClass
     "false"
   end
 
+  def inspect
+    to_s
+  end
+
   def !
     true
   end
