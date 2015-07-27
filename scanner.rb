@@ -7,9 +7,17 @@
 class Scanner
   attr_reader :col, :lineno, :filename # @filename holds the name of the file the parser reads from
 
-  Position = Struct.new(:filename, :lineno, :col)
+#  Position = Struct.new(:filename, :lineno, :col)
 
   class Position
+    def initialize(filename,lineno,col)
+      @filename = filename
+      @lineno   = lineno
+      @col      = col
+    end
+
+    attr_accessor :filename, :lineno, :col
+
     def inspect
       "line #{self.lineno}, col #{self.col} in #{self.filename}"
     end
