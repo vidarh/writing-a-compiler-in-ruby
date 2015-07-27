@@ -45,6 +45,9 @@ class Function
     args ||= []
 
     @defaultvars = 0
+
+    @blockarg = args.pop if args[-1].kind_of?(Array) && args[-1][0] == :block
+
     @args = args.collect do |a|
       arg = Arg.new(*[a].flatten(1))
       if arg.default
