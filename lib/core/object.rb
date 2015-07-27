@@ -49,6 +49,7 @@ class Object
     # with a magic value to indicate if it's a method_missing thunk,
     # maybe.
     puts "Object#respond_to? not implemented [#{method.to_s}]"
+    false
   end
 
   # FIXME: This will not handle eigenclasses correctly.
