@@ -166,6 +166,7 @@ Feature: Parser
       | expr                             | tree                                                                    | notes  |
       | "a && b"                         | [:do, [:and, :a, :b]]                                                   | Simple |
       | "false && false ? 'ERROR' : 'OK'" | [:do, [:ternif, [:and, :false, :false], [:ternalt, "ERROR", "OK"]]]     | Operator priorities    |
+      | "a = false && false ? 'ERROR' : 'OK'" | [:do, [:assign, :a, [:ternif, [:and, :false, :false], [:ternalt, "ERROR", "OK"]]]] | Operator priorities    |
 
 
     @lambda

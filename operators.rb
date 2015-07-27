@@ -69,19 +69,20 @@ Operators = {
 
   "=>"        => Oper.new(  5, :pair,     :infix),
   "&"         => Oper.new(  5, :to_block, :prefix), # This will need to be treated like "*" when I add bitwise and.
-  "?"         => Oper.new(  5, :ternif,   :infix),
-  "return"    => Oper.new(  5, :return,   :prefix,1,0),
 
-  "&&"        => Oper.new(  6, :and,      :infix),
-  "||"        => Oper.new(  6, :or,       :infix),
+  "="         => Oper.new(  5, :assign,   :infix),
+  "||="       => Oper.new(  5, :or_assign,:infix),
+  "-="        => Oper.new(  5, :decr,     :infix),
+  "+="        => Oper.new(  5, :incr,     :infix),
 
-  "="         => Oper.new(  6, :assign,   :infix),
-  "||="       => Oper.new(  6, :or_assign,:infix),
-  "-="        => Oper.new(  6, :decr,     :infix),
-  "+="        => Oper.new(  6, :incr,     :infix),
+  "?"         => Oper.new(  6, :ternif,   :infix),
+  "return"    => Oper.new(  6, :return,   :prefix,1,0),
 
-  ":"         => Oper.new(  7, :ternalt,  :infix),
-  "<<"        => Oper.new(  7, :<<,       :infix),
+  "&&"        => Oper.new(  7, :and,      :infix),
+  "||"        => Oper.new(  7, :or,       :infix),
+
+  ":"         => Oper.new(  8, :ternalt,  :infix),
+  "<<"        => Oper.new(  8, :<<,       :infix),
 
   "<"         => Oper.new(  9, :<,       :infix),
   "<="        => Oper.new(  9, :<=,       :infix),
