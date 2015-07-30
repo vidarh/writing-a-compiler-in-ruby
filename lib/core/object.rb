@@ -23,6 +23,14 @@ class Object
     %s(__get_fixnum self)
   end
 
+  def hash
+    object_id
+  end
+
+  def eql? other
+    self.==(other)
+  end
+
   def inspect
     %s(assign buf (malloc 20))
     %s(snprintf buf 20 "%p" self)
