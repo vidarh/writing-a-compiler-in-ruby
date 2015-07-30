@@ -40,4 +40,13 @@ class Hash
     str
   end
 
+
+  def keys
+    a = []
+    each do |k,v|
+      a << k
+    end
+    a
+  end
+
 end
