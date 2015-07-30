@@ -17,4 +17,20 @@ class Range
     end
     return val >= @min && val <= @max
   end
+
+  def each
+    i = @min
+    while i < @max
+      yield i
+      i += 1
+    end
+  end
+
+  def to_a
+    a = []
+    each do |v|
+      a << v
+    end
+    a
+  end
 end
