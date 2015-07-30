@@ -29,6 +29,10 @@ class Symbol
     @name
   end
 
+  def inspect
+    ":#{to_s}"
+  end
+
   def hash
     to_s.hash
   end
