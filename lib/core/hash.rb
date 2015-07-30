@@ -8,6 +8,13 @@ class Hash
     @last  = nil
   end
 
+  # The full version is thorny to handle this early in bootstrap, 
+  # but to make code that just wants to create an empty literal 
+  # Hash nicer, we do this:
+  def self.[]
+    Hash.new
+  end
+
   def _alloc_data
     # FIXME: If there's a pre-existing array, resize it
     @data = Array.new(@capacity * 4)
@@ -78,7 +85,6 @@ class Hash
   end
 
   def []= key,value
-
     limit = (@capacity * 3) / 4
 
     _grow if limit <= @length

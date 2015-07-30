@@ -271,7 +271,7 @@ class Compiler
       pairs << pair[1]
       pairs << pair[2]
     end
-    compile_callm(scope, :Hash, :new, pairs)
+    compile_callm(scope, :Hash, :[], pairs)
   end
 
   def compile_case(scope, *args)
