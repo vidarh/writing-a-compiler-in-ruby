@@ -63,6 +63,9 @@ class Array
     %s(assign (index @ptr idx) obj)
   end
 
+  def to_a
+    self
+  end
 end
 
 # FIXME:
