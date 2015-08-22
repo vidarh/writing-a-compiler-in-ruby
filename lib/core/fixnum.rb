@@ -31,6 +31,10 @@ class Fixnum < Integer
        )
   end
 
+  def hash
+    self
+  end
+
   def inspect
     to_s
   end
