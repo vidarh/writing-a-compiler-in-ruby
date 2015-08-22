@@ -17,6 +17,19 @@ class Set
     @set.keys
   end
 
+  def inspect
+    out = ""
+    @set.each do |k,_|
+      out << ", " if !out.empty?
+      out << k
+    end
+    out
+  end
+
+  def member?(m)
+    @set[m] == 1
+  end
+
   def self.[] *args
     s = Set.new
     args.each do |a|
