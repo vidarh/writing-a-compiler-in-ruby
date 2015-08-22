@@ -6,7 +6,7 @@ class NilClass
   end
 
   def == other
-    return !other.nil?
+    return other.nil?
   end
 
   def nil?
