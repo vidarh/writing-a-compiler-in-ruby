@@ -577,6 +577,7 @@ class Emitter
 
     pushl(:ebx)  # For numargs
     yield
+    popl(:ebx)   # Used in the case of splat args
     leave
     ret
 

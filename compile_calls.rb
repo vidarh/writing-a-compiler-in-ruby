@@ -90,7 +90,6 @@ class Compiler
     @e.comment("END Calculating argument count for splat; numargs is now in #{@e.scratch.to_s}")
 
     @e.comment("Moving stack pointer to start of argument array:")
-    @e.pushl(@e.scratch) # We assume this may get borked during argument evaluation
     @e.imull(4,@e.result)
 
     # esp now points to the start of the arguments; ebx holds numargs,
