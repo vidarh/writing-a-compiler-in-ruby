@@ -50,22 +50,5 @@ require 'core/exception'
 require 'core/pp'
 require 'core/range'
 
-# FIXME: This is of course just plain blatantly wrong, but
-# the next goal is to get everything to link (and crash...)
-# These fall in two categories:
-#  - The ones that fails because scoped lookups doesn't
-#    yet work
-E = 2
-Tokens=5
-#  - The ones that fails because they haven't been implemented
-STDIN= IO.new
-STDERR=IO.new
-STDOUT = IO.new
-Enumerable=8 #Here because modules doesn't work yet
-
-# FIXME:
-%s(defun range (a b)
-  (puts "Compiler range construct is not implemented yet")
-)
-
-require 'core/debug'
+require 'core/stubs'  # Stubbed out/non-functional missing pieces
+require 'core/debug'  # Low level debug support
