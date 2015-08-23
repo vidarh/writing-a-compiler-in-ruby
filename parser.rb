@@ -368,7 +368,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_class || parse_def || parse_require || parse_include || parse_defexp
+    ret = parse_class || parse_def || parse_require || parse_include || parse_defexp || expect("protected")
     ret = E[pos].concat(ret) if ret.is_a?(Array)
     ret.position = pos if ret.respond_to?(:position) && !ret.position
     ws; expect(";"); ws
