@@ -3,6 +3,22 @@
 #
 #
 
+# FIXME:
+# Should auto-generate this so it actually has the correct value...
+# However it requires String support to be functional first.
+#
+__FILE__ = "[filename]"
+
+
+# Set up the 'main' object
+#
+# FIXME: This is insufficient. E.g. the object is supposed
+# to return 'main' as the textual representation.
+#
+self = Object.new
+
+
+
 # FIXME: This is of course just plain blatantly wrong, but
 # the next goal is to get everything to link (and crash...)
 # These fall in two categories:

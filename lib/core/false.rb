@@ -18,3 +18,6 @@ class FalseClass
   end
 
 end
+
+# FIXME: MRI does not allow creating an object of FalseClass
+false = FalseClass.new 

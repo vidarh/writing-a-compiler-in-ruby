@@ -26,3 +26,5 @@ class NilClass
   end
 end
 
+# FIXME: MRI does not allow creating an object of NilClass.
+nil  = NilClass.new 

@@ -21,3 +21,6 @@ class TrueClass
     end
   end
 end
+
+# FIXME: MRI does not allow creating an object of TrueClass
+true = TrueClass.new 

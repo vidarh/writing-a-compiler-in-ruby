@@ -60,6 +60,11 @@
   (assign (index vtable off) ptr)
 ))
 
+
+
+# FIXME: Note that Class incorrectly does *NOT* inherit
+# from Object at this stage.
+#
 class Class
 
   # We first introduce three "low-level" methods that should eventually be
