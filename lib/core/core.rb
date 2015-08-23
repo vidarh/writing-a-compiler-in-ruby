@@ -1,13 +1,5 @@
 
-%s(defun __method_missing (sym ob (args rest)) (let (k cname)
-  (assign k     (callm ob class))
-  (assign cname (callm ob inspect))
-  (printf "Method missing: %s#%s\n" (callm (callm cname to_s) __get_raw) (callm (callm sym to_s) __get_raw))
-  (div 0 0)
-  0)
-)
-
-%s(defun __array (size) (malloc (mul size 4)))
+require 'core/base'
 
 # FIXME: Need to bootstrap Object in first, so that Class inherits
 #  the appropriate methods.
