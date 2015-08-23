@@ -64,16 +64,11 @@ require 'core/range'
 #  - The ones that fails because scoped lookups doesn't
 #    yet work
 E = 2
-PTR_SIZE=4
 Tokens=5
-OpPrec = 6
-AST = 7
-Node = 8
 #  - The ones that fails because they haven't been implemented
 STDIN= IO.new
-STDERR = 1
+STDERR=IO.new
 STDOUT = IO.new
-ARGV=7
 Enumerable=8 #Here because modules doesn't work yet
 
 # FIXME:
