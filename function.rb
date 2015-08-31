@@ -46,7 +46,9 @@ class Function
 
     @defaultvars = 0
 
-    @blockarg = args.pop if args[-1].kind_of?(Array) && args[-1][0] == :block
+    if args.last.kind_of?(Array)
+      @blockarg = args.pop[0] if  args.last[1] == :block
+    end
 
     @args = args.collect do |a|
       arg = Arg.new(*[a].flatten(1))
@@ -114,6 +116,7 @@ class Function
     return r if r
     raise "Expected lvar - #{a} / #{args.inspect}" if a[0] == ?#
 
+    a = :__closure__ if a == @blockarg
     args.each_with_index do |arg,i|
       return [arg.type, i] if arg.name == a
     end
