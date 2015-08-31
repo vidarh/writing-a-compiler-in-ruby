@@ -623,6 +623,7 @@ class Compiler
   # vtable slot and then jumps straight to __method_missing, instead
   # of wasting extra stack space and time on copying the objects.
   def output_vtable_thunks
+    @e.label("__vtable_thunks_start")
     @vtableoffsets.vtable.each do |name,_|
       @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
       # FIXME: Call get_symbol for these during initalization
@@ -635,6 +636,8 @@ class Compiler
       end
       @e.jmp("__method_missing")
     end
+    @e.label("__vtable_thunks_end")
+
     @e.label("__base_vtable")
     # For ease of implementation of __new_class_object we
     # pad this with the number of class ivar slots so that the
