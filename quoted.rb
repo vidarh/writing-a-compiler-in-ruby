@@ -99,6 +99,7 @@ module Tokens
       # For now we're doing % followed by a non-alphanumeric, non-whitespace
       # character.
 
+      words   = false
       dquoted = true
       if q == "'"
         dquoted = false
@@ -111,6 +112,7 @@ module Tokens
         when ?Q
           s.get
         when ?w
+          words = true
           s.get
         when ?a .. ?z, ?A .. ?Z, ?0..?9
           s.unget(c)
@@ -123,8 +125,9 @@ module Tokens
         end
       end
 
-      return expect_dquoted(s,q,&block) if dquoted
-      return expect_squoted(s,q)
+      r = dquoted ? expect_dquoted(s,q,&block) : expect_squoted(s,q)
+      r = [:array].concat(r.split(" ")) if words
+      r
     end
   end
 end
