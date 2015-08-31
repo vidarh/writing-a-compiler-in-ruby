@@ -38,12 +38,21 @@ class Compiler
     compile_class(scope,name, *exps)
   end
 
+  def mk_new_class_object(*args)
+    [:sexp, [:call, :__new_class_object, args]]
+  end
+
+  def mk_class(ob)
+    [:index,ob,0]
+  end
+
   def compile_eigenclass(scope, expr, exps)
     @e.comment("=== Eigenclass start")
 
-    ob = [:index, expr, 0]
+    ob      = mk_class(expr)
+    classob = mk_class(expr)
     ret = compile_eval_arg(scope, [:assign, ob,
-                                   [:sexp, [:call, :__new_class_object, [scope.klass_size, ob, scope.klass_size]]]
+                                   mk_new_class_object(scope.klass_size, ob, scope.klass_size, classob)
                                   ])
     @e.save_result(ret)
 
@@ -87,13 +96,17 @@ class Compiler
 
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
+
+    classob = :Class
+    if superc && superc.name != "Object"
+      classob = [:index, superc.name.to_sym , 0]
+    end
     compile_eval_arg(scope, [:if,
                              [:sexp,[:eq, name, 0]],
                              # then
                              [:assign, name.to_sym,
-                              [:sexp,[:call, :__new_class_object, [cscope.klass_size,superclass,ssize]]]
-                             ]
-                            ])
+                              mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
+                             ]])
 
     @global_constants << name
 

@@ -1,6 +1,7 @@
 # size <= ssize *always* or something is severely wrong.
-%s(defun __new_class_object (size superclass ssize)
+%s(defun __new_class_object (size superclass ssize classob)
   (let (ob i)
+   (if (eq classob 0) (assign classob Class))
    (assign ob (malloc (mul size 4))) # Assumes 32 bit
    (assign i 6) # Skips the initial instance vars
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
@@ -15,7 +16,7 @@
        (assign (index ob i) (index __base_vtable i))
        (assign i (add i 1))
   ))
-  (assign (index ob 0) Class)
+  (assign (index ob 0) classob)
   (assign (index ob 3) superclass)
 # Sub-classes
   (assign (index ob 4) 0) 
