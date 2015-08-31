@@ -659,7 +659,7 @@ class Array
 
   # Returns self.join.
   def to_s
-    self.join
+    self.join("")
   end
 
 
