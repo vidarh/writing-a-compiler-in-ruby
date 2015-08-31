@@ -51,13 +51,18 @@ class Object
   end
 
   def respond_to?(method)
-    # FIXME: respond_to? is a bit tricky:
-    # Because we use thunks for method_missing, we can't just check
-    # the vtable. One approach is to "tag" the start of the thunk
-    # with a magic value to indicate if it's a method_missing thunk,
-    # maybe.
-    puts "Object#respond_to? not implemented [#{method.to_s}]"
-    false
+    # The vtable thunks make up a contiguous sequence of memory,
+    # bounded by __vtable_thunks_start and __vtable_thunks_end
+    m = Class.method_to_voff
+
+    voff = m[method]
+    return false if !voff # FIXME: Handle dynamically added.
+
+    %s(assign raw (callm voff __get_raw))
+    %s(assign ptr (index (index self 0) raw))
+    %s(if (lt ptr __vtable_thunks_start) (return true))
+    %s(if (gt ptr __vtable_thunks_end) (return true))
+    return false
   end
 
   # FIXME: This will not handle eigenclasses correctly.
