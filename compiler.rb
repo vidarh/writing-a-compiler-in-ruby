@@ -626,9 +626,11 @@ class Compiler
     @e.label("__vtable_thunks_start")
     @vtableoffsets.vtable.each do |name,_|
       @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
+      @e.pushl(:ebx)
       # FIXME: Call get_symbol for these during initalization
       # and then load them from a table instead.
       res = compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
+      @e.popl(:ebx)
       @e.with_register do |reg|
         @e.popl(reg)
         @e.pushl(res)
