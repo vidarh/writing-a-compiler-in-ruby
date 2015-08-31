@@ -220,6 +220,13 @@ class Compiler
     stackfence do
       args ||= []
       args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
+
+
+      if args.last.kind_of?(Array) && args.last[0] == :to_block
+        block = args.last[1]
+        args.pop
+      end
+
       args = [block ? block : 0] + args
 
       off = nil
