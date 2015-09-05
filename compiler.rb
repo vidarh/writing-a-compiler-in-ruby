@@ -587,6 +587,7 @@ class Compiler
       # so argc and argv get defined, but
       # that is for later.
       compile_eval_arg(@global_scope, exp)
+      compile_eval_arg(@global_scope, [:sexp,[:exit, 0]])
     end
   end
 
