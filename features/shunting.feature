@@ -76,6 +76,7 @@ Feature: Shunting Yard
       | "x = foo.bar().baz"  | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
       | "return foo.bar().baz" | [:return, [:callm, [:callm, :foo, :bar], :baz]]     |
 
+    @arrays
 	Scenario Outline: Array syntax
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
@@ -94,6 +95,8 @@ Feature: Shunting Yard
 	  | "[o.sym,foo]"| [:array,[:callm,:o,:sym],:foo]          | 
 	  | "[1].compact"| [:callm,[:array,1],:compact]            | 
 	  | "return []"  | [:return,[:array]]                      |
+	  | "return [foo]" | [:return,[:array, :foo]]                |
+	  | "return [foo.bar]" | [:return,[:array, [:callm, :foo, :bar]]] |
 
     @arrays
 	Scenario Outline: Array operators
@@ -108,6 +111,8 @@ Feature: Shunting Yard
       | "r[2][0]"    | [:callm, [:callm,:r,:[],[2]],:[],[0]] |       |
       | "s.foo[0]"   | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
       | "foo[1] = 2" | [:callm, :foo, :[]=, [1,2]]           | Tree rewrite |
+      | "puts([42])" | [:call, :puts, [[:array, 42]]]          | |
+      | "puts [42]"  | [:call, :puts, [:array, 42]]            | |
 
     @func
     Scenario Outline: Function calls
