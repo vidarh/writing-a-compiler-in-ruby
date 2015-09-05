@@ -1,4 +1,4 @@
-
+require 'emitter'
 require 'vtableoffsets'
 
 
