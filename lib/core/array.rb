@@ -434,7 +434,18 @@ class Array
 
   # Create a printable version of array.
   def inspect
-    return "[" + self.join(", ") + "]"
+    str = "["
+    first = true
+    each do |a|
+      if !first
+        str << ", "
+      else
+        first = false
+      end
+      str << a.inspect
+    end
+    str << "]"
+    str
   end
 
 
