@@ -66,6 +66,10 @@ Feature: Shunting Yard
       | "foo.bar(ret[123])"  | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]] |
       | "Foo::bar(baz)"      | [:callm, :Foo, :bar, :baz]                         |
       | "foo.bar sym do end" | [:callm, :foo, :bar, :sym, [:block]]               |
+      | "foo.bar"            | [:callm, :foo, :bar]                               |
+      | "foo().bar"          | [:callm, [:call, :foo], :bar]                      |
+      | "foo.bar.baz"        | [:callm, [:callm, :foo, :bar], :baz]               |
+      | "foo.bar().baz"      | [:callm, [:callm, :foo, :bar], :baz]               |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>
