@@ -481,9 +481,8 @@ class Compiler
   #
   def compile_array(scope, *initializers)
     compile_eval_arg(scope,
-                     [:sexp,
                       [:callm, :Array, :[], initializers]
-                      ])
+                      )
     return Value.new([:subexpr], :object)
   end
 
