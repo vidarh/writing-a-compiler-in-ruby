@@ -12,3 +12,11 @@ compiler.s: *.rb
 compiler: compiler.s runtime.o
 	gcc -gstabs -o compiler compiler.s
 
+push:
+	git push origin master
+
+.PHONY: selftest
+
+selftest:
+	./compile test/selftest.rb -I . -g
+	/tmp/selftest
