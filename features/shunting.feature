@@ -70,6 +70,10 @@ Feature: Shunting Yard
       | "foo().bar"          | [:callm, [:call, :foo], :bar]                      |
       | "foo.bar.baz"        | [:callm, [:callm, :foo, :bar], :baz]               |
       | "foo.bar().baz"      | [:callm, [:callm, :foo, :bar], :baz]               |
+      | "x = foo.bar"        | [:assign, :x, [:callm, :foo, :bar]]                |
+      | "x = foo.bar()"      | [:assign, :x, [:callm, :foo, :bar]]                |
+      | "x = foo.bar.baz"    | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
+      | "x = foo.bar().baz"  | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
 
 	Scenario Outline: Array syntax
 		Given the expression <expr>

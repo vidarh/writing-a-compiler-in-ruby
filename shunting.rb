@@ -108,7 +108,7 @@ module OpPrec
               opstate = :infix_or_postfix
               # Handling function calls and a[1] vs [1]
               ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
-              reduce(ostack)
+              reduce(ostack, @opcall2)
             elsif op.type == :rp
               break
             else
