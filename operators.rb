@@ -110,7 +110,7 @@ Operators = {
 
   # "Fake" operator for function calls
   "#call#"    => Oper.new( 99, :call,     :prefix,2,1),
-  "#call2#"   => Oper.new(  5, :call,     :prefix,2,1),
+  "#call2#"   => Oper.new(  7, :call,     :prefix,2,1),
   ","         => Oper.new( 99, :comma,    :infix, 2,1),
 
   # "Fake" operator for [] following a name
