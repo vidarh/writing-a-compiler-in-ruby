@@ -60,6 +60,7 @@ module OpPrec
         rightv = E[rightv] if !ra
         args = leftv[3] ? leftv[3]+rightv : rightv
         eq = "#{leftv[2].to_s}="
+        args = E[args] if args[0] == :callm
         @vstack << E[:callm, leftv[1], eq.to_sym,args]
       elsif o.sym == :index
         if ra and rightv[0] == :array
