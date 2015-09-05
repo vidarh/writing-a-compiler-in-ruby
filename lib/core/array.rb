@@ -130,7 +130,7 @@ class Array
 
 
   def self.[](*elements)
-    a = Array.new
+    a = self.new
     elements.each do |e|
       a << e
     end
