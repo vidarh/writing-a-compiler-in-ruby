@@ -4,5 +4,7 @@
 bin/*
 asm/*
 doc/*
+examples/*
 publish
 *#
+.*
