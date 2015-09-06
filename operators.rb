@@ -78,10 +78,10 @@ Operators = {
   "?"         => Oper.new(  6, :ternif,   :infix),
   "return"    => Oper.new(  6, :return,   :prefix,1,0),
 
+  ":"         => Oper.new(  7, :ternalt,  :infix),
   "&&"        => Oper.new(  7, :and,      :infix),
   "||"        => Oper.new(  7, :or,       :infix),
 
-  ":"         => Oper.new(  8, :ternalt,  :infix),
   "<<"        => Oper.new(  8, :<<,       :infix),
 
   "<"         => Oper.new(  9, :<,       :infix),

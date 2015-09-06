@@ -36,6 +36,11 @@ Feature: Shunting Yard
       | ":[]"                | :":[]"                                |
       | "self.class"         | [:callm,:self,:class]                 |
       | 'return :":[]"'      | [:return, :"::[]"]                    |
+      | "a = b && c"         | [:assign, :a, [:and, :b, :c]]         |
+      | "a = b && c ? d : e" | [:assign, :a, [:ternif, [:and, :b, :c], [:ternalt, :d, :e]]] |
+      | "b && c ? d : e"     | [:ternif, [:and, :b, :c], [:ternalt, :d, :e]]                |
+      | "a && b ? c : d"     | [:ternif, [:and, :a, :b], [:ternalt, :c, :d]] |
+      | "foo(a) && bar(b) ? baz(c) : 'test'" | [:ternif, [:and, [:call, :foo, [:a]], [:call, :bar, [:b]]], [:ternalt, [:call, :baz, [:c]], "test"]] |
 
     @callm
 	Scenario Outline: Method calls
