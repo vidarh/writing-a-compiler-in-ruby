@@ -82,6 +82,35 @@ class ClassScope < Scope
   end
 
 
+  def get_constant(a)
+    if @constants.member?(a.to_sym)
+      return [:global,name + "__" + a.to_s]
+    else
+      return @next.get_arg(a)
+    end
+  end
+
+  def get_class_var(a)
+    @class_vars[a] ||= a.to_s[2..-1].to_sym # save without "@@"
+    instance_var = @class_vars[a]
+    cvar = "__classvar__#{@name}__#{instance_var}"
+    return [:cvar, cvar.to_sym] # -> e.g. __classvar__Foo__varname
+  end
+
+  def get_instance_var(a)
+    offset = @instance_vars.index(a)
+    add_ivar(a) if !offset
+    offset = @instance_vars.index(a)
+
+    # This will show the name of the current class, the superclass name, the instance variable 
+    # name, the offset of the instance variable relative to the current class "base", and the
+    # instance variable offset for the current class which comes in quite handy when debugging
+    # object layout:
+    #
+    # STDERR.puts [:ivar, @name, @superclass ? @superclass.name : "",a, offset, @ivaroff].inspect
+    return [:ivar, offset + @ivaroff]
+  end
+
   # Returns an argument within a class scope.
   # First, check if argument is class or instance variable.
   # If argument is not defined within class scope, check next (outer) scope.
@@ -92,38 +121,11 @@ class ClassScope < Scope
       return [:global,name]
     end
 
-    if (?A..?Z).member?(a.to_s[0])
-      if @constants.member?(a.to_sym)
-        return [:global,name + "__" + a.to_s]
-      else
-        return @next.get_arg(a)
-      end
-    end
+    as = a.to_s
 
-    # class variables.
-    # if it starts with "@@" it's a classvariable.
-    if a.to_s[0..1] == "@@" or @class_vars.include?(a)
-      @class_vars[a] ||= a.to_s[2..-1].to_sym # save without "@@"
-      instance_var = @class_vars[a]
-      cvar = "__classvar__#{@name}__#{instance_var}"
-      return [:cvar, cvar.to_sym] # -> e.g. __classvar__Foo__varname
-    end
-
-    # instance variables.
-    # if it starts with a single "@", it's a instance variable.
-    if a.to_s[0] == ?@ or @instance_vars.include?(a)
-      offset = @instance_vars.index(a)
-      add_ivar(a) if !offset
-      offset = @instance_vars.index(a)
-
-      # This will show the name of the current class, the superclass name, the instance variable 
-      # name, the offset of the instance variable relative to the current class "base", and the
-      # instance variable offset for the current class which comes in quite handy when debugging
-      # object layout:
-      #
-      # STDERR.puts [:ivar, @name, @superclass ? @superclass.name : "",a, offset, @ivaroff].inspect
-      return [:ivar, offset + @ivaroff]
-    end
+    return get_constant(a)  if (?A..?Z).member?(as[0])
+    return get_class_var(a) if as[0..1] == "@@" or @class_vars.include?(a)
+    return get_instance_var(a) if a.to_s[0] == ?@ or @instance_vars.include?(a)
 
     # if not in class scope, check next (outer) scope.
     n =  @next.get_arg(a) if @next
