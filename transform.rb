@@ -353,7 +353,7 @@ class Compiler
 
     exps.each do |e|
       if e.is_a?(Array)
-        if e[0] == :defm && scope.is_a?(ClassScope)
+        if e[0] == :defm && scope.is_a?(ModuleScope)
           scope.add_vtable_entry(e[1]) # add method into vtable of class-scope to associate with class
 
           e[3].depth_first do |exp|
@@ -403,7 +403,7 @@ class Compiler
           build_class_scopes(e[3], cscope)
         elsif e[0] == :module
           cscope   = @classes[e[1].to_sym]
-          cscope ||= ClassScope.new(scope, e[1], @vtableoffsets, nil)
+          cscope ||= ModuleScope.new(scope, e[1], @vtableoffsets, @classes[:Object])
           @classes[cscope.name.to_sym] =  cscope
           @global_scope.add_constant(cscope.name.to_sym,cscope)
           scope.add_constant(e[1].to_sym,cscope)
