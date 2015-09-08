@@ -18,7 +18,7 @@ class GlobalScope < Scope
   end
 end
 
-class ClassScope < Scope
+class ClassScope < ModuleScope
   def dump(indent = 0,data = {})
     # FIXME: Don't add e.g. Token__Atom, and fix lookup so it's irrelevant
     if !@constants.empty?

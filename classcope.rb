@@ -2,10 +2,9 @@ require 'emitter'
 require 'vtableoffsets'
 
 
-# Class scope.
 # Holds name of class, vtable for methods defined within the class
 # as well as all defined instance & class variables.
-class ClassScope < Scope
+class ModuleScope < Scope
   # class name,
   # method v-table,
   # instance variables
@@ -26,7 +25,7 @@ class ClassScope < Scope
   # slot 5 is reserved for next_sibling
   CLASS_IVAR_NUM = 6
 
-  def initialize(next_scope, name, offsets, superclass)
+  def initialize(next_scope, name, offsets, superclass = nil)
     @next = next_scope
     @superclass = superclass
     @name = name
@@ -37,6 +36,12 @@ class ClassScope < Scope
     @class_vars = {}
 
     @constants = {}
+
+    @modules = []
+  end
+
+  def include_module(m)
+    @modules << m
   end
 
   def find_constant(c)
@@ -86,6 +91,16 @@ class ClassScope < Scope
     if @constants.member?(a.to_sym)
       return [:global,name + "__" + a.to_s]
     else
+      @modules.each do |m|
+        n = m.get_constant(a)
+        return n if n
+      end
+
+      if @superclass
+        n = @superclass.get_constant(a)
+        return n if n && n[0] != :addr
+      end
+
       return @next.get_arg(a)
     end
   end
@@ -175,3 +190,7 @@ class ClassScope < Scope
   end
 end
 
+
+
+class ClassScope < ModuleScope
+end
