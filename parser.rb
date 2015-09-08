@@ -288,7 +288,7 @@ class Parser < ParserBase
     error("A module can not have a super class") if @scanner.peek == ?<
     exps = zero_or_more(:exp)
     expect(:end) or expected("expression or 'end'")
-    return E[pos, type.to_sym, name, nil, exps]
+    return E[pos, type.to_sym, name, :Object, exps]
   end
 
 
