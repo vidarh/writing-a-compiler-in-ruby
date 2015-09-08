@@ -392,11 +392,18 @@ class Compiler
               e << E[:defm, "#{mname}=".to_sym, [:value], [[:assign, "@#{mname}".to_sym, :value]]]
             end
           end
-        elsif e[0] == :class || e[0] == :module
+        elsif e[0] == :class
           superclass = e[2]
           superc = @classes[superclass.to_sym]
           cscope = @classes[e[1].to_sym]
           cscope = ClassScope.new(scope, e[1], @vtableoffsets, superc) if !cscope
+          @classes[cscope.name.to_sym] =  cscope
+          @global_scope.add_constant(cscope.name.to_sym,cscope)
+          scope.add_constant(e[1].to_sym,cscope)
+          build_class_scopes(e[3], cscope)
+        elsif e[0] == :module
+          cscope   = @classes[e[1].to_sym]
+          cscope ||= ClassScope.new(scope, e[1], @vtableoffsets, nil)
           @classes[cscope.name.to_sym] =  cscope
           @global_scope.add_constant(cscope.name.to_sym,cscope)
           scope.add_constant(e[1].to_sym,cscope)
