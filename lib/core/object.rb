@@ -9,7 +9,7 @@ class Object
   #
   %s(assign (index self 4) Class)
 
-  # FIXME: Should include "Kernel" here
+  include Kernel
 
   def initialize
     # Default. Empty on purpose
