@@ -65,7 +65,7 @@ require 'core/array_base'  # Splats are unavailable before this.
 require 'core/true'
 require 'core/false'
 require 'core/nil'
-require 'core/enumerable'
+#require 'core/enumerable'
 require 'core/array' 
 require 'core/string'
 require 'core/hash'

@@ -30,7 +30,7 @@ Tokens=5
 STDIN= IO.new
 STDERR=IO.new
 STDOUT = IO.new
-Enumerable=8 #Here because modules doesn't work yet
+# Enumerable=8 #Here because modules doesn't work yet
 
 def raise *exp
   puts "ERROR: Exception support not yet implemented"
