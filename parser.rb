@@ -278,10 +278,24 @@ class Parser < ParserBase
 
   def parse_sexp; @sexp.parse; end
 
-  # class ::= ("class"|"module") ws* name ws* exp* "end"
+  # module ::= "module" ws* name ws* exp* "end"
+  def parse_module
+    pos = position
+    type = expect(:module) or return
+    ws
+    name = expect(Atom) || expect("<<") or expected("class name")
+    ws
+    error("A module can not have a super class") if @scanner.peek == ?<
+    exps = zero_or_more(:exp)
+    expect(:end) or expected("expression or 'end'")
+    return E[pos, type.to_sym, name, nil, exps]
+  end
+
+
+  # class ::= ("class" ws* (name|"<<") ws* (< ws* superclass)? ws* name ws* exp* "end"
   def parse_class
     pos = position
-    type = expect(:class,:module) or return
+    type = expect(:class) or return
     ws
     name = expect(Atom) || expect("<<") or expected("class name")
     ws
@@ -368,7 +382,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_class || parse_def || parse_require || parse_include || parse_defexp || expect("protected")
+    ret = parse_class || parse_module || parse_def || parse_require || parse_include || parse_defexp || expect("protected")
     ret = E[pos].concat(ret) if ret.is_a?(Array)
     ret.position = pos if ret.respond_to?(:position) && !ret.position
     ws; expect(";"); ws
