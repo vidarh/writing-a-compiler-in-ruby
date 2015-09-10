@@ -8,7 +8,7 @@ module AST
   # plugins to attach additional notation to the
   # nodes, such as inferred type information etc.
   module Node
-    attr_accessor :position
+#    attr_accessor :position
   end
 
   # Inheriting from Array lets most code just work on the
@@ -29,6 +29,16 @@ module AST
   # it will be stripped and used as the position.
   class Expr < Array
     include Node
+
+    # FIXME:
+    # As a temporary concession to facilitate self-hosting,
+    # I'm moving the attr_accessor :position here.
+    #
+    # The reason is that it's the one place where the compiler
+    # made use of "include" in a way that require both carrying over
+    # methods, *and* handling instance variables (because of the
+    # generated/injected accessors.
+    attr_accessor :position
 
     def update_position
       sub = find{ |n| n.respond_to?(:position) }
