@@ -47,6 +47,28 @@ class Compiler
   end
 
 
+  # or_assign is "x ||= y", which translates to x = y if !x
+  def compile_or_assign scope, left, right
+    @e.comment("compile_or_assign: #{left.inspect} ||= #{right.inspect}")
+
+    ret = compile_eval_arg(scope,left)
+    l_or = @e.get_local + "_or"
+    compile_jmp_on_false(scope, ret, l_or)
+
+    l_end_or = @e.get_local + "_end_or"
+    @e.jmp(l_end_or)
+
+    @e.comment(".. or:")
+    @e.local(l_or)
+    or_ret = compile_assign(scope, left, right)
+    @e.local(l_end_or)
+
+    @e.evict_all
+
+    combine_types(ret,or_ret)
+  end
+
+
   # Compiles an if expression.
   # Takes the current (outer) scope and two expressions representing
   # the if and else arm.
@@ -95,6 +117,7 @@ class Compiler
       compile_jmp_on_false(scope, var, br)
       compile_exp(scope, body)
     end
+    # FIXME: "while" should return nil.
     return Value.new([:subexpr])
   end
 
