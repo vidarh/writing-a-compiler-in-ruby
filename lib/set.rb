@@ -37,4 +37,13 @@ class Set
     end
     s
   end
+
+  def dup
+    s = Set.new
+    @set.each do |k,_|
+      s << k
+    end
+    s
+  end
+  
 end
