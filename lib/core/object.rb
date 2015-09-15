@@ -42,6 +42,10 @@ class Object
     "#<#{self.class.name}:#{buf}>"
   end
 
+  def to_s
+    inspect
+  end
+
   def == other
     object_id == other.object_id
   end
@@ -142,5 +146,11 @@ class Object
       end
       i = i + 1
     end
+  end
+
+
+  def dup
+    # FIXME
+    self.class.new
   end
 end
