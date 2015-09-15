@@ -144,6 +144,8 @@ class Array
     # FIXME: Negative indices not implemented
     # FIXME: Range support not implemented
 
+    %s(if (lt idx 0) (return nil))
+
     %s(if (ge idx @len)
          (assign idx (sub @len idx))
          )
@@ -292,16 +294,41 @@ class Array
     %s(puts "Array#delete_if not implemented")
   end
 
+  def dup
+    a = self.class.new
+    each do |e|
+      a << e
+    end
+    a
+  end
 
   # Calls block once for each element in self,
   # passing that element as a parameter.
-  def each
+  def each &block
     i = 0
-    while i < self.size
+    a = block.arity
+    s = self.size
+
+    if a == 1
+      while i < s
+        el = self[i]
+        yield(el)
+        i += 1
+      end
+      return nil
+    end
+
+    while i < s
       el = self[i]
-      yield(el)
+      el = el.is_a?(Array) ? el.dup : [el]
+
+      while el.length < a
+        el << nil
+      end
+      yield(*el)
       i += 1
-     end
+    end
+    return nil
   end
 
 
