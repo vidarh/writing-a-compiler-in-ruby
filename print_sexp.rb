@@ -11,7 +11,7 @@ class SexpPrinter
     @nest = 0
     @indent = 2
     @col = 0
-    @maxcol = 120
+    @maxcol = 140
     @line = 0
 
     @prune = opts[:prune]
@@ -66,11 +66,11 @@ class SexpPrinter
         puts if n.is_a?(Array) && i == 0
         print_node(n)
         @nest -= 1
-        if n == :sexp && i > 0 or node.first == :do or node.first == :let && i > 0
+        if node.first == :do or node.first == :if or node.first == :when or node.first == :case or node.first == :let && i > 0
           puts 
         end
       end
-      puts if [:defun,:defm,:class].include?(node.first) && @line > old_line
+      puts if [:defun,:defm,:class,:do,:case].include?(node.first) && @line > old_line
       print ")"
     else
       print node
