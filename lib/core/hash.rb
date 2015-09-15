@@ -72,6 +72,11 @@ class Hash
     pos
   end
 
+  def member? key
+    pos = _find_slot(key)
+    @data[pos] ? true : false
+  end
+
   def [] key
     pos  = _find_slot(key)
     @data[pos] ? @data[pos + 1] : nil
