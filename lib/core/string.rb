@@ -102,6 +102,10 @@ class String
   end
 
 
+  def chr
+    self[0]
+  end
+
   def ord
     # FIXME: On empty string we're obliged to throw an ArgumentError
 
