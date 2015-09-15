@@ -18,6 +18,10 @@ class Range
     return val >= @min && val <= @max
   end
 
+  def === (val)
+    member?(val)
+  end
+
   def each
     i = @min
     while i < @max

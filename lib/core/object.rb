@@ -31,6 +31,10 @@ class Object
     self.==(other)
   end
 
+  def === other
+    self.==(other)
+  end
+
   def inspect
     %s(assign buf (malloc 20))
     %s(snprintf buf 20 "%p" self)

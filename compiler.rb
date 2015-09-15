@@ -292,18 +292,51 @@ class Compiler
 
     @e.comment("compare_exp: #{compare_exp}")
 
-    args.rest.each do |whens|
-      whens.each do |exp| # each when-expression
-        test_value = exp[1] # value to test against
+    test = lambda do |test_exprs|
+      if test_exprs.is_a?(Array) && test_exprs[0] == :comma
+        test_value = test_exprs[1]
+        rest = test_exprs[2]
+      else
+        test_value = test_exprs
+        rest = []
+      end
+      cmp = [:callm, test_value, :===, [compare_exp]]
+
+      rest.empty? ? cmp : [:or, cmp, test.call(rest)]
+    end
+
+    r = lambda do |whens|
+      exp = whens.first
+
+      if exp[0] == :when
+        test_values = exp[1]
+
         body = exp[2] # body to be executed, if compare_exp === test_value
 
-        @e.comment("test_value: #{test_value.inspect}")
+        @e.comment("test_value: #{test_values.inspect}")
         @e.comment("body: #{body.inspect}")
 
-        # turn case-expression into if.
-        compile_if(scope, [:callm, compare_exp, :===, test_value], body)
+        rest = whens.slice(1..-1)
+        if rest.empty?
+          rest = [:do]
+        else
+          rest = r.call(rest)
+        end
+        [:do, [:if, test.call(test_values), [:do]+body, rest]]
+      else
+        [:do]+exp
       end
     end
+
+    rest = args.rest
+    exprs = rest[0]
+    if rest[1]
+      exprs << rest[1]
+    end
+
+    exprs = r.call(exprs)
+    print_sexp(exprs,STDERR)
+    compile_eval_arg(scope, exprs)
 
     return Value.new([:subexpr])
   end
