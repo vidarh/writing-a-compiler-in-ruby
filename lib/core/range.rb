@@ -18,6 +18,10 @@ class Range
     return val >= @min && val <= @max
   end
 
+  def include? val
+    member?(val)
+  end
+
   def === (val)
     member?(val)
   end
