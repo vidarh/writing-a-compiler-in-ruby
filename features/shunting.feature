@@ -25,6 +25,7 @@ Feature: Shunting Yard
       | "1 .. 2"             | [:range,1,2]                          |
       | "a == b"             | [:"==",:a,:b]                         |
       | "a = 1 or foo + bar" | [:or,[:assign,:a,1],[:+,:foo,:bar]]   |
+      | "!c \|\| d"            | [:or, [:"!", :c], :d]                 |
       | "foo and !bar"       | [:and,:foo,[:"!",:bar]]               |
       | "return 1"           | [:return,1]                           |
       | "return"             | [:return]                             |
@@ -33,6 +34,7 @@ Feature: Shunting Yard
       | "foo +"+10.chr+"bar" | [:+,:foo,:bar]                        |
       | "return"+10.chr+"foo" | [:return]                            |
       | ":sym"               | :":sym"                               |
+      | ":foo_bar"           | :":foo_bar"                           |
       | ":[]"                | :":[]"                                |
       | "self.class"         | [:callm,:self,:class]                 |
       | 'return :":[]"'      | [:return, :"::[]"]                    |
@@ -81,7 +83,7 @@ Feature: Shunting Yard
       | "x = foo.bar().baz"  | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
       | "return foo.bar().baz" | [:return, [:callm, [:callm, :foo, :bar], :baz]]     |
 
-    @arrays
+    @arrays @arrays1
 	Scenario Outline: Array syntax
 		Given the expression <expr>
 		When I parse it with the shunting yard parser
@@ -102,6 +104,7 @@ Feature: Shunting Yard
 	  | "return []"  | [:return,[:array]]                      |
 	  | "return [foo]" | [:return,[:array, :foo]]                |
 	  | "return [foo.bar]" | [:return,[:array, [:callm, :foo, :bar]]] |
+      | "!foo[1].bar" | [:!,[:callm, [:callm, :foo, :[], [1]], :bar]]   |
 
     @arrays
 	Scenario Outline: Array operators
