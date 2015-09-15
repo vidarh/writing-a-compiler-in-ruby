@@ -80,8 +80,9 @@ Operators = {
 
   ":"         => Oper.new(  7, :ternalt,  :infix),
   "&&"        => Oper.new(  7, :and,      :infix),
-  "||"        => Oper.new(  7, :or,       :infix),
+  "||"        => Oper.new(  6, :or,       :infix),
 
+  "!"         => Oper.new(  7, :"!",      :prefix),
   "<<"        => Oper.new(  8, :<<,       :infix),
 
   "<"         => Oper.new(  9, :<,       :infix),
@@ -97,7 +98,6 @@ Operators = {
     :infix_or_postfix  => Oper.new( 10, :-,      :infix),
     :prefix => Oper.new( 20, :-,      :prefix)
   },
-  "!"         => Oper.new( 10, :"!",      :prefix),
   "%"         => {
     :infix_or_postfix => Oper.new( 20, :"%",      :infix),
     :prefix => Oper.new( 20, :quoted_exp, :prefix)
