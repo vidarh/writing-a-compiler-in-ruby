@@ -50,6 +50,10 @@ class Object
     object_id == other.object_id
   end
 
+  def !
+    false
+  end
+
   def != other
     !(self == other)
   end
