@@ -206,7 +206,11 @@ class String
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
   # and need to store length to be able to handle strings with \0 in the middle.
   def concat(other)
-    other = other.to_s
+    if (other.is_a?(Fixnum))
+      other = other.chr
+    else
+      other = other.to_s
+    end
     %s(do
          (assign ro (callm other __get_raw))
          (assign osize (strlen ro))
