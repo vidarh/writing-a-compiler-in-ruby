@@ -232,11 +232,11 @@ class Compiler
   end
 
   def compile_decr(scope, left, right)
-    compile_exp(scope, [:assign, left, [:sub, left, right]])
+    compile_assign(scope, left, [:callm, left, :-, [right]])
   end
 
   def compile_incr(scope, left, right)
-    compile_exp(scope, [:assign, left, [:add, left, right]])
+    compile_assign(scope, left, [:callm, left, :+, [right]])
   end
 
   # Shortcircuit 'left && right' is equivalent to 'if left; right; end'
