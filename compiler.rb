@@ -40,7 +40,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :bindex, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr, :block,
+                   :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
@@ -229,6 +229,10 @@ class Compiler
   def compile_rescue(scope, *args)
     warning("RESCUE is NOT IMPLEMENTED")
     Value.new([:subexpr])
+  end
+
+  def compile_decr(scope, left, right)
+    compile_exp(scope, [:assign, left, [:sub, left, right]])
   end
 
   def compile_incr(scope, left, right)
