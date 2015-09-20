@@ -23,6 +23,10 @@ class Fixnum < Integer
     @value
   end
 
+  def to_i
+    self
+  end
+
   def to_s
     %s(let (buf)
        (assign buf (malloc 16))
