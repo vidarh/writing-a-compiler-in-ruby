@@ -316,7 +316,7 @@ class Emitter
     if !reload_numargs
       adj = PTR_SIZE * args
     else
-      adj = PTR_SIZE + (((args+0.5)*PTR_SIZE/(4.0*PTR_SIZE)).round) * (4*PTR_SIZE)
+      adj = (((args+1) * PTR_SIZE / 16) + 1)* 16
     end
 
     subl(adj,:esp)

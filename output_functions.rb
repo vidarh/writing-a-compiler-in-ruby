@@ -1,6 +1,15 @@
 
 class Compiler
 
+  def output_body(fscope, func)
+    @e.comment("METHOD BODY:")
+    if func.body.empty?
+      compile_eval_arg(fscope, [:return, 0])
+    else
+      compile_eval_arg(fscope, func.body)
+    end
+  end
+
   # Similar to output_constants, but for functions.
   # Compiles all functions, defined so far and outputs the appropriate assembly code.
   def output_functions
@@ -22,6 +31,7 @@ class Compiler
         @e.func(name, pos, varfreq) do
           minargs = func.minargs
 
+          # FIXME
           compile_if(fscope, [:lt, :numargs, minargs],
                      [:sexp,[:call, :printf, 
                              ["ArgumentError: In %s - expected a minimum of %d arguments, got %d\n",
@@ -44,12 +54,11 @@ class Compiler
                            [:assign, ("#"+arg.name.to_s).to_sym, arg.default],
                            [:assign, ("#"+arg.name.to_s).to_sym, arg.name])
               end
+              output_body(fscope,func)
             end
+          else
+            output_body(fscope,func)
           end
-
-          @e.comment("METHOD BODY:")
-
-          compile_eval_arg(fscope, func.body)
 
           @e.comment("Reloading self if evicted:")
           # Ensure %esi is intact on exit, if needed:
