@@ -51,10 +51,10 @@ class Compiler
         e[1] = E[:assign, [:index, :__env__,0], [:stackframe]]
         e[2] = E[:assign, :__tmp_proc,
           E[:defun, @e.get_local,
-            E[:self,:__closure__,:__env__]+args,
+            E[:self,:__closure__,:__env__]+args.collect{|a| [a, :default, :nil] },
             body]
         ]
-        e[3] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self]]]
+        e[3] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self, args.length]]]
       end
     end
   end
