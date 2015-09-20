@@ -320,12 +320,11 @@ class Array
 
     while i < s
       el = self[i]
-      el = el.is_a?(Array) ? el.dup : [el]
-
-      while el.length < a
-        el << nil
+      if el.is_a?(Array)
+        yield(*el)
+      else
+        yield(el)
       end
-      yield(*el)
       i += 1
     end
     return nil
