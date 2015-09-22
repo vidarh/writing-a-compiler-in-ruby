@@ -147,8 +147,7 @@ class Array
     %s(if (lt idx 0) (return nil))
 
     %s(if (ge idx @len)
-         (assign idx (sub @len idx))
-         )
+         (return nil))
 
     %s(if (or (or 
                (eq @ptr 0) 
@@ -183,13 +182,10 @@ class Array
 #      return nil
 #    end
 
-    %s(if (ge idx @len)
+    # FIXME the logic here needs lots of cleanup
+    %s(if (ge idx @capacity) (callm self __grow (idx)))
 
-         (do
-            (callm self __grow (idx))
-            (assign @len (add idx 1))
-            )
-          )
+    %s(if (ge idx @len) (assign @len (add idx 1)))
 
     %s(assign (index @ptr idx) obj)
   end
