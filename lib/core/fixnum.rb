@@ -28,11 +28,9 @@ class Fixnum < Integer
   end
 
   def to_s
-    %s(let (buf)
-       (assign buf (malloc 16))
-       (snprintf buf 16 "%ld" @value)
-       (__get_string buf)
-       )
+    %s(assign buf (malloc 16))
+    %s(snprintf buf 16 "%ld" @value)
+    %s(__get_string buf)
   end
 
   def hash
