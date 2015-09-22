@@ -37,7 +37,7 @@ def raise *exp
   puts "ERROR: Arguments to raise were:"
   puts exp.inspect
   puts "ERROR ============="
-  exit(1)
+  %s(div 0 0) # Force an exception so we can trap it easily in gdb.
 end
 
 # FIXME:
