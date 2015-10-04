@@ -33,7 +33,7 @@ class Array
 
     %s(if (ne @ptr 0)
          (assign @ptr (realloc @ptr (mul @capacity 4)))
-         (assign @ptr (malloc (mul @capacity 4)))
+         (assign @ptr (calloc @capacity 4))
          )
   end
 
