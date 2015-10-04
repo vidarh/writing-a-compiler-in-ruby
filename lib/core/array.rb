@@ -37,6 +37,27 @@ class Array
 
   # --------------------------------------------------
 
+  # FIXME: Belongs in Enumerable
+  def include? other
+    each do |e|
+      return true if e == other
+    end
+    return false
+  end
+
+  # FIXME: Belongs in enumerable
+  def reject
+    a = self.class.new
+    each do |item|
+      if !yield(item)
+        a << item
+      end
+    end
+    a
+  end
+
+
+
   # Set Intersection.
   # Returns a new array containing elements common to the two arrays, with no duplicates.
 #  def &(other_array)
