@@ -214,6 +214,8 @@ class Compiler
   #
   # Note that compile_defun is now only accessed via s-expressions
   def compile_defun(scope, name, args, body)
+    raise "Internal error: Expecting a name; got #{name.inspect}" if name.is_a?(Array)
+
     f = Function.new(name,args, body,scope)
     name = clean_method_name(name)
 
