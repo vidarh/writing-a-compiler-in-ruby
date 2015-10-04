@@ -9,6 +9,8 @@ class Arg
   attr_accessor :lvar
 
   def initialize(name, *modifiers)
+    raise "Internal error: Arg.name must be Symbol; '#{name.inspect}'" if !name.is_a?(Symbol)
+
     @name = name
     # @rest indicates if we have
     # a variable amount of parameters
