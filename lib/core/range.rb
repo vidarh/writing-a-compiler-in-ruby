@@ -8,6 +8,22 @@ class Range
     @max = _max
   end
 
+  def to_s
+    "#{@min}..#{@max}"
+  end
+
+  def inspect
+    to_s
+  end
+
+  def first
+    @min
+  end
+
+  def last
+    @max
+  end
+
   # FIXME: This is hopelessly inadequate, but
   # tolerable for the case where we only use integer
   # ranges

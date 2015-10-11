@@ -55,8 +55,40 @@ class String
     false
   end
 
+
   def [] index
     l = length
+
+    if index.is_a?(Range)
+      b = index.first
+      e = index.last
+
+      if b < 0
+        b = l + b
+        if b < 0
+          return nil
+        end
+      end
+
+      if e < 0
+        e = l + e
+        if e < 0
+          e = 0
+        end
+      end
+
+      endp = b + e
+      if endp > l
+        e = l - b
+      end
+      e = e - b
+
+      a = String.new
+      %s(assign src (add @buffer (callm b __get_raw)))
+      a.__copy_raw(src, e)
+      return a
+    end
+
     if index < 0
       index = l + index
       if index < 0

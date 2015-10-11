@@ -66,6 +66,7 @@ require 'core/true'
 require 'core/false'
 require 'core/nil'
 #require 'core/enumerable'
+require 'core/range'
 require 'core/array' 
 require 'core/string'
 require 'core/hash'
@@ -81,7 +82,6 @@ require 'core/float'
 require 'core/struct'
 require 'core/exception'
 require 'core/pp'
-require 'core/range'
 
 
 #
