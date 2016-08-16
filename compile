@@ -7,9 +7,9 @@ bname = File.basename(fname).split(".")[0..-2].join(".")
 # and you will be able to debug at the assembler level.
 asmdebug = ARGV.include?("-g") ? "-g" : ""
 
-if system("ruby #{dir}/compiler.rb #{ARGV.join(" ")} 2>&1 >/tmp/#{bname}.s")
-  if system("gcc #{asmdebug} -m32 -o /tmp/#{bname} /tmp/#{bname}.s")
-    puts "Compiled to /tmp/#{bname}"
+if system("ruby #{dir}/compiler.rb #{ARGV.join(" ")} 2>&1 >#{bname}.s")
+  if system("gcc #{asmdebug} -m32 -o #{bname} #{bname}.s")
+    puts "Compiled to #{bname}"
   else
     STDERR.puts "*** Assembly failed."
     exit(1)

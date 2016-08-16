@@ -1,5 +1,5 @@
-
-
+IMAGE=ruby-compiler-buildenv
+DR=docker run -t -i -v ${PWD}:/app ${IMAGE}
 all: compiler
 
 clean:
@@ -18,5 +18,11 @@ push:
 .PHONY: selftest
 
 selftest:
-	./compile test/selftest.rb -I . -g
-	/tmp/selftest
+	${DR} ./compile test/selftest.rb -I . -g
+	${DR} ./selftest
+
+buildc:
+	docker build -t ${IMAGE} .
+
+cli:
+	${DR} /bin/bash -l
