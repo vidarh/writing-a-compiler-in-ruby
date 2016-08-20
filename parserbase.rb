@@ -17,7 +17,10 @@ class ParserBase
 
   def zero_or_more(sym)
     res = []
-    while e = send(("parse_"+sym.to_s).to_sym); res << e; end
+    s = "parse_#{sym.to_s}".to_sym
+    while e = send(s)
+        res << e;
+    end
     res
   end
 
