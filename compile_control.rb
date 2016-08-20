@@ -100,8 +100,9 @@ class Compiler
     combine_types(ifret, elseret)
   end
 
-  def compile_return(scope, arg = nil)
+  def compile_return(scope, arg = :nil)
     @e.save_result(compile_eval_arg(scope, arg)) if arg
+    @e.movl("-4(%ebp)",:ebx)
     @e.evict_all
     reload_self(scope)
     @e.leave
