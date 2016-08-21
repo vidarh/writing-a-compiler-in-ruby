@@ -6,23 +6,20 @@ clean:
 	@rm -f *~ *.o *.s
 	@rm -rf doc/
 
-compiler.s: *.rb
-	ruby compiler.rb compiler.rb >compiler.s
-
-compiler: compiler.s runtime.o
-	gcc -gstabs -o compiler compiler.s
+compiler: *.rb
+	${DR} ./compiler compiler.rb
 
 push:
 	git push origin master
 
 .PHONY: selftest
 
-selftest:
-	${DR} ./compile test/selftest.rb -I . -g
-	${DR} ./selftest
+selftest: buildc
+	./compile test/selftest.rb -I . -g
+	${DR} ./out/selftest
 
 buildc:
 	docker build -t ${IMAGE} .
 
-cli:
+cli: buildc
 	${DR} /bin/bash -l
