@@ -3,11 +3,11 @@ DR=docker run -t -i -v ${PWD}:/app ${IMAGE}
 all: compiler
 
 clean:
-	@rm -f *~ *.o *.s
+	@rm -f *~ *.o *.s *\#
 	@rm -rf doc/
 
 compiler: *.rb
-	${DR} ./compiler compiler.rb
+	./compile compiler.rb -I . -g
 
 push:
 	git push origin master
