@@ -55,7 +55,7 @@ module Tokens
     def self.expect(s,match)
       a = Atom.expect(s)
       return a if (a == match)
-      s.unget(a.to_s)
+      s.unget(a.to_s) if a
       return nil
     end
   end
