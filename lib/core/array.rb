@@ -83,13 +83,11 @@ class Array
   # Concatenation.
   # Returns a new array built by concatenating the two arrays together
   # to produce a third array.
-#  def +(other_array)
-#    added = Array.new(self)
-#    other_array.each do |item|
-#      added << item
-#    end
-#    return added
-#  end
+  def +(other_array)
+    added = self.dup
+    added.concat(other_array)
+    return added
+  end
 
   # Array Difference.
   # Returns a new array that is a copy of the original array,
@@ -281,8 +279,11 @@ class Array
 
   # Appends the elements in other_array to self.
   def concat(other_array)
-    # FIXME: This is wrong; concat mutates the array
-    return self + other_array
+    added = self
+    other_array.each do |item|
+      added << item
+    end
+    return added
   end
 
 
