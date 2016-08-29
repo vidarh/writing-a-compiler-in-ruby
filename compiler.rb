@@ -588,7 +588,15 @@ class Compiler
   # before/after 
   def compile_required(scope,exp)
     @e.include(exp.position.filename) do
-      compile_exp(scope,exp)
+      v = scope.get_arg(:__FILE__)
+      if v[0] == :global
+        compile_eval_arg(scope,[:assign, :__FILE__, [:sexp, [:__get_string,exp.position.filename]]])
+      end
+      ret = compile_exp(scope,exp)
+      if v[0] == :global
+        compile_eval_arg(scope,[:assign, :__FILE__, [:sexp, [:call, :__get_string,exp.position.filename]]])
+      end
+      ret
     end
   end
 
