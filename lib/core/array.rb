@@ -165,14 +165,28 @@ class Array
     a
   end
 
+  # This ends up getting called by a lot of really low level code,
+  # and so anything trying to call any other Ruby code, to e.g. use
+  # Symbol's or similar, is likely to fail.
+  #
   def [](idx)
+
+    if idx.is_a?(Range)
+      STDERR.puts "ERROR: Array#[#{idx.inspect}] where index is a Range not implemented yet"
+      1/0
+    end
+
     %s(assign idx (callm idx __get_raw))
 
     # return element at given index
     # FIXME: Negative indices not implemented
     # FIXME: Range support not implemented
 
-    %s(if (lt idx 0) (return nil))
+    %s(if (lt idx 0)
+         (do
+            (assign idx (add @len idx))
+            (if (lt idx 0) (return nil)
+               )))
 
     %s(if (ge idx @len)
          (return nil))
