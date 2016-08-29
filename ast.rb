@@ -40,9 +40,12 @@ module AST
     # generated/injected accessors.
     attr_accessor :position
 
+    # FIXME: For self-hosting, we temporarily rename this variable
+    # as one of the tree transforms is too aggressive, and for
+    # the time being it's easier to work around here.
     def update_position
-      sub = find{ |n| n.respond_to?(:position) }
-      position = sub.position if sub
+      xsub = find{ |n| n.respond_to?(:position) }
+      position = xsub.position if xsub
     end
 
     def self.[](*args)
