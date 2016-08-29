@@ -180,7 +180,9 @@ class ModuleScope < Scope
     # for adding this method, as the class object may be dynamically
     # determined. The vtable offset would be determined based on name[1] in
     # this case.
-    @vtable[name] ||= VTableEntry.new
+
+    # FIXME
+    @vtable[name] = @vtable[name] || VTableEntry.new
     v = @vtable[name]
     v.name = name.to_s
     v.offset = @vtableoffsets.alloc_offset(name) if !v.offset
