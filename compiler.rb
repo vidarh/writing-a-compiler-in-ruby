@@ -200,7 +200,6 @@ class Compiler
   def compile_deref(scope, left, right)
     cscope = scope.find_constant(left)
     if !cscope || !cscope.is_a?(ModuleScope)
-      global_scope.dump
       error("Unable to resolve: #{left}::#{right} statically (FIXME)",scope) 
     end
     get_arg(cscope,right)
@@ -341,7 +340,6 @@ class Compiler
     end
 
     exprs = r.call(exprs)
-    print_sexp(exprs,STDERR)
     compile_eval_arg(scope, exprs)
 
     return Value.new([:subexpr])
