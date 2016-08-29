@@ -9,6 +9,15 @@ class Set
     @set = Hash.new # Told you it was dirty
   end
 
+  # FIXME: Belongs in Enumerable
+  def select
+    a = []
+    @set.each do |e,_|
+      a << e if yield(e) == true
+    end
+    a
+  end
+
   def << k
     @set[k]=1
   end
