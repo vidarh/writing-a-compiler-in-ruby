@@ -57,7 +57,7 @@ Feature: Shunting Yard
       | "foo 1"              | [:call,:foo,[1]]                                   |
       | "foo 1,2"            | [:call,:foo,[1,2]]                                 |
       | "self.foo"           | [:callm,:self,:foo]                                |
-      | "self.foo(1)"        | [:callm,:self,:foo,1]                              |
+      | "self.foo(1)"        | [:callm,:self,:foo,[1]]                              |
       | "self.foo(1,2)"      | [:callm,:self,:foo,[1,2]]                          |
       | "self.foo bar"       | [:callm,:self,:foo,:bar]                           |
       | "foo(*arg)"          | [:call,:foo,[[:splat, :arg]]]                      |
@@ -71,7 +71,7 @@ Feature: Shunting Yard
       | "foo.bar = 123"      | [:callm,:foo,:bar=, [123]]                         |
       | "flatten(r[2])"      | [:call, :flatten, [[:callm, :r, :[], [2]]]]        |
       | "foo.bar(ret[123])"  | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]] |
-      | "Foo::bar(baz)"      | [:callm, :Foo, :bar, :baz]                         |
+      | "Foo::bar(baz)"      | [:call, [:deref, :Foo, :bar], [:baz]]              |
       | "foo.bar sym do end" | [:callm, :foo, :bar, :sym, [:block]]               |
       | "foo.bar"            | [:callm, :foo, :bar]                               |
       | "foo().bar"          | [:callm, [:call, :foo], :bar]                      |
@@ -82,6 +82,7 @@ Feature: Shunting Yard
       | "x = foo.bar.baz"    | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
       | "x = foo.bar().baz"  | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
       | "return foo.bar().baz" | [:return, [:callm, [:callm, :foo, :bar], :baz]]     |
+      | "foo.bar(*[a].flatten)" | [:callm, :foo, :bar, [[:callm, [:splat, [:array, :a]], :flatten]]]  |
 
     @arrays @arrays1
 	Scenario Outline: Array syntax
@@ -98,7 +99,7 @@ Feature: Shunting Yard
       | "a = [1,2]" | [:assign,:a,[:array,1,2]]                |
       | "a = []"    | [:assign,:a,[:array]]                    |
 	  | "[o.sym]"   | [:array,[:callm,:o,:sym]]                | 
-	  | "[o.sym(1)]"   | [:array,[:callm,:o,:sym,1]]           | 
+	  | "[o.sym(1)]"   | [:array,[:callm,:o,:sym,[1]]]         | 
 	  | "[o.sym,foo]"| [:array,[:callm,:o,:sym],:foo]          | 
 	  | "[1].compact"| [:callm,[:array,1],:compact]            | 
 	  | "return []"  | [:return,[:array]]                      |
@@ -134,6 +135,7 @@ Feature: Shunting Yard
       | "puts 42 == 42"           | [:call, :puts, [[:==,42,42]]]               |   |
       | "foo.bar() + 'x'"         | [:+, [:callm, :foo, :bar], "x"]             |   | 
       | "foo.bar + 'x'"           | [:+, [:callm, :foo, :bar], "x"]             |   | 
+      | "!(x).y"                  | [:!, [:callm, :x, :y]]                      |   |
   
 	Scenario Outline: Terminating expressions with keywords
 		Given the expression <expr>
@@ -185,7 +187,7 @@ Feature: Shunting Yard
       | "foo() {}"          | [:call, :foo, [],[:block]]                 |
       | "foo(1) {}"         | [:call, :foo, 1,[:block]]                  |
       | "e.foo(vars) { }"   | [:callm, :e, :foo, :vars, [:block]]      |
-      | "e.foo(vars)"       | [:callm, :e, :foo, :vars]                  |
+      | "e.foo(vars)"       | [:callm, :e, :foo, [:vars]]                |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
       | "@s.expect(Quoted) { }"    | [:callm, :@s, :expect, :Quoted, [:block]]       |
