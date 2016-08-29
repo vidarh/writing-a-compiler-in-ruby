@@ -31,6 +31,10 @@ class Oper
     @assoc = assoc
   end
 
+  def inspect
+    "{#{@sym}/#{@arity} pri=#{@pri}}"
+  end
+
   def self.expect(s)
     # expect any of the defined operators
     # if operator found, return it's symbol (e.g. "*" -> :*)
@@ -82,13 +86,14 @@ Operators = {
   "&&"        => Oper.new(  7, :and,      :infix),
   "||"        => Oper.new(  6, :or,       :infix),
 
-  "!"         => Oper.new(  7, :"!",      :prefix),
+  "!"         => Oper.new(  8, :"!",      :prefix),
   "<<"        => Oper.new(  8, :<<,       :infix),
 
-  "<"         => Oper.new(  9, :<,       :infix),
-  "<="        => Oper.new(  9, :<=,       :infix),
+  "<"         => Oper.new(  9, :"<",       :infix),
+  "<="        => Oper.new(  9, :"<=",       :infix),
   ">"         => Oper.new(  9, :>,       :infix),
   ">="        => Oper.new(  9, :>=,       :infix),
+  "==="       => Oper.new(  9, :===,      :infix),
   "=="        => Oper.new(  9, :==,       :infix),
   "!="        => Oper.new(  9, :"!=",       :infix),
   "<=>"       => Oper.new(  9, :"<=>",      :infix),
@@ -105,24 +110,24 @@ Operators = {
   "/"         => Oper.new( 20, :/,      :infix),
   "*"         => {
     :infix_or_postfix => Oper.new( 20, :"*",   :infix),
-    :prefix           => Oper.new( 98, :splat, :prefix)
+    :prefix           => Oper.new( 97, :splat, :prefix)
   },
 
   # "Fake" operator for function calls
   "#call#"    => Oper.new( 99, :call,     :prefix,2,1),
-  "#call2#"   => Oper.new(  7, :call,     :prefix,2,1),
+  "#call2#"   => Oper.new(  9, :call,     :prefix,2,1),
   ","         => Oper.new( 99, :comma,    :infix, 2,1),
 
   # "Fake" operator for [] following a name
   "#index#"   => Oper.new(100, :index,    :infix),
-  "."         => Oper.new(100, :callm,    :infix, 2,2,:left),
+  "."         => Oper.new( 98, :callm,    :infix, 2,2,:left),
   "::"        => Oper.new(100, :deref,    :infix, 2,2,:left),
   ".."        => Oper.new(100, :range,    :infix), # FIXME: Check pri - probably not right.
 
 
   #### Parentheses ####
 
-  "["         => Oper.new( 99, :array,    :lp,1),
+  "["         => Oper.new( 97, :array,    :lp,1),
   "]"         => Oper.new(  0, nil,       :rp),
 
   "do"        => Oper.new( 99, :block,    :lp,1),
