@@ -267,10 +267,15 @@ class Compiler
           @e.call(compile_eval_arg(scope,method))
         end
 
-        if ob != :self
+        # FIXME: Unsure if the below check is
+        # inherently unsafe, or currently unsafe
+        # due to abug elsewhere, but removing it
+        # solves some register invalidation problems,
+        # so commenting out for now.
+#        if ob != :self
           @e.comment("Evicting self") 
           @e.evict_regs_for(:self) 
-        end
+#        end
       end
     end
 
