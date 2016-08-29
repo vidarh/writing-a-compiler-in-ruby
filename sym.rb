@@ -39,6 +39,10 @@ module Tokens
         s.get
         if s.peek == ?=
           s.get
+          if s.peek == ?=
+            s.get
+            return :":==="
+          end
           return :":=="
         end
         return :":="
