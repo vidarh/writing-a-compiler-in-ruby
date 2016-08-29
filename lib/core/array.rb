@@ -38,6 +38,15 @@ class Array
   # --------------------------------------------------
 
   # FIXME: Belongs in Enumerable
+  def find # FIXME: ifnone
+    each do |e|
+      r = yield(e)
+      return e if r != false
+    end
+    return nil
+  end
+
+  # FIXME: Belongs in Enumerable
   def include? other
     each do |e|
       return true if e == other
