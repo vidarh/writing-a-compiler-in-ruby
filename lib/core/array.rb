@@ -65,6 +65,28 @@ class Array
     a
   end
 
+  # FIXME: Cut and paste from Enumerable
+  def collect
+    items = Array.new
+    each do |item|
+      items << yield(item)
+    end
+    return items
+  end
+
+
+  # FIXME: Cut and paste from Enumerable
+  def detect(ifnone = nil)
+    self.each do |item|
+      if yield(item)
+        return item
+      end
+    end
+    if ifnone
+      return ifnone.call
+    end
+    return nil
+  end
 
 
   # Set Intersection.
