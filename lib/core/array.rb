@@ -341,14 +341,47 @@ class Array
   # If the item is not found, returns nil. If the optional code block is given,
   # returns the result of block if the item is not found.
   def delete(obj)
-    %s(puts "Array#delete not implemented")
+    src  = 0
+    dest = 0
+    len  = length
+
+    while src < len
+      sob = self[src]
+      if sob != obj
+        if src != dest
+          self[dest] = sob
+        end
+        dest += 1
+      end
+      src += 1
+    end
+    %s(assign @len (callm dest __get_raw))
+    obj
   end
 
 
   # Deletes the element at the specified index, returning that element,
   # or nil if the index is out of range. See also Array#slice!.
   def delete_at(idx)
-    %s(puts "Array#delete_at not implemented")
+    return nil if idx < 0
+
+    l = length
+    return nil if idx >= l
+
+    e = self[idx]
+
+    x = self
+    while idx < l
+      # FIXME: This is parsed wrong:
+      # self[idx] = self[idx+1]
+
+      o = x[idx+1]
+      x[idx] = o
+      idx += 1
+    end
+
+    %s(assign @len (sub @len 1))
+    return e
   end
 
 
