@@ -5,7 +5,7 @@
 # (because their value is known at compile time), but some of them are
 # not. For now, we'll treat all of them as global variables.
 class GlobalScope < Scope
-  attr_reader :class_scope
+  attr_reader :class_scope, :globals
 
   def initialize(offsets)
     @vtableoffsets = offsets
@@ -16,6 +16,10 @@ class GlobalScope < Scope
     @globals[:false] = true
     @globals[:true]  = true
     @globals[:nil]   = true
+  end
+
+  def add_global(c)
+    @globals[c] = true
   end
 
   def add_constant(c,v = true)
