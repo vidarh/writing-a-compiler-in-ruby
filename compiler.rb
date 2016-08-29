@@ -230,9 +230,9 @@ class Compiler
     return Value.new([:addr, clean_method_name(name)])
   end
 
-  def compile_rescue(scope, *args)
+  def compile_rescue(scope, rval, lval)
     warning("RESCUE is NOT IMPLEMENTED")
-    Value.new([:subexpr])
+    compile_exp(scope,lval)
   end
 
   def compile_decr(scope, left, right)
