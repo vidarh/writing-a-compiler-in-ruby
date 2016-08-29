@@ -162,7 +162,10 @@ class Compiler
   # Outputs them as string and global constants, respectively.
   def output_constants
     @e.rodata { @string_constants.each { |c, l| @e.string(l, c) } }
-    @e.bss    { @global_constants.each { |c|    @e.bsslong(c) }}
+
+    # FIXME: Temporary workaround to add bss entries for "missing" globals
+    vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq
+    @e.bss    { vars.each { |c|    @e.bsslong(c) }}
   end
 
 
@@ -446,7 +449,7 @@ class Compiler
     aparam = args[1]
     atype = :addr if atype == :possible_callm
 
-    if atype == :addr
+    if atype == :addr || atype == :cvar
       scope.add_constant(aparam)
       prefix = scope.name
       aparam = prefix + "__" + aparam.to_s if !prefix.empty?

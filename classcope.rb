@@ -106,10 +106,17 @@ class ModuleScope < Scope
   end
 
   def get_class_var(a)
-    @class_vars[a] ||= a.to_s[2..-1].to_sym # save without "@@"
-    instance_var = @class_vars[a]
+    instance_var = a.to_s[2..-1].to_sym # save without "@@"
+    is_new = !@class_vars[a]
+
     cvar = "__classvar__#{@name}__#{instance_var}"
-    return [:cvar, cvar.to_sym] # -> e.g. __classvar__Foo__varname
+
+    if is_new
+      @class_vars[a] = instance_var
+      add_global(cvar)
+    end
+
+    return [:global, cvar.to_sym] # -> e.g. __classvar__Foo__varname
   end
 
   def get_instance_var(a)
