@@ -77,7 +77,7 @@ class Parser < ParserBase
   # if_unless ::= ("if"|"unless") if_body
   def parse_if_unless
     pos = position
-    type = expect(:if) || expect(:unless) or return
+    type = keyword(:if) || keyword(:unless) or return
     parse_if_body(type.to_sym)
   end
   
@@ -371,7 +371,7 @@ class Parser < ParserBase
   # include ::= "include" ws* name w
   def parse_include
     pos = position
-    expect(:include) or return
+    keyword(:include) or return
     ws
     n = parse_name or expected("name of module to include")
     ws
