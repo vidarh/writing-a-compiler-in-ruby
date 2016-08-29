@@ -250,7 +250,8 @@ class Emitter
     # FIXME: uh. yeah. Without fixing the rest the line below 
     # will not return sensible results, but it should let the code compile
     # (and fail)
-    return result_value
+
+    return load_global_var(aparam)
   end
 
   def save_to_local_var(arg, aparam)
@@ -265,6 +266,7 @@ class Emitter
     # needs to be implemented
     STDERR.puts("Emitter#save_to_class_var needs to be implemented")
     STDERR.puts("Emitter#save_to_class_var: arg: #{arg.inspect}, aparam: #{aparam.inspect}")
+    emit(:movl, arg,aparam.to_s)
   end
 
   def save_to_arg(arg, aparam)
