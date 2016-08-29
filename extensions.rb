@@ -7,14 +7,6 @@ module Enumerable
   end
 end
 
-if RUBY_VERSION < "1.9"
-  class String
-    def ord
-      self[0].to_i
-    end
-  end
-end
-
 class Array
   # Visit each node depth first
   # If the given block return :skip,
