@@ -7,7 +7,7 @@
 # Should auto-generate this so it actually has the correct value...
 # However it requires String support to be functional first.
 #
-__FILE__ = "[filename]"
+__FILE__ = "lib/core/stubs.rb"
 
 
 # Set up the 'main' object
@@ -27,9 +27,6 @@ self = Object.new
 E = 2
 Tokens=5
 #  - The ones that fails because they haven't been implemented
-STDIN= IO.new
-STDERR=IO.new
-STDOUT = IO.new
 # Enumerable=8 #Here because modules doesn't work yet
 
 def raise *exp
