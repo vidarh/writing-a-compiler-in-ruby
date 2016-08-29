@@ -36,6 +36,10 @@ class ParserBase
     return nil
   end
 
+  def keyword(arg)
+    Tokens::Keyword.expect(@scanner,arg)
+  end
+
   def expected(name)
     error("Expected: #{name}")
   end
