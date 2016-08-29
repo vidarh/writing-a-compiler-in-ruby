@@ -88,5 +88,6 @@ require 'core/pp'
 # Other support
 #
 
+require 'core/stdio'
 require 'core/stubs'       # Stubbed out/non-functional missing pieces
 require 'core/debug'       # Low level debug support
