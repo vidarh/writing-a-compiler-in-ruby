@@ -106,9 +106,16 @@ module OpPrec
             if op.type == :lp
               shunt(src, [op], [])
               opstate = :infix_or_postfix
-              # Handling function calls and a[1] vs [1]
               ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
-              reduce(ostack, @opcall2)
+
+              # Handling function calls and a[1] vs [1]
+              #
+              # - If foo is a method, then "foo [1]" is "foo([1])"
+              # - If foo is a local variable, then "foo [1]" is "foo.[](1)"
+              # - foo[1] is always foo.[](1)
+              # So we need to know if there's whitespace, and we then higher up need to know if
+              # if's a method. Fuck the Ruby grammar
+              reduce(ostack, @opcall2) if ostack[-1].nil? || ostack[-1].sym != :call
             elsif op.type == :rp
               break
             else
