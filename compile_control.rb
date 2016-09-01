@@ -116,10 +116,55 @@ class Compiler
     @e.loop do |br|
       var = compile_eval_arg(scope, cond)
       compile_jmp_on_false(scope, var, br)
-      compile_exp(scope, body)
+      compile_exp(ControlScope.new(scope, br), body)
     end
     # FIXME: "while" should return nil.
     return Value.new([:subexpr])
   end
 
+  # "break" has different complexity in different contexts:
+  #
+  # 1) Lexically inside constructs like "while", break "just" jumps out of the loop
+  # This is handled using "controlscope", which intercept requests for a "break label"
+  #
+  # 2) Inside bare blocks, a break is a potentially non-local jump up the stack to the
+  # first instruction *following* the method call that the bare block is attached to.
+  #
+  # 3) FIXME: ? Verify behaviour for *lambda* as opposed to *proc* and bare blocks.
+  #
+  # Case #2 is handled by saving the stack frame (which we also need for "preturn")
+  # of the location the block is defined. But unlike preturn, where we put this stack
+  # frame in place and "leave", thus triggering a return *from* the point we defined
+  # the block, for "break" we unwind the stack until "leave" leaves the stack frame
+  # in question in %ebp. Then we "ret". This causes us to return to the instruction
+  # after the "call" that brought us into the method that took the block as an argument
+  # - just where we want to be.
+  #
+  # See also controlscope.rb
+  #
+  def compile_break(scope)
+    br = scope.break_label
+    @e.comment("BREAK")
+    if br
+      @e.jmp(br)
+    else
+      # Handling lexical break from block/proc's.
+      #
+      #    If after leave, %ebp == __stackframe__
+      #    then we're where we want to be.
+      ret = compile_eval_arg(scope,[:index,:__env__,0])
+      @e.movl(ret,:eax)
+      l = @e.local
+      r = @e.get_local
+      @e.leave
+      @e.cmpl :eax, :ebp
+      @e.jz r
+      @e.addl(4,:esp)
+      @e.jmp l
+      @e.local(r)
+      @e.ret
+    end
+    @e.evict_all
+    return Value.new([:subexpr])
+  end
 end

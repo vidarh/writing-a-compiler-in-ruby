@@ -34,6 +34,11 @@ class Scope
   def vtable
     @next ? @next.vtable : {}
   end
+
+  def break_label
+    @next ? @next.break_label : nil
+  end
+
 end
 
 
@@ -42,3 +47,4 @@ require 'funcscope'
 require 'sexpscope'
 require 'localvarscope'
 require 'classcope'
+require 'controlscope'

@@ -44,7 +44,7 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
-                   :protected, :array, :splat, :mod, :or_assign
+                   :protected, :array, :splat, :mod, :or_assign, :break
                   ]
 
   Keywords = @@keywords
@@ -215,10 +215,10 @@ class Compiler
   # the actual code for the function's body.
   #
   # Note that compile_defun is now only accessed via s-expressions
-  def compile_defun(scope, name, args, body)
+  def compile_defun(scope, name, args, body, break_label = nil)
     raise "Internal error: Expecting a name; got #{name.inspect}" if name.is_a?(Array)
 
-    f = Function.new(name,args, body,scope)
+    f = Function.new(name,args, body, scope, break_label || @e.get_local)
     name = clean_method_name(name)
 
     # add function to the global list of functions defined so far
@@ -398,7 +398,7 @@ class Compiler
     body ||= []
     args ||= []
 
-    r = compile_defun(scope, e, [:self,:__closure__]+args,[:let,[]]+body)
+    r = compile_defun(scope, e, [:self,:__closure__]+args,[:let,[]]+body, scope.break_label)
     r
   end
 

@@ -13,7 +13,7 @@ class Compiler
 
 
     # FIXME: Replace "__closure__" with the block argument name if one is present
-    f = Function.new(name,[:self,:__closure__]+args, body, scope) # "self" is "faked" as an argument to class methods
+    f = Function.new(name,[:self,:__closure__]+args, body, scope, @e.get_local) # "self" is "faked" as an argument to class methods
 
     @e.comment("method #{name}")
 

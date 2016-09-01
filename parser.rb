@@ -202,13 +202,19 @@ class Parser < ParserBase
     return E[pos, :lambda, *block[1..-1]]
   end
 
+  def parse_break
+    pos = position
+    return nil if !expect(:break)
+    return E[pos, :break]
+  end
+
   # Later on "defexp" will allow anything other than "def"
   # and "class".
   # defexp ::= sexp | while | begin | case | if | lambda | subexp
   def parse_defexp
     pos = position
     ws
-    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_lambda || parse_subexp
+    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_lambda || parse_break || parse_subexp || parse_require
     ret.position = pos if ret.respond_to?(:position)
     nolfws
     if sym = expect(:if, :while, :rescue)
