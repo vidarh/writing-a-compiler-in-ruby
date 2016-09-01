@@ -71,15 +71,14 @@ class String
       end
 
       if e < 0
-        e = l + e
+        e = l + e + 1
         if e < 0
           e = 0
         end
       end
 
-      endp = b + e
-      if endp > l
-        e = l - b
+      if e > l
+        e = l
       end
       e = e - b
 
