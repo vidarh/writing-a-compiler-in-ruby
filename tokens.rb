@@ -128,11 +128,15 @@ module Tokens
       @parser = parser
       @keywords = Keywords.dup
       @lastop = false
+
+      # FIXME: Auto-nil instance variables that are not present in initialize
+      @last = nil
     end
 
     def each
       while t = get and t[0]
-        yield *t
+        # FIXME: Fails without parentheses
+        yield(*t)
       end
     end
 
