@@ -13,10 +13,19 @@ class Parser < ParserBase
     super(scanner)
     @opts = opts
     @sexp = SEXParser.new(scanner)
-    @shunting = OpPrec::parser(scanner, self)
+    # FIXME:
+    # OpPrec::parser fails, though it works with MRI
+    @shunting = OpPrec.parser(scanner, self)
+
+    # FIXME: If member variable is not explicitly assigned, it
+    # will be 0 rather than nil. Need to ensure instance vars
+    # are cleared.
+    @include_paths = nil
     @include_paths = opts[:include_paths].dup if opts[:include_paths]
     @include_paths ||= []
-    @include_paths << File.expand_path(File.dirname(__FILE__)+"/lib")
+
+    path = File.expand_path(File.dirname(__FILE__)+"/lib")
+    @include_paths << path
   end
 
   # name ::= atom
@@ -350,11 +359,21 @@ class Parser < ParserBase
 
     STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
 
-    @@requires[q] = [] # Prevent include/require loops
+    # FIXME: This fails with
+    #  @@requires[q] = []
+    # as well as with:
+    #  @@requires[q] = Array.new
+    # (for apparently different reasons)
+    a = Array.new
+    @@requires[q] = a # Prevent include/require loops
+
     s = Scanner.new(f)
     pos = position
-    expr = Parser.new(s, @opts).parse(false)
-    @@requires[q] = E[pos,:required, expr]
+    # FIXME: Is this change also down to parser bug?
+    parser =  Parser.new(s, @opts)
+    expr = parser.parse(false)
+    e = E[pos,:required, expr]
+    @@requires[q] = e
   end
 
   # require ::= "require" ws* subexp
