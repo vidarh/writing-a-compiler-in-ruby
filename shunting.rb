@@ -54,7 +54,7 @@ module OpPrec
       @tokenizer.get_quoted_exp
     end
 
-    def shunt(src, ostack = [], inhibit = [])
+    def shunt(src, ostack, inhibit)
       possible_func = false     # was the last token a possible function name?
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
@@ -89,7 +89,7 @@ module OpPrec
               ostack << @opcall if !ocall
             elsif op.sym == :hash_or_block
               op = Operators["#hash#"]
-              shunt(src, [op])
+              shunt(src, [op], [])
               opstate = :infix_or_postfix
             else
               raise "Block not allowed here"
@@ -104,7 +104,7 @@ module OpPrec
             end
             reduce(ostack, op)
             if op.type == :lp
-              shunt(src, [op])
+              shunt(src, [op], [])
               opstate = :infix_or_postfix
               # Handling function calls and a[1] vs [1]
               ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
