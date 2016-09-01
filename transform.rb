@@ -216,7 +216,20 @@ class Compiler
 
   def rewrite_env_vars(exp, env)
     exp.depth_first do |e|
+      # We need to expand "yield" before we rewrite.
+      if e.is_a?(Array) && e[0] == :call && e[1] == :yield
+        args = e[2]
+        e[0] = :callm
+        e[1] = :__closure__
+        e[2] = :call
+        e[3] = args
+      end
+
       e.each_with_index do |ex, i|
+        # FIXME: This is necessary in order to avoid rewriting compiler keywords in some
+        # circumstances. The proper solution would be to introduce more types of 
+        # expression nodes in the parser
+        next if i == 0 && ex == :index
         num = env.index(ex)
         if num
           e[i] = E[:index, :__env__, num]
@@ -259,6 +272,8 @@ class Compiler
 
       vars,env= find_vars(e[3],scopes,Set.new, freq)
 
+      env << :__closure__
+
       # For "preturn". see Compiler#compile_preturn
       aenv = [:__stackframe__] + env.to_a
       env << :__stackframe__
@@ -268,7 +283,7 @@ class Compiler
         body = e[3]
 
         rewrite_env_vars(body, aenv)
-        notargs = env - Set[*e[2]]
+        notargs = env - Set[*e[2]] - [:__closure__]
         extra_assigns = (env - notargs).to_a.collect do |a|
           E[e.position,:assign, E[e.position,:index, :__env__, aenv.index(a)], a]
         end
