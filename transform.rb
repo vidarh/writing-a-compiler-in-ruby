@@ -200,7 +200,7 @@ class Compiler
           vars.each {|v| push_var(scopes,env,v); }
         end
       elsif n.is_a?(Symbol)
-        sc = in_scopes(scopes,n)
+        sc = in_scopes(scopes[0..-2],n)
         freq[n] += 1 if !is_special_name?(n)
         if sc.size == 0
           push_var(scopes,env,n) if in_assign && !is_special_name?(n)
