@@ -77,7 +77,6 @@ class Compiler
       location = ""
     end
     raise "Compiler error: #{error_message}#{location}\n
-           current scope: #{current_scope.inspect}\n
            current expression: #{current_exp.inspect}\n"
   end
 
