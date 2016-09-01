@@ -272,17 +272,25 @@ class Parser < ParserBase
     return E[pos, :proc, args, exps]
   end
 
-  # def ::= "def" ws* name args? block_body
-  def parse_def
-    pos = position
-    expect(:def) or return
-    ws
+
+
+
+  def parse_defname
     name = expect(Methodname) || @shunting.parse or expected("function name")
     if (expect("."))
       name = [name]
       ret = expect(Methodname) or expected("name following '#{name}.'")
       name << ret
     end
+    return name
+  end
+
+  # def ::= "def" ws* name args? block_body
+  def parse_def
+    pos = position
+    expect(:def) or return nil
+    ws
+    name = parse_defname
     args = parse_args || []
     expect(";")
     exps = parse_block_exps
@@ -304,7 +312,6 @@ class Parser < ParserBase
     expect(:end) or expected("expression or 'end'")
     return E[pos, type.to_sym, name, :Object, exps]
   end
-
 
   # class ::= ("class" ws* (name|"<<") ws* (< ws* superclass)? ws* name ws* exp* "end"
   def parse_class
@@ -335,6 +342,7 @@ class Parser < ParserBase
     @include_paths.collect do |path|
       full = File.expand_path("#{path}/#{filename}")
       full << ".rb" if full[-3..-1] != ".rb"
+      full
     end
   end
 
@@ -406,7 +414,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_class || parse_module || parse_def || parse_require || parse_include || parse_defexp || expect("protected")
+    ret = parse_class || parse_module || parse_def || parse_include || parse_defexp || expect("protected")
     ret = E[pos].concat(ret) if ret.is_a?(Array)
     ret.position = pos if ret.respond_to?(:position) && !ret.position
     ws; expect(";"); ws
