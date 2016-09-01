@@ -653,7 +653,7 @@ class Array
       return nil
     else
       last_element = self.last
-      self.delete(last_element)
+      %s(assign @len (sub @len 1))
       return last_element
     end
   end
