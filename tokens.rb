@@ -153,6 +153,12 @@ module Tokens
     end
 
     def get_raw
+      # FIXME: Workaround for a bug where "first" is not 
+      # identified as a variable if first introduced inside
+      # the case block. Placing this here until the bug
+      # is fixed.
+      first = nil
+
       case @s.peek
       when ?",?'
         return [get_quoted_exp, nil]
