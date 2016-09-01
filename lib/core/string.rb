@@ -268,6 +268,19 @@ class String
     s
   end
 
+
+  def rindex(ch)
+    l  = length
+    ch = ch.ord
+    while l > 0
+      l -= 1
+      if self[l].ord == ch.ord
+        return l
+      end
+    end
+    return nil
+  end
+
 end
 
 # FIXME: This is an interesting bootstrapping problem
