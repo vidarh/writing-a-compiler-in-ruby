@@ -3,8 +3,20 @@
 class Scope
   attr_reader :next
 
+  def initialize n=nil
+    @next = n
+  end
+
   def method
     nil
+  end
+
+  def get_arg(a)
+    @next ? @next.get_arg(a) : nil
+  end
+
+  def add_global(c)
+    @next.add_global(c) if @next
   end
 
   def add_constant(c)
@@ -12,7 +24,7 @@ class Scope
   end
 
   def find_constant(c)
-    @next.find_constant(c) if @next
+    @next ? @next.find_constant(c) : nil
   end
 
   def name
