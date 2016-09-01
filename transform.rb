@@ -161,7 +161,13 @@ class Compiler
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
         elsif n[0] == :lambda || n[0] == :proc
-          vars, env = find_vars(n[2], scopes + [Set.new],env, freq, true)
+          vars, env2= find_vars(n[2], scopes + [Set.new],env, freq, true)
+
+          # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
+          vars  -= n[1] if n[1]
+          env2  -= n[1] if n[1]
+          env += env2
+
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
         else
           if    n[0] == :callm 
