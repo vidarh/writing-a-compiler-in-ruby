@@ -57,6 +57,7 @@ require 'print_sexp'
 require 'vtableoffsets'
 
 require 'ast'
+#require 'value'
 
 class MockIO
   def initialize str
@@ -222,6 +223,10 @@ def test_parser
   test_exp("def foo; puts 'Hello World'; end", "[:do, [:defm, :foo, [], [[:call, :puts, \"Hello World\"]]]]")
 end
 
+def test_destructuring
+  test_exp("a,b = [42,123]", [:do, [:assign, [:destruct, :a, :b],[:array, 42,123]]])
+end
+
 test_array
 test_mockio
 test_scannerstring
@@ -234,4 +239,5 @@ test_sexp_basics
 test_tokenizer
 test_shunting
 test_parser
+test_destructuring
 

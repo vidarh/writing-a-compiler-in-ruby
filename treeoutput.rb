@@ -86,7 +86,11 @@ module OpPrec
         if o.sym == :call || o.sym == :callm and o.type == :prefix and rightv && rightv[0] != :flatten and rightv[0] != :comma
           rightv = E[rightv]
         end
-        @vstack << E[o.sym, flatten(leftv), rightv].compact
+        lv = flatten(leftv)
+        if o.sym == :assign && lv.is_a?(Array)
+            lv = [:destruct] + lv
+        end
+        @vstack << E[o.sym, lv, rightv].compact
       end
       return
     end

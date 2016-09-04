@@ -439,11 +439,40 @@ class Compiler
     end
   end
 
+  # Handle destructuring (e.g. a,b = [1,2])
+  # by rewriting to
+  #
+  # (let (__destruct) (do
+  #   (assign __destruct (array 1 2))
+  #   (assign a (callm __destruct [] (0)))
+  #   (assign b (callm __destruct [] (1)))
+  # ))
+  #
+  def rewrite_destruct(exps)
+    exps.depth_first(:assign) do |e|
+      l = e[1]
+      if l.is_a?(Array) && l[0] == :destruct
+        vars = l[1..-1]
+        r = e[2]
+
+        # FIXME: Are there instances where aliasing __destruct may
+        # be a problem?
+        e[0] = :let
+        e[1] = [:__destruct]
+        e[2] = [:do, [:assign, :__destruct, r]]
+        vars.each_with_index do |v,i|
+          e[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
+        end
+      end
+    end
+  end
+
   def preprocess exp
     # The global scope is needed for some rewrites
     @global_scope = GlobalScope.new(@vtableoffsets)
     build_class_scopes(exp)
 
+    rewrite_destruct(exp)
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_strconst(exp)
