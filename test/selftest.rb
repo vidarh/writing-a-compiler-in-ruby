@@ -224,7 +224,7 @@ def test_parser
 end
 
 def test_destructuring
-  test_exp("a,b = [42,123]", [:do, [:assign, [:destruct, :a, :b],[:array, 42,123]]])
+  test_exp("a,b = [42,123]", "[:do, [:assign, [:destruct, :a, :b], [:array, 42, 123]]]")
 end
 
 test_array
