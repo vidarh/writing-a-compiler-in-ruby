@@ -211,7 +211,6 @@ class Array
   def __range_get(idx)
      start = idx.first
      xend  = idx.last
-     puts "start: #{start}, end: #{xend}"
      %s(assign start (__get_fixnum (callm self __offset_to_pos(start))))
      %s(assign xend  (__get_fixnum (callm self __offset_to_pos(xend))))
 
