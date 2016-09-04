@@ -187,43 +187,70 @@ class Array
     a
   end
 
-  # This ends up getting called by a lot of really low level code,
-  # and so anything trying to call any other Ruby code, to e.g. use
-  # Symbol's or similar, is likely to fail.
-  #
-  def [](idx)
-
-    if idx.is_a?(Range)
-      STDERR.puts "ERROR: Array#[#{idx.inspect}] where index is a Range not implemented yet"
-      1/0
-    end
-
+  # FIXME: Should be private
+  # Takes an index into an array, which may be
+  # negative, and returns the actual offset
+  # of -1 if the index is out of bounds.
+  def __offset_to_pos(idx)
     %s(assign idx (callm idx __get_raw))
-
-    # return element at given index
-    # FIXME: Negative indices not implemented
-    # FIXME: Range support not implemented
-
     %s(if (lt idx 0)
          (do
             (assign idx (add @len idx))
-            (if (lt idx 0) (return nil)
+            (if (lt idx 0) (return -1)
                )))
 
     %s(if (ge idx @len)
-         (return nil))
+         (return -1))
 
+    %s(return idx)
+  end
+
+  # FIXME: Private.
+  #
+  # Handles #[](idx) where "idx" is a Range.
+  def __range_get(idx)
+     start = idx.first
+     xend  = idx.last
+     puts "start: #{start}, end: #{xend}"
+     %s(assign start (__get_fixnum (callm self __offset_to_pos(start))))
+     %s(assign xend  (__get_fixnum (callm self __offset_to_pos(xend))))
+
+     # Single item gets passed back to #[]
+     return self.[](start) if start == xend
+
+     # FIXME
+     # This is an inefficient first pass vs. allocating sufficient capacity
+     # and copying straight over, but will do for now.
+     tmp = Array.new
+     while start <= xend
+       tmp << self[start]
+       start += 1
+     end
+     return tmp
+  end
+
+  #
+  # The non-Range version of Array#[] ends up getting called by a
+  # lot of really low level code, and so anything trying to call any
+  # other Ruby code, to e.g. use Symbol's or similar, is likely to fail.
+  #
+  def [](idx)
+
+    return __range_get(idx) if idx.is_a?(Range)
+
+    %s(assign idx (callm self __offset_to_pos (idx)))
+
+    # Bounds check - if still out of bounds after handling negative integers
+    # and the like with __offset_to_pos(), we return nil.
     %s(if (or (or 
                (eq @ptr 0) 
                (gt idx @len)
                ) 
            (lt idx 0))
-         (return nil) 
-         (do
-            (assign tmp (callm self __get (idx)))
-            (if (eq tmp 0) (return nil) (return tmp))
-             )
-         )
+         (return nil))
+
+    %s(assign tmp (callm self __get (idx)))
+    %s(if (eq tmp 0) (return nil) (return tmp))
   end
 
 
