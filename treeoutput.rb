@@ -31,6 +31,7 @@ module OpPrec
       rightv = @vstack.pop if o.arity > 0
 
       raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
+      leftv = nil
       leftv = @vstack.pop if o.arity > 1
 
       leftv = E[] if !leftv && o.sym == :flatten # Empty argument list. :flatten is badly named
