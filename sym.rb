@@ -22,7 +22,10 @@ module Tokens
         s.get
         if s.peek == ?]
           s.get
-          return :":[]=" if s.peek == ?=
+          if s.peek == ?=
+            s.get
+            return :":[]="
+          end
           return :":[]"
         end
         s.unget("[")
