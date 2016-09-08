@@ -70,11 +70,45 @@ module OpPrec
           @vstack << E[:callm, leftv, :[], [rightv]]
         end
       elsif o.sym == :incr
+        # FIXME: This probably doesn't belong here, but rather in transform.rb
+        #
+        # :incr represents +=. There is an added complication: If the left hand side is
+        # the result of a foo[bar] array index operation, foo[bar] += baz needs to be translated to
+        # foo.[]=(bar, foo[bar] + 1) (that's the clean version, see below for the dirty details)
+        #
         if ra and rightv[0] == :array
-          @vstack << E[:assign, leftv, [:callm, leftv, :"+", flatten(rightv[1..-1])]]
+          r = flatten(rightv[1..-1])
         else
-          @vstack << E[:assign, leftv, [:callm, leftv, :"+", [rightv]]]
+          r = [rightv]
         end
+        if la and leftv[0] == :callm and leftv[2] == :[]
+          #
+          # Ruby Array syntax and += etc. is all syntactic sugar:
+          #
+          # foo[bar] += baz
+          #
+          # =>
+          #
+          # __incr = bar
+          # foo.[]=(__incr, foo[__incr] + baz)
+          #
+          # =>
+          #
+          # __incr = bar
+          # foo.[]=(__incr, foo.+(foo.[](__incr),baz)
+          #
+          # =>
+          #
+          lexp = [:callm, leftv[1], :[], :__incr]
+          @vstack << E[:let, [:__incr], [:do,
+                                         E[:assign, :__incr, leftv[3][0]],
+                                         E[:callm, leftv[1], :[]=, [:__incr, [:callm, lexp, :"+", r]]]
+                                        ]
+                      ]
+        else
+          @vstack << E[:assign, leftv, [:callm, leftv, :"+", r]]
+        end
+
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
         @vstack << E[o.sym, leftv].compact + flatten(rightv)
       elsif ra and rightv[0] == :comma and o.sym != :comma
