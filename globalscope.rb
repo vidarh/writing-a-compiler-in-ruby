@@ -16,6 +16,13 @@ class GlobalScope < Scope
     @globals[:false] = true
     @globals[:true]  = true
     @globals[:nil]   = true
+
+    # Special "built-in" globals with two-character names starting with $
+    # that we need to expand to something else.
+    @aliases = {
+      :"$:" => "LOAD_PATH",
+      :"$0" => "__D_0"
+    }
   end
 
   def add_global(c)
@@ -37,6 +44,10 @@ class GlobalScope < Scope
   # Returns an argument within the global scope, if defined here.
   # Otherwise returns it as an address (<tt>:addr</tt>)
   def get_arg(a)
+    # Handle $:, $0 etc.
+    s = @aliases[a]
+    return [:global, s] if s
+
     return [:global, a] if @globals.member?(a)
     return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
     return [:addr, a]

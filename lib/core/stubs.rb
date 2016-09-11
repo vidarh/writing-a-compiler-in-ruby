@@ -42,3 +42,9 @@ end
   (puts "Compiler range construct is not implemented yet")
 )
 
+# FIXME
+ARGV=[]
+LOAD_PATH=[]
+
+# $0
+__D_0="<script name>"
