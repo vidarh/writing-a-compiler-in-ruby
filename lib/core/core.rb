@@ -64,7 +64,7 @@ require 'core/proc'        # Blocks are unavailable before this
 require 'core/array_base'  # Splats are unavailable before this.
 require 'core/true'
 require 'core/false'
-require 'core/nil'
+require 'core/nil'         # Before this, all variables must be explicitly defined.
 #require 'core/enumerable'
 require 'core/range'
 require 'core/array' 
@@ -82,7 +82,7 @@ require 'core/float'
 require 'core/struct'
 require 'core/exception'
 require 'core/pp'
-
+require 'core/regexp'
 
 #
 # Other support

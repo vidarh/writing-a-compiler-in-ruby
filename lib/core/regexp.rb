@@ -1,0 +1,3 @@
+
+class Regexp
+end

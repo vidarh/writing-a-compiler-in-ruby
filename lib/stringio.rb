@@ -1,2 +1,5 @@
 
 # Dummy
+
+class StringIO
+end
