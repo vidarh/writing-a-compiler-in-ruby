@@ -35,6 +35,7 @@ class File < IO
   end
 
   def self.expand_path(path)
+    STDERR.puts "expand_path: '#{path}'"
     path
   end
 end
