@@ -33,6 +33,10 @@ class Symbol
     @name
   end
 
+  def to_sym
+    self
+  end
+
   def inspect
     ":#{to_s}"
   end
