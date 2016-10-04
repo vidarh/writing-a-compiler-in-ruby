@@ -16,9 +16,10 @@ class IO < Object
   def getc
     c = 0
     tmp = 0
-
+    len = nil
     %s(do
-         (read (callm @fd __get_raw) @rawbuf 1)
+         (assign len (read (callm @fd __get_raw) @rawbuf 1))
+         (if (eq len 0) (return nil))
          (assign c (__get_fixnum (bindex @rawbuf 0)))
          )
     c
