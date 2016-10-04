@@ -88,6 +88,15 @@ class Array
     return nil
   end
 
+  # FIXME: Cut and paste from Enumerable
+  def each_with_index
+    i = 0
+    self.each do |item|
+      yield(item, i)
+      i += 1
+    end
+  end
+
 
   # Set Intersection.
   # Returns a new array containing elements common to the two arrays, with no duplicates.
