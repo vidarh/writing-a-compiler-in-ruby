@@ -20,6 +20,7 @@ class Class
       %s(printf "WARNING:    symbol address = %p\n" sym)
       %s(printf "WARNING:    object = %p\n" obj)
       %s(printf "WARNING:    class '%s'\n" (callm (callm self name) __get_raw))
+      %s(div 1 0)
       nil
     else
       # We can't inline this in the call, as our updated callm
