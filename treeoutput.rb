@@ -58,7 +58,7 @@ module OpPrec
           @vstack << leftv + args
         end
       elsif la and leftv[0] == :callm and o.sym == :assign
-        rightv = E[rightv] if !ra
+        rightv = E[rightv]
         args = leftv[3] ? leftv[3]+rightv : rightv
         eq = "#{leftv[2].to_s}="
         args = E[args] if args[0] == :callm
