@@ -58,6 +58,7 @@ require 'vtableoffsets'
 
 require 'ast'
 #require 'value'
+require 'compiler'
 
 class MockIO
   def initialize str
@@ -221,10 +222,23 @@ def test_parser
   test_exp("puts 'Hello World'", "[:do, [:call, :puts, \"Hello World\"]]")
   test_exp("def foo; end", "[:do, [:defm, :foo, [], []]]")
   test_exp("def foo; puts 'Hello World'; end", "[:do, [:defm, :foo, [], [[:call, :puts, \"Hello World\"]]]]")
+  test_exp("e[i]", "[:do, [:callm, :e, :[], :i]]")
+  test_exp("e[i] = E[:foo]", "[:do, [:callm, :e, :[]=, [:i, [:callm, :E, :[], ::foo]]]]")
 end
 
 def test_destructuring
   test_exp("a,b = [42,123]", "[:do, [:assign, [:destruct, :a, :b], [:array, 42, 123]]]")
+end
+
+def mock_preprocess(exp)
+  prog = mock_parse(exp)
+  e = Emitter.new
+  c = Compiler.new(e)
+  c.preprocess(prog)
+end
+
+def test_compiler
+  mock_preprocess("a = 42")
 end
 
 test_array
@@ -240,4 +254,4 @@ test_tokenizer
 test_shunting
 test_parser
 test_destructuring
-
+test_compiler
