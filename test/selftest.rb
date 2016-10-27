@@ -231,7 +231,8 @@ def test_destructuring
 end
 
 def mock_preprocess(exp)
-  prog = mock_parse(exp)
+  parser = Parser.new(mock_scanner(exp))
+  prog = parser.parse(false)
   e = Emitter.new
   c = Compiler.new(e)
   c.preprocess(prog)
