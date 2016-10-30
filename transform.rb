@@ -136,7 +136,11 @@ class Compiler
   end
 
   def is_special_name?(v)
-    Compiler::Keywords.member?(v) || v == :nil || v == :self ||
+    # FIXME: This is/was broken because it'd prevent valid variable names
+    # like "eq" from being recognized. The proper fix to this is to type
+    # the AST properly, but for now this seems to be an improvement
+    #Compiler::Keywords.member?(v) ||
+      v == :nil || v == :self ||
       v.to_s[0] == ?@ ||
       v == :true || v == :false  || v.to_s[0] < ?a
   end
