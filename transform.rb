@@ -261,10 +261,19 @@ class Compiler
       args   = Set[*e[2].collect{|a| a.kind_of?(Array) ? a[0] : a}]
       scopes = [args.dup] # We don't want "args" above to get updated 
 
-      rest = e[2][-1] rescue nil
-      rest = (rest[-1] == :rest ? rest[0] : nil) rescue nil
-      if rest
-        e[2][-1][0] = :__splat
+      ri = -1
+      r = e[2][ri]
+      if r
+        if r[-1] != :rest
+          ri -= 1
+          r = e[2][ri]
+        end
+        if r && r[-1] == :rest
+          rest = r[0]
+        end
+        if rest
+          r[0] = :__splat
+        end
       end
 
       # We use this to assign registers
