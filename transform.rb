@@ -387,9 +387,7 @@ class Compiler
   #
   # (we still need to be able to fall back to dynamic constant lookup)
   #
-  def build_class_scopes(exps, scope = nil)
-    scope = @global_scope if !scope
-
+  def build_class_scopes(exps, scope)
     return if !exps.is_a?(Array)
 
     exps.each do |e|
@@ -490,7 +488,7 @@ class Compiler
   def preprocess exp
     # The global scope is needed for some rewrites
     @global_scope = GlobalScope.new(@vtableoffsets)
-    build_class_scopes(exp)
+    build_class_scopes(exp,@global_scope)
 
     rewrite_destruct(exp)
     rewrite_concat(exp)
