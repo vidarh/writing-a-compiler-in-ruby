@@ -1,3 +1,7 @@
+
+require 'ast'
+require 'scanner'
+
 # 
 # Parts of the compiler class that mainly transform the source tree
 #
