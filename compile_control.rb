@@ -113,13 +113,27 @@ class Compiler
   # Compiles a while loop.
   # Takes the current scope, a condition expression as well as the body of the function.
   def compile_while(scope, cond, body)
-    @e.loop do |br|
+    @e.loop do |br,l|
       var = compile_eval_arg(scope, cond)
       compile_jmp_on_false(scope, var, br)
-      compile_exp(ControlScope.new(scope, br), body)
+      compile_exp(ControlScope.new(scope, br,l), body)
     end
     # FIXME: "while" should return nil.
     return Value.new([:subexpr])
+  end
+
+  # "next" acts differently in a control structure vs. block
+  #
+  # In "while" etc, "next" jumps to the next iteration.
+  # In a block, "next" acts like "break".
+  #
+  def compile_next(scope)
+    l = scope.loop_label
+    if l
+      @e.jmp(l)
+    else
+      compile_break(scope)
+    end
   end
 
   # "break" has different complexity in different contexts:

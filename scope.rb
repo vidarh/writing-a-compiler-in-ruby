@@ -1,5 +1,4 @@
 
-
 class Scope
   attr_reader :next
 
@@ -49,6 +48,10 @@ class Scope
 
   def break_label
     @next ? @next.break_label : nil
+  end
+
+  def loop_label
+    @next ? @next.loop_label : nil
   end
 
 end
