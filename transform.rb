@@ -292,7 +292,7 @@ class Compiler
         body = e[3]
 
         rewrite_env_vars(body, aenv)
-        notargs = env - Set[*e[2]] - [:__closure__]
+        notargs = env - args - [:__closure__]
         extra_assigns = (env - notargs).to_a.collect do |a|
           E[e.position,:assign, E[e.position,:index, :__env__, aenv.index(a)], a]
         end
