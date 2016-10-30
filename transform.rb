@@ -96,15 +96,18 @@ class Compiler
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
+      # FIXME: e seems to get aliased by v
+      ex = e
       e.each_with_index do |v,i|
         if v.is_a?(Integer)
-          e[i] = E[:sexp, E[:call, :__get_fixnum, v]]
+          # FIXME: Parsing breaks.
+          ex[i] = E[:sexp, E[:call, :__get_fixnum, v]]
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
           # the argument "bare" if it's not an array, which breaks with
           # this rewrite.
-          e[i] = E[e[i]] if is_call && i > 1
+          ex[i] = E[ex[i]] if is_call && i > 1
         end
       end
     end
