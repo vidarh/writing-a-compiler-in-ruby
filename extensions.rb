@@ -24,12 +24,28 @@ class Array
   # when the parser is cleaned up to never
   # create "raw" arrays
   def depth_first(*arg, &block)
-    ret = yield(self) if arg.size == 0 || arg.member?(self[0])
+    # FIXME: Temporary workaround: If
+    # "ret" is used in the if statements
+    # further down, but only initialized
+    # in the if-block, it will be used
+    # without first being initialized.
+    # Need to ensure that all variables
+    # gets initialized before use.
+    ret = nil
+    if arg.size == 0 || arg.member?(self[0])
+      ret = yield(self) 
+    end
     return :stop if ret == :stop
     return true if ret == :skip
 
+    # FIXME: Temporary workaround; if
+    # "arg" is used directly within
+    # the block below then one of the
+    # rewrites fail and causes it to
+    # be incorrectly initialized
+    a = arg
     self.each do |n|
-      ret = n.depth_first(*arg, &block) if n.is_a?(Array)
+      ret = n.depth_first(*a, &block) if n.is_a?(Array)
       return :stop if ret == :stop
     end
     return true
