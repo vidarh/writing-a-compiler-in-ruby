@@ -270,6 +270,13 @@ class Compiler
   def rewrite_let_env(exp)
     exp.depth_first(:defm) do |e|
       args   = Set[*e[2].collect{|a| a.kind_of?(Array) ? a[0] : a}]
+
+      # Count number of "regular" arguments (non "rest", non "block")
+      # FIXME: There are cleaner ways, but in the interest of
+      # self-hosting, I'll do this for now.
+      ac = 0
+      e[2].each{|a| ac += 1 if ! a.kind_of?(Array)}
+
       scopes = [args.dup] # We don't want "args" above to get updated 
 
       ri = -1
@@ -325,7 +332,7 @@ class Compiler
         rest_func =
           [:sexp,
            # Corrected to take into account statically provided arguments.
-           [:assign, rest.to_sym, [:__splat_to_Array, :__splat, [:sub, :numargs, args.size-1]]]
+           [:assign, rest.to_sym, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
           ]
       else
         rest_func = []
