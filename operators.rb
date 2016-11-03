@@ -110,7 +110,7 @@ Operators = {
   "/"         => Oper.new( 20, :/,      :infix),
   "*"         => {
     :infix_or_postfix => Oper.new( 20, :"*",   :infix),
-    :prefix           => Oper.new( 97, :splat, :prefix)
+    :prefix           => Oper.new( 8, :splat, :prefix)
   },
 
   # "Fake" operator for function calls

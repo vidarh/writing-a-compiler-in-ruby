@@ -77,11 +77,25 @@ class MockIO
   end
 end
 
+# FIXME: The 27.chr is a workaround for parser bug
+# with \e
+def col(num)
+  "#{27.chr}[3#{num.to_s}m"
+end
+
+def msg_pass(message, right)
+  puts "#{col(2)}PASS#{col(7)}: #{message} [expected/got #{right.inspect}]"
+end
+
+def msg_fail(message, left,right)
+  puts "#{col(1)}FAIL#{col(7)}: #{message} [expected #{right.inspect}, got #{left.inspect}]"
+end
+
 def expect_eq(left, right, message)
   if left == right
-    puts "PASS: #{message} [expected/got #{right.inspect}]"
+    msg_pass(message, right)
   else
-    puts "FAIL: #{message} [expected #{right.inspect}, got #{left.inspect}]"
+    msg_fail(message, left, right)
   end
 end
 
@@ -208,11 +222,11 @@ end
 
 def mock_parse(str)
   parser = Parser.new(mock_scanner(str))
-  parser.parse(false).inspect
+  parser.parse(false)
 end
 
 def test_exp(exp, result)
-  m = mock_parse(exp)
+  m = mock_parse(exp).inspect
   expect_eq(m, result, "Parsing '#{exp}' with the full parser")
 end
 
@@ -224,15 +238,24 @@ def test_parser
   test_exp("def foo; puts 'Hello World'; end", "[:do, [:defm, :foo, [], [[:call, :puts, \"Hello World\"]]]]")
   test_exp("e[i]", "[:do, [:callm, :e, :[], :i]]")
   test_exp("e[i] = E[:foo]", "[:do, [:callm, :e, :[]=, [:i, [:callm, :E, :[], ::foo]]]]")
+  test_exp('"\e"',"[:do, \"\\e\"]")
+  test_exp("Set[* e[2].to_a]","[:do, [:callm, :Set, :[], [:splat, [:callm, [:callm, :e, :[], 2], :to_a]]]]")
 end
 
 def test_destructuring
   test_exp("a,b = [42,123]", "[:do, [:assign, [:destruct, :a, :b], [:array, 42, 123]]]")
 end
 
+def test_depth_first
+  prog = mock_parse("a = 42")
+  STDERR.puts "DEPTH_FIRST: #{prog.inspect}"
+  prog.depth_first do |n|
+    STDERR.puts n.inspect
+  end
+end
+
 def mock_preprocess(exp)
-  parser = Parser.new(mock_scanner(exp))
-  prog = parser.parse(false)
+  prog = mock_parse(exp)
   e = Emitter.new
   c = Compiler.new(e)
   c.preprocess(prog)
@@ -255,4 +278,5 @@ test_tokenizer
 test_shunting
 test_parser
 test_destructuring
+test_depth_first
 test_compiler
