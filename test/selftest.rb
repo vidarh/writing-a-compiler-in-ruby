@@ -240,6 +240,7 @@ def test_parser
   test_exp("e[i] = E[:foo]", "[:do, [:callm, :e, :[]=, [:i, [:callm, :E, :[], ::foo]]]]")
   test_exp('"\e"',"[:do, \"\\e\"]")
   test_exp("Set[* e[2].to_a]","[:do, [:callm, :Set, :[], [:splat, [:callm, [:callm, :e, :[], 2], :to_a]]]]")
+  test_exp("def foo; name.gsub(foo.bar) { }; end ","[:do, [:defm, :foo, [], [[:callm, :name, :gsub, [[:callm, :foo, :bar]], [:proc]]]]]")
 end
 
 def test_destructuring
@@ -249,7 +250,8 @@ end
 def test_depth_first
   prog = mock_parse("a = 42")
   STDERR.puts "DEPTH_FIRST: #{prog.inspect}"
-  prog.depth_first do |n|
+  prog.depth_first(:defm) do |n|
+    STDERR.puts "Shouldn't get here"
     STDERR.puts n.inspect
   end
 end
