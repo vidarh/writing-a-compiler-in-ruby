@@ -82,7 +82,7 @@ Feature: Shunting Yard
       | "x = foo.bar.baz"    | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
       | "x = foo.bar().baz"  | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
       | "return foo.bar().baz" | [:return, [:callm, [:callm, :foo, :bar], :baz]]     |
-      | "foo.bar(*[a].flatten)" | [:callm, :foo, :bar, [[:callm, [:splat, [:array, :a]], :flatten]]]  |
+      | "foo.bar(*[a].flatten)" | [:callm, :foo, :bar, [[:splat, [:callm, [:array, :a], :flatten]]]] |
 
     @arrays @arrays1
 	Scenario Outline: Array syntax
