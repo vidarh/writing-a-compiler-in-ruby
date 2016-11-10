@@ -45,7 +45,21 @@ module OpPrec
 
       # Rewrite rules to simplify the tree
       if ra and rightv[0] == :call and o.sym == :callm
-        @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
+        s = rightv[1]
+        r = rightv[2..-1]
+        block = r[1]
+
+        args = r[0]
+        if args.is_a?(Array) && args[0] == :callm
+          args = E[args]
+        end
+        expr = E[o.sym,leftv,s]
+        if args || block
+          args ||= []
+          expr << args
+        end
+        expr << block if block
+        @vstack << expr
       elsif la and leftv[0] == :callm and o.sym == :call
         block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
         comma = ra && rightv[0] == :comma
@@ -59,7 +73,11 @@ module OpPrec
         end
       elsif la and leftv[0] == :callm and o.sym == :assign
         rightv = E[rightv]
-        args = leftv[3] ? leftv[3]+rightv : rightv
+        lv = leftv[3]
+        lv = [lv] if lv && !lv.is_a?(Array)
+        args = lv ? lv +rightv : rightv
+
+        # FIXME: For some reason "eq" gets mis-identified as method call.
         eq = "#{leftv[2].to_s}="
         args = E[args] if args[0] == :callm
         @vstack << E[:callm, leftv[1], eq.to_sym,args]

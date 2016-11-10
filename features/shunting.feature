@@ -51,38 +51,40 @@ Feature: Shunting Yard
 		Then the parse tree should become <tree>
 
 	Examples:
-      | expr                 | tree                                               |
-      | "foo(1)"             | [:call,:foo,[1]]                                   |
-      | "foo(1,2)"           | [:call,:foo,[1,2]]                                 |
-      | "foo 1"              | [:call,:foo,[1]]                                   |
-      | "foo 1,2"            | [:call,:foo,[1,2]]                                 |
-      | "self.foo"           | [:callm,:self,:foo]                                |
-      | "self.foo(1)"        | [:callm,:self,:foo,[1]]                              |
-      | "self.foo(1,2)"      | [:callm,:self,:foo,[1,2]]                          |
-      | "self.foo bar"       | [:callm,:self,:foo,:bar]                           |
-      | "foo(*arg)"          | [:call,:foo,[[:splat, :arg]]]                      |
-      | "foo(*arg,bar)"      | [:call,:foo,[[:splat, :arg],:bar]]                 |
-      | "foo.bar(*arg)"      | [:callm, :foo, :bar, [[:splat, :arg]]]             |
-      | "foo.bar(!arg)"      | [:callm, :foo, :bar, [[:"!", :arg]]]               |
-      | "foo(1 + arg)"       | [:call,:foo,[[:+, 1, :arg]]]                       |
-      | "foo(1 * arg,bar)"   | [:call,:foo,[[:*, 1, :arg],:bar]]                  |
-      | "(ret.flatten).uniq" | [:callm,[:callm,:ret,:flatten],:uniq]              |
-      | "ret.flatten.uniq"   | [:callm,[:callm,:ret,:flatten],:uniq]              |
-      | "foo.bar = 123"      | [:callm,:foo,:bar=, [123]]                         |
-      | "flatten(r[2])"      | [:call, :flatten, [[:callm, :r, :[], [2]]]]        |
-      | "foo.bar(ret[123])"  | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]] |
-      | "Foo::bar(baz)"      | [:call, [:deref, :Foo, :bar], [:baz]]              |
-      | "foo.bar sym do end" | [:callm, :foo, :bar, :sym, [:block]]               |
-      | "foo.bar"            | [:callm, :foo, :bar]                               |
-      | "foo().bar"          | [:callm, [:call, :foo], :bar]                      |
-      | "foo.bar.baz"        | [:callm, [:callm, :foo, :bar], :baz]               |
-      | "foo.bar().baz"      | [:callm, [:callm, :foo, :bar], :baz]               |
-      | "x = foo.bar"        | [:assign, :x, [:callm, :foo, :bar]]                |
-      | "x = foo.bar()"      | [:assign, :x, [:callm, :foo, :bar]]                |
-      | "x = foo.bar.baz"    | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
-      | "x = foo.bar().baz"  | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]] |
-      | "return foo.bar().baz" | [:return, [:callm, [:callm, :foo, :bar], :baz]]     |
+      | expr                    | tree                                                               |
+      | "foo(1)"                | [:call,:foo,[1]]                                                   |
+      | "foo(1,2)"              | [:call,:foo,[1,2]]                                                 |
+      | "foo 1"                 | [:call,:foo,[1]]                                                   |
+      | "foo 1,2"               | [:call,:foo,[1,2]]                                                 |
+      | "self.foo"              | [:callm,:self,:foo]                                                |
+      | "self.foo(1)"           | [:callm,:self,:foo,[1]]                                            |
+      | "self.foo(1,2)"         | [:callm,:self,:foo,[1,2]]                                          |
+      | "self.foo bar"          | [:callm,:self,:foo,:bar]                                           |
+      | "foo(*arg)"             | [:call,:foo,[[:splat, :arg]]]                                      |
+      | "foo(*arg,bar)"         | [:call,:foo,[[:splat, :arg],:bar]]                                 |
+      | "foo.bar(*arg)"         | [:callm, :foo, :bar, [[:splat, :arg]]]                             |
+      | "foo.bar(!arg)"         | [:callm, :foo, :bar, [[:"!", :arg]]]                               |
+      | "foo(1 + arg)"          | [:call,:foo,[[:+, 1, :arg]]]                                       |
+      | "foo(1 * arg,bar)"      | [:call,:foo,[[:*, 1, :arg],:bar]]                                  |
+      | "(ret.flatten).uniq"    | [:callm,[:callm,:ret,:flatten],:uniq]                              |
+      | "ret.flatten.uniq"      | [:callm,[:callm,:ret,:flatten],:uniq]                              |
+      | "foo.bar = 123"         | [:callm,:foo,:bar=, [123]]                                         |
+      | "flatten(r[2])"         | [:call, :flatten, [[:callm, :r, :[], [2]]]]                        |
+      | "foo.bar(ret[123])"     | [:callm, :foo, :bar, [[:callm, :ret, :[], [123]]]]                 |
+      | "Foo::bar(baz)"         | [:call, [:deref, :Foo, :bar], [:baz]]                              |
+      | "foo.bar sym do end"    | [:callm, :foo, :bar, :sym, [:block]]                               |
+      | "foo.bar"               | [:callm, :foo, :bar]                                               |
+      | "foo().bar"             | [:callm, [:call, :foo], :bar]                                      |
+      | "foo.bar.baz"           | [:callm, [:callm, :foo, :bar], :baz]                               |
+      | "foo.bar().baz"         | [:callm, [:callm, :foo, :bar], :baz]                               |
+      | "x = foo.bar"           | [:assign, :x, [:callm, :foo, :bar]]                                |
+      | "x = foo.bar()"         | [:assign, :x, [:callm, :foo, :bar]]                                |
+      | "x = foo.bar.baz"       | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]]                |
+      | "x = foo.bar().baz"     | [:assign, :x, [:callm, [:callm, :foo, :bar], :baz]]                |
+      | "return foo.bar().baz"  | [:return, [:callm, [:callm, :foo, :bar], :baz]]                    |
       | "foo.bar(*[a].flatten)" | [:callm, :foo, :bar, [[:splat, [:callm, [:array, :a], :flatten]]]] |
+      | "name.gsub(foo.bar) { } "   | [:callm, :name, :gsub, [[:callm, :foo, :bar]], [:block]]       |
+      | "name.gsub(1) { }"      | [:callm, :name, :gsub, 1, [:block]]                                |
 
     @arrays @arrays1
 	Scenario Outline: Array syntax
