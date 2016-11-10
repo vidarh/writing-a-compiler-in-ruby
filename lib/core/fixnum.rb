@@ -27,10 +27,28 @@ class Fixnum < Integer
     self
   end
 
-  def to_s
-    %s(assign buf (malloc 16))
-    %s(snprintf buf 16 "%ld" @value)
-    %s(__get_string buf)
+  def to_s(radix=10)
+    if radix == 10
+      %s(assign buf (malloc 16))
+      %s(snprintf buf 16 "%ld" @value)
+      %s(__get_string buf)
+    elsif radix < 2 || radix > 36
+      STDERR.puts "ERROR: Invalid radix #{radix.inspect} - must be betwee 2 and 36"
+      1/0
+    else
+      out = ""
+      n = self
+      digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+      while n != 0
+        r = n % radix
+        out << digits[r]
+        n = n / radix
+      end
+      if out.empty?
+        out = "0"
+      end
+      out.reverse
+    end
   end
 
   def hash
