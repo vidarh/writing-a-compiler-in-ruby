@@ -1,0 +1,4 @@
+#!/bin/sh
+
+docker run -t -i -v ${PWD}:/app ruby-compiler-buildenv /bin/bash -l -c 'cd features; pwd; bundle exec cucumber -r. -e inputs -e outputs '$@ | less -r
+
