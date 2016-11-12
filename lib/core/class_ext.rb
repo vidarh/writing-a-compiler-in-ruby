@@ -11,17 +11,19 @@ class Class
     @method_to_voff
   end
 
+  def method_missing sym, *args
+      %s(if sym (printf "WARNING:    Method: '%s'\n" (callm (callm sym to_s) __get_raw)))
+      %s(printf "WARNING:    symbol address = %p\n" sym)
+      %s(printf "WARNING:    class '%s'\n" (callm (callm self name) __get_raw))
+      %s(call exit 1)
+  end
+
   # This is called by __send__
   def __send_for_obj__ obj,sym,*args
     voff = Class.method_to_voff[sym]
     if !voff
-      %s(printf "WARNING: __send__ bypassing vtable (name not statically known at compile time) not yet implemented.\n")
-      %s(if sym (printf "WARNING:    Method: '%s'\n" (callm (callm sym to_s) __get_raw)))
-      %s(printf "WARNING:    symbol address = %p\n" sym)
-      %s(printf "WARNING:    object = %p\n" obj)
-      %s(printf "WARNING:    class '%s'\n" (callm (callm self name) __get_raw))
-      %s(div 1 0)
-      nil
+      # FIXME: This needs to change once we handle "define_method"
+      return obj.method_missing(sym, *args)
     else
       # We can't inline this in the call, as our updated callm
       # doesn't allow method/function calls in the method slot
