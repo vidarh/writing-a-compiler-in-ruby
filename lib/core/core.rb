@@ -65,6 +65,9 @@ require 'core/array_base'  # Splats are unavailable before this.
 require 'core/true'
 require 'core/false'
 require 'core/nil'         # Before this, all variables must be explicitly defined.
+
+require 'core/class_ivarinit'
+
 #require 'core/enumerable'
 require 'core/range'
 require 'core/array' 
