@@ -20,6 +20,10 @@ class File < IO
     f = File.new(path)
   end
 
+  def self.basename(name)
+    name
+  end
+
   def self.dirname(dname)
     i = dname.rindex(SEPARATOR)
     if !i && ALT_SEPARATOR
