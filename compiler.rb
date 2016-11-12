@@ -183,18 +183,45 @@ class Compiler
       "/"  => "__div",  "*"  => "__mul",
       "+"  => "__plus", "-"  => "__minus"}
 
-    cleaned = name.to_s.gsub(Regexp.new('>=|<=|==|[\?!<>+\-\/\*]')) do |match|
-      dict[match.to_s]
-    end
+    pos = 0
+    # FIXME: this is necessary because we
+    # currently don't define Symbol#[]
+    name = name.to_s
+    len = name.length
+    out = ""
 
-    cleaned = cleaned.split(Regexp.new('')).collect do |c|
-      if c.match(Regexp.new('[a-zA-Z0-9_]'))
-        c
+    while (pos < len)
+      c  = name[pos].chr
+      co = c.ord
+      pos += 1
+      if (co >= ?a.ord &&
+         co <= ?z.ord) ||
+          (co >= ?A.ord &&
+           co <= ?Z.ord) ||
+          (co >= ?0.ord &&
+           co <= ?9.ord) ||
+          co == ?_.ord
+
+        out << c
       else
-        "__#{c[0].ord.to_s(16)}"
+        cn = name[pos]
+        if cn
+          ct = c + cn.chr
+        else
+          ct = nil
+        end
+
+        if dict[ct]
+          out << dict[ct]
+          pos += 1
+        elsif dict[c]
+          out << dict[c]
+        else
+          out << "__#{co.to_s(16)}"
+        end
       end
-    end.join
-    return cleaned
+    end
+    out
   end
 
   # Handle e.g. Tokens::Atom, which is parsed as (deref Tokens Atom)
