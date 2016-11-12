@@ -20,6 +20,7 @@ class Class
 
   # This is called by __send__
   def __send_for_obj__ obj,sym,*args
+    sym  = sym.to_sym
     voff = Class.method_to_voff[sym]
     if !voff
       # FIXME: This needs to change once we handle "define_method"
