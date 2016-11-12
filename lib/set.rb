@@ -39,6 +39,11 @@ class Set
     @set[m] == 1
   end
 
+  # FIXME: alias
+  def include?(m)
+    member?(m)
+  end
+
   def self.[] *args
     s = Set.new
     args.each do |a|
