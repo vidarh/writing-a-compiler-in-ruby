@@ -8,6 +8,12 @@ module Enumerable
 end
 
 class Array
+
+  # FIXME: Because of lack of "include" support
+  def rest
+    self[1..-1]
+  end
+
   # Visit each node depth first
   # If the given block return :skip,
   # no children of this node gets visited
