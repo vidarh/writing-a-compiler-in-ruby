@@ -21,7 +21,10 @@ class IOOutput
   end
 
   def emit(op, *args)
-    puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
+    # FIXME: This version breaks due to a compiler bug
+    # puts "\t#{op}\t"+args.collect{ |a| to_operand_value(a) }.join(', ')
+    a = args.collect{ |a| to_operand_value(a) }.join(', ')
+    puts "\t#{op}\t#{a}"
   end
 
   def export(label, type = nil)
