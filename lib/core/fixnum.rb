@@ -83,6 +83,7 @@ class Fixnum < Integer
     if other.nil?
       return false 
     end
+    return false if !other.is_a?(Numeric)
     %s(if (eq @value (callm other __get_raw)) true false)
   end
 
@@ -92,7 +93,7 @@ class Fixnum < Integer
   end
 
   def != other
-    return false if !other.is_a?(Numeric)
+    return true if !other.is_a?(Numeric)
     other = other.to_i
     %s(if (ne @value (callm other __get_raw)) true false)
   end
