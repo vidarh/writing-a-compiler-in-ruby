@@ -77,14 +77,19 @@ class Object
     return false
   end
 
+  # Relying on s-exps here to prevent bootstrap issues
+  # w/Fixnum#== / Fixnum#!= which again is relied on by
+  # the basic Object#object_id. Perhaps replace those
+  # instead
+  #
   # FIXME: This will not handle eigenclasses correctly.
   def is_a?(c)
-    k = self.class
-    while k != c && k != Object
-      k = k.superclass
-    end
+    %s(assign k (callm self class))
+    %s(while (and (ne k c) (ne k Object)) (do
+      (assign k (callm k superclass))
+     ))
 
-    return (k == c)
+    %s(if (eq k c) (return true) (return false))
   end
 
   # FIXME: Private
