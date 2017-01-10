@@ -146,6 +146,14 @@ class Hash
     @length
   end
 
+  def to_a
+    a = []
+    each do |k,v|
+      a << [k,v]
+    end
+    a
+  end
+
   def each
     pos = 0
     capacity = @capacity * 2
