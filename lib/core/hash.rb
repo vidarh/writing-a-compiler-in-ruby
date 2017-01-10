@@ -110,10 +110,40 @@ class Hash
     if !@first
       @first = slot
     end
+    @data[slot+2] = nil
     @data[slot+3] = @last
     @last = slot
 
     nil
+  end
+
+  def __delete_first
+    return if !@first
+    old = @first
+    @first = @data[@first+2]
+    if old == @last
+      @last = @first
+    end
+    @data[old] = nil
+    @data[old+1] = nil
+    @data[old+2] = nil
+    @data[old+3] = nil
+    @length -= 1
+  end
+
+  def shift
+    return nil if !@first
+
+    slot  = @first
+    key   = @data[slot]
+    value = @data[slot+1]
+
+    __delete_first
+    [key,value]
+  end
+
+  def length
+    @length
   end
 
   def each
