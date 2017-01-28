@@ -751,7 +751,17 @@ class Array
 
   # Reverses self in place.
   def reverse!
-    %s(puts "Array#reverse! not implemented")
+    i = 0
+    j = length - 1
+
+    while i < j
+      tmp = self[i]
+      self[i] = self[j]
+      self[j] = tmp
+      i += 1
+      j -= 1
+    end
+    self
   end
 
 
