@@ -110,6 +110,17 @@ class Fixnum < Integer
     %s(if (ge @value (callm other __get_raw)) true false)
   end
 
+  def <=> other
+    return nil if !other.is_a?(Numeric)
+    if self > other
+      return 1
+    end
+    if self < other
+      return -1
+    end
+    return 0
+  end
+
   def div other
     %s(call __get_fixnum ((div @value (callm other __get_raw))))
   end
