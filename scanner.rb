@@ -19,7 +19,10 @@ class Scanner
     attr_accessor :filename, :lineno, :col
 
     def inspect
-      "line #{self.lineno}, col #{self.col} in #{self.filename}"
+      # FIXME: If these are inlined, they are treated incorrectly.
+      l = self.lineno
+      c = self.col
+      "line #{l}, col #{c} in #{self.filename}"
     end
 
     def short
