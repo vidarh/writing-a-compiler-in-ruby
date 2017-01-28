@@ -224,7 +224,7 @@ class Array
      %s(assign xend  (__get_fixnum (callm self __offset_to_pos(xend))))
 
      # Single item gets passed back to #[]
-     return self.[](start) if start == xend
+     #return self.[](start) if start == xend
 
      # FIXME
      # This is an inefficient first pass vs. allocating sufficient capacity
