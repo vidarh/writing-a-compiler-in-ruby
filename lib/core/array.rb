@@ -745,7 +745,7 @@ class Array
 
   # Returns a new array containing self‘s elements in reverse order.
   def reverse
-    %s(puts "Array#reverse not implemented")
+    self.dup.reverse!
   end
 
 
