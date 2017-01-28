@@ -802,6 +802,42 @@ class Array
     return self.length
   end
 
+  # FIXME: This belongs in Enumberable once "include" works.
+  def partition &block
+    trueArr = []
+    falseArr = []
+
+    each do |e|
+      if block.call(e)
+        trueArr << e
+      else
+        falseArr << e
+      end
+    end
+    
+    [trueArr,falseArr]
+  end
+
+  # FIXME: This belongs in Enumberable once "include" works.
+  #
+  # FIXME: This implementation is horrible in many ways,
+  #  as it's the most naive way possible of implementing
+  #  quicksort. It *will* perform badly. Basic improvements to
+  #  look at (precise set of what's worth depends on constant
+  #  overheads, so needs benchmarks):
+  #   - Other sorts may work better once sub-arrays are small enough
+  #   - In place partitioning after initial copy.
+  #   - Proper pivot selection to reduce chance of hitting worst case
+  def sort_by &block
+    return self if length <= 1
+    pivot = block.call(self[0])
+    part  = self[1..-1].partition {|e| block.call(e) < pivot }
+
+    left  = part[0].sort_by(&block)
+    right = part[1].sort_by(&block)
+    
+    left + [pivot] + right
+  end
 
   # Returns a new array created by sorting self.
   # Comparisons for the sort will be done using the <=> operator or using
