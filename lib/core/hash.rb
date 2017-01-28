@@ -1,11 +1,12 @@
 
 class Hash
-  def initialize
+  def initialize defval = nil
     @length   = 0
     @capacity = 4
     _alloc_data
     @first = nil
     @last  = nil
+    @defval = defval
   end
 
   # The full version is thorny to handle this early in bootstrap, 
@@ -79,7 +80,7 @@ class Hash
 
   def [] key
     pos  = _find_slot(key)
-    @data[pos] ? @data[pos + 1] : nil
+    @data[pos] ? @data[pos + 1] : @defval
   end
 
   def capacity_too_low
