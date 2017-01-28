@@ -18,7 +18,6 @@ class SimpleDelegator
 
   # FIXME: Cleaner way is to remove default implementations
   def inspect
-    STDERR.puts @ob.class.inspect
     @ob.inspect
   end
 
@@ -31,12 +30,10 @@ class SimpleDelegator
   end
 
   def [] index
-    STDERR.puts "SimpleDelegator.[] #{index}"
     @ob[index]
   end
 
   def method_missing sym, *args
-    STDERR.puts "delegator: #{sym.inspect} / args: #{args.inspect}"
     @ob.send(sym,*args)
   end
 end
