@@ -18,6 +18,12 @@ class Set
     a
   end
 
+  def each
+    @set.each do |k,_|
+      yield(k)
+    end
+  end
+
   def << k
     @set[k]=1
   end
@@ -59,5 +65,17 @@ class Set
     end
     s
   end
-  
+
+  def + other
+    s = dup
+    other.each do |e|
+      s << e
+    end
+    s
+  end
+
+  def delete key
+    @set.delete(key)
+    self
+  end
 end
