@@ -1,5 +1,12 @@
 
 class Hash
+
+  class Deleted
+    def self.eql? other
+      false
+    end
+  end
+
   def initialize defval = nil
     @length   = 0
     @capacity = 4
@@ -160,11 +167,37 @@ class Hash
     capacity = @capacity * 2
     slot = @first
     while slot
-      if key  = @data[slot]
+      if (key  = @data[slot]) && Deleted != key
         value = @data[slot + 1]
         yield key,value
       end
       slot = @data[slot + 2]
     end
   end
+
+  # FIXME: This is a very crude way of handling deletion:
+  # It simply removes the key by replacing it with 
+  # Deleted that compares false against everyhing
+  # using #eql?. The problem with this is that it will
+  # gradually pollute the Hash. 
+  #
+  # To do this "properly" you would need to either
+  # rebuild the hash completely on delete, or more
+  # reasonably, continue to probe past the deletion
+  # point, determine if each encountered key hashes
+  # to somewhere between the current location and
+  # the location being probed, and if so move it and
+  # update insertion points etc..
+  # 
+  # As a compromise solution, at least update insertion
+  # operations to insert into Deleted slots.
+  def delete key
+    slot  = _find_slot(key)
+    return nil if !@data[slot]
+    value = @data[slot+1]
+    @data[slot]   = Deleted
+    @data[slot+1] = nil
+    value
+  end
+
 end
