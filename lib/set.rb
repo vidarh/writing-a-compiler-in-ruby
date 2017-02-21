@@ -33,11 +33,17 @@ class Set
   end
 
   def inspect
-    out = ""
+    out = "#<Set: {"
+    first = true
     @set.each do |k,_|
-      out << ", " if !out.empty?
-      out << k
+      if first
+        first = false
+      else
+        out << ", "
+      end
+      out << k.inspect
     end
+    out << "}>"
     out
   end
 
