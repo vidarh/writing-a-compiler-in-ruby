@@ -358,7 +358,7 @@ class Compiler
 
   def create_concat(sub)
     right = sub.pop
-    right = E[:callm,right,:to_s] if !right.is_a?(Array)
+    right = E[:callm,right,:to_s]
     return right if sub.size == 0
     E[:callm, create_concat(sub), :concat, [right]]
   end
