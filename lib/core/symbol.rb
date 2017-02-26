@@ -45,6 +45,10 @@ class Symbol
     to_s.hash
   end
 
+  def [] i
+    to_s[i]
+  end
+
   # FIXME
   # The compiler should turn ":foo" into Symbol.__get_symbol("foo").
   # Alternatively, the compiler can do this _once_ at the start for
