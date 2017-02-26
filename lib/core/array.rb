@@ -830,13 +830,14 @@ class Array
   #   - Proper pivot selection to reduce chance of hitting worst case
   def sort_by &block
     return self if length <= 1
-    pivot = block.call(self[0])
+    pivot_el = self[0]
+    pivot = block.call(pivot_el)
     part  = self[1..-1].partition {|e| block.call(e) < pivot }
 
     left  = part[0].sort_by(&block)
     right = part[1].sort_by(&block)
     
-    left + [pivot] + right
+    left + [pivot_el] + right
   end
 
   # Returns a new array created by sorting self.
