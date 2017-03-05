@@ -151,7 +151,7 @@ class Compiler
     fargs = get_arg(scope, func)
 
     return compile_super(scope, args,block) if func == :super
-    return compile_callm(scope,:self, func, args,block) if fargs && fargs[0] == :possible_callm
+    return compile_callm(scope,:self, func, args,block) if fargs and fargs[0] == :possible_callm || fargs[0] == :global
 
     args = [args] if !args.is_a?(Array)
     compile_args(scope, func, args) do
