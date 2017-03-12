@@ -62,6 +62,12 @@ class Object
     false
   end
 
+  def method_missing (sym, *args)
+    cname = self.class.inspect
+    puts "Method missing #{cname}##{sym.to_s}"
+    %s(div 0 0)
+  end
+
   def respond_to?(method)
     # The vtable thunks make up a contiguous sequence of memory,
     # bounded by __vtable_thunks_start and __vtable_thunks_end
