@@ -133,9 +133,12 @@ class Array
   # Returns a new array that is a copy of the original array,
   # removing any items that also appear in other_array.
   # (If you need set-like behavior, see the library class Set.)
-#  def -(other_array)
-#    return self.reject{|item| other_array.include?(item)}
-#  end
+  # FIXME: Merely uncommenting this (without calling it) causes weird errors.
+  # def -(other_array)
+  #  self.reject do |item| 
+  #    other_array.include?(item)
+  #  end
+  #end
 
   # Pushes the given object on to the end of this array. This expression
   # returns the array itself, so several appends may be chained together.
@@ -425,6 +428,7 @@ class Array
     %s(puts "Array#delete_if not implemented")
   end
 
+  # FIXME: Highly inefficient...
   def dup
     a = self.class.new
     each do |e|
@@ -847,6 +851,7 @@ class Array
   # See also Enumerable#sort_by.
   def sort
     %s(puts "Array#sort not implemented")
+    self.dup
   end
 
 
@@ -856,6 +861,7 @@ class Array
   # See also Enumerable#sort_by.
   def sort!
     %s(puts "Array#sort! not implemented")
+    self
   end
 
 
@@ -891,12 +897,14 @@ class Array
 
   # Returns a new array by removing duplicate values in self.
   def uniq
+    STDERR.puts "Array#uniq not implemented"
     uniq_arr = Array.new
     self.each do |item|
 #      unless uniq_arr.include?(item)
 #        uniq_arr << item
 #      end
     end
+    uniq_arr
   end
 
 
