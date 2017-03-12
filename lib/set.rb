@@ -1,3 +1,12 @@
+# FIXME: Doesn't belong here, but for some reason
+# including it in lib/core/array.rb causes problems..
+class Array
+  def -(other_array)
+    self.reject do |item| 
+      other_array.include?(item)
+    end
+  end
+end
 
 #
 # FIXME
@@ -78,6 +87,12 @@ class Set
       s << e
     end
     s
+  end
+
+  def - other
+    select do |item| 
+      !other.include?(item)
+    end
   end
 
   def delete key
