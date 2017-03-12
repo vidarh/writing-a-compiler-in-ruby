@@ -129,6 +129,8 @@ module OpPrec
 
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
         @vstack << E[o.sym, leftv].compact + flatten(rightv)
+      elsif ra and rightv[0] == :comma and o.sym == :return
+        @vstack << E[o.sym, leftv, [:array]+flatten(rightv)].compact
       elsif ra and rightv[0] == :comma and o.sym != :comma
         @vstack << E[o.sym, leftv, flatten(rightv)].compact
       elsif ra and rightv[0] == :flatten
