@@ -104,7 +104,8 @@ class String
   end
 
   def == other
-    return false if !other.is_a?(String)
+    s = other.is_a?(String)
+    return false if !s
     %s(assign res (if (strcmp @buffer (callm other __get_raw)) false true))
     return res
   end
@@ -281,6 +282,11 @@ class String
     return nil
   end
 
+
+  def gsub(arg1,arg2)
+    STDERR.puts "WARNING: String#gsub is just stubbed out"
+    self.dup
+  end
 end
 
 # FIXME: This is an interesting bootstrapping problem
