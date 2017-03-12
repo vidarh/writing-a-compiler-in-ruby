@@ -167,7 +167,7 @@ class Compiler
       #    If after leave, %ebp == __stackframe__
       #    then we're where we want to be.
       ret = compile_eval_arg(scope,[:index,:__env__,0])
-      @e.movl(ret,:eax)
+      @e.movl(ret,:eax) if ret != :eax
       l = @e.local
       r = @e.get_local
       @e.leave
@@ -176,6 +176,7 @@ class Compiler
       @e.addl(4,:esp)
       @e.jmp l
       @e.local(r)
+      @e.movl("-4(%ebp)",:ebx)
       @e.ret
     end
     @e.evict_all

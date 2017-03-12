@@ -66,6 +66,9 @@ class Compiler
     # FIXME: Added as workaround as compiler does not auto-initialize
     # member variables (yuck)
     @global_scope = nil
+    @lastpos = nil
+    @linelabel = 0
+    @section = 0
   end
 
 
@@ -413,6 +416,7 @@ class Compiler
     ret = compile_eval_arg(scope,[:index,:__env__,0])
 
     @e.movl(ret,:ebp)
+    @e.movl("-4(%ebp)",:ebx) # Restoring numargs from outside scope
     @e.popl(:eax)
     @e.leave
     @e.ret
@@ -438,7 +442,7 @@ class Compiler
       pos = arg.position.inspect
       if pos != @lastpos
         @e.lineno(arg.position)
-        trace(arg.position,arg)
+        # trace(arg.position,arg)
       end
       @lastpos = pos
     end
@@ -519,7 +523,14 @@ class Compiler
       exp = [:nil]
     end
 
-    exp.each { |e| source=compile_eval_arg(scope, e); @e.save_result(source); }
+    exp.each do |e|
+      # FIXME: Mentioning it due to find_vars bug
+      scope
+
+      source=compile_eval_arg(scope, e)
+      @e.save_result(source)
+    end
+
     return Value.new([:subexpr])
   end
 
@@ -635,9 +646,17 @@ class Compiler
   def compile_exp(scope, exp)
     return Value.new([:subexpr]) if !exp || exp.size == 0
 
-    pos = exp.position rescue nil
+    # FIXME:
+    # rescue is unsupported in:
+    # pos = exp.position rescue nil
+    #
+    pos = nil
+    if exp.respond_to?(:position)
+      pos = exp.position
+    end
+
     @e.lineno(pos) if pos
-    trace(pos,exp)
+    #trace(pos,exp)
 
     # check if exp is within predefined keywords list
     if(@@keywords.include?(exp[0]))
@@ -665,6 +684,7 @@ class Compiler
       # that is for later.
       compile_eval_arg(@global_scope, exp)
       compile_eval_arg(@global_scope, [:sexp,[:exit, 0]])
+      nil
     end
   end
 
@@ -707,13 +727,28 @@ class Compiler
       # FIXME: Call get_symbol for these during initalization
       # and then load them from a table instead.
       res = compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
-      @e.popl(:ebx)
-      @e.with_register do |reg|
-        @e.popl(reg)
-        @e.pushl(res)
-        @e.pushl(reg)
-      end
-      @e.jmp("__method_missing")
+      @e.popl(:ebx) # numargs
+      @e.movl("4(%esp)",:esi)  # self
+
+      # Making space for the symbolx for the method.
+      @e.movl("(%esp)", :ecx)  # Return address
+      @e.pushl(:ecx)
+
+      # Self into new position
+      @e.movl(:esi, "4(%esp)")
+
+      # Block into new position
+      @e.movl("12(%esp)",:ecx)
+      @e.movl(:ecx, "8(%esp)")
+
+      # Symbol as first argument
+      @e.movl(res,"12(%esp)")
+
+      # Adjust argument count
+      @e.addl(1,:ebx)
+
+      load_class(@global_scope)
+      @e.jmp("*__voff__method_missing(%eax)")
     end
     @e.label("__vtable_thunks_end")
 
@@ -753,4 +788,3 @@ class Compiler
   end
 end
 
-require "driver" if __FILE__ == $0

@@ -6,15 +6,42 @@
 
 class Compiler
 
-  def compile_args_nosplat(scope, ob, args)
-    @e.with_stack(args.length, true) do
-      @e.pushl(@e.scratch)
-      args.each_with_index do |a, i|
-        param = compile_eval_arg(scope, a)
-        @e.save_to_stack(param, i + 1)
-      end
-      @e.popl(@e.scratch)
-      yield
+  def compile_args_nosplat(scope, ob, args, dynamic_adj = false, &block)
+    # FIXME: This used to use "with_stack" which aligns to 16 byte boundaries,
+    # but lifted this in here due to dynamically adjusting the stack based on
+    # %ebx. Need to determine exactly what to do about this size - it needs to
+    # be bigger than args.length for some reason, but unsure exactly why and
+    # how much.
+    adj = Emitter::PTR_SIZE * (args.length+4)
+    @e.subl(adj, :esp)
+    args.each_with_index do |a, i|
+      # FIXME: Temporary workaround for find_vars bug:
+      scope
+
+      param = compile_eval_arg(scope, a)
+      @e.save_to_stack(param, i)
+    end
+    @e.movl(args.length, :ebx)
+
+    # FIXME: Using 'yield' instead of 'block' here causes a seg-fault as
+    # the internal __closure__ is 0. There are two issues here:
+    # __closure__ should *never* be 0 - for ease (avoiding a check on
+    # each call) it should be a "dummy" that triggers an error/execption on #call
+    # Secondly, 'yield' probably needs to be transformed early enough to have
+    # the reference to __closure__ rewritten.
+    block.call
+
+    if dynamic_adj
+      # Always dynamically adjust the stack based on %ebx for method calls
+      # (as opposed to C-library calls) due to potential of hitting a 
+      # method_missing thunk or anything else that might mess around with the
+      # argument list before returning from the call.
+      @e.comment("Static adj: #{adj}")
+      @e.addl(4, :ebx) # Need to correspond to the extra space used when assigning "adj" above.
+      @e.sall(2, :ebx) 
+      @e.addl(:ebx, :esp)
+    else
+      @e.addl(adj, :esp)
     end
   end
 
@@ -122,12 +149,17 @@ class Compiler
     @e.addl(@e.scratch, :esp)
   end
 
-  def compile_args(scope, ob, args, &block)
+  def compile_args(scope, ob, args, dynamic_adjust=false, &block)
     @e.caller_save do
       splat = args.detect {|a| a.is_a?(Array) && a.first == :splat }
 
+      #FIXME Mentioned here to lift vars
+      scope
+      block
+      dynamic_adjust
+
       if !splat
-        compile_args_nosplat(scope,ob,args, &block)
+        compile_args_nosplat(scope,ob,args,dynamic_adjust, &block)
       else
         compile_args_splat(scope,ob,args, &block)
       end
@@ -135,7 +167,7 @@ class Compiler
   end
 
   def compile_callm_args(scope, ob, args, &block)
-    compile_args(scope, ob, [ob].concat(args), &block)
+    compile_args(scope, ob, [ob].concat(args), true, &block)
   end
 
 
@@ -155,6 +187,8 @@ class Compiler
 
     args = [args] if !args.is_a?(Array)
     compile_args(scope, func, args) do
+      scope
+      func
       @e.call(compile_eval_arg(scope, func))
     end
 
