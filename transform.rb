@@ -221,9 +221,13 @@ class Compiler
         end
       end
     end
-    return scopes[-1].to_a, env
-  end
 
+    ## FIXME: putting the below on one line breaks.
+    last_scope = scopes[-1]
+    a = last_scope.to_a
+    return a, env
+    # return scopes[-1].to_a, env
+  end
 
   def rewrite_env_vars(exp, env)
     exp.depth_first do |e|
