@@ -44,7 +44,7 @@ class Range
 
   def each
     i = @min
-    while i < @max
+    while i <= @max
       yield i
       i += 1
     end
