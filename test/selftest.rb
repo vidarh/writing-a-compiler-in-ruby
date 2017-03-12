@@ -119,7 +119,42 @@ def test_array
   expect_eq(b.length, 0, "#length after [44].delete_at(0)")
 
   expect_eq([32].member?(32),true, "member? should return true if an element exists in the array")
+
+  b = [42,43]
+  expect_eq(b[0], 42, "b=[42,43]; b[0] should return 42")
+  expect_eq(b[-1], 43, "b=[42,43]; b[-1] should return 43")
+  expect_eq(b[1..-1].inspect, [43].inspect, "b=[42,43]; b[1..-1] should return [43]")
+
+  b = [1,2,3,4]
+  expect_eq(b.reverse.inspect, [4,3,2,1].inspect, "Array#reverse should reverse an array")
+
+  # FIXME: Inlining this into the expect_eq() call causes seg-fault.
+  part = [42,2,5,1].partition {|v| v > 4}
+  expect_eq(part.inspect, [[42,5], [2,1]].inspect, "Array#partition should split an array in two based on provided block")
+
+  #expect_eq([42,2,3,1].sort,     [1,2,3,42], "Array#sort")
+  res = [42,2,3,1].sort_by {|v| v }
+  expect_eq(res.inspect, [1,2,3,42].inspect , "Array#sort_by (ascending)")
+  # FIXME: The below fails due to "-"
+#  res = [42,2,3,1].sort_by {|v| -v }
+#  expect_eq(res, [42,3,2,1] , "Array#sort_by (descending)")
+
+  res = Array(42)
+  expect_eq(res.inspect,"[42]", "Array(42) should return [42]")
+
 end
+
+
+def test_hash
+
+  d = Hash.new(42)
+  expect_eq(d[1],42, "Verifying that Hash returns default specified default value for unknown key")
+
+  #d[1] += 1
+  #expect_eq(d[1],43, "Incrementing default value")
+
+end
+
 
 # Test our own Mock first...
 #
@@ -148,6 +183,9 @@ def test_scanner_basics
   expect_eq(s.get, "h", "scanner.get with 'his is a test' remaining after unget")
 
   expect_eq(s.expect("is"),"is", "scanner.expect('is') with 'is a test' remaining")
+
+  s.expect("a test")
+  expect_eq(s.expect("x"), false, "scanner.expect('x') after having consumed the whole string should return nil")
 end
 
 
@@ -203,6 +241,13 @@ def test_tokenizer
   t.each do |token,oper|
     ar << [token,oper]
   end
+
+  s = mock_scanner("def foo; end")
+  t = Tokens::Tokenizer.new(s,nil)
+  while tok = t.get and tok[0]
+    ar << tok
+  end
+  p ar
 #  p ar
 end
 
@@ -233,13 +278,13 @@ end
 def test_parser
   test_exp("%s(this is a test)", "[:do, [:sexp, [:this, :is, :a, :test]]]")
   test_exp("5 + a", "[:do, [:+, 5, :a]]")
-  test_exp("puts 'Hello World'", "[:do, [:call, :puts, \"Hello World\"]]")
+  test_exp("puts 'Hello World'", "[:do, [:call, :puts, [\"Hello World\"]]]")
   test_exp("def foo; end", "[:do, [:defm, :foo, [], []]]")
-  test_exp("def foo; puts 'Hello World'; end", "[:do, [:defm, :foo, [], [[:call, :puts, \"Hello World\"]]]]")
-  test_exp("e[i]", "[:do, [:callm, :e, :[], :i]]")
-  test_exp("e[i] = E[:foo]", "[:do, [:callm, :e, :[]=, [:i, [:callm, :E, :[], ::foo]]]]")
-  test_exp('"\e"',"[:do, \"\\e\"]")
-  test_exp("Set[* e[2].to_a]","[:do, [:callm, :Set, :[], [:splat, [:callm, [:callm, :e, :[], 2], :to_a]]]]")
+  test_exp("def foo; puts 'Hello World'; end", "[:do, [:defm, :foo, [], [[:call, :puts, [\"Hello World\"]]]]]")
+  test_exp("e[i]", "[:do, [:callm, :e, :[], [:i]]]")
+  test_exp("e[i] = E[:foo]", "[:do, [:callm, :e, :[]=, [:i, [:callm, :E, :[], [:\":foo\"]]]]]")
+  test_exp('"\e"',"[:do, \"\\\\e\"]")
+  test_exp("Set[* e[2].to_a]","[:do, [:callm, :Set, :[], [[:splat, [:callm, [:callm, :e, :[], [2]], :to_a]]]]]")
   test_exp("def foo; name.gsub(foo.bar) { }; end ","[:do, [:defm, :foo, [], [[:callm, :name, :gsub, [[:callm, :foo, :bar]], [:proc]]]]]")
 end
 
@@ -249,11 +294,10 @@ end
 
 def test_depth_first
   prog = mock_parse("a = 42")
-  STDERR.puts "DEPTH_FIRST: #{prog.inspect}"
   prog.depth_first(:defm) do |n|
-    STDERR.puts "Shouldn't get here"
-    STDERR.puts n.inspect
+    msg_fail("Testing depth_first","not to get here", "here")
   end
+  msg_pass("depth_first","to get here")
 end
 
 def mock_preprocess(exp)
@@ -263,11 +307,26 @@ def mock_preprocess(exp)
   c.preprocess(prog)
 end
 
+#include AST
+
 def test_compiler
-  mock_preprocess("a = 42")
+  e = Emitter.new
+  c = Compiler.new(e)
+  exp = [E[:assign, :foo, [:array, [:sexp, [:call, :__get_fixnum, 1]]]], 
+        [:callm, :foo, :each, [], E[:proc, [:e], [:arg, [:call, :puts, [:arg]]]]]]
+  args = Set.new
+  args << :arg
+  scopes = [args]
+  
+  # FIXME: find_vars seg faults; find_vars2 doesn't
+  r = c.find_vars(exp,scopes,Set.new, Hash.new(0))
+
+  expect_eq("[[:foo], #<Set: {:arg}>]", r.inspect, "Compiler#find_vars")
+#  mock_preprocess("a = 42")
 end
 
 test_array
+test_hash
 test_mockio
 test_scannerstring
 test_scanner_basics
