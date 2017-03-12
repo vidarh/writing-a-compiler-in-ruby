@@ -21,7 +21,8 @@ class TokenizerAdapter
     @tokenizer.each do |token, op, keyword|
       if keyword and (m = @escape_tokens[token])
         @tokenizer.unget(token)
-        yield(@parser.send(m), nil, nil)
+        ss = @parser.send(m)
+        yield(ss, nil, nil)
       else
         yield(token,op,keyword)
       end
