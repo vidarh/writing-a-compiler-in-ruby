@@ -64,6 +64,11 @@ module OpPrec
       lastlp = true
       src.each do |token,op,keyword|
 
+        # FIXME: This is a workaround for a bug in find_vars that doesn't correctly
+        # identify variables used in methods calls.
+        ostack
+        inhibit
+
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator
         if inhibit.include?(token) or keyword && (opstate != :prefix || !ostack.last || ostack.last.type != :infix || token == :end)
