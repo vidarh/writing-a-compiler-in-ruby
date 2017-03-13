@@ -98,6 +98,12 @@ class Object
     %s(if (eq k c) (return true) (return false))
   end
 
+  # FIXME: A proper alias would be more efficient,
+  # but not yet supported
+  def kind_of?(c)
+    is_a?(c)
+  end
+
   # FIXME: Private
   def send sym, *args
     __send__(sym, *args)
