@@ -589,7 +589,29 @@ class Array
   # Inserts the given values before the element with the given index
   # (which may be negative).
   def insert(idx, obj)
-    %s(puts "Array#insert not implemented")
+    if idx < 0
+      #FIXME: -idx does not work
+      if 0 - idx > length
+        STDERR.puts "IndexError: index #{idx} too small for array; minimum #{-length}"
+        exit(1)
+      end
+      idx = length + 1 + idx
+    end
+
+    pos = length
+    # FIXME: This can be done much more efficiently
+    # by dipping down and copying memory...
+    prev = nil
+    while pos > idx
+      # FIXME: If you remove the spaces here it fails.
+      prev = pos - 1
+      self[pos] = self[prev]
+      pos -= 1
+    end
+
+    self[idx] = obj
+
+    self
   end
 
 

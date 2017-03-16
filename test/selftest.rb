@@ -142,6 +142,10 @@ def test_array
   res = Array(42)
   expect_eq(res.inspect,"[42]", "Array(42) should return [42]")
 
+  expect_eq([0,1,2,3,4].insert(2,42).inspect, "[0, 1, 42, 2, 3, 4]", "Array#insert with a positive offset should insert its argument *before* the value at the offset")
+  expect_eq([0,1,2].insert(4,42).inspect, "[0, 1, 2, nil, 42]", "Array#insert with an offset larger than the array should cause 'nil's to be inserted to expand the array accordingly")
+  expect_eq([0,1,2].insert(-1,42).inspect, "[0, 1, 2, 42]", "Array#insert with -1 as offset is the same as appending an entry at the end")
+  expect_eq([0,1,2].insert(-2,42).inspect, "[0, 1, 42, 2]", "Array#insert with a negative offset is the same as counting that many places from the right, and then inserting the entry *after* that position")
 end
 
 
