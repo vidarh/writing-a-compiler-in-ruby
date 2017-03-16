@@ -1,4 +1,5 @@
 
+require 'compiler'
 
   dump = ARGV.include?("--parsetree")
   norequire = ARGV.include?("--norequire") # Don't process require's statically - compile them instead
@@ -41,21 +42,22 @@
 
   s = Scanner.new(input_source)
   prog = nil
-  
-  begin
+
+### FIXME: Fails here due to lack of exceptions support.
+#  begin
     parser = Parser.new(s, {:norequire => norequire, :include_paths => include_paths})
     prog = parser.parse
-  rescue Exception => e
-    STDERR.puts "#{e.message}"
+#  rescue Exception => e
+#    STDERR.puts "#{e.message}"
     # FIXME: The position ought to come from the parser, as should the rest, since it could come
     # from a 'require'd file, in which case the fragment below means nothing.
-    STDERR.puts "Failed at line #{s.lineno} / col #{s.col} / #{s.filename}  before:\n"
-    buf = ""
-    while s.peek && buf.size < 100
-      buf += s.get
-    end
-    STDERR.puts buf
-  end
+#    STDERR.puts "Failed at line #{s.lineno} / col #{s.col} / #{s.filename}  before:\n"
+#    buf = ""
+#    while s.peek && buf.size < 100
+#      buf += s.get
+#    end
+#    STDERR.puts buf
+#  end
   
   if prog
     e = Emitter.new
