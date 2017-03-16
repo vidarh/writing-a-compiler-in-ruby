@@ -38,11 +38,15 @@ rather than as an overrideable method.
 
 ### $0
 
-While $0 will at some point be initialized with the name of 
+While `$0` will at some point be initialized with the name of
 the file compilation is triggered for, certain patterns of
 Ruby, such as conditionally executing code based on whether
 a given file is executed directly are conceptually different,
 given that $0 gets bound at *compile time*.
+
+We'll need to consider if the right behaviour is for `$0` and/or
+`__FILE__` to contain the equivalent of C's `argv[0]` instead.
+Possibly make `$0` and `__FILE__` refer to different things.
 
 
 ### $:, $LOAD_PATH
