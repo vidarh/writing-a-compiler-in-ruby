@@ -329,6 +329,13 @@ def test_compiler
 #  mock_preprocess("a = 42")
 end
 
+
+def test_string
+  expect_eq("foo".gsub("o","x"), "fxx", "String#gsub - Simple character substitution")
+  expect_eq("foo".gsub("o","xy"), "fxyxy", "String#gsub - Replace character with string")
+  expect_eq("foo\nbar".gsub("\n","\\n"), "foo\\nbar", "String#gsub - Replace character with string with escape characters")
+end
+
 test_array
 test_hash
 test_mockio
@@ -345,3 +352,4 @@ test_parser
 test_destructuring
 test_depth_first
 test_compiler
+test_string

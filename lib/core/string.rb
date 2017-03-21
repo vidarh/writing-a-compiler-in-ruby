@@ -282,10 +282,25 @@ class String
     return nil
   end
 
+  # FIXME: Currently only supports a string pattern
+  # of a single character, with a simple string replace
+  #
+  def gsub(pattern, replacement)
+    if pattern.length > 1
+      STDERR.puts "WARNING: String#gsub with strings longer than one character not supported"
+      exit(1/1)
+    end
 
-  def gsub(arg1,arg2)
-    STDERR.puts "WARNING: String#gsub is just stubbed out"
-    self.dup
+    str = ""
+    pb = pattern[0].ord
+    each_byte do |b|
+      if b == pb
+        str << replacement
+      else
+        str << b.chr
+      end
+    end
+    str
   end
 end
 
