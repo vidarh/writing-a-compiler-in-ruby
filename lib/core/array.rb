@@ -866,14 +866,24 @@ class Array
     left + [pivot_el] + right
   end
 
+  # FIXME: Inefficient, and doesn't support providing a block
+  #
   # Returns a new array created by sorting self.
   # Comparisons for the sort will be done using the <=> operator or using
   # an optional code block. The block implements a comparison between a and b,
   # returning -1, 0, or +1.
   # See also Enumerable#sort_by.
   def sort
-    %s(puts "Array#sort not implemented")
-    self.dup
+    return self if length <= 1
+    pivot = self[0]
+
+    # FIXME This should use <=> but that doesn't work for some reason
+    part  = self[1..-1].partition {|e| e < pivot }
+
+    left  = part[0].sort
+    right = part[1].sort
+    
+    left + [pivot] + right
   end
 
 
