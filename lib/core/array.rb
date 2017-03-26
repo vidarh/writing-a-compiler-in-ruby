@@ -875,10 +875,14 @@ class Array
   # See also Enumerable#sort_by.
   def sort
     return self if length <= 1
+
     pivot = self[0]
 
-    # FIXME This should use <=> but that doesn't work for some reason
-    part  = self[1..-1].partition {|e| e < pivot }
+    part  = self[1..-1].partition do |e|
+      # FIXME: Had to add "pivot" here to work around bug in variable lifting
+      pivot
+      (e <=> pivot)  <= 0
+    end
 
     left  = part[0].sort
     right = part[1].sort
