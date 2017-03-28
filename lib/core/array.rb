@@ -639,8 +639,6 @@ class Array
     size = self.size
     sep = sep.to_s
     self.each do |item|
-      puts item
-
       if !join_str.empty?
         join_str << sep
       end
