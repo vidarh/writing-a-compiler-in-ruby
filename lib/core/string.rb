@@ -156,6 +156,33 @@ class String
     self
   end
 
+  # FIXME: The documentation for String#<=> in Ruby 2.4.1
+  # does not specify *how* this comparison is to be carried
+  # out, and I'm not inclined to e.g. try to support encodings
+  # at this point, so for the time being this compares strings
+  # byte by byte, which is almost guaranteed to be wrong,
+  # but this is sufficient to get a lot of code working initially
+  #
+  # FIXME: This implementation is also inefficient
+  #
+  def <=> other
+    return nil if !other.kind_of?(String)
+
+    i   = 0
+    max = length > other.length ? other.length : length
+
+    while i < max
+      return -1 if self[i] < other[i]
+      return 1  if self[i] < other[i]
+      i += 1
+    end
+
+    return 1 if i < other.length
+
+    return 0
+  end
+
+
   def uniq
   end
 
