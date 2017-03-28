@@ -930,15 +930,13 @@ class Array
     %s(puts "Array#transpose not implemented")
   end
 
-
   # Returns a new array by removing duplicate values in self.
   def uniq
-    STDERR.puts "Array#uniq not implemented"
     uniq_arr = Array.new
     self.each do |item|
-#      unless uniq_arr.include?(item)
-#        uniq_arr << item
-#      end
+      if !uniq_arr.include?(item)
+        uniq_arr << item
+      end
     end
     uniq_arr
   end
