@@ -21,6 +21,10 @@ class SimpleDelegator
     @ob.inspect
   end
 
+  def to_s
+    @ob.to_s
+  end
+
   def __getobj__
     @ob
   end
