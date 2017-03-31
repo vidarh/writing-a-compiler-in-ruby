@@ -8,8 +8,9 @@ class File < IO
     false
   end
 
-  def initialize(path)
-    %s(assign fd (__get_fixnum (open path 0)))
+  def initialize(path, mode = "r")
+    %s(assign rpath (callm path __get_raw))
+    %s(assign fd (__get_fixnum (open rpath 0)))
 
     # FIXME: Error checking
 
