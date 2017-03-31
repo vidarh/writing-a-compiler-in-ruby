@@ -13,13 +13,17 @@ class IO < Object
     @rawbuf = tmp
   end
 
+  def to_i
+    @fd
+  end
+
   def getc
     c = 0
     tmp = 0
     len = nil
     %s(do
          (assign len (read (callm @fd __get_raw) @rawbuf 1))
-         (if (eq len 0) (return nil))
+         (if (le len 0) (return nil))
          (assign c (__get_fixnum (bindex @rawbuf 0)))
          )
     c
