@@ -35,7 +35,18 @@ class String
   end
 
   def inspect
-    "\""+self+"\""
+    buf = "\""
+    each_byte do |b|
+      if b == 34
+        buf << "\\\""
+      elsif b == 92
+        buf << "\\\\"
+      else
+        buf << b.chr
+      end
+    end
+    buf << "\""
+    buf
   end
 
   # DJB hash
