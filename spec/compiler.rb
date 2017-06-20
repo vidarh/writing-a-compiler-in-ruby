@@ -1,6 +1,5 @@
 
-$: << File.dirname(__FILE__)+"/.."
-require 'compiler'
+require_relative '../compiler'
 
 describe Compiler do
 

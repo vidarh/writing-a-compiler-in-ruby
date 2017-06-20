@@ -14,14 +14,14 @@ def dr(cmd)
 end
 
 puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
-if dr("ruby #{dir}/compiler.rb #{ARGV.join(" ")} 2>&1 >out/#{bname}.s")
+if dr("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} 2>&1 >out/#{bname}.s")
   if dr("gcc #{asmdebug} -m32 -o out/#{bname} out/#{bname}.s")
-    puts "+++ Compiled to out/#{bname}"
+    puts "+++ \e[32mCompiled to out/#{bname}\e[37m"
   else
-    STDERR.puts "*** Assembly failed."
+    STDERR.puts "*** \e[31mAssembly failed.\e[37m"
     exit(1)
   end
 else
-  STDERR.puts "*** Compilation failed."
+  STDERR.puts "*** \e[31mCompilation failed.\e[37m"
   exit(1)
 end

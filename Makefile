@@ -1,5 +1,5 @@
 IMAGE=ruby-compiler-buildenv
-DR=docker run -t -i -v ${PWD}:/app ${IMAGE}
+DR=docker run --rm -t -i -v ${PWD}:/app ${IMAGE}
 all: compiler
 
 clean:
@@ -7,19 +7,31 @@ clean:
 	@rm -rf doc/
 
 compiler: *.rb
-	./compile compiler.rb -I . -g
+	./compile driver.rb -I . -g
 
 push:
 	git push origin master
 
 .PHONY: selftest
 
-selftest: buildc
+selftest:
 	./compile test/selftest.rb -I . -g
 	${DR} ./out/selftest
 
-buildc:
+buildc: Dockerfile
 	docker build -t ${IMAGE} .
 
-cli: buildc
+cli:
 	${DR} /bin/bash -l
+
+bundle:
+	${DR} bundle install
+
+rspec:
+	${DR} bundle exec rspec --format=doc ./spec/*.rb
+
+.PHONY: features
+features:
+	${DR} /bin/bash -l -c 'cd features; bundle exec cucumber -r. -e inputs -e outputs *.feature'
+
+tests: rspec features selftest
