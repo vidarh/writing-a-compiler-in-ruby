@@ -38,7 +38,15 @@ class Symbol
   end
 
   def inspect
-    ":#{to_s}"
+    # FIXME: This is incomplete.
+    o = @name[0].ord
+    if (o >= 97 && o <= 122) ||
+       (o >= 65 && o <= 91)  ||
+       o == 42 || o == 43
+      ":#{to_s}"
+    else
+      ":#{to_s.inspect}"
+    end
   end
 
   def hash
