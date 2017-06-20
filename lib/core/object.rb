@@ -141,8 +141,13 @@ class Object
     while i < na
       raw = str[i]
       if raw
-        raw = raw.to_s.__get_raw
-        %s(if (ne raw 0) (puts raw))
+        raw = raw.to_s
+        last = raw[-1]
+        raw = raw.__get_raw
+        %s(if (ne raw 0) (printf "%s" raw))
+        if last.ord != 10
+           %s(puts "")
+        end
       else
         %s(puts "")
       end
