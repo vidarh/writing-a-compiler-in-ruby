@@ -139,7 +139,7 @@ Feature: Parser
       | "begin; puts 'foo';rescue Exception => e; end; " | [:do, [:block, [], [[:call, :puts, ["foo"]]], [:rescue, :Exception, :e, []]]] | begin/rescue                    |
       | "unless foo; bar; else; baz; end"                | [:do, [:unless, :foo, [:do, :bar], [:do, :baz]]]                            |                                 |
       | "if foo; bar; elsif baz; a; else; b; end"        | [:do, [:if, :foo, [:do, :bar], [:do, [:if, :baz, [:do, :a], [:do, :b]]]]]   |                                 |
-
+      | "next :foo"                                      | [:do, [:next, :":foo"]]                                                     |                                 |
 
 
     @methodcalls
