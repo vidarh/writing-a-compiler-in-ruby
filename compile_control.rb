@@ -125,15 +125,16 @@ class Compiler
   # "next" acts differently in a control structure vs. block
   #
   # In "while" etc, "next" jumps to the next iteration.
-  # In a block, "next" acts like "break".
+  # In a block, "next" exits the block.
   #
-  def compile_next(scope)
+  def compile_next(scope, arg = :nil)
     l = scope.loop_label
     if l
       @e.jmp(l)
-    else
-      compile_break(scope)
+      @e.evict_all
+      return Value.new([:subexpr])
     end
+    compile_return(scope,arg)
   end
 
   # "break" has different complexity in different contexts:
