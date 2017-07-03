@@ -496,10 +496,14 @@ class Compiler
     end
   end
 
-  def preprocess exp
-    # The global scope is needed for some rewrites
+  def setup_global_scope(exp)
     @global_scope = GlobalScope.new(@vtableoffsets)
     build_class_scopes(exp,@global_scope)
+  end
+
+  def preprocess exp
+    # The global scope is needed for some rewrites
+    setup_global_scope(exp)
 
     rewrite_destruct(exp)
     rewrite_concat(exp)
