@@ -422,7 +422,8 @@ class Compiler
           #
           arr = e[2].is_a?(Array) ? e[2] : [e[2]]
           arr.each {|entry|
-            scope.add_vtable_entry(entry.to_s[1..-1].to_sym) 
+            scope.add_vtable_entry(entry.to_s[1..-1].to_sym)
+            scope.add_ivar("@#{entry.to_s[1..-1]}".to_sym)
           }
 
           # Then let's do the quick hack:
