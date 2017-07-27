@@ -25,7 +25,7 @@ self = Object.new
 #  - The ones that fails because scoped lookups doesn't
 #    yet work
 E = 2
-Tokens=5
+
 #  - The ones that fails because they haven't been implemented
 # Enumerable=8 #Here because modules doesn't work yet
 
