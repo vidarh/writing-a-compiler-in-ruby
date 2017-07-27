@@ -5,7 +5,7 @@
    (assign ob (calloc size 4)) # Assumes 32 bit
    (assign i 6) # Skips the initial instance vars
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
-  (while (le i ssize) (do
+  (while (lt i ssize) (do
        (assign (index ob i) (index superclass i))
        (assign i (add i 1))
   ))
