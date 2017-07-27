@@ -126,7 +126,7 @@ class String
   end
 
   def __copy_raw(str,len)
-    %s(assign len (callm len __get_raw))
+    %s(assign len (add (callm len __get_raw) 1))
     %s(assign @buffer (malloc len))
     %s(memmove @buffer str len)
    end
