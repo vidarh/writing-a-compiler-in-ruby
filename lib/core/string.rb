@@ -236,7 +236,7 @@ class String
     %s(assign src (add @buffer (callm b __get_raw)))
     n.__copy_raw(src, e)
 
-    endp = b + e + 1
+    endp = b + e
     %s(assign dest (add @buffer (callm b __get_raw)))
     %s(assign src (add @buffer (callm endp __get_raw)))
     %s(memmove dest src (callm e __get_raw))
