@@ -1,3 +1,4 @@
+#-*- ruby -*-
 require 'rubygems'
 require 'bundler/setup'
 require "rake"
