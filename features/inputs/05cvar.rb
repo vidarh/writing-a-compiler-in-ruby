@@ -8,4 +8,5 @@ class Foo
 end
 
 foo = Foo.new
-%s(printf "%s\n" (callm (foo cvar) __get_raw))
+puts foo.cvar
+
