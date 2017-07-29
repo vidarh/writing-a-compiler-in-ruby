@@ -479,8 +479,12 @@ class Emitter
   end
 
   def get_local
+    # FIXME: This causes error.
+    #@seq +=1
+    #".L#{@seq-1}"
+    r =  ".L#{@seq}"
     @seq +=1
-    ".L#{@seq-1}"
+    return r
   end
 
 
