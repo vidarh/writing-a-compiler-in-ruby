@@ -56,6 +56,9 @@ module AST
     end
 
     def self.[](*args)
+      # FIXME: Code generation bug causes
+      # pos not to get initialized if the if condition below is not satisfied.
+      pos = nil
       if args.size > 0 and args.first.is_a?(Scanner::Position) || args.first.nil?
         pos = args.shift
       end
