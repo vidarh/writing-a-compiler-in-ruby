@@ -1,4 +1,6 @@
-
+#
+# FIXME: Breaks if you try to insert same key twice
+#
 class Hash
 
   def self.[] *args
