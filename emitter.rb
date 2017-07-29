@@ -161,6 +161,8 @@ class Emitter
       emit(:movl, source,dest) if source != dest
     when :indirect
       emit(:movl,source, "(%#{dest})")
+    when :indirect8
+      emit(:movb,source, "(%#{dest})")
     when :global
       emit(:movl, source, dest.to_s)
     when :lvar
