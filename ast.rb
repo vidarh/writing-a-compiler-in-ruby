@@ -40,6 +40,13 @@ module AST
     # generated/injected accessors.
     attr_accessor :position
 
+    def initialize(*elements)
+      # FIXME: Workaround for bug in initialization of instance
+      # variables.
+      @position = nil
+      super(*elements)
+    end
+
     # FIXME: For self-hosting, we temporarily rename this variable
     # as one of the tree transforms is too aggressive, and for
     # the time being it's easier to work around here.
