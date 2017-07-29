@@ -311,20 +311,20 @@ class Parser < ParserBase
     pos = position
     type = expect(:module) or return
     ws
-    name = expect(Atom) || expect("<<") or expected("class name")
+    name = expect(Atom) || expect('<<') or expected("class name")
     ws
     error("A module can not have a super class") if @scanner.peek == ?<
     exps = zero_or_more(:exp)
-    expect(:end) or expected("expression or 'end'")
+    expect(:end) or expected("expression or \'end\'")
     return E[pos, type.to_sym, name, :Object, exps]
   end
 
-  # class ::= ("class" ws* (name|"<<") ws* (< ws* superclass)? ws* name ws* exp* "end"
+  # class ::= ("class" ws* (name|'<<') ws* (< ws* superclass)? ws* name ws* exp* "end"
   def parse_class
     pos = position
     type = expect(:class) or return
     ws
-    name = expect(Atom) || expect("<<") or expected("class name")
+    name = expect(Atom) || expect("\<\<") or expected("class name")
     ws
     if expect("<")
       ws
