@@ -220,7 +220,8 @@ class Parser < ParserBase
   def parse_next
     pos = position
     return nil if !expect(:next)
-    return E[pos, :next]
+    exps = parse_subexp
+    return E[pos, :next, *exps]
   end
 
   # Later on "defexp" will allow anything other than "def"
