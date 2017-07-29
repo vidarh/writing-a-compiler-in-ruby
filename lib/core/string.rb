@@ -301,12 +301,13 @@ class String
     concat(other)
   end
 
-  # FIXME: Horribly inefficient 
+  def dup
+    String.new(self)
+  end
+
+  # FIXME: Inefficient (should pre-alloc capacity)
   def + other
-    s = ""
-    s << self
-    s << other
-    s
+    dup.concat(other)
   end
 
 
