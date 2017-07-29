@@ -184,7 +184,6 @@ class RegisterAllocator
     to_push = will_push ? [] : nil
     @caller_saved.each do |r|
       evict_by_cache(@by_reg[r])
-      yield r if block_given?
 
       if @allocated_registers.member?(r)
         if !will_push
