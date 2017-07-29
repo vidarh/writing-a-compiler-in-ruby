@@ -89,7 +89,7 @@ Operators = {
   "!"         => Oper.new(  8, :"!",      :prefix),
   "<<"        => Oper.new(  8, :<<,       :infix),
 
-  "<"         => Oper.new(  9, :"<",       :infix),
+  "<"         => Oper.new(  9, :"\<",       :infix),
   "<="        => Oper.new(  9, :"<=",       :infix),
   ">"         => Oper.new(  9, :>,       :infix),
   ">="        => Oper.new(  9, :>=,       :infix),
