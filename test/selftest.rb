@@ -139,6 +139,21 @@ def test_array
 #  res = [42,2,3,1].sort_by {|v| -v }
 #  expect_eq(res, [42,3,2,1] , "Array#sort_by (descending)")
 
+  expect_eq(42 <=> 2, 1, "Fixnum#<=>(42,2)")
+  expect_eq(42 <=> 3, 1, "Fixnum#<=>(42,3)")
+  expect_eq(42 <=> 1, 1, "Fixnum#<=>(42,1)")
+  expect_eq(2 <=> 3, -1, "Fixnum#<=>(2,3)")
+  expect_eq(2 <=> 2, 0, "Fixnum#<=>(2,2)")
+  expect_eq(3 <=> 1, 1, "Fixnum#<=>(3,1)")
+
+  #  ary = [42,2,3,1]
+  # FIXME: This causes a parse/compilation error:
+  #  res = ary.partition {|e| (e <=> 2) > 0 }
+  #  expect_eq(res.inspect, "[[42, 3], [2, 1]]", "partition")
+
+  res = [42,2,3,1].sort
+  expect_eq(res.inspect, [1,2,3,42].inspect , "Array#sort (ascending)")
+
   res = Array(42)
   expect_eq(res.inspect,"[42]", "Array(42) should return [42]")
 
@@ -309,6 +324,7 @@ def mock_preprocess(exp)
   e = Emitter.new
   c = Compiler.new(e)
   c.preprocess(prog)
+  c.compile(prog)
 end
 
 #include AST
@@ -326,7 +342,7 @@ def test_compiler
   r = c.find_vars(exp,scopes,Set.new, Hash.new(0))
 
   expect_eq("[[:foo], #<Set: {:arg}>]", r.inspect, "Compiler#find_vars")
-#  mock_preprocess("a = 42")
+  mock_preprocess("a = 42")
 end
 
 
@@ -351,5 +367,6 @@ test_shunting
 test_parser
 test_destructuring
 test_depth_first
-test_compiler
 test_string
+test_compiler
+
