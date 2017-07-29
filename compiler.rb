@@ -633,6 +633,8 @@ class Compiler
         compile_eval_arg(scope,[:assign, :__FILE__, [:sexp, [:__get_string,exp.position.filename]]])
       end
       ret = compile_exp(scope,exp)
+      # FIXME: This of course doesn't do what it is intended
+      # - it needs to reset filename back to its previous value.
       if v[0] == :global
         compile_eval_arg(scope,[:assign, :__FILE__, [:sexp, [:call, :__get_string,exp.position.filename]]])
       end
