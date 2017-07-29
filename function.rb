@@ -48,7 +48,6 @@ class Function
 
     @defaultvars = 0
 
-    STDERR.puts "#{name}: '#{break_label.inspect}"
     # If break should go to an outer function,
     # break_label is not nil
     @break_label = break_label 
