@@ -129,6 +129,8 @@ class String
     %s(assign len (add (callm len __get_raw) 1))
     %s(assign @buffer (malloc len))
     %s(memmove @buffer str len)
+    %s(assign (bindex @buffer (sub len 1)) 0)
+    nil
    end
 
   def __set_raw(str)
