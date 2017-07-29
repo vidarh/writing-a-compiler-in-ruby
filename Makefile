@@ -18,6 +18,9 @@ selftest:
 	./compile test/selftest.rb -I . -g
 	${DR} ./out/selftest
 
+valgrind: selftest
+	${DR} valgrind --track-origins=yes ./out/selftest 2>&1
+
 buildc: Dockerfile
 	docker build -t ${IMAGE} .
 
