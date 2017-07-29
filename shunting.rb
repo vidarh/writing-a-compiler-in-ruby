@@ -66,6 +66,8 @@ module OpPrec
 
         # FIXME: This is a workaround for a bug in find_vars that doesn't correctly
         # identify variables used in methods calls.
+        # It appears it might also cause the env allocated for the
+        # block to not be correctly initialized.
         ostack
         inhibit
 
