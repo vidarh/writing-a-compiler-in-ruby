@@ -35,10 +35,11 @@ When /^I compile it and run it$/ do
     Tempfile.open('ruby-compiler') do |tmp|
       src = "inputs/#{@src}"
       raise "Input '#{src}' does not exist" if !File.exists?("features/#{src}")
-      `ruby compiler.rb features/#{src} >#{tmp.path}.s 2>#{tmp.path}`
+      cmd = "ruby -I. driver.rb features/#{src} >#{tmp.path}.s 2>#{tmp.path}"
+      `#{cmd}`
       Tempfile.open('ruby-compiler') do |exe|
 #        STDERR.puts "Asm file is in #{tmp.path}.s"
-        `gcc -m32 -gstabs -o #{exe.path}-binary #{tmp.path}.s`
+        `gcc 2>#{tmp.path} -m32 -gstabs -o #{exe.path}-binary #{tmp.path}.s`
         @output = `echo test | #{exe.path}-binary`
       end
     end
