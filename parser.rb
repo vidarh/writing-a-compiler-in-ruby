@@ -346,8 +346,11 @@ class Parser < ParserBase
       return [filename]
     end
 
+    # FIXME: Hack due to codegen error
+    # regarding using argument inside block
+    fname = filename
     @include_paths.collect do |path|
-      full = File.expand_path("#{path}/#{filename}")
+      full = File.expand_path("#{path}/#{fname}")
       full << ".rb" if full[-3..-1] != ".rb"
       full
     end
