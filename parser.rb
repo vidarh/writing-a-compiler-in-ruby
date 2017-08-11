@@ -26,6 +26,9 @@ class Parser < ParserBase
 
     path = File.expand_path(File.dirname(__FILE__)+"/lib")
     @include_paths << path
+
+    # FIXME: This is a hack.
+    @include_paths << "./lib"
   end
 
   # name ::= atom
