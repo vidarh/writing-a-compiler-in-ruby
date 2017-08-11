@@ -9,10 +9,16 @@ class File < IO
   end
 
   def initialize(path, mode = "r")
+    STDERR.puts "File.init: #{path.inspect}"
     %s(assign rpath (callm path __get_raw))
-    %s(assign fd (__get_fixnum (open rpath 0)))
-
-    # FIXME: Error checking
+    %s(assign fd (open rpath 0))
+    %s(perror 0)
+   # FIXME: Error checking
+    %s(if (le fd 0) (do
+         (printf "Failed to open '%s' got %ld\n" rpath fd)
+        (div 0 0)
+    ))
+    %s(assign fd (__get_fixnum fd))
 
     super(fd)
   end
