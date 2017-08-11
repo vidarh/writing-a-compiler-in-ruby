@@ -27,6 +27,14 @@ class File < IO
     f = File.new(path)
   end
 
+  def self.exists?(path)
+    %s(assign rpath (callm path __get_raw))
+    %s(assign fd (open rpath 0))
+    %s(if (le fd 0) (return false))
+    %s(close fd)
+    return true
+  end
+
   def self.basename(name)
     name
   end
