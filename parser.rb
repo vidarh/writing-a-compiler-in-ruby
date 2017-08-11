@@ -37,6 +37,8 @@ class Parser < ParserBase
   def parse_arglist
     prefix = expect("*") || expect("&")
     ws if prefix
+    ## FIXME: If "name" is not mentioned here, it is not correctly recognised
+    name = nil
     if !(name = parse_name)
       expected("argument name following '#{prefix}'") if prefix
       return
