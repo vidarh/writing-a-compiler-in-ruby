@@ -442,7 +442,11 @@ class Parser < ParserBase
   # program ::= exp* ws*
   def parse(require_core = true)
     res = E[position, :do]
-    res << self.require(File.expand_path(File.dirname(__FILE__)+"/lib/core/core.rb")) if require_core and !@opts[:norequire]
+    # FIXME: This does not work in the face of compiling the compiler somewhere where
+    # the paths are different than where it will run. A lesson in the compile-time vs.
+    # runtime issue.
+    # res << self.require(File.expand_path(File.dirname(__FILE__)+"/lib/core/core.rb")) if require_core and !@opts[:norequire]
+    res << self.require("core/core.rb") if require_core and !@opts[:norequire]
     res.concat(zero_or_more(:exp))
     ws
     error("Expected EOF") if scanner.peek
