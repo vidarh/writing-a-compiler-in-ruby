@@ -125,6 +125,14 @@ class Compiler
     return get_arg(scope,:false, save) if a == false
     return Value.new([:int, a]) if (a.is_a?(Fixnum))
     return Value.new([:int, a.to_i]) if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
+
+    if a == :"block_given?"
+      return compile_exp(scope,
+                         [:if,
+                          [:ne, :__closure__, 0],
+                          :true, :false])
+    end
+
     if (a.is_a?(Symbol))
       name = a.to_s
       return intern(scope,name[1..-1]) if name[0] == ?:
