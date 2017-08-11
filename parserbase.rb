@@ -67,8 +67,14 @@ class ParserBase
   # Error message contains filename and linenumber, if reading from a file.
   # Otherwise, the message only contains the current linenumber and the error message.
   def error(message)
+    i = 0
+    str = ""
+    while (i < 30)
+      str << @scanner.get
+      i += 1
+    end
     if from_file?
-      raise "Parse error: #{filename}(#{@scanner.lineno}):  #{message}"
+      raise "Parse error: #{filename}(#{@scanner.lineno}):  #{message}\nAfter: '#{str}'"
     else
       raise "Parse error: #{@scanner.lineno}: #{message}"
     end
