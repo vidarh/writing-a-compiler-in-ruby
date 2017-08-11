@@ -263,14 +263,17 @@ class Parser < ParserBase
     ws
     args = []
     if expect("|")
-       ws
-      begin
+      ws
+      # FIXME:
+      # This is a workaround, as
+      # "begin ... end while ...." does not
+      # yet work correctly.
+      while name = parse_name
+        args << name
         ws
-        if name = parse_name
-          args << name
-          ws
-        end
-      end while name and expect(",")
+        break if !expect(",")
+        ws
+      end
       ws
       expect("|")
     end
