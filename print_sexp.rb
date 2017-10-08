@@ -48,7 +48,9 @@ class SexpPrinter
 
   def print_node node, nest = 0
     if node.is_a?(Array)
-      puts if @col > @maxcol * 0.7 or
+      # FIXME: Changed from @maxcol * 0.7 as compiler currently does not
+      # support Float.
+      puts if @col > @maxcol * 3 / 4 or
         @col > 0 && [:defun,:defm,:class,:if,:let].include?(node.first)
       print "("
       old_line = @line
