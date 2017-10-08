@@ -1,6 +1,10 @@
 
+# FIXME: Not supported by compiler yet.
+#VTableEntry = Struct.new(:name, :realname, :offset, :function)
 
-VTableEntry = Struct.new(:name, :realname, :offset, :function)
+class VTableEntry
+  attr_accessor :name, :realname, :offset, :function
+end
 
 # Need a global list of vtable offsets since
 # we can't usually statically determine what class
