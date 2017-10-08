@@ -310,6 +310,15 @@ class String
     dup.concat(other)
   end
 
+  # FIXME: Terribly inefficient (should pre-alloc capacity)
+  def * cnt
+    s = ""
+    cnt.times do
+      s.concat(self)
+    end
+    s
+  end
+
 
   def rindex(ch)
     l  = length
