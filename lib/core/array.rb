@@ -587,8 +587,15 @@ class Array
 
   # Compute a hash-code for this array. Two arrays with the same content will have
   # the same hash code (and will compare using eql?).
+  #
+  # Uses djb hash
   def hash
-    %s(puts "Array#hash not implemented")
+    h = 5381
+    h = h * 33 + self.length
+    each do |c|
+      h = h * 33 + c.hash
+    end
+    h
   end
 
 
