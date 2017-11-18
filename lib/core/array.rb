@@ -553,8 +553,22 @@ class Array
 
   # Returns a new array that is a one-dimensional flattening of this array (recursively).
   # That is, for every element that is an array, extract its elements into the new array.
-  def flatten
-    %s(puts "Array#flatten not implemented")
+  def flatten level=0
+    #STDERR.puts "FLATTEN: #{self.inspect}"
+    n = []
+    l = level
+    each do |e|
+      l
+      n
+      if e.is_a?(Array)
+        # FIXME: the "e.flatten(l-1)" was mis-parsed without the whitespace.
+        e = e.flatten(l - 1) if l > 0
+        n.concat(e)
+      else
+        n << e
+      end
+    end
+    n
   end
 
 
