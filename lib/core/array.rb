@@ -493,7 +493,19 @@ class Array
   # Returns true if array and other are the same object,
   # or are both arrays with the same content.
   def eql?(other_array)
-    %s(puts "Array#eql? not implemented")
+    return true if (self.object_id == other_array.object_id)
+    return false if !other_array.kind_of?(Array)
+    return false if self.length != other_array.length
+
+    i = 0
+    l = self.length
+    while i < l
+      # FIXME: Recursion
+      return false if self[i] != other_array[i]
+      i += 1
+    end
+
+    return true
   end
 
 
