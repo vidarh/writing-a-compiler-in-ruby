@@ -681,8 +681,23 @@ class Compiler
     #trace(pos,exp)
 
     # check if exp is within predefined keywords list
+
+    ## FIXME: Attempt at fixing segfault
+    cmd = nil
+    r = nil
+    exp
     if(@@keywords.include?(exp[0]))
-      return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
+      # FIXME: This variation segfaults
+      # return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
+    exp
+      cmd = "compile_#{exp[0].to_s}"
+      if cmd == "compile_defm"
+        # FIXME: Uncommenting this causes crash to move elsewhere.
+        #STDERR.puts scope.object_id
+        r = exp.rest
+        return self.compile_defm(scope, *r)
+      end
+      return self.send(cmd, scope, *exp.rest)
     elsif @@oper_methods.member?(exp[0])
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
