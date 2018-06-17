@@ -108,6 +108,8 @@ class Parser < ParserBase
     exps = zero_or_more(:defexp)
     ws
 
+    # FIXME: Workaround for intialization error
+    elseexps = nil
     if expect(:elsif)
       # We treat "if ... elif ... else ... end" as shorthand for "if ... else if ... else ... end; end"
       elseexps = [parse_if_body(:if)]
@@ -335,6 +337,8 @@ class Parser < ParserBase
     ws
     name = expect(Atom) || expect("\<\<") or expected("class name")
     ws
+    # FIXME: Workaround for initialization error
+    superclass = nil
     if expect("<")
       ws
       superclass = expect(Atom) or expected("superclass")
@@ -358,6 +362,9 @@ class Parser < ParserBase
     # regarding using argument inside block
     fname = filename
     @include_paths.collect do |path|
+      # FIXME: Hack due to codegen error
+      # regarding argument inside the block
+      fname
       full = File.expand_path("#{path}/#{fname}")
       full << ".rb" if full[-3..-1] != ".rb"
       full

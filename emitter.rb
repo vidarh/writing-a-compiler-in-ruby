@@ -83,6 +83,7 @@ class Emitter
   # Takes a block and calls it after emitting the bss-section.
   def bss
     emit(".section",".bss")
+    emit(".align", "4")
     yield
   end
 
