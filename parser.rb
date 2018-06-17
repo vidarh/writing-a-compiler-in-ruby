@@ -386,7 +386,7 @@ class Parser < ParserBase
     fname = nil
     paths.detect do |path|
       fname = path
-      f = File.open(path) rescue nil
+      f = File.exists?(path) ? File.open(path) : nil
     end
     error("Unable to open '#{q}'")  if !f
 
