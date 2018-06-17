@@ -537,7 +537,7 @@ class Compiler
     if exp.length == 0
       exp = [:nil]
     end
-
+    source = nil
     exp.each do |e|
       # FIXME: Mentioning it due to find_vars bug
       scope
