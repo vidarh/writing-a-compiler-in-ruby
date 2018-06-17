@@ -2,6 +2,9 @@
 class Fixnum < Integer
 
   def initialize
+    # Can't use a Ruby expression here, because it
+    # would cause infinite recursion. Well, run out
+    # of memory.
     %s(assign @value 0)
   end
 
