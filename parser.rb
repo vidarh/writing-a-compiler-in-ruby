@@ -407,6 +407,8 @@ class Parser < ParserBase
     expr = parser.parse(false)
     e = E[pos,:required, expr]
     @@requires[q] = e
+
+    e
   end
 
   # require ::= "require" ws* subexp
