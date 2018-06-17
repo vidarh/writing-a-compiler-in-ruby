@@ -351,7 +351,7 @@ class Parser < ParserBase
 
   # Returns the include paths relative to a given filename.
   def rel_include_paths(filename)
-    if filename[0] == "/"
+    if filename[0].chr == "/"
       if filename[-3..-1] != ".rb"
         return [filename +".rb"]
       end
