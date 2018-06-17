@@ -296,8 +296,10 @@ class Compiler
 
   def combine_types(left, right)
     type = nil
-    if left && (!right || left.type == right.type)
-      type = left.type
+    if left
+      if (!right || left.type == right.type)
+        type = left.type
+      end
     end
     return Value.new([:subexpr],type)
   end
