@@ -84,7 +84,7 @@ class Class
   # Clients that need to be able to allocate a completely clean-slate empty
   # object, should call <tt>__alloc</tt>.
   #
-  def __alloc
+  def allocate
     %s(assign ob (__array @instance_size))
     %s(assign (index ob 0) self)
     ob
@@ -95,13 +95,13 @@ class Class
   # <tt>__splat_to_array</tt>
   #
   def __new
-    ob = __alloc
+    ob = allocate
     ob.__initialize
     ob
   end
 
   def new *rest
-    ob = __alloc
+    ob = allocate
     ob.initialize(*rest)
     ob
   end
