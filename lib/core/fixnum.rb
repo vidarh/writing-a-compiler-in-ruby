@@ -163,7 +163,7 @@ end
 
 
 %s(defun __get_fixnum (val) (let (num)
-  (assign num (callm Fixnum __alloc))
+  (assign num (callm Fixnum allocate))
   (callm num __set_raw (val))
   num
 ))
