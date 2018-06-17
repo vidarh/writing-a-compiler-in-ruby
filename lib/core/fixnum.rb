@@ -41,7 +41,7 @@ class Fixnum < Integer
       %s(snprintf buf 16 "%ld" @value)
       %s(__get_string buf)
     elsif radix < 2 || radix > 36
-      STDERR.puts "ERROR: Invalid radix #{radix.inspect} - must be betwee 2 and 36"
+      STDERR.puts "ERROR: Invalid radix #{radix.inspect} - must be between 2 and 36"
       1/0
     else
       out = ""
