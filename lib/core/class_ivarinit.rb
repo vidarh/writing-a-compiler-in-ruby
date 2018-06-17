@@ -5,7 +5,7 @@
 #
 class Class
 
-  def __alloc
+  def allocate
     %s(assign is @instance_size)
     %s(assign ob (__array @instance_size))
     %s(assign i 1)
