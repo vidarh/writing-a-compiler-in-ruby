@@ -601,13 +601,18 @@ class Compiler
     source = compile_eval_arg(scope, arr)
     r = @e.with_register do |reg|
       @e.movl(source, reg)
-      @e.pushl(reg)
-      
-      source = compile_eval_arg(scope, index)
-      @e.save_result(source)
-      @e.sall(2, @e.result_value)
-      @e.popl(reg)
-      @e.addl(@e.result_value, reg)
+      if index.is_a?(Numeric)
+        if index != 0
+          @e.addl(index*4, reg)
+        end
+      else
+        @e.pushl(reg)
+        source = compile_eval_arg(scope, index)
+        @e.save_result(source)
+        @e.sall(2, @e.result_value)
+        @e.popl(reg)
+        @e.addl(@e.result_value, reg)
+      end
     end
     return Value.new([:indirect, r], lookup_type(arr,index))
   end
