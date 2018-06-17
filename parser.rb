@@ -388,7 +388,7 @@ class Parser < ParserBase
       fname = path
       f = File.open(path) rescue nil
     end
-    error("Unable to load '#{q}'")  if !f
+    error("Unable to open '#{q}'")  if !f
 
     STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
 
