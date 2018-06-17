@@ -30,6 +30,11 @@ class Fixnum < Integer
     self
   end
 
+  # FIXME
+  # Bit access
+  def [] i
+    1
+  end
   def to_s(radix=10)
     if radix == 10
       %s(assign buf (malloc 16))
