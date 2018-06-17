@@ -27,7 +27,7 @@ class Compiler
     compile_eval_arg(scope,[:sexp, [:call, :__set_vtable, [:self,v.offset, fname.to_sym]]])
     
     # This is taken from compile_defun - it does not necessarily make sense for defm
-    return Value.new([:addr, clean_method_name(fname)])
+    return Value.new([:subexpr]) #addr, clean_method_name(fname)])
   end
 
 
