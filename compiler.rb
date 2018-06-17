@@ -133,6 +133,11 @@ class Compiler
                           :true, :false])
     end
 
+    if a == :"caller"
+      return compile_exp(scope,
+                         [:sexp, [:__get_string, "FIXME: caller not implemented yet"]])
+    end
+    arg = nil
     if (a.is_a?(Symbol))
       name = a.to_s
       return intern(scope,name[1..-1]) if name[0] == ?:
