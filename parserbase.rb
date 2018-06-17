@@ -69,8 +69,8 @@ class ParserBase
   def error(message)
     i = 0
     str = ""
-    while (i < 30)
-      str << @scanner.get
+    while (i < 30) && (c = @scanner.get)
+      str << c
       i += 1
     end
     if from_file?
