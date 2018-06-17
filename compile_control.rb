@@ -89,6 +89,8 @@ class Compiler
     @e.comment("else: #{else_arm.inspect}")
     @e.local(l_else_arm)
     @e.evict_all
+    # FIXME: Workaround for missing initialisation of local vars
+    elseret = nil
     elseret = compile_eval_arg(scope, else_arm) if else_arm
     @e.evict_all
     @e.local(l_end_if_arm) if else_arm
