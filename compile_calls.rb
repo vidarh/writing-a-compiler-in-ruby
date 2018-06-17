@@ -189,7 +189,13 @@ class Compiler
     compile_args(scope, func, args) do
       scope
       func
-      @e.call(compile_eval_arg(scope, func))
+
+      r = get_arg(scope,func)
+      if r[0] == :addr
+        @e.call(r[1].to_s)
+      else
+        @e.call(compile_eval_arg(scope, func))
+      end
     end
 
     @e.evict_regs_for(:self)
