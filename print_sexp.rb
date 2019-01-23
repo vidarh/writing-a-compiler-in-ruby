@@ -42,6 +42,7 @@ class SexpPrinter
 
   def print_tree(data, out = STDOUT)
     @out = out
+    print "\n%s"
     print_node(data)
     puts
   end
@@ -74,6 +75,8 @@ class SexpPrinter
       end
       puts if [:defun,:defm,:class,:do,:case].include?(node.first) && @line > old_line
       print ")"
+    elsif node.is_a?(String)
+      print "\"#{node}\""
     else
       print node
     end
