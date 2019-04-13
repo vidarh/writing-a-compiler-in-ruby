@@ -161,6 +161,13 @@ def test_array
   expect_eq([0,1,2].insert(4,42).inspect, "[0, 1, 2, nil, 42]", "Array#insert with an offset larger than the array should cause 'nil's to be inserted to expand the array accordingly")
   expect_eq([0,1,2].insert(-1,42).inspect, "[0, 1, 2, 42]", "Array#insert with -1 as offset is the same as appending an entry at the end")
   expect_eq([0,1,2].insert(-2,42).inspect, "[0, 1, 42, 2]", "Array#insert with a negative offset is the same as counting that many places from the right, and then inserting the entry *after* that position")
+
+  # Test the extensions to Array used by the compiler:
+  a = [:stackframe]
+  expect_eq(a.inspect, "[:stackframe]", "Array with a single symbol")
+  expect_eq(a[1].inspect, "nil", "[:stackframe][1] should return nil")
+  expect_eq(a[-1].inspect, ":stackframe", "[:stackframe][-1] should return :stackframe")
+  expect_eq(a[1..-1].inspect, "[]", "[:stackframe][1..-1] should return []")
 end
 
 

@@ -226,6 +226,10 @@ class Array
      %s(assign start (__get_fixnum (callm self __offset_to_pos(start))))
      %s(assign xend  (__get_fixnum (callm self __offset_to_pos(xend))))
 
+     if (start < 0)
+       return Array.new
+     end
+
      # Single item gets passed back to #[]
      #return self.[](start) if start == xend
 
