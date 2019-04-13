@@ -6,7 +6,7 @@ require 'tokenizeradapter'
 
 module OpPrec
   class ShuntingYard
-    def initialize(output, tokenizer, parser)
+    def initialize(output, tokenizer, parser, inhibit = [])
       @out = output
 
       # FIXME: Pass this in instead of storing it.
@@ -24,6 +24,9 @@ module OpPrec
       @opcall2 = Operators["#call2#"] 
 
       @opcallm = Operators["."]
+
+      @inhibit = inhibit
+      @ostack  = []
     end
 
     def keywords
@@ -54,7 +57,59 @@ module OpPrec
       @tokenizer.get_quoted_exp
     end
 
-    def shunt(src, ostack, inhibit)
+    def shunt_subexpr(ostack, src)
+      old = @ostack
+      @ostack = ostack
+      shunt(src)
+      @ostack = old
+      :infix_or_postfix
+    end
+    
+    def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
+
+      if op.sym == :hash_or_block || op.sym == :block
+        if possible_func || (@ostack.last && @ostack.last.sym == :call) || @ostack.last == @opcallm
+          ocall = @ostack.last ? @ostack.last.sym == :call : false
+          @out.value([]) if !ocall
+          @out.value(parse_block(token))
+          @out.oper(Operators["#flatten#"])
+          ostack << @opcall if !ocall
+        elsif op.sym == :hash_or_block
+          opstate = shunt_subexpr([Operators["#hash#"]],src)
+        else
+          raise "Block not allowed here"
+        end
+      elsif op.sym == :quoted_exp
+        @out.value(parse_quoted_exp)
+      elsif op.type == :rp
+        @out.value(nil) if lastlp
+        @out.value(nil) if src.lasttoken and src.lasttoken[1] == Operators[","]
+        src.unget(token) if !lp_on_entry
+        reduce(ostack, op)
+        return :break
+      elsif op.type == :lp
+        reduce(ostack, op)
+        opstate = shunt_subexpr([op],src)
+        ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
+        
+        # Handling function calls and a[1] vs [1]
+        #
+        # - If foo is a method, then "foo [1]" is "foo([1])"
+        # - If foo is a local variable, then "foo [1]" is "foo.[](1)"
+        # - foo[1] is always foo.[](1)
+        # So we need to know if there's whitespace, and we then higher up need to know if
+        # if's a method. Fuck the Ruby grammar
+        reduce(@ostack, @opcall2) if @ostack[-1].nil? || @ostack[-1].sym != :call
+      else
+        reduce(ostack, op)
+        opstate = :prefix
+        @ostack << op
+      end
+      opstate
+    end
+    
+    def shunt(src)
+      ostack = @ostack
       possible_func = false     # was the last token a possible function name?
       opstate = :prefix         # IF we get a single arity operator right now, it is a prefix operator
                                 # "opstate" is used to handle things like pre-increment and post-increment that
@@ -62,18 +117,27 @@ module OpPrec
       lp_on_entry = ostack.first && ostack.first.type == :lp
 
       lastlp = true
-      src.each do |token,op,keyword|
-
+      op = nil
+      token = nil
+      src.each do |t,o,keyword|
+        op = o
+        token = t
         # FIXME: This is a workaround for a bug in find_vars that doesn't correctly
         # identify variables used in methods calls.
         # It appears it might also cause the env allocated for the
         # block to not be correctly initialized.
         ostack
-        inhibit
+        opstate
 
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator
-        if inhibit.include?(token) or keyword && (opstate != :prefix || !ostack.last || ostack.last.type != :infix || token == :end)
+        if @inhibit.include?(token) or
+          keyword &&
+          (opstate != :prefix ||
+           !ostack.last ||
+           ostack.last.type != :infix ||
+           token == :end)
+          
           src.unget(token)
           break
         end
@@ -87,48 +151,11 @@ module OpPrec
           # This whole module needs a cleanup
           op = Operators["#,#"] if op == Operators[","] and lp_on_entry
 
-          if op.sym == :hash_or_block || op.sym == :block
-            if possible_func || (ostack.last && ostack.last.sym == :call) || ostack.last == @opcallm
-              ocall = ostack.last ? ostack.last.sym == :call : false
-              @out.value([]) if !ocall
-              @out.value(parse_block(token))
-              @out.oper(Operators["#flatten#"])
-              ostack << @opcall if !ocall
-            elsif op.sym == :hash_or_block
-              op = Operators["#hash#"]
-              shunt(src, [op], [])
-              opstate = :infix_or_postfix
-            else
-              raise "Block not allowed here"
-            end
-          elsif op.sym == :quoted_exp
-            @out.value(parse_quoted_exp)
+          r = oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
+          if r == :break
+            break
           else
-            if op.type == :rp
-              @out.value(nil) if lastlp
-              @out.value(nil) if src.lasttoken and src.lasttoken[1] == Operators[","]
-              src.unget(token) if !lp_on_entry
-            end
-            reduce(ostack, op)
-            if op.type == :lp
-              shunt(src, [op], [])
-              opstate = :infix_or_postfix
-              ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
-
-              # Handling function calls and a[1] vs [1]
-              #
-              # - If foo is a method, then "foo [1]" is "foo([1])"
-              # - If foo is a local variable, then "foo [1]" is "foo.[](1)"
-              # - foo[1] is always foo.[](1)
-              # So we need to know if there's whitespace, and we then higher up need to know if
-              # if's a method. Fuck the Ruby grammar
-              reduce(ostack, @opcall2) if ostack[-1].nil? || ostack[-1].sym != :call
-            elsif op.type == :rp
-              break
-            else
-              opstate = :prefix
-              ostack << op
-            end
+            opstate = r
           end
         else
           if possible_func
@@ -144,7 +171,7 @@ module OpPrec
         src.ws if lp_on_entry
       end
 
-      if opstate == :prefix && ostack.size && ostack.last && ostack.last.type == :prefix
+      if opstate == :prefix && (ostack.size && ostack.last && ostack.last.type == :prefix)
         # This is an error unless the top of the @ostack has minarity == 0,
         # which means it's ok for it to be provided with no argument
         if ostack.last.minarity == 0
@@ -154,16 +181,16 @@ module OpPrec
         end
       end
 
-      reduce(ostack)
-      return @out if ostack.empty?
-      raise "Syntax error. #{ostack.inspect}"
+      reduce(@ostack)
+      return @out if @ostack.empty?
+      raise "Syntax error. #{@ostack.inspect}"
     end
 
     def parse(inhibit=[])
       out = @out.dup
       out.reset
-      tmp = self.class.new(out, @tokenizer,@parser)
-      res = tmp.shunt(@tokenizer,[],inhibit)
+      tmp = self.class.new(out, @tokenizer,@parser, inhibit)
+      res = tmp.shunt(@tokenizer)
       res ? res.result : nil
     end
   end
