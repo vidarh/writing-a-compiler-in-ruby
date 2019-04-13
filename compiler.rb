@@ -182,8 +182,13 @@ class Compiler
     @e.rodata { @string_constants.each { |c, l| @e.string(l, c) } }
 
     # FIXME: Temporary workaround to add bss entries for "missing" globals
-    vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq
-    @e.bss    { vars.each { |c|    @e.bsslong(c) }}
+    vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq - ["__roots_start","__roots_end"]
+    @e.bss    do
+      #@e.bsslong("__stack_top")
+      @e.label("__roots_start")
+      vars.each { |c|    @e.bsslong(c) }
+      @e.label("__roots_end")
+    end
   end
 
 
@@ -719,6 +724,7 @@ class Compiler
       # We should allow arguments to main
       # so argc and argv get defined, but
       # that is for later.
+      compile_eval_arg(@global_scope, [:sexp, [:assign, :__stack_top, [:stackframe]]])
       compile_eval_arg(@global_scope, exp)
       compile_eval_arg(@global_scope, [:sexp,[:exit, 0]])
       nil
