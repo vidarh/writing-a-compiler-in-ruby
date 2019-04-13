@@ -26,68 +26,7 @@ module OpPrec
       return E[r[1]] + flatten(r[2])
     end
 
-    def oper(o)
-      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
-      rightv = @vstack.pop if o.arity > 0
-
-      raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
-      leftv = nil
-      leftv = @vstack.pop if o.arity > 1
-
-      leftv = E[] if !leftv && o.sym == :flatten # Empty argument list. :flatten is badly named
-
-      la = leftv.is_a?(Array)
-      ra = rightv.is_a?(Array)
-
-
-      # Debug option: Output the tree without rewriting.
-      return @vstack << E[o.sym, leftv, rightv] if @@dont_rewrite
-
-      # Rewrite rules to simplify the tree
-      if ra and rightv[0] == :call and o.sym == :callm
-        s = rightv[1]
-        r = rightv[2..-1]
-        block = r[1]
-
-        args = r[0]
-        if args.is_a?(Array) && args[0] == :callm
-          args = E[args]
-        end
-        expr = E[o.sym,leftv,s]
-        if args || block
-          args ||= []
-          expr << args
-        end
-        expr << block if block
-        @vstack << expr
-      elsif la and leftv[0] == :callm and o.sym == :call
-        block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
-        comma = ra && rightv[0] == :comma
-        args = comma || block ? flatten(rightv) : rightv
-        args = E[args] if !comma && !block && args.is_a?(Array)
-        args = E[args]
-        if block
-          @vstack << leftv.concat(*args)
-        else
-          @vstack << leftv + args
-        end
-      elsif la and leftv[0] == :callm and o.sym == :assign
-        rightv = E[rightv]
-        lv = leftv[3]
-        lv = [lv] if lv && !lv.is_a?(Array)
-        args = lv ? lv +rightv : rightv
-
-        # FIXME: For some reason "eq" gets mis-identified as method call.
-        eq = "#{leftv[2].to_s}="
-        args = E[args] if args[0] == :callm
-        @vstack << E[:callm, leftv[1], eq.to_sym,args]
-      elsif o.sym == :index
-        if ra and rightv[0] == :array
-          @vstack << E[:callm, leftv, :[], flatten(rightv[1..-1])]
-        else
-          @vstack << E[:callm, leftv, :[], [rightv]]
-        end
-      elsif o.sym == :incr
+    def oper_incr(la, leftv, ra, rightv)
         # FIXME: This probably doesn't belong here, but rather in transform.rb
         #
         # :incr represents +=. There is an added complication: If the left hand side is
@@ -126,7 +65,78 @@ module OpPrec
         else
           @vstack << E[:assign, leftv, [:callm, leftv, :"+", r]]
         end
+      
+    end
+    
 
+    def oper_call_right(leftv, o, rightv)
+      s = rightv[1]
+      r = rightv[2..-1]
+      block = r[1]
+      args = r[0]
+      if args.is_a?(Array) && args[0] == :callm
+        args = E[args]
+      end
+      expr = E[o.sym,leftv,s]
+
+      if args || block
+        args ||= []
+        expr << args
+      end
+      expr << block if block
+      @vstack << expr
+    end
+    
+    
+    def oper(o)
+      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
+      rightv = @vstack.pop if o.arity > 0
+
+      raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
+      leftv = nil
+      leftv = @vstack.pop if o.arity > 1
+
+      leftv = E[] if !leftv && o.sym == :flatten # Empty argument list. :flatten is badly named
+
+      la = leftv.is_a?(Array)
+      ra = rightv.is_a?(Array)
+
+
+      # Debug option: Output the tree without rewriting.
+      return @vstack << E[o.sym, leftv, rightv] if @@dont_rewrite
+
+      # Rewrite rules to simplify the tree
+      if ra and rightv[0] == :call and o.sym == :callm
+        oper_call_right(leftv, o, rightv)
+      elsif la and leftv[0] == :callm and o.sym == :call
+        block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
+        comma = ra && rightv[0] == :comma
+        args = comma || block ? flatten(rightv) : rightv
+        args = E[args] if !comma && !block && args.is_a?(Array)
+        args = E[args]
+        if block
+          @vstack << leftv.concat(*args)
+        else
+          @vstack << leftv + args
+        end
+      elsif la and leftv[0] == :callm and o.sym == :assign
+        rightv = E[rightv]
+        lv = leftv[3]
+        lv = [lv] if lv && !lv.is_a?(Array)
+        args = lv ? lv +rightv : rightv
+
+        # FIXME: For some reason "eq" gets mis-identified as method call.
+        eq = "#{leftv[2].to_s}="
+        args = E[args] if args[0] == :callm
+        @vstack << E[:callm, leftv[1], eq.to_sym,args]
+      elsif o.sym == :index
+        if ra and rightv[0] == :array
+          @vstack << E[:callm, leftv, :[], flatten(rightv[1..-1])]
+        else
+          @vstack << E[:callm, leftv, :[], [rightv]]
+        end
+      elsif o.sym == :incr
+        oper_incr(la,leftv,ra,rightv)
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
         @vstack << E[o.sym, leftv].compact + flatten(rightv)
       elsif ra and rightv[0] == :comma and o.sym == :return
@@ -138,7 +148,15 @@ module OpPrec
       else
         # FIXME This seemingly fixes issue where single argument function call does not get its arguments wrapped.
         # FIXME Need to verify that this doesn't fail any other tests than the ones it should
-        if o.sym == :call || o.sym == :callm and o.type == :prefix and rightv && rightv[0] != :flatten and rightv[0] != :comma
+        # FIXME: rightv[0] there becomes bitfield access if rightv contains an integer,
+        # which it sometimes does. These work, since Fixnum#[] returns 0 or 1, and
+        # 0 or 1 never matches :flatten or :comma, but it's not very satisfying code
+
+        #STDERR.puts "o=#{o.inspect} rightv=#{rightv.inspect} leftv=#{leftv.inspect}"
+        if o.sym == :call || o.sym == :callm and
+          o.type == :prefix and
+          rightv && rightv[0] != :flatten and
+          rightv[0] != :comma
           rightv = E[rightv]
         end
         lv = flatten(leftv)
