@@ -99,6 +99,12 @@ def expect_eq(left, right, message)
   end
 end
 
+def test_fixnum
+  expect_eq((40 % 10).inspect, "0", "40 % 10 == 0")
+  expect_eq(4096.to_s(10), "4096", "4096.to_s(10) => '4096'")
+  expect_eq(4096.inspect, "4096", "4096.inspect => '4096'")
+end
+
 def test_array
   a = []
 
@@ -359,6 +365,7 @@ def test_string
   expect_eq("foo\nbar".gsub("\n","\\n"), "foo\\nbar", "String#gsub - Replace character with string with escape characters")
 end
 
+test_fixnum
 test_array
 test_hash
 test_mockio
