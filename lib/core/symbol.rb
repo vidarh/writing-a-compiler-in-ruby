@@ -39,10 +39,18 @@ class Symbol
 
   def inspect
     # FIXME: This is incomplete.
+    # Ruby is massively annoying here - what gets printed without quotes depend
+    # on what is parseable without quotes. For now I'm adding the rules needed
+    # to get identical output when parsing the compiler itself.
+
+    return ":==" if @name == "=="
+    return ":===" if @name == "==="
+    return ":!=" if @name == "!="
+
     o = @name[0].ord
     if (o >= 97 && o <= 122) ||
-       (o >= 65 && o <= 91)  ||
-       o == 42 || o == 43 || o == 95
+       (o >= 64 && o <= 91)  ||
+       o == 42 || o == 43 || o == 95 || o == 33
       ":#{to_s}"
     else
       ":#{to_s.inspect}"
