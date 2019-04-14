@@ -12,8 +12,7 @@ class Fixnum < Integer
 #    %s(printf "%i\n" (callm other __get_raw))
     %s(assign r (callm other __get_raw))
     %s(assign m (mod @value r))
-
-    %s(if (eq (gt m 0) (lt r 0))
+    %s(if (eq (ge m 0) (lt r 0))
          (assign m (add m r)))
     %s(__get_fixnum m)
   end
