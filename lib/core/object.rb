@@ -122,6 +122,7 @@ class Object
 
   def p ob
     puts ob.inspect
+    ob
   end
 
   # FIXME: Belongs in Kernel
