@@ -42,7 +42,7 @@ class Symbol
     o = @name[0].ord
     if (o >= 97 && o <= 122) ||
        (o >= 65 && o <= 91)  ||
-       o == 42 || o == 43
+       o == 42 || o == 43 || o == 95
       ":#{to_s}"
     else
       ":#{to_s.inspect}"
