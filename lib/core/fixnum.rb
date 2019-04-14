@@ -34,12 +34,9 @@ class Fixnum < Integer
   def [] i
     1
   end
+
   def to_s(radix=10)
-    if radix == 10
-      %s(assign buf (malloc 16))
-      %s(snprintf buf 16 "%ld" @value)
-      %s(__get_string buf)
-    elsif radix < 2 || radix > 36
+    if radix < 2 || radix > 36
       STDERR.puts "ERROR: Invalid radix #{radix.inspect} - must be between 2 and 36"
       1/0
     else
