@@ -1,15 +1,13 @@
-
 class Fixnum < Integer
 
   def initialize
-    # Can't use a Ruby expression here, because it
-    # would cause infinite recursion. Well, run out
-    # of memory.
+    # Can't use any Ruby expressions that use integers here,
+    # directly or indirectly, so best not use *any*, because
+    # it would cause recursion until running out of memory.
     %s(assign @value 0)
   end
 
   def % other
-#    %s(printf "%i\n" (callm other __get_raw))
     %s(assign r (callm other __get_raw))
     %s(assign m (mod @value r))
     %s(if (eq (ge m 0) (lt r 0))
