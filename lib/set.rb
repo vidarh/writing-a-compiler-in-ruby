@@ -22,7 +22,9 @@ class Set
   def select
     a = []
     @set.each do |e,_|
-      a << e if yield(e) == true
+      if yield(e)
+        a << e
+      end
     end
     a
   end
