@@ -49,6 +49,7 @@ class Fixnum < Integer
       while n != 0
         r = n % radix
         out << digits[r]
+        break if n < radix
         n = n / radix
       end
       if out.empty?
