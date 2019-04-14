@@ -64,4 +64,7 @@ class GlobalScope < Scope
   def lvaroffset
     0
   end
+
+  def include_module m
+  end
 end

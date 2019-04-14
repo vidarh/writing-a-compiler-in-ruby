@@ -340,7 +340,7 @@ def mock_preprocess(exp)
   c.compile(prog)
 end
 
-#include AST
+include AST
 
 def test_compiler
   e = Emitter.new
