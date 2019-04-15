@@ -8,3 +8,6 @@ examples/*
 publish
 *#
 .*
+vendor/*
+features/inputs/*
+out/*
