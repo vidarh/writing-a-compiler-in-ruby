@@ -629,7 +629,7 @@ class Array
     if idx < 0
       #FIXME: -idx does not work
       if 0 - idx > length
-        STDERR.puts "IndexError: index #{idx} too small for array; minimum #{-length}"
+        STDERR.puts("IndexError: index #{idx} too small for array; minimum #{-length}")
         exit(1)
       end
       idx = length + 1 + idx

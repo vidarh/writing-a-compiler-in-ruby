@@ -122,7 +122,7 @@ class String
   end
 
   def eql? other
-    self.== other
+    self.==(other)
   end
 
   def __copy_raw(str,len)
@@ -349,7 +349,7 @@ class String
   #
   def gsub(pattern, replacement)
     if pattern.length > 1
-      STDERR.puts "WARNING: String#gsub with strings longer than one character not supported"
+      STDERR.puts("WARNING: String#gsub with strings longer than one character not supported")
       exit(1/1)
     end
 

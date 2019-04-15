@@ -9,7 +9,6 @@ class File < IO
   end
 
   def initialize(path, mode = "r")
-    STDERR.puts "File.init: #{path.inspect}"
     %s(assign rpath (callm path __get_raw))
     %s(assign fd (open rpath 0))
     %s(perror 0)
@@ -54,7 +53,6 @@ class File < IO
   end
 
   def self.expand_path(path)
-    STDERR.puts "expand_path: '#{path}'"
     path
   end
 end

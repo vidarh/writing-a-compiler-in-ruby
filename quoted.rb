@@ -45,7 +45,10 @@ module Tokens
           if !block_given?
             STDERR.puts "WARNING: String interpolation requires passing block to Quoted.expect"
           else
-            ret ||= [:concat]
+            if !ret
+              ret = [:concat]
+            end
+            #ret ||= [:concat]
             ret << buf 
             buf = ""
             s.get

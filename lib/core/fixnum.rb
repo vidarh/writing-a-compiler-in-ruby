@@ -35,7 +35,7 @@ class Fixnum < Integer
 
   def to_s(radix=10)
     if radix < 2 || radix > 36
-      STDERR.puts "ERROR: Invalid radix #{radix.inspect} - must be between 2 and 36"
+      STDERR.puts("ERROR: Invalid radix #{radix.inspect} - must be between 2 and 36")
       1/0
     else
       out = ""

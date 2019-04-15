@@ -26,7 +26,7 @@ class Symbol
   end
 
   def eql? other
-    self.== other
+    self.==(other)
   end
 
   def to_s
@@ -41,11 +41,25 @@ class Symbol
     # FIXME: This is incomplete.
     # Ruby is massively annoying here - what gets printed without quotes depend
     # on what is parseable without quotes. For now I'm adding the rules needed
-    # to get identical output when parsing the compiler itself.
+    # to get identical output when parsing the compiler itself. But because of
+    # how we create symbols, it'd probably be "cheaper" to just define a flag and
+    # "pre-create" these symbols at compile time, since we'll be including either
+    # the strings or the code to detect them anyway, and now we're paying the cost
+    # on every Symbol#inspect
 
     return ":==" if @name == "=="
     return ":===" if @name == "==="
     return ":!=" if @name == "!="
+    return ":<=" if @name == "<="
+    return ":<=>" if @name == "<=>"
+    return ":>=" if @name == ">="
+    return ":>" if @name == ">"
+    return ":<" if @name == "<"
+    return ":<<" if @name == "<<"
+    return ":>>" if @name == ">>"
+    return ":-" if @name == "-"
+    return ":/" if @name == "/"
+    return ":%" if @name == "%"
 
     o = @name[0].ord
     if (o >= 97 && o <= 122) ||
