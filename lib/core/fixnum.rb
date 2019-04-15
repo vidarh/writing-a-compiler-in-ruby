@@ -40,6 +40,10 @@ class Fixnum < Integer
     else
       out = ""
       n = self
+      neg = self < 0
+      if neg
+        n = 0 - n
+      end
       digits = "0123456789abcdefghijklmnopqrstuvwxyz"
       while n != 0
         r = n % radix
@@ -49,6 +53,8 @@ class Fixnum < Integer
       end
       if out.empty?
         out = "0"
+      elsif neg
+        out << "-"
       end
       out.reverse
     end

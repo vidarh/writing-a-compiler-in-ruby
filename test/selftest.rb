@@ -103,6 +103,8 @@ def test_fixnum
   expect_eq((40 % 10).inspect, "0", "40 % 10 == 0")
   expect_eq(4096.to_s(10), "4096", "4096.to_s(10) => '4096'")
   expect_eq(4096.inspect, "4096", "4096.inspect => '4096'")
+  expect_eq("-4".to_i.to_s,"-4", "Converting -4 from a string to Fixnum and back")
+  expect_eq((-4).to_s,"-4", "Converting -4 to a string")
 end
 
 def test_array
@@ -263,6 +265,9 @@ def test_sexp_basics
   tree = sx.parse
 
   expect_eq(tree.inspect, "[:sexp, [:this, :is, :a, :test]]", "Parsing %s(this is a test)")
+
+  tree = SEXParser.new(mock_scanner("%s(index self -4)")).parse
+  expect_eq(tree.inspect, "[:sexp, [:index, :self, -4]]", "Parsing %s(index self -4)")
 end
 
 def test_tokenizer

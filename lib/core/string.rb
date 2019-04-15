@@ -209,12 +209,24 @@ class String
   end
 
   def to_i
+    num = 0
     i = 0
-    each_byte do |s|
-      return i if !(?0..?9).member?(s) 
-      i = i*10 + s - ?0
+    len = length
+    neg = false
+    if self[0] == ?-
+      neg = true
+      i+=1
     end
-    i
+    while i <  len
+      s = self[i]
+      break if !(?0..?9).member?(s)
+      num = num*10 + s - ?0
+      i = i + 1
+    end
+    if neg
+      return num * (-1)
+    end
+    return num
   end
 
   def slice!(b,e)
