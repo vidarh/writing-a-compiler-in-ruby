@@ -288,6 +288,10 @@ def test_tokenizer
 #  p ar
 end
 
+def test_methodname_tokenizer
+  s = mock_scanner("__flag=x")
+  expect_eq(Tokens::Methodname.expect(s).inspect, ":__flag=", "__flag= is a legal method name")
+end
 
 def mock_shunting(str)
   s = mock_scanner(str)
