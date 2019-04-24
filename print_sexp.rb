@@ -12,6 +12,7 @@ class SexpPrinter
     @indent = 2
     @col = 0
     @maxcol = 140
+    @brk = 105 # @maxcol * 3 / 4
     @line = 0
 
     @prune = opts[:prune]
@@ -34,8 +35,14 @@ class SexpPrinter
 
   def puts str = ""
     str = str.to_s
-    print str if str != ""
-    @out.puts if str[-1] != ?\n && @col > 0
+    if str != ""
+      print str
+      # FIXME: The "ord" here is necessary because the compiler
+      # itself currently still uses (very) old semantics for string indices.
+      @out.puts if str[-1].ord != ?\n
+    else
+      @out.puts
+    end
     @col = 0
     @line += 1
   end
@@ -51,7 +58,7 @@ class SexpPrinter
     if node.is_a?(Array)
       # FIXME: Changed from @maxcol * 0.7 as compiler currently does not
       # support Float.
-      puts if @col > @maxcol * 3 / 4 or
+      puts if @col > @brk or
         @col > 0 && [:defun,:defm,:class,:if,:let].include?(node.first)
       print "("
       old_line = @line
