@@ -346,12 +346,12 @@ class Emitter
       return reg
     end
 
-    comment("RA: Already cached '#{reg.to_s}' for #{var}") if reg
+    #comment("RA: Already cached '#{reg.to_s}' for #{var}") if reg
     return reg if reg
     reg = @allocator.cache_reg!(var)
-    comment("RA: No available register for #{var}") if !reg
+    #comment("RA: No available register for #{var}") if !reg
     return nil if !reg
-    comment("RA: Allocated reg '#{reg.to_s}' for #{var}")
+    #comment("RA: Allocated reg '#{reg.to_s}' for #{var}")
     comment([atype,aparam,reg].inspect)
     load(atype,aparam,reg)
     return reg
@@ -363,7 +363,7 @@ class Emitter
 
   def evict_regs_for(vars)
     evicted = @allocator.evict(vars)
-    comment("RA: Evicted #{evicted.join(",")}") if !evicted.empty?
+    #comment("RA: Evicted #{evicted.join(",")}") if !evicted.empty?
   end
 
   def with_register(required_reg = nil)
