@@ -14,11 +14,7 @@ class TrueClass
   end
 
   def == other
-    if other
-      true
-    else
-      false
-    end
+    %s(if (eq other true) true false)
   end
 end
 

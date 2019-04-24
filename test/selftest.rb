@@ -306,9 +306,9 @@ def test_shunting
 end
 
 
-def mock_parse(str)
+def mock_parse(str, require_core = false)
   parser = Parser.new(mock_scanner(str))
-  parser.parse(false)
+  parser.parse(require_core)
 end
 
 def test_exp(exp, result)
@@ -341,14 +341,21 @@ def test_depth_first
     msg_fail("Testing depth_first","not to get here", "here")
   end
   msg_pass("depth_first","to get here")
+
+  prog = [:if, [:a, :b], [:do, :c]]
+  out = []
+  prog.depth_first do |e|
+    out << e
+  end
+  expect_eq(out.inspect, [[:if, [:a, :b], [:do, :c]], [:a, :b], [:do, :c]].inspect, "#depth_first should descent into each array")
 end
 
 def mock_preprocess(exp)
-  prog = mock_parse(exp)
-  e = Emitter.new
-  c = Compiler.new(e)
-  c.preprocess(prog)
-  c.compile(prog)
+  prog = mock_parse(exp, false)
+  #e = Emitter.new
+  #c = Compiler.new(e)
+  #c.preprocess(prog)
+  #c.compile(prog)
 end
 
 include AST
