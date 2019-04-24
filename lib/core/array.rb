@@ -237,6 +237,7 @@ class Array
      # This is an inefficient first pass vs. allocating sufficient capacity
      # and copying straight over, but will do for now.
      tmp = Array.new
+
      while start <= xend
        tmp << self[start]
        start += 1
@@ -619,7 +620,13 @@ class Array
   # Replaces the contents of self with the contents of other_array,
   # truncating or expanding if necessary.
   def replace(other_array)
-    %s(puts "Array#replace not implemented")
+    # FIXME: Initial, crude, slow version.
+
+    # Truncate current version, without resetting capacity.
+    %s(assign @len 0)
+
+    # Copy other_array.
+    other_array.each {|item| self << item }
   end
 
 
@@ -794,13 +801,6 @@ class Array
   # Also see Enumerable#reject.
   def reject!
     %s(puts "Array#reject! not implemented")
-  end
-
-
-  # Replaces the contents of self with the contents of other_array,
-  # truncating or expanding if necessary.
-  def replace(other_array)
-    %s(puts "Array#replace not implemented")
   end
 
 
