@@ -3,10 +3,42 @@
 
 Source for my series on writing a compiler in Ruby.
 
-See http://www.hokstad.com/compiler
+See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete. 
 
+
+## Status as of April 24th 2019
+
+This is *all new* as of April, as I finally started playing with it again:
+
+ * When compiling the compiler with itself with a slightly modified driver, it successfully parses all of itself and produces identical output to when run under MRI. This does not mean the parse is complete (it absolutely is not), or bug free - it means the parser acts correctly on the very specific subset of expressions currently present in the compiler itself.
+ * The AST transformation steps (in transform.rb) up to but not including `rewrite_strcont` gives identical results under the compiler itself and MRI, the differences for the remaining four rewrites appears to be down to bugs/missing pieces in the standard library rather than the compiler itself (but we'll see).
+ * Status of the bootstrapped compilers ability to run the code generation step is currently largely unknown; I believe it likely to fail and need fixes, but I don't get a realistic test until the transform steps all work, however experience bringing the parser and transform steps up suggests most bugs at this point are missing pieces in the standard library, which are generally quick to fix, rather than bugs in the code generation itself, so I expect getting this to work to be fairly quick.
+ 
+ * Compiling the compiler with itself under MRI produces a binary that runs through a substantial portion of the full compilation, but eventually does fail.
+ 
+ * I have a GC under preparation (it is working, but I need to put some effort into cleaning things up); **A new blog post or two that covers integration of the GC is coming as a continuation of the original series**
+
+Assuming I get time to continue current progress, the compiler should fully compile itself and the compiled version should be able to compile itself by summer.
+Before getting too excited about trying to use it for other things, however, note:
+
+ * The compiler itself carefully avoids known missing functionality, and/or I work around some during testing the bootstrap. The big ones:
+   * ARGV (used by the compiler; when testing bootstrapping I currently hardcode options)
+   * Exceptions (used by the compiler, but only begin/rescue causes problems and that's only used once; commented out for testing)
+   * Regexp (not used by the compiler)
+   * Float (not used by the compiler)
+ * The compiler code is littered with workarounds for specific bugs (they're not consistently marked, but `FIXME` will include all of the workarounds for compiler bugs and more).
+ * The GC mentioned above is very simple and not well suited for the sheer amount of objects currently allocated. It needs a number of improvements to handle many small objects, and the compiler needs additional work to reduce the number of objects created.
+
+Once the compiler is bootstrapped w/workarounds, my next steps are:
+
+ * Add support for for ARGV
+ * Add support for exceptions (prob. worth a blog post)
+ * Go through the current FIXME's and explicitly check which are still relevant (some have likely been fixed as a result of other bug fixes); add test cases, and fix them in turn.
+ * Make [mspec](https://github.com/ruby/mspec) compile
+ * Make [the Ruby Spec Suite](https://github.com/ruby/spec) run, and cry over how large parts of it will fail.
+ * Some of the GC improvements mentioned above.
 
 
 ## Caveats
@@ -58,4 +90,3 @@ loaded. Currently this is not supported.
 It is likely that for compatibility a limited subset of Ruby
 will be *interpreted* at compile time to support some forms
 of this pattern. See also "require"
-
