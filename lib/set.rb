@@ -18,6 +18,10 @@ class Set
     @set = Hash.new # Told you it was dirty
   end
 
+  def size
+    @set.size
+  end
+
   # FIXME: Belongs in Enumerable
   def select
     a = []

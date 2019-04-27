@@ -154,6 +154,10 @@ class Hash
     @length
   end
 
+  def size
+    @length
+  end
+
   def to_a
     a = []
     each do |k,v|
