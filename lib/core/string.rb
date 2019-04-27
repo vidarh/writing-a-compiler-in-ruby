@@ -114,6 +114,11 @@ class String
     %s(__get_fixnum c)
   end
 
+  def []= pos, str
+    STDERR.puts("ERROR: String#[]= NOT IMPLEMENTED YET; Called with (#{pos},'#{str}')")
+    0/0
+  end
+
   def == other
     s = other.is_a?(String)
     return false if !s
