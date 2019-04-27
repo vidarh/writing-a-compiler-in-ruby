@@ -7,6 +7,11 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete. 
 
+## Status as of April 27th 2019
+
+The AST transformation steps now succeeds up to and including `rewrite_operators`, which means only `rewrite_let_env` is currently failing.
+However `rewrite_let_env` is a complicated mess, and also one I've been changing as part of the GC work, so might use this point to commit
+and wrap up my GC article before I fix this bug. Once this bug is fixed, the next step is to get the actual code generation step working.
 
 ## Status as of April 24th 2019
 
