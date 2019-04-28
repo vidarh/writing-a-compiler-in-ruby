@@ -342,7 +342,9 @@ class Array
 
   # Removes all elements from self.
   def clear
-    %s(puts "Array#clear not implemented")
+    # FIXME: consider whether to actually shrink
+    %s(assign @len 0)
+    self
   end
 
 
