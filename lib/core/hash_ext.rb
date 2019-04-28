@@ -25,6 +25,10 @@ class Hash
     h
   end
 
+  def sort_by
+    to_a.sort_by {|pair| yield(pair[0], pair[1]) }
+  end
+
   def inspect
     str = "{"
     first = true
