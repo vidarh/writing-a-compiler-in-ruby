@@ -400,23 +400,6 @@ class Compiler
     return Value.new([:subexpr])
   end
 
-  # Compiles an anonymous function ('lambda-expression').
-  # Simply calls compile_defun, only, that the name gets generated
-  # by the emitter via Emitter#get_local.
-  def compile_lambda(scope, args=nil, body=nil)
-    e = @e.get_local
-    body ||= []
-    args ||= []
-    # FIXME: Need to use a special scope object for the environment,
-    # including handling of self. 
-    # Note that while compiled with compile_defun, the calling convetion
-    # is that of a method. However we have the future complication of
-    # handling instance variables in closures, which is rather painful.
-    r = compile_defun(scope, e, [:self,:__closure__]+args,[:let,[]]+body)
-    r
-  end
-
-
   def compile_stackframe(scope)
     @e.comment("Stack frame")
     Value.new([:reg,:ebp])
@@ -443,18 +426,6 @@ class Compiler
     @e.evict_all
     return Value.new([:subexpr])
   end
-
-  # To compile `proc`, and anonymous blocks
-  # See also #compile_lambda
-  def compile_proc(scope, args=nil, body=nil)
-    e = @e.get_local
-    body ||= []
-    args ||= []
-
-    r = compile_defun(scope, e, [:self,:__closure__]+args,[:let,[]]+body, scope.break_label)
-    r
-  end
-
 
   # Compiles and evaluates a given argument within a given scope.
   def compile_eval_arg(scope, arg)
