@@ -128,9 +128,6 @@ module Tokens
       @parser = parser
       @keywords = Keywords.dup
       @lastop = false
-
-      # FIXME: Auto-nil instance variables that are not present in initialize
-      @last = nil
     end
 
     def each
