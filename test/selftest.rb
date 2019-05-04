@@ -374,6 +374,16 @@ def test_compiler
 
   expect_eq("[[:foo], #<Set: {:arg}>]", r.inspect, "Compiler#find_vars")
   mock_preprocess("a = 42")
+  prog = mock_parse("def __flag=x\n    42\n  end\n")
+  expect_eq(prog.inspect, "[:do, [:defm, :__flag=, [:x], [42]]]", "Parse 'def __flag=(x)' without leaving out the =")
+  # FIXME: The way this gets rewritten is awful, but this test does cover the current correct behaviour
+  prog = mock_parse("\"\#{'foo'}\#{'bar'}\"")
+  c = Compiler.new(e)
+  c.rewrite_concat(prog)
+  expect_eq(prog.inspect, [:do, [:callm, [:callm, [:callm, [:callm, "", :to_s], :concat, [[:callm, "foo", :to_s]]], :concat, [[:callm, "", :to_s]]], :concat, [[:callm, "bar", :to_s]]]].inspect, "concat => callm")
+  c = Compiler.new(e)
+  c.rewrite_concat(prog)
+  expect_eq(prog.inspect, [:do, [:if, [:<, :a, 2], [:do, [:callm, :STDERR, :puts, [[:callm, [:callm, [:callm, "a ", :to_s], :concat, [[:callm, :b, :to_s]]], :concat, [[:callm, " c", :to_s]]]]]]]].inspect, "concat => callm (2)")
 end
 
 
