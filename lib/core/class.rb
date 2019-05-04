@@ -161,6 +161,7 @@ class Class
     %s(printf "attr_reader %s\n" (callm (callm sym to_s) __get_raw))
     define_method sym do
 #       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
+      nil
     end
   end
 
