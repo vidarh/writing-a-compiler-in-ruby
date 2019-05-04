@@ -88,7 +88,9 @@ def col(num)
 end
 
 def msg_pass(message, right)
-  puts "#{col(2)}PASS#{col(7)}: #{message} [expected/got #{right.inspect}]"
+#  if !$quiet
+#    puts "#{col(2)}PASS#{col(7)}: #{message} [expected/got #{right.inspect}]"
+#  end
 end
 
 def msg_fail(message, left,right)
