@@ -5,28 +5,54 @@ Source for my series on writing a compiler in Ruby.
 
 See <http://www.hokstad.com/compiler>
 
-**NOTE** This is still wildly incomplete. 
+**NOTE** This is still wildly incomplete.
 
-## Status as of April 27th 2019
+## Status as of May 4th 2019
 
-The AST transformation steps now succeeds up to and including `rewrite_operators`, which means only `rewrite_let_env` is currently failing.
-However `rewrite_let_env` is a complicated mess, and also one I've been changing as part of the GC work, so might use this point to commit
-and wrap up my GC article before I fix this bug. Once this bug is fixed, the next step is to get the actual code generation step working.
-
-## Status as of April 24th 2019
+(see commit history for README.md for past updates; I will consolidate this regularly to be current
+state only)
 
 This is *all new* as of April, as I finally started playing with it again:
 
- * When compiling the compiler with itself with a slightly modified driver, it successfully parses all of itself and produces identical output to when run under MRI. This does not mean the parse is complete (it absolutely is not), or bug free - it means the parser acts correctly on the very specific subset of expressions currently present in the compiler itself.
- * The AST transformation steps (in transform.rb) up to but not including `rewrite_strcont` gives identical results under the compiler itself and MRI, the differences for the remaining four rewrites appears to be down to bugs/missing pieces in the standard library rather than the compiler itself (but we'll see).
- * Status of the bootstrapped compilers ability to run the code generation step is currently largely unknown; I believe it likely to fail and need fixes, but I don't get a realistic test until the transform steps all work, however experience bringing the parser and transform steps up suggests most bugs at this point are missing pieces in the standard library, which are generally quick to fix, rather than bugs in the code generation itself, so I expect getting this to work to be fairly quick.
- 
- * Compiling the compiler with itself under MRI produces a binary that runs through a substantial portion of the full compilation, but eventually does fail.
- 
- * I have a GC under preparation (it is working, but I need to put some effort into cleaning things up); **A new blog post or two that covers integration of the GC is coming as a continuation of the original series**
+ * When compiling the compiler with itself with a slightly modified driver,
+ it successfully parses all of itself and produces identical output to when
+ run under MRI. This does not mean the parse is complete (it absolutely is not),
+ or bug free - it means the parser acts correctly on the very specific subset
+ of expressions currently present in the compiler itself.
+ * The AST transformation steps (in transform.rb) gives identical results
+ under the compiler itself and MRI.
+ * The bootstrapped compiler does currently fail during code generation.
+ Based on experience getting transform.rb working, it appears likely this is
+ down to problems with lowering method arguments into a closure (compiler bug).
+ It is likely I will also find missing parts of the standard library to fill in
+ * I have a GC under preparation (it is working, but I need to put some effort
+ into cleaning things up); **A new blog post or two that covers integration of the GC is coming as a continuation of the original series**
+ (currently I'm unsure if I'll finish that before or after making the bootstrapped
+ compiler at least compile a "hello world"; depends how many problems I run into
+ with that)
 
-Assuming I get time to continue current progress, the compiler should fully compile itself and the compiled version should be able to compile itself by summer.
-Before getting too excited about trying to use it for other things, however, note:
+Assuming I get time to continue current progress, the compiler should fully compile
+itself and the compiled version should be able to compile itself by summer.
+
+(to make that clear, what I want to get to is:
+
+ 1. Run the compiler source with MRI on its own source to produce a "compiler1" that is a native i386 binary
+ 2. Run "compiler1" with its own source as input to produce a "compiler2"
+ 3. Run "compiler2" with its own source as input to produce a "compiler3"
+
+Currently step 1 "works" to the extent that it produces a binary, but that binary has bugs, and so
+fails to produce a compiler2. To complete the bootstrap process I need it to complete the compile
+and produce a binary, but I *also* need that binary to be correct. I can part-validate that by comparing
+it to "compiler1" - they should have identical assembler source, but the best way of validating it
+fully is to effectively repeat step 2, but with "compiler2" as the input, and verify that "compiler2"
+and "compiler3" are identical, to validate the entire end-to-end process. This may seem paranoid,
+but once step2 works the point is step3 *should* be trivial, so there's no point in not taking
+that extra step.
+
+)
+
+
+### Before getting too excited about trying to use the compiler at the point when it bootstraps fully, note:
 
  * The compiler itself carefully avoids known missing functionality, and/or I work around some during testing the bootstrap. The big ones:
    * ARGV (used by the compiler; when testing bootstrapping I currently hardcode options)
@@ -34,7 +60,9 @@ Before getting too excited about trying to use it for other things, however, not
    * Regexp (not used by the compiler)
    * Float (not used by the compiler)
  * The compiler code is littered with workarounds for specific bugs (they're not consistently marked, but `FIXME` will include all of the workarounds for compiler bugs and more).
- * The GC mentioned above is very simple and not well suited for the sheer amount of objects currently allocated. It needs a number of improvements to handle many small objects, and the compiler needs additional work to reduce the number of objects created.
+ * The GC mentioned above is very simple and not well suited for the sheer amount
+ of objects currently allocated. It needs a number of improvements to handle
+ many small objects, and the compiler needs additional work to reduce the number of objects created.
 
 Once the compiler is bootstrapped w/workarounds, my next steps are:
 
