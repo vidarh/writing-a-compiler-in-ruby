@@ -1,5 +1,5 @@
 IMAGE=ruby-compiler-buildenv
-DR=docker run --rm -t -i -v ${PWD}:/app ${IMAGE}
+DR=docker run --rm -ti --privileged -v ${PWD}:/app ${IMAGE}
 all: compiler
 
 clean:
@@ -23,6 +23,9 @@ valgrind: selftest
 
 buildc: Dockerfile
 	docker build -t ${IMAGE} .
+
+buildc-nocache: Dockerfile
+	docker build --no-cache -t ${IMAGE} .
 
 cli:
 	${DR} /bin/bash -l
