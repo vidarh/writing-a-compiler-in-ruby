@@ -368,10 +368,8 @@ def test_compiler
   args = Set.new
   args << :arg
   scopes = [args]
-  
-  # FIXME: find_vars seg faults; find_vars2 doesn't
-  r = c.find_vars(exp,scopes,Set.new, Hash.new(0))
 
+  r = c.find_vars(exp,scopes,Set.new, Hash.new(0))
   expect_eq("[[:foo], #<Set: {:arg}>]", r.inspect, "Compiler#find_vars")
   mock_preprocess("a = 42")
   prog = mock_parse("def __flag=x\n    42\n  end\n")
