@@ -9,6 +9,12 @@ clean:
 compiler: *.rb
 	./compile driver.rb -I . -g
 
+compiler2: *.rb
+	./compile driver2.rb -I . -g
+
+compiler2b: *.rb
+	./compile driver2.rb -I .
+
 push:
 	git push origin master
 
