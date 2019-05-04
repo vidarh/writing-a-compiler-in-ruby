@@ -89,11 +89,9 @@ class Array
   end
 
   # FIXME: Cut and paste from Enumerable
-  def each_with_index
-    i = 0
-    self.each do |item|
-      yield(item, i)
-      i += 1
+  def each_with_index(&block)
+    self.each_index do |i|
+      block.call(self[i], i)
     end
   end
 
@@ -609,11 +607,20 @@ class Array
   # Returns the index of the first object in self such that is == to obj.
   # Returns nil if no match is found.
   def index(obj)
-    self.each_with_index do |item, idx|
-      if item == obj
-        return index
+    i = 0
+    l = length
+    while (i < l)
+      if self[i] == obj
+        return i
       end
+      i+=1
     end
+    # FIXME: This seems to fail when compiling the compiler.
+    #self.each_with_index do |item, idx|
+    #  if item == obj
+    #    return index
+    #  end
+    #end
 
     return nil
   end
