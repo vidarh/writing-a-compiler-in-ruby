@@ -197,9 +197,9 @@ class Compiler
   # but it makes me a lot happier when debugging the asm.
   def clean_method_name(name)
     dict = {
-      "?" => "__Q",     "!"  => "__X", 
-      "[]" => "__NDX",  "==" => "__eq",  
-      ">=" => "__ge",   "<=" => "__le", 
+      "?" => "__Q",     "!"  => "__X",
+      "[]" => "__NDX",  "==" => "__eq",
+      ">=" => "__ge",   "<=" => "__le",
       "<"  => "__lt",   ">"  => "__gt",
       "/"  => "__div",  "*"  => "__mul",
       "+"  => "__plus", "-"  => "__minus"}
@@ -253,7 +253,7 @@ class Compiler
   def compile_deref(scope, left, right)
     cscope = scope.find_constant(left)
     if !cscope || !cscope.is_a?(ModuleScope)
-      error("Unable to resolve: #{left}::#{right} statically (FIXME)",scope) 
+      error("Unable to resolve: #{left}::#{right} statically (FIXME)",scope)
     end
     get_arg(cscope,right)
   end
@@ -309,7 +309,7 @@ class Compiler
     return Value.new([:subexpr],type)
   end
 
-  # Compiles the ternary if form (cond ? then : else) 
+  # Compiles the ternary if form (cond ? then : else)
   # It may be better to transform this into the normal
   # if form in the tree.
   def compile_ternif(scope, cond, alt)
@@ -539,7 +539,7 @@ class Compiler
   # (which doesn't really matter to the compiler, just the parser
   # - what matters is that if it stands on it's own it will be
   # "executed" immediately; otherwise it should be treated like
-  # a :lambda more or less. 
+  # a :lambda more or less.
   #
   # FIXME: Since we don't implement "rescue" yet, we'll just
   # treat it as a :do, which is likely to cause lots of failures
@@ -622,7 +622,7 @@ class Compiler
   end
 
   # Put at the start of a required file, to allow any special processing
-  # before/after 
+  # before/after
   def compile_required(scope,exp)
     @e.include(exp.position.filename) do
       v = scope.get_arg(:__FILE__)
@@ -724,7 +724,7 @@ class Compiler
     exp.depth_first(:class) { |c| classes += 1; :skip }
     #warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
-  
+
   # When we hit a vtable slot for a method that doesn't exist for
   # the current object/class, we call method_missing. However, method
   # missing needs the symbol of the method that was being called.

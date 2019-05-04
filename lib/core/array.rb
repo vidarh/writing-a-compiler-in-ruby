@@ -884,7 +884,7 @@ class Array
         falseArr << e
       end
     end
-    
+
     [trueArr,falseArr]
   end
 
@@ -906,7 +906,7 @@ class Array
 
     left  = part[0].sort_by(&block)
     right = part[1].sort_by(&block)
-    
+
     left + [pivot_el] + right
   end
 
@@ -930,7 +930,7 @@ class Array
 
     left  = part[0].sort
     right = part[1].sort
-    
+
     left + [pivot] + right
   end
 

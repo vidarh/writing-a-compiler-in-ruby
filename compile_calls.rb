@@ -33,7 +33,7 @@ class Compiler
 
     if dynamic_adj
       # Always dynamically adjust the stack based on %ebx for method calls
-      # (as opposed to C-library calls) due to potential of hitting a 
+      # (as opposed to C-library calls) due to potential of hitting a
       # method_missing thunk or anything else that might mess around with the
       # argument list before returning from the call.
       @e.comment("Static adj: #{adj}")
@@ -63,7 +63,7 @@ class Compiler
       l = @e.get_local
 
       # If Array class ptr has not been allocated yet:
-      @e.je(l) 
+      @e.je(l)
 
       @e.loop do |br|
         @e.testl(splatcnt, splatcnt)
@@ -217,7 +217,6 @@ class Compiler
   def load_super(scope)
     @e.load_instance_var(:eax, 3)
   end
-                
 
   # if we called a method on something other than self,
   # or a function, we have or may have clobbered %esi,
@@ -313,8 +312,8 @@ class Compiler
         # solves some register invalidation problems,
         # so commenting out for now.
 #        if ob != :self
-          @e.comment("Evicting self") 
-          @e.evict_regs_for(:self) 
+          @e.comment("Evicting self")
+          @e.evict_regs_for(:self)
 #        end
       end
     end

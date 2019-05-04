@@ -5,7 +5,7 @@
 class ArrayOutput
   attr_reader :output
 
-  def initialize 
+  def initialize
     @output = []
   end
 
@@ -24,4 +24,3 @@ class ArrayOutput
     @output << [:export,label,type]
   end
 end
-
