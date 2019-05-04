@@ -31,7 +31,7 @@
   ob
 ))
 
-# __set_vtable
+# # __set_vtable
 #
 # Set the vtable entry. If a subclass has *not*
 # overridden a method, then propagate the override 
@@ -42,12 +42,14 @@
 # Most of this could be turned into pure Ruby. The
 # code is roughly equivalent to this "pseudo-Ruby":
 #
+#```ruby
 #   p = vtable.subclasses
 #   while p
 #      if p[off] == vtable[off]; __set_vtable(p,off,ptr); end
 #      p = p.next_sibling
 #   end
 #   vtable[off] = ptr
+#```
 #
 %s(defun __set_vtable (vtable off ptr)
    (let (p) 
@@ -82,7 +84,7 @@ class Class
   end
 
   # Clients that need to be able to allocate a completely clean-slate empty
-  # object, should call <tt>__alloc</tt>.
+  # object, should call <tt>allocate</tt>.
   #
   def allocate
     %s(assign ob (__array @instance_size))

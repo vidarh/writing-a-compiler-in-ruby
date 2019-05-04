@@ -57,7 +57,7 @@ end
 # call Array.new in the splat handling, since that's actually
 # Class.new.
 #
-# This also means that Array#initialize *can not* allocate objects,
+# This also means that `Array#initialize` *can not* allocate objects,
 # which may be / is a complication, as it means it can not even assign
 # integers. At the moment I've partially untangled this by changing
 # Array#initialize to use %s(...), but while that may be more efficient,
