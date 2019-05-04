@@ -182,8 +182,22 @@ def test_array
   expect_eq(a[1].inspect, "nil", "[:stackframe][1] should return nil")
   expect_eq(a[-1].inspect, ":stackframe", "[:stackframe][-1] should return :stackframe")
   expect_eq(a[1..-1].inspect, "[]", "[:stackframe][1..-1] should return []")
+
+  expect_eq(([:a] - [:a]).inspect, "[]", "Subtracting identical arrays should return []")
+  expect_eq(([:a, :b, :c] - [:b]).inspect, "[:a, :c]", "Subtracting part of an array should return the rest")
 end
 
+def test_set
+  s = Set.new
+  s << :a
+  s << :b
+  s << :c
+  a = [:foo, :a]
+
+  expect_eq((s - a).inspect, "#<Set: {:b, :c}>", "Subtracting an array from a Set")
+  c = [:c]
+  expect_eq((s - a - c).inspect, "#<Set: {:b}>", "Chained subtration of arrays from a Set")
+end
 
 def test_hash
 
@@ -290,8 +304,6 @@ def test_tokenizer
   while tok = t.get and tok[0]
     ar << tok
   end
-  p ar
-#  p ar
 end
 
 def test_methodname_tokenizer
@@ -335,6 +347,12 @@ def test_parser
   test_exp("def foo; name.gsub(foo.bar) { }; end ","[:do, [:defm, :foo, [], [[:callm, :name, :gsub, [[:callm, :foo, :bar]], [:proc]]]]]")
   test_exp('STDERR.puts "defm: #{args.inspect}"', "[:do, [:callm, :STDERR, :puts, [[:concat, \"defm: \", [:callm, :args, :inspect]]]]]")
   test_exp("self.== other","[:do, [:callm, :self, :==, :other]]")
+
+  # Testing basic operator associativity.
+  test_exp("a - b - c","[:do, [:-, [:-, :a, :b], :c]]")
+  test_exp("a + b + c","[:do, [:+, [:+, :a, :b], :c]]")
+  test_exp("a * b * c","[:do, [:*, [:*, :a, :b], :c]]")
+  test_exp("a / b / c","[:do, [:/, [:/, :a, :b], :c]]")
 end
 
 def test_destructuring
@@ -405,6 +423,7 @@ end
 
 test_fixnum
 test_array
+test_set
 test_hash
 test_mockio
 test_scannerstring

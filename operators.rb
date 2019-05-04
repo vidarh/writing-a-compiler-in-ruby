@@ -87,7 +87,7 @@ Operators = {
   "||"        => Oper.new(  6, :or,       :infix),
 
   "!"         => Oper.new(  8, :"!",      :prefix),
-  "<<"        => Oper.new(  8, :<<,       :infix),
+  "<<"        => Oper.new(  8, :<<,       :infix, 2, 2, :left),
 
   "<"         => Oper.new(  9, :"\<",       :infix),
   "<="        => Oper.new(  9, :"<=",       :infix),
@@ -98,18 +98,18 @@ Operators = {
   "!="        => Oper.new(  9, :"!=",       :infix),
   "<=>"       => Oper.new(  9, :"<=>",      :infix),
 
-  "+"         => Oper.new( 10, :+,      :infix),
+  "+"         => Oper.new( 10, :+,      :infix, 2, 2, :left),
   "-"         => {
-    :infix_or_postfix  => Oper.new( 10, :-,      :infix),
+    :infix_or_postfix  => Oper.new( 10, :-,      :infix, 2, 2, :left),
     :prefix => Oper.new( 20, :-,      :prefix)
   },
   "%"         => {
     :infix_or_postfix => Oper.new( 20, :"%",      :infix),
     :prefix => Oper.new( 20, :quoted_exp, :prefix)
   },
-  "/"         => Oper.new( 20, :/,      :infix),
+  "/"         => Oper.new( 20, :/,      :infix, 2, 2, :left),
   "*"         => {
-    :infix_or_postfix => Oper.new( 20, :"*",   :infix),
+    :infix_or_postfix => Oper.new( 20, :"*",   :infix, 2, 2, :left),
     :prefix           => Oper.new( 8, :splat, :prefix)
   },
 
@@ -142,4 +142,3 @@ Operators = {
 
 # Operators that are allowed as method names
 OPER_METHOD = %w{=== []= [] == <=> <= >= ** << >> != !~ =~ ! ~ + - * / % & | ^ < >}
-

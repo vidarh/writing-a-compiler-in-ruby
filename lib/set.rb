@@ -96,9 +96,7 @@ class Set
   end
 
   def - other
-    select do |item| 
-      !other.include?(item)
-    end
+    Set.new + select {|item| !other.include?(item) }
   end
 
   def delete key
