@@ -88,6 +88,10 @@ class Class
   #
   def allocate
     %s(assign ob (__array @instance_size))
+    %s(if (eq ob 0) (do
+      (printf "FATAL: Failed to allocate object of size %ld, class %s\n" (mul 4 @instance_size) (index self 2))
+      (div 0 0)
+    ))
     %s(assign (index ob 0) self)
     ob
   end
