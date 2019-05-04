@@ -85,7 +85,7 @@ class Symbol
   # any symbol encountered in the source text, and store the result.
   def self.__get_symbol(name)
     sym = @@symbols[name]
-    if sym.nil? ## FIXME: Doing !sym instead fails w/method missing
+    if !sym
       sym = Symbol.new(name)
       @@symbols[name] = sym
     end
@@ -94,4 +94,3 @@ class Symbol
 end
 
 %s(defun __get_symbol (name) (callm Symbol __get_symbol ((__get_string name))))
-
