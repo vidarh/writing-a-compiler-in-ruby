@@ -20,6 +20,10 @@
 #    /tmp/selftest
 #
 
+# FIXME: At some point globals seems to have broken.
+# Don't output PASS's
+# $quiet = true
+
 require 'scanner'
 require 'parserbase'
 require 'sym'
