@@ -405,6 +405,7 @@ test_atom
 test_respond_to
 test_sexp_basics
 test_tokenizer
+test_methodname_tokenizer
 test_shunting
 test_parser
 test_destructuring
