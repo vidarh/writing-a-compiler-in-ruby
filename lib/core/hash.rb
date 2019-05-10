@@ -108,18 +108,21 @@ class Hash
 
     capacity_too_low if @capacity <= @length
 
-    @length = @length + 1
-
     slot = _find_slot(key)
+    new = @data[slot].nil?
+    if new
+      @length = @length + 1
+    end
+
+    @data[slot+1] = value
+    return if !new
 
     @data[slot]   = key
-    @data[slot+1] = value
-
     # Maintain insertion order:
     if @last
       @data[@last+2] = slot
     end
-    if !@first
+    if @first.nil?
       @first = slot
     end
     @data[slot+2] = nil
