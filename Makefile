@@ -20,8 +20,15 @@ push:
 
 .PHONY: selftest
 
+# To validate that the test completes under MRI.
+# failures under MRI implies the code does something wrong,
+selftest-mri:
+	@echo "== Selftest with MRI:"
+	${DR} ruby -I. test/selftest.rb
+
 selftest:
 	./compile test/selftest.rb -I . -g
+	@echo "== Compiled:"
 	${DR} ./out/selftest
 
 valgrind: selftest
