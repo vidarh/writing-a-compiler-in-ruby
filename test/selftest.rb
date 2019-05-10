@@ -416,6 +416,63 @@ def test_compiler
   c = Compiler.new(e)
   c.rewrite_concat(prog)
   expect_eq(prog.inspect, [:do, [:if, [:<, :a, 2], [:do, [:callm, :STDERR, :puts, [[:callm, [:callm, [:callm, "a ", :to_s], :concat, [[:callm, :b, :to_s]]], :concat, [[:callm, " c", :to_s]]]]]]]].inspect, "concat => callm (2)")
+
+  dummypos = Scanner::Position.new("test", 1,1)
+
+  c = Compiler.new
+  prog = mock_parse('
+    each_byte do |c|
+      h = h * 33 + c
+    end
+  ')
+  p prog
+  res = c.find_vars(prog, [[:h]], Set.new, Hash.new(0))
+  expect_eq(res.inspect, "[[], #<Set: {:h}>]", "find_vars should identify all variables in a proc")
+
+  c = Compiler.new
+  prog = mock_parse('
+    with_register_for do
+      @e.save_result(scope,right)
+    end
+  ')
+  p prog
+  res = c.find_vars(prog, [[:scope, :left, :right]], Set.new, Hash.new(0))
+  expect_eq(res.inspect, "[[:left], #<Set: {:scope, :right}>]", "find_vars_should identify all variables in a proc")
+
+  c = Compiler.new
+  prog = mock_parse('
+    with_register_for do
+      @e.save_result(foo(scope,right))
+    end
+  ')
+
+  res = c.find_vars(prog[1][3][2][0][3], [[:scope, :left, :right]], Set.new, Hash.new(0), true)
+  expect_eq(res.inspect, "[[:left], #<Set: {:scope, :right}>]", "find_vars_should identify all variables in a proc")
+
+  p prog[1][3][2]
+  res = c.find_vars(prog[1][3][2], [[:scope, :left, :right]], Set.new, Hash.new(0), true)
+  expect_eq(res.inspect, "[[:left], #<Set: {:scope, :right}>]", "find_vars_should identify all variables in a proc [x]")
+
+  c = Compiler.new(e)
+  prog = [[:call, :p, [:arg, :arg2]]]
+  res = c.find_vars(prog, [[:arg,:arg2], Set.new], Set.new, Hash.new(0), true)
+  expect_eq(res.inspect, "[[], #<Set: {:arg, :arg2}>]", "find_vars should identify all variables in a proc")
+
+  prog = E[E[dummypos,:proc, [], [[:call, :p, [:arg, :arg2]]]]]
+  res = c.find_vars(prog, [[:arg,:arg2]], Set.new, Hash.new(0))
+  expect_eq(res.inspect, "[[], #<Set: {:arg, :arg2}>]", "find_vars should identify all variables references in method body")
+
+  c = Compiler.new(e)
+  prog = E[:defm, :foo, E[:arg, :arg2], E[E[dummypos,:proc, [], [[:call, :p, [:arg, :arg2]]]]]]
+  c.rewrite_let_env(prog)
+
+  prog2 = E[:defm, :foo, E[:arg, :arg2], E[E[dummypos,:proc, [], [:arg, [:call, :p, [:arg, :arg2]]]]]]
+  c.rewrite_let_env(prog2)
+
+  p1=(prog.flatten - [:arg])
+  p2=(prog2.flatten - [:arg])
+  expect_eq(p1.inspect, p2.inspect, "def foo(arg,arg2); proc do p(arg,arg2); end vs. def foo(arg,arg2); proc do arg; p(arg,arg2); end")
+
 end
 
 

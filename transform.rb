@@ -191,7 +191,7 @@ class Compiler
               nodes = n[3]
               nodes = [nodes] if !nodes.is_a?(Array)
               nodes.each do |n2|
-                vars2, env2 = find_vars(n2, scopes, env, freq, in_lambda)
+                vars2, env2 = find_vars([n2], scopes+[Set.new], env, freq, in_lambda)
                 vars += vars2
                 env  += env2
               end
@@ -203,13 +203,25 @@ class Compiler
               vars += vars3
               env  += env3
             end
-          else
-            if n[0] == :call
-              sub = n[2..-1]
-            else 
-              sub = n[1..-1]
+          elsif    n[0] == :call
+            vars, env = find_vars(n[1], scopes, env, freq, in_lambda)
+            if n[2]
+              nodes = n[2]
+              nodes = [nodes] if !nodes.is_a?(Array)
+              nodes.each do |n2|
+                vars2, env2 = find_vars(n2, scopes+[Set.new], env, freq, in_lambda)
+                vars += vars2
+                env  += env2
+              end
             end
-            vars, env = find_vars(sub, scopes, env, freq, in_lambda)
+
+            if n[3]
+              vars2, env2 = find_vars([n[3]], scopes, env, freq, in_lambda)
+              vars += vars2
+              env  += env2
+            end
+          else
+            vars, env = find_vars(n[1..-1], scopes, env, freq, in_lambda)
           end
 
           vars.each {|v| push_var(scopes,env,v); }
