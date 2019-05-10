@@ -85,6 +85,10 @@ class Hash
     @data[pos] ? true : false
   end
 
+  def include? key
+    member?(key)
+  end
+
   def [] key
     pos  = _find_slot(key)
     @data[pos] ? @data[pos + 1] : @defval
