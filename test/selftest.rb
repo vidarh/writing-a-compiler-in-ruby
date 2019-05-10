@@ -185,6 +185,8 @@ def test_array
 
   expect_eq(([:a] - [:a]).inspect, "[]", "Subtracting identical arrays should return []")
   expect_eq(([:a, :b, :c] - [:b]).inspect, "[:a, :c]", "Subtracting part of an array should return the rest")
+
+  expect_eq([:a, :b, :c].zip(1..3).inspect, "[[:a, 1], [:b, 2], [:c, 3]]", "Array#zip should merge the array with an enumerable")
 end
 
 def test_set
@@ -353,6 +355,8 @@ def test_parser
   test_exp("a + b + c","[:do, [:+, [:+, :a, :b], :c]]")
   test_exp("a * b * c","[:do, [:*, [:*, :a, :b], :c]]")
   test_exp("a / b / c","[:do, [:/, [:/, :a, :b], :c]]")
+
+  test_exp("1..x.size","[:do, [:range, 1, [:callm, :x, :size]]]")
 end
 
 def test_destructuring

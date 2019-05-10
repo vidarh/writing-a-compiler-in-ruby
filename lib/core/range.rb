@@ -57,4 +57,8 @@ class Range
     end
     a
   end
+
+  def to_enum
+    RangeEnumerator.new(self)
+  end
 end

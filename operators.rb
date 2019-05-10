@@ -63,6 +63,10 @@ end
 # *mean* anything other than establish order. The only
 # reason for gaps is convenience when having to change them
 # during development.
+#
+# FIXME: Currently the priorities and associativity etc. have not been
+# systematically validated.
+#
 Operators = {
   # "Fake" operator injected for blocks.
   "#block#"   => Oper.new(  1, :block,    :infix),
@@ -122,7 +126,7 @@ Operators = {
   "#index#"   => Oper.new(100, :index,    :infix),
   "."         => Oper.new( 98, :callm,    :infix, 2,2,:left),
   "::"        => Oper.new(100, :deref,    :infix, 2,2,:left),
-  ".."        => Oper.new(100, :range,    :infix), # FIXME: Check pri - probably not right.
+  ".."        => Oper.new( 97, :range,    :infix), # FIXME: Check pri; less wrong than it was, but may still not be right
 
 
   #### Parentheses ####

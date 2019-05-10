@@ -1019,14 +1019,30 @@ class Array
     %s(puts "Array#yaml_initialize not implemented")
   end
 
-
+  # FIXME: Belongs in Enumerable
   # Converts any arguments to arrays, then merges elements of self with corresponding
   # elements from each argument. This generates a sequence of self.size n-element arrays,
   # where n is one more that the count of arguments. If the size of any argument is less
   # than enumObj.size, nil values are supplied. If a block given, it is invoked for each
   # output array, otherwise an array of arrays is returned.
   def zip(*args)
-    %s(puts "Array#zip not implemented")
+    # For now we fudge this, as it's only needed to handle a simple case of
+    # an_array.zip(a_range) in the compiler itself. Though incidentally this is
+    # one of the most painful things to handle, as since the argument is not an
+    # Array, MRI converts all arguments to Enumerators.
+    #
+    # For now we handle both Array's and Range's the same, but can't enumerate over
+    # anything else
+
+    enums = args.collect{|a| a.to_enum}
+
+    collect do |a|
+      ary = [a]
+      enums.each do |e|
+        ary << e.next
+      end
+      ary
+    end
   end
 
 

@@ -86,6 +86,7 @@ require 'core/struct'
 require 'core/exception'
 require 'core/pp'
 require 'core/regexp'
+require 'core/enumerator'
 
 #
 # Other support
