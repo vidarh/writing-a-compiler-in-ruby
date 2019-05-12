@@ -473,6 +473,16 @@ def test_compiler
   p2=(prog2.flatten - [:arg])
   expect_eq(p1.inspect, p2.inspect, "def foo(arg,arg2); proc do p(arg,arg2); end vs. def foo(arg,arg2); proc do arg; p(arg,arg2); end")
 
+  c = Compiler.new(e)
+  prog = mock_parse('
+  def foo
+    yield
+  end
+')
+  c.preprocess(prog)
+  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_mem, [8]]]], [:assign, [:index, :__env__, 1], :__closure__], [:callm, [:index, :__env__, 1], :call, nil]]",
+    "yield triggers a rewrite even with no arguments")
+
 end
 
 

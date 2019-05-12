@@ -513,6 +513,12 @@ class Compiler
     end
   end
 
+  def rewrite_yield(exps)
+    exps.depth_first(:yield) do |e|
+      e[0] = [:call, :yield]
+    end
+  end
+
   def setup_global_scope(exp)
     @global_scope = GlobalScope.new(@vtableoffsets)
     build_class_scopes(exp,@global_scope)
@@ -528,6 +534,7 @@ class Compiler
     rewrite_strconst(exp)
     rewrite_fixnumconst(exp)
     rewrite_operators(exp)
+    rewrite_yield(exp)
     rewrite_let_env(exp)
     rewrite_lambda(exp)
   end
