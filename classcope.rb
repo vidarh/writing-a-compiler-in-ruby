@@ -31,7 +31,12 @@ class ModuleScope < Scope
     @name = name
     @vtable = {}
     @vtableoffsets = offsets
+
+    # FIXME: This can only safely be determined after we've parsed everything, and
+    # even then only  if we add any additional ones that are defined dynamically to a hash
+    # but this works ok for now as long as we don't reopen a superclass and add new ivars.
     @ivaroff = @superclass ? @superclass.instance_size : 0
+
     @instance_vars = !@superclass ? [:@__class__]  : [] # FIXME: Do this properly
     @class_vars = {}
 
@@ -74,8 +79,19 @@ class ModuleScope < Scope
     false
   end
 
+  def find_ivar_offset(a)
+    a = a.to_sym
+    offset = @instance_vars.index(a)
+    return @ivaroff + offset if offset
+    return nil if !@superclass
+    return @superclass.find_ivar_offset(a)
+  end
+
   def add_ivar(a)
-    @instance_vars << a.to_sym if !@instance_vars.include?(a.to_sym)
+    a = a.to_sym
+    if !find_ivar_offset(a)
+      @instance_vars << a
+    end
   end
 
   def add_constant(c, v = true)
@@ -120,9 +136,12 @@ class ModuleScope < Scope
   end
 
   def get_instance_var(a)
-    offset = @instance_vars.index(a)
-    add_ivar(a) if !offset
-    offset = @instance_vars.index(a)
+    a = a.to_sym
+    offset = find_ivar_offset(a)
+    if !offset
+      add_ivar(a)
+    end
+    offset = find_ivar_offset(a)
 
     # This will show the name of the current class, the superclass name, the instance variable 
     # name, the offset of the instance variable relative to the current class "base", and the
@@ -130,7 +149,7 @@ class ModuleScope < Scope
     # object layout:
     #
     # STDERR.puts [:ivar, @name, @superclass ? @superclass.name : "",a, offset, @ivaroff].inspect
-    return [:ivar, offset + @ivaroff]
+    return [:ivar, offset]
   end
 
   # Returns an argument within a class scope.
