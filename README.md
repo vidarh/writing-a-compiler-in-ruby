@@ -7,20 +7,23 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of May 10th 2019
-
- * Gets substantially further during code generation. Currently fails
- somewhere during initialization of the Array eigenclass, which means
- it gets probably about 1/3 through the code generation stage before
- it fails.
-
-## Status as of May 4th 2019
+## Status as of May 16th 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
 This is *all new* as of April, as I finally started playing with it again:
 
+ * The bootstrapped compiler does currently fails during code generation *after*
+ processing the top layer of code. This means code to set up all classes and
+ functions defined in the core library has been output (~6k lines of asm; this
+ is about 10% through the code generation for a "hello world").
+
+ Currently generation fails in `Compiler#output_functions`. A couple of the
+ workarounds to get me that far is still sitting in my working dir as I want
+ to see if they're actually required or if I was overzealous, but should be pushed
+ within a few days.
+ 
  * When compiling the compiler with itself with a slightly modified driver,
  it successfully parses all of itself and produces identical output to when
  run under MRI. This does not mean the parse is complete (it absolutely is not),
@@ -28,10 +31,6 @@ This is *all new* as of April, as I finally started playing with it again:
  of expressions currently present in the compiler itself.
  * The AST transformation steps (in transform.rb) gives identical results
  under the compiler itself and MRI.
- * The bootstrapped compiler does currently fail during code generation.
- Based on experience getting transform.rb working, it appears likely this is
- down to problems with lowering method arguments into a closure (compiler bug).
- It is likely I will also find missing parts of the standard library to fill in.
  * I have a GC under preparation (it is working, but I need to put some effort
  into cleaning things up); **A new blog post or two that covers integration of the GC is coming as a continuation of the original series**
  (currently I'm unsure if I'll finish that before or after making the bootstrapped
