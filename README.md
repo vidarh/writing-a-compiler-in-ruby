@@ -14,7 +14,7 @@ state only)
 
 This is *all new* as of April, as I finally started playing with it again:
 
- * The bootstrapped compiler does currently fails during code generation *after*
+ * The bootstrapped compiler currently fails during code generation *after*
  processing the top layer of code. This means code to set up all classes and
  functions defined in the core library has been output (~6k lines of asm; this
  is about 10% through the code generation for a "hello world", though I've not
