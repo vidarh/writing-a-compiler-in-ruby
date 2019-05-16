@@ -17,7 +17,8 @@ This is *all new* as of April, as I finally started playing with it again:
  * The bootstrapped compiler does currently fails during code generation *after*
  processing the top layer of code. This means code to set up all classes and
  functions defined in the core library has been output (~6k lines of asm; this
- is about 10% through the code generation for a "hello world").
+ is about 10% through the code generation for a "hello world", though I've not
+ yet validated if those 6k lines are *correct*).
 
  Currently generation fails in `Compiler#output_functions`. A couple of the
  workarounds to get me that far is still sitting in my working dir as I want
