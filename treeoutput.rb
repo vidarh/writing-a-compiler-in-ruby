@@ -81,7 +81,7 @@ module OpPrec
 
       if args || block
         args ||= []
-        expr << args
+        expr << Array(args)
       end
       expr << block if block
       @vstack << expr
