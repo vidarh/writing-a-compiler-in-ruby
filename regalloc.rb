@@ -283,14 +283,24 @@ class RegisterAllocator
       if !@cached.empty?
         # Figure out which register to drop, based on order.
         # (least frequently used variable evicted first)
-        @order.reverse.each do |v|
-          c = @cached[v]
-          if c && !c.locked
-            reg = c.reg
-            evict(v)
-            free = reg
-            @free_registers.delete(free)
-            break
+        r = @order.reverse
+        r.each do |v|
+          # @FIXME: Workaround for @bug below
+          if !free
+            c = @cached[v]
+            if c
+              if !c.locked
+                # @FIXME
+                # @bug variable name matching method name
+                # in lambda triggers rewrite bug.
+                xreg = c.reg
+                evict(v)
+                free = xreg
+                @free_registers.delete(free)
+# @FIXME @bug Break here appears to reset ebx incorrectly.
+#              break
+             end
+           end
           end
         end
       end
