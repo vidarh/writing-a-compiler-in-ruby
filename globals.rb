@@ -24,9 +24,11 @@ class Globals
   # as the use-case we need is function/method
   # compilation where additional synthesized methods
   # may get added during compilation.
-  def until_empty!
+  def until_empty!(&block)
     while f = @global_functions.shift
-      yield f[0],f[1]
+      # FIXME: Compiler @bug: This gets turned into calling "comma"
+      #yield f[0],f[1]
+      block.call(f[0],f[1])
     end
   end
 end
