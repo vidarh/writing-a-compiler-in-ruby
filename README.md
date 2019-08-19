@@ -7,24 +7,38 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of May 16th 2019
+## Status as of August 19th 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
 This is *all new* as of April, as I finally started playing with it again:
 
- * The bootstrapped compiler currently fails during code generation *after*
- processing the top layer of code. This means code to set up all classes and
- functions defined in the core library has been output (~6k lines of asm; this
- is about 10% through the code generation for a "hello world", though I've not
- yet validated if those 6k lines are *correct*).
+ * Using the bootstrapped compiler for a "hello world" now runs through the
+   full code generation step. (~70k lines; mostly the runtime) with my latest
+   changes (not all of which have been pushed to Github yet, as I'm still trying
+   to ensure the changes are minimized to just what is required). There are
+   some discrepancies in output that looks likely to be caused by 2-3 different
+   minor bugs. There's also likely at least one stack-busting bug left that
+   causes occasional crashes during code generation. There are likely to be
+   more code-generation bugs lurking that will show up when trying to compile
+   larger code.
+ * This includes a number of ugly workarounds for compiler bugs that have
+   not been nailed down yet. I'm trying to ensure sites of known workarounds
+   for bugs in the compiler are marked with `@bug`.
+ * Current biggest problem is actually reducing garbage collection overhead
+   as compiling even a minimal hello world takes several minutes, so the next
+   few rounds of changes might be focused on that. A few easy wins, and avenues
+   to investigate:
+     * Pre-create objects for all constants (numeric and string in particular,
+       as symbols are already looked up; symbols would cut code size, but not
+       do anything for GC). String would require supporting the frozen string
+       constant pragma to do it *safely*
+     * Ensure all objects that can be allocated as leaves are.
+     * Currently Proc and env objects are created separately; might be worth
+       allocating the env as part of the Proc object, but not sure it's worthwhile
+     * Capture stats on number of allocated objects per class, and output,
 
- Currently generation fails in `Compiler#output_functions`. A couple of the
- workarounds to get me that far is still sitting in my working dir as I want
- to see if they're actually required or if I was overzealous, but should be pushed
- within a few days.
- 
  * When compiling the compiler with itself with a slightly modified driver,
  it successfully parses all of itself and produces identical output to when
  run under MRI. This does not mean the parse is complete (it absolutely is not),
@@ -39,7 +53,7 @@ This is *all new* as of April, as I finally started playing with it again:
  with that)
 
 Assuming I get time to continue current progress, the compiler should fully compile
-itself and the compiled version should be able to compile itself by summer.
+itself and the compiled version might be able to compile itself by (late) summer.
 
 (to make that clear, what I want to get to is:
 
@@ -56,8 +70,6 @@ and "compiler3" are identical, to validate the entire end-to-end process. This m
 but once step2 works the point is step3 *should* be trivial, so there's no point in not taking
 that extra step.
 
-)
-
 
 ### Before getting too excited about trying to use the compiler at the point when it bootstraps fully, note:
 
@@ -66,7 +78,7 @@ that extra step.
    * Exceptions (used by the compiler, but only begin/rescue causes problems and that's only used once; commented out for testing)
    * Regexp (not used by the compiler)
    * Float (not used by the compiler)
- * The compiler code is littered with workarounds for specific bugs (they're not consistently marked, but `FIXME` will include all of the workarounds for compiler bugs and more).
+ * The compiler code is littered with workarounds for specific bugs (they're not consistently marked, but `FIXME` will include all of the workarounds for compiler bugs and more, and whenever I find new ones they're also marked `@bug`).
  * The GC mentioned above is very simple and not well suited for the sheer amount
  of objects currently allocated. It needs a number of improvements to handle
  many small objects, and the compiler needs additional work to reduce the number of objects created.
