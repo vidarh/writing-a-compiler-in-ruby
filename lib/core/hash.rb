@@ -89,6 +89,10 @@ class Hash
     member?(key)
   end
 
+  def empty?
+    @length == 0
+  end
+
   def [] key
     pos  = _find_slot(key)
     @data[pos] ? @data[pos + 1] : @defval
