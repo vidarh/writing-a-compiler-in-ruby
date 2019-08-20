@@ -132,6 +132,8 @@ class RegisterAllocator
     @cached = {}
     @by_reg = {} # Cache information, by register
     @order = {}
+
+    @allocators = []
   end
 
   # Order to prioritise variables in for register access
