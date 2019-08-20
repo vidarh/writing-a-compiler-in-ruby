@@ -122,7 +122,7 @@ module OpPrec
       src.each do |t,o,keyword|
         op = o
         token = t
-        # FIXME: This is a workaround for a bug in find_vars that doesn't correctly
+        # FIXME: @bug This is a workaround for a bug in find_vars that doesn't correctly
         # identify variables used in methods calls.
         # It appears it might also cause the env allocated for the
         # block to not be correctly initialized.
