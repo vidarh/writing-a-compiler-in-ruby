@@ -118,6 +118,9 @@ class Function
     # of arguments, so we need this always.
     return [:lvar, -1] if a == :numargs
 
+    # FIXME
+    # @bug: r does not get set to nil if this line is not here.
+    r = nil
     r = get_lvar_arg(a) if @defaults_assigned || a[0] == ?#
     return r if r
     raise "Expected lvar - #{a} / #{args.inspect}" if a[0] == ?#
