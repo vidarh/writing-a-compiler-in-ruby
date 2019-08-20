@@ -319,7 +319,8 @@ class RegisterAllocator
       STDERR.puts "--"
       STDERR.puts @free_registers.inspect
       STDERR.puts @allocators.inspect
-      raise "Register allocation FAILED" 
+      #raise "Register allocation FAILED"
+      1/0
     end
 
     # This is for debugging of the allocator - we store
