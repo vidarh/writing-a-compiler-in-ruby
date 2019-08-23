@@ -592,14 +592,22 @@ class Compiler
 
 
 
-  def let(scope,*varlist)
+  def let(scope,*varlist, &block)
     vars = Hash[*(varlist.zip(1..varlist.size)).flatten]
     lscope =LocalVarScope.new(vars, scope)
     if varlist.size > 0
       @e.evict_regs_for(varlist)
       # FIXME: I'm not actually sure why we need to add 1 here.
-      @e.with_local(vars.size+1) do
-        yield(lscope)
+      # FIXME: @bug workaround for @e.with_local(vars.size+1) getting
+      # turned into (callm @e with_local(callm (calm vars size) + 1))
+      # (probable parser bug that leaves argument without parentheses
+      # when single argument given
+      s = vars.size + 2
+      # FIXME: @bug: calling "with_local" does not work here, so trying
+      # to avoid with "with_stack" (and adding 1 extra to var.size above.
+      # Original line: @e.with_local(vars.size+1) do
+      @e.with_stack(s) do
+        block.call(lscope)
       end
       @e.evict_regs_for(varlist)
     else
