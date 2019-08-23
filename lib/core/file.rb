@@ -5,10 +5,17 @@ class File < IO
   ALT_SEPARATOR = nil
 
   def self.file?(io)
-    false
+    # @FIXME; really should stat or something
+    # but this is just for bootstrapping.
+    io.is_a?(File)
+  end
+
+  def path
+    @path
   end
 
   def initialize(path, mode = "r")
+    @path = path
     %s(assign rpath (callm path __get_raw))
     %s(assign fd (open rpath 0))
     %s(perror 0)
@@ -52,7 +59,11 @@ class File < IO
     return nil
   end
 
-  def self.expand_path(path)
-    path
+  def self.expand_path(path, dir_string = Dir.pwd)
+    return path if path[0] == ?/
+    if path[0..1] == "./"
+      return "#{dir_string}#{path[1..-1]}"
+    end
+    return path "#{dir_string}/#{path[1..-1]}"
   end
 end
