@@ -515,10 +515,6 @@ class Compiler
     end
     source = nil
     exp.each do |e|
-      # FIXME: Mentioning it due to find_vars bug
-      #scope
-
-
       source=compile_eval_arg(scope, e)
       @e.save_result(source)
     end
