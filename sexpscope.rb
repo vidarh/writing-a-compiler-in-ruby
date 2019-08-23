@@ -24,6 +24,12 @@ class SexpScope < Scope
     0
   end
 
+  # @FIXME This works only due to a quirk of Ruby:
+  # `arg` may not be an `Array`. If `arg` is a number,
+  # then `arg.[]` returns the value of the bit specified
+  # by the index. Since this returns 1 or 0, it will
+  # never match `:possible_callm` so the code works,
+  # but smells...
   def get_arg(a)
     arg = @next.get_arg(a)
     if arg[0] == :possible_callm
