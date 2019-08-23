@@ -387,7 +387,14 @@ class Emitter
   end
 
   def with_register_for(maybe_reg)
-    c = @allocator.lock_reg(maybe_reg) rescue nil
+    # @FIXME @bug
+    # Because of lack of support for exceptions, this will not work:
+    #c = @allocator.lock_reg(maybe_reg) rescue nil
+    c = nil
+    if maybe_reg.respond_to?(:to_sym)
+      c = @allocator.lock_reg(maybe_reg)
+    end
+
     if c
       comment("Locked register #{c.reg}")
       r = yield c.reg
