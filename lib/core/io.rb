@@ -32,8 +32,4 @@ class IO < Object
   def file?
     false
   end
-
-  def path
-  end
-
 end
