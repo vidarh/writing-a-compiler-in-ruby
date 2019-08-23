@@ -91,7 +91,7 @@ class String
       if e > l
         e = l
       end
-      e = e - b
+      e = e - b + 1
 
       a = String.new
       %s(assign src (add @buffer (callm b __get_raw)))
