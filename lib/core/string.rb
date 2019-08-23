@@ -41,6 +41,8 @@ class String
         buf << "\\\""
       elsif b == 92
         buf << "\\\\"
+      elsif b == 10
+        buf << "\\n"
       else
         buf << b.chr
       end
