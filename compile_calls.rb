@@ -45,6 +45,25 @@ class Compiler
     end
   end
 
+  def copy_splat_loop(splatcnt, indir)
+    # @FIXME @bug
+    # Seems to pick up the wrong argument if we
+    # refer directly to `indir` inside the lambda.
+    xindir = indir
+    # @FIXME @bug
+    # Should be fine to leave out second arg here.
+    @e.loop do |br,_|
+      @e.testl(splatcnt, splatcnt)
+      @e.je(br)
+      # x86 will be the death of me.
+      @e.pushl("(%eax)")
+      @e.popl("(%#{xindir.to_s})")
+      @e.addl(4,:eax)
+      @e.addl(4,xindir)
+      @e.subl(1,splatcnt)
+    end
+  end
+
   # For a splat argument, push it onto the stack,
   # forwards relative to register "indir".
   #
@@ -64,19 +83,32 @@ class Compiler
 
       # If Array class ptr has not been allocated yet:
       @e.je(l)
-
-      @e.loop do |br|
-        @e.testl(splatcnt, splatcnt)
-        @e.je(br)
-        # x86 will be the death of me.
-        @e.pushl("(%eax)")
-        @e.popl("(%#{indir.to_s})")
-        @e.addl(4,:eax)
-        @e.addl(4,indir)
-        @e.subl(1,splatcnt)
-      end
-
+      copy_splat_loop(splatcnt, indir)
       @e.local(l)
+    end
+
+  end
+
+  def compile_args_splat_loop(scope, args, indir)
+    # @FIXME @bug
+    # Probably another findvars bug
+    xindir = indir
+    args.each do |a|
+      ary = a.is_a?(Array)
+      sp = false
+      if ary
+        if a[0] == :splat
+          sp = true
+        end
+      end
+      # ary && (a[0] == :splat)
+      if sp
+        compile_args_copysplat(scope, a, xindir)
+      else
+        param = compile_eval_arg(scope, a)
+        @e.save_indirect(param, xindir)
+        @e.addl(4, xindir)
+      end
     end
   end
 
@@ -129,16 +161,7 @@ class Compiler
       @e.movl(:esp, indir)
       @e.pushl(@e.scratch)
       @e.comment("BEGIN args.each do |a|")
-      args.each do |a|
-        @e.comment(a.inspect)
-        if a.is_a?(Array) && a[0] == :splat
-          compile_args_copysplat(scope, a, indir)
-        else
-          param = compile_eval_arg(scope, a)
-          @e.save_indirect(param, indir)
-          @e.addl(4,indir)
-        end
-      end
+      compile_args_splat_loop(scope, args, indir)
       @e.comment("END args.each")
       @e.popl(@e.scratch)
     end
@@ -225,6 +248,10 @@ class Compiler
     t,a = get_arg(scope,:self)
   end
 
+  # FIXME: @bug May need to do this as a rewrite, as if block is taken in, and
+  # then another block is passed to another method, that other method can not
+  # contain "yield", as it needs to go through a let_env rewrite.
+  #
   # Yield to the supplied block
   def compile_yield(scope, args, block)
     @e.comment("yield")
