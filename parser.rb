@@ -390,7 +390,7 @@ class Parser < ParserBase
     end
     error("Unable to open '#{q}'")  if !f
 
-    STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
+    # STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
 
     # FIXME: This fails with
     #  @@requires[q] = []
