@@ -145,7 +145,11 @@ class Emitter
 
   # Stores a given parameter in %eax register as a result for further use.
   def save_result(param)
-    if param != :eax
+    # @FIXME @bug Workaround as param != :eax
+    # does not work reliably because :eax does not reliably get looked up
+    # in Symbol table.
+    pr = param.inspect
+    if pr != ":eax"
       movl(param, :eax)
     end
   end
@@ -306,13 +310,17 @@ class Emitter
     nil
   end
 
-
-  def with_local(args)
+  def with_local(args, &block)
     # FIXME: The "+1" is a hack because main contains a pushl %ecx
-    with_stack(args+1) { yield }
+    # FIXME: @bug with_stack(args+1) does not work.
+    # FIXME: @bug appears to be multiple problems here:
+    # 1. Nested "yields" does not appear to work; probably does not get.
+    # forwarded. But using &block and then block.call causes seg fault.
+    v = args+1
+    with_stack(v) { block.call }
   end
 
-  def with_stack(args, reload_numargs = false)
+  def with_stack(args, reload_numargs = false, &block)
     # We normally aim to make the stack frame aligned to 16
     # bytes. This however fails in the presence of the splat operator
     # If a splat is present, we instead allocate exact space, and use
@@ -330,7 +338,10 @@ class Emitter
     else
       movl(args, :ebx)
     end
-    yield
+# FIXME: Not sure if yield vs block.call makes a difference here
+# (it obviously *shouldnt* make a difference)
+#    yield
+    block.call
     addl(adj, :esp)
   end
 
@@ -366,11 +377,11 @@ class Emitter
     #comment("RA: Evicted #{evicted.join(",")}") if !evicted.empty?
   end
 
-  def with_register(required_reg = nil)
+  def with_register(required_reg = nil, &block)
     r = nil
     @allocator.with_register(required_reg) do |reg|
       r = reg
-      yield reg
+      block.call(reg) #yield reg
     end
     r
   end
