@@ -7,10 +7,18 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of August 19th 2019
+## Status as of August 23rd 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
+
+New since August 19th:
+
+ * The "hello world" compiled with the bootstrapped/compiled compiler now
+   assembles, but crashes due to one of the remaining differences.
+ * More, but not all, of the fixes from my local tree is now on Github.
+   What's holding me up is trying to reduce the workarounds to the minimum
+   necessary set.
 
 This is *all new* as of April, as I finally started playing with it again:
 
@@ -18,11 +26,9 @@ This is *all new* as of April, as I finally started playing with it again:
    full code generation step. (~70k lines; mostly the runtime) with my latest
    changes (not all of which have been pushed to Github yet, as I'm still trying
    to ensure the changes are minimized to just what is required). There are
-   some discrepancies in output that looks likely to be caused by 2-3 different
-   minor bugs. There's also likely at least one stack-busting bug left that
-   causes occasional crashes during code generation. There are likely to be
-   more code-generation bugs lurking that will show up when trying to compile
-   larger code.
+   some discrepancies in output that looks likely to be caused by 1-2 different
+   minor bugs. There are likely to be more code-generation bugs lurking that will
+   show up when trying to compile larger code.
  * This includes a number of ugly workarounds for compiler bugs that have
    not been nailed down yet. I'm trying to ensure sites of known workarounds
    for bugs in the compiler are marked with `@bug`.
@@ -52,7 +58,7 @@ This is *all new* as of April, as I finally started playing with it again:
  compiler at least compile a "hello world"; depends how many problems I run into
  with that)
 
-Assuming I get time to continue current progress, the compiler should fully compile
+Assuming I get time to continue current progress, the compiler might fully compile
 itself and the compiled version might be able to compile itself by (late) summer.
 
 (to make that clear, what I want to get to is:
