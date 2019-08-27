@@ -228,9 +228,24 @@ def test_hash
   d = Hash.new(42)
   expect_eq(d[1],42, "Verifying that Hash returns default specified default value for unknown key")
 
-  #d[1] += 1
-  #expect_eq(d[1],43, "Incrementing default value")
+  h = {}
+  h[:foo] = :bar
+  expect_eq(h.inspect, "{:foo=>:bar}", "Insert single key into Hash")
+  h[:a] = :b
+  expect_eq(h.inspect, "{:foo=>:bar, :a=>:b}", "Inserting second key maintains insertion order")
+  h[:foo] = :baz
+  expect_eq(h.inspect, "{:foo=>:baz, :a=>:b}", "Replacing first inserted key maintains original insertion order")
 
+  h[:b] = :c
+  expect_eq(h.inspect, "{:foo=>:baz, :a=>:b, :b=>:c}", "Additional insertion after overwrite")
+
+  expect_eq(h.collect.to_a.inspect, "[[:foo, :baz], [:a, :b], [:b, :c]]", "Collect should return Hash values in insertion order")
+
+  h[:d] = :e
+  h[:e] = :f
+  h[:f] = :g
+  expect_eq(h.inspect, "{:foo=>:baz, :a=>:b, :b=>:c, :d=>:e, :e=>:f, :f=>:g}", "Additional additions")
+  expect_eq(h.keys.inspect, [:foo, :a, :b, :d, :e, :f].inspect, "#keys")
 end
 
 
