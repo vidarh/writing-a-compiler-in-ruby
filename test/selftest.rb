@@ -490,6 +490,9 @@ def test_string
   expect_eq("foo".gsub("o","x"), "fxx", "String#gsub - Simple character substitution")
   expect_eq("foo".gsub("o","xy"), "fxyxy", "String#gsub - Replace character with string")
   expect_eq("foo\nbar".gsub("\n","\\n"), "foo\\nbar", "String#gsub - Replace character with string with escape characters")
+
+  expect_eq("e" <=> "d", 1, "String#<=> should return 1 if left string sorts after right string")
+  expect_eq("foo" <=> "f", 1, "String#<=> should return 1 for 'foo' <=> 'f'")
 end
 
 test_fixnum

@@ -193,11 +193,12 @@ class String
 
     while i < max
       return -1 if self[i] < other[i]
-      return 1  if self[i] < other[i]
+      return 1  if self[i] > other[i]
       i += 1
     end
 
-    return 1 if i < other.length
+    return -1 if i < other.length
+    return 1 if length > other.length
 
     return 0
   end
