@@ -218,6 +218,9 @@ def test_set
   expect_eq((s - a).inspect, "#<Set: {:b, :c}>", "Subtracting an array from a Set")
   c = [:c]
   expect_eq((s - a - c).inspect, "#<Set: {:b}>", "Chained subtration of arrays from a Set")
+
+  s << :b
+  expect_eq(s.inspect, "#<Set: {:a, :b, :c}>", "Second addition of pre-existing value to Set")
 end
 
 def test_hash
