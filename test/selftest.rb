@@ -175,8 +175,17 @@ def test_array
   #  res = ary.partition {|e| (e <=> 2) > 0 }
   #  expect_eq(res.inspect, "[[42, 3], [2, 1]]", "partition")
 
+  expect_eq([:a] == [:a], true, "Array#==: Two Array's where each element compares the same should return true")
+  expect_eq([:foo, :a, :b, :d, :e, :f].sort, [:a, :b, :d, :e, :f, :foo], "Array#sort")
+
   res = [42,2,3,1].sort
   expect_eq(res.inspect, [1,2,3,42].inspect , "Array#sort (ascending)")
+
+  res = ["true","nil", "sp"].sort
+  expect_eq(res.inspect, '["nil", "sp", "true"]', "Array#sort (strings)")
+
+  res = [:true, :nil, :sp].sort
+  expect_eq(res.inspect, '[:nil, :sp, :true]', "Array#sort (symbols)")
 
   res = Array(42)
   expect_eq(res.inspect,"[42]", "Array(42) should return [42]")
