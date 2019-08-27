@@ -37,13 +37,13 @@ class Hash
     first = true
     each do |k,v|
       if !first
-        str += ","
+        str += ", "
       else
         first = false
       end
-      str += k.to_s
+      str += k.inspect
       str += "=>"
-      str += v.to_s
+      str += v.inspect
     end
     str += "}"
     str
