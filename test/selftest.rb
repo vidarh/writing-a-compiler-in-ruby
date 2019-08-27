@@ -382,6 +382,10 @@ def test_parser
   test_exp("a / b / c","[:do, [:/, [:/, :a, :b], :c]]")
 
   test_exp("1..x.size","[:do, [:range, 1, [:callm, :x, :size]]]")
+
+  # Handling of single argument with/without lambda
+  test_exp("foo.bar(x)", "[:do, [:callm, :foo, :bar, [:x]]]")
+  test_exp("foo.bar(x) {}", "[:do, [:callm, :foo, :bar, [:x], [:proc]]]")
 end
 
 def test_destructuring
