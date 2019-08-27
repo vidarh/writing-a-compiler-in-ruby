@@ -236,7 +236,7 @@ class RegisterAllocator
       @cached[var.to_sym] = c
       @by_reg[free] = c
     else
-      STDERR.puts "NO FREE REGISTER (consider evicting if more important var?)"
+      # STDERR.puts "NO FREE REGISTER (consider evicting if more important var?)"
     end
     free
   end
