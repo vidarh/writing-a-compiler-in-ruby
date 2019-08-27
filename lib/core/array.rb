@@ -965,13 +965,6 @@ class Array
     return self
   end
 
-
-  # Returns self.join.
-  def to_s
-    self.join("")
-  end
-
-
   def to_yaml
     %s(puts "Array#to_yaml not implemented")
   end
