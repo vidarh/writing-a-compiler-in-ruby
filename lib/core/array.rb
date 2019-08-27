@@ -179,18 +179,22 @@ class Array
   # Two arrays are equal if they contain the same number of elements and if each
   # element is equal to (according to Object.==) the corresponding element in the
   # other array.
-#  def ==(other_array)
-#    if self.size == other_array.size
-#      self.each_index do |i|
-#        unless self[i] == other_array[i]
-#          return false
-#        end
-#      end
-#      return true
-#    end#
-#
-#    return false
-#  end
+  def ==(other)
+    if !other.is_a?(Array)
+      return false
+    end
+
+    if self.size == other.size
+      self.each_index do |i|
+        if self[i] != other[i]
+          return false
+        end
+      end
+      return true
+    end
+
+    return false
+  end
 
 
   def self.[](*elements)
