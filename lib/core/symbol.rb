@@ -29,6 +29,13 @@ class Symbol
     self.==(other)
   end
 
+  def <=> other
+    if eql?(other)
+      return 0
+    end
+    to_s <=> other.to_s
+  end
+
   def to_s
     @name
   end
