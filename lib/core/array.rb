@@ -67,11 +67,15 @@ class Array
 
   # FIXME: Cut and paste from Enumerable
   def collect
-    items = Array.new
-    each do |item|
-      items << yield(item)
+    if block_given?
+      items = Array.new
+      each do |item|
+        items << yield(item)
+      end
+      return items
+    else
+      return self
     end
-    return items
   end
 
 
