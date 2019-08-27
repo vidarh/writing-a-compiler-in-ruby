@@ -337,7 +337,7 @@ end
 
 def mock_shunting(str)
   s = mock_scanner(str)
-  OpPrec.parser(s, nil)
+  OpPrec.parser(s, Parser.new(s))
 end
 
 
@@ -345,6 +345,9 @@ def test_shunting
   expect_eq(mock_shunting("5 + 1").parse.inspect, "[:+, 5, 1]", "Shunting 1")
   expect_eq(mock_shunting("5 + y").parse.inspect, "[:+, 5, :y]", "Shunting 2")
   expect_eq(mock_shunting("5 + 1 * 2").parse.inspect, "[:+, 5, [:*, 1, 2]]", "Shunting 3")
+
+  # Handling of single argument with lambda wrongly used to return a non-array argument list
+  expect_eq(mock_shunting("foo.bar(x) {}\n").parse.inspect, "[:callm, :foo, :bar, [:x], [:proc]]", "Shunting foo.bar(x) {}")
 end
 
 
