@@ -111,6 +111,16 @@ def test_fixnum
   expect_eq(4096.inspect, "4096", "4096.inspect => '4096'")
   expect_eq("-4".to_i.to_s,"-4", "Converting -4 from a string to Fixnum and back")
   expect_eq((-4).to_s,"-4", "Converting -4 to a string")
+
+  expect_eq(4 <=> 3, 1, "4 <=> 3 should return 1")
+end
+
+def test_symbol
+  expect_eq(:foo == :foo, true, "Same symbol should match with #==")
+  expect_eq(:foo === :foo, true, "Same symbol should match with #===")
+  expect_eq(:foo.eql?(:foo), true, "Same symbol should match with #eql?")
+  expect_eq(:foo != :foo, false, ":foo != :foo => false")
+  expect_eq(:foo != :bar, true, ":foo != :bar => true")
 end
 
 def test_array
@@ -496,6 +506,7 @@ def test_string
 end
 
 test_fixnum
+test_symbol
 test_array
 test_set
 test_hash
