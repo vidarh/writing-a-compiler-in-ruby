@@ -71,7 +71,6 @@ require 'compiler'
     c.preprocess(prog)
     #if transform
 
-    dump = true
     if dump || dumpsymtabs
       print_sexp prog if dump
       c.global_scope.dump if dumpsymtabs
