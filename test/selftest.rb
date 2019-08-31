@@ -64,6 +64,12 @@ require 'ast'
 #require 'value'
 require 'compiler'
 
+class MockParser
+  def parse_block
+    [:proc]
+  end
+end
+
 class MockIO
   def initialize str
     @str = str
@@ -121,6 +127,7 @@ def test_symbol
   expect_eq(:foo.eql?(:foo), true, "Same symbol should match with #eql?")
   expect_eq(:foo != :foo, false, ":foo != :foo => false")
   expect_eq(:foo != :bar, true, ":foo != :bar => true")
+  expect_eq(:foo.respond_to?(:to_sym), true, "A Symbol should respond to #to_sym")
 end
 
 def test_array
@@ -206,6 +213,11 @@ def test_array
   expect_eq(([:a, :b, :c] - [:b]).inspect, "[:a, :c]", "Subtracting part of an array should return the rest")
 
   expect_eq([:a, :b, :c].zip(1..3).inspect, "[[:a, 1], [:b, 2], [:c, 3]]", "Array#zip should merge the array with an enumerable")
+
+  expect_eq([:a].flatten, [:a], "Flatten on a flat Array is a noop")
+  expect_eq([:a,[:b,:c]].flatten, [:a, :b, :c], "Array#flatten on a nested array")
+  expect_eq([:a,[:b,[:c]]].flatten, [:a, :b, :c], "Array#flatten on a more deeply nested array")
+  expect_eq([:a,[:b,[:c]]].flatten(1), [:a, :b, [:c]], "Array#flatten(1)q on a more deeply nested array")
 end
 
 def test_set
@@ -401,6 +413,8 @@ def test_parser
   # Handling of single argument with/without lambda
   test_exp("foo.bar(x)", "[:do, [:callm, :foo, :bar, [:x]]]")
   test_exp("foo.bar(x) {}", "[:do, [:callm, :foo, :bar, [:x], [:proc]]]")
+
+  test_exp("def flatten level=0; end", "[:do, [:defm, :flatten, [[:level, :default, 0]], []]]")
 end
 
 def test_destructuring
