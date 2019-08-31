@@ -37,6 +37,10 @@ class SimpleDelegator
     @ob[index]
   end
 
+  def respond_to?(m)
+    @ob.respond_to?(m)
+  end
+
   def method_missing sym, *args
     @ob.send(sym,*args)
   end
