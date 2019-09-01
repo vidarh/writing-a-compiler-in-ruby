@@ -386,7 +386,7 @@ class Emitter
     r
   end
 
-  def with_register_for(maybe_reg)
+  def with_register_for(maybe_reg, &block)
     # @FIXME @bug
     # Because of lack of support for exceptions, this will not work:
     #c = @allocator.lock_reg(maybe_reg) rescue nil
@@ -397,12 +397,17 @@ class Emitter
 
     if c
       comment("Locked register #{c.reg}")
-      r = yield c.reg
+      # FIXME: @bug - yield does not work here.
+      r = block.call(c.reg) #yield c.reg
       comment("Unlocked register #{c.reg}")
       c.locked = false
       return r
     end
-    with_register {|r| emit(:movl, maybe_reg, r); yield(r) }
+    with_register do |r|
+      emit(:movl, maybe_reg, r)
+      # FIXME: @bug - yield does not work here.
+      block.call(r)
+    end
   end
 
   def mark_dirty(var, type, src)
