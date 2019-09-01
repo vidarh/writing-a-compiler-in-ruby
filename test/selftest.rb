@@ -279,18 +279,32 @@ def test_scanner_basics
   io = MockIO.new("This is a test")
   s = Scanner.new(io)
 
+  expect_eq(s.position.lineno, 1, "Scanner#position#lineno starts at 1")
+  expect_eq(s.position.col, 1, "Scanner#position#col starts at 1")
   expect_eq(s.filename,"<stream>", "Scanner#filename for non-file IO")
 
   expect_eq(s.peek, ?T, "scanner.peek on 'This is a test'")
+  expect_eq(s.position.col, 1, "Scanner#peek does not move the column")
   expect_eq(s.get, "T", "scanner.get on 'This is a test'")
+  expect_eq(s.position.col, 2, "Scanner#get does move the column")
   expect_eq(s.get, "h", "scanner.get with 'his is a test' remaining")
+  expect_eq(s.position.col, 3, "Scanner#get does move the column (2)")
   s.unget("h");
+  expect_eq(s.position.col, 2, "Scanner#unget does move the column back")
   expect_eq(s.get, "h", "scanner.get with 'his is a test' remaining after unget")
 
   expect_eq(s.expect("is"),"is", "scanner.expect('is') with 'is a test' remaining")
 
   s.expect("a test")
   expect_eq(s.expect("x"), false, "scanner.expect('x') after having consumed the whole string should return nil")
+
+  io = MockIO.new("foo\nbar\n")
+  s = Scanner.new(io)
+  s.expect("foo\n")
+  expect_eq(s.position.col, 1, "Scanner position after LF should be 1")
+  expect_eq(s.position.lineno, 2, "Scanner lineno should increase")
+  s.unget("foo\n")
+  expect_eq(s.position.lineno, 1, "Unget of a line with LF should reduce lineno")
 end
 
 
