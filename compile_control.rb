@@ -120,7 +120,7 @@ class Compiler
       compile_jmp_on_false(scope, var, br)
       compile_exp(ControlScope.new(scope, br,l), body)
     end
-    # FIXME: "while" should return nil.
+    compile_eval_arg(scope, :nil)
     return Value.new([:subexpr])
   end
 
