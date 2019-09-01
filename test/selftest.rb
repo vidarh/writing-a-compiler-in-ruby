@@ -260,6 +260,14 @@ def test_hash
   expect_eq(h.keys.inspect, [:foo, :a, :b, :d, :e, :f].inspect, "#keys")
 end
 
+def while_loop
+  while false
+  end
+end
+
+def test_while
+  expect_eq(while_loop, nil, "A while loop without an explicit return should evaluation to nil")
+end
 
 # Test our own Mock first...
 #
@@ -572,6 +580,7 @@ test_symbol
 test_array
 test_set
 test_hash
+test_while
 test_mockio
 test_scannerstring
 test_scanner_basics
