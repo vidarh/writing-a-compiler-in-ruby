@@ -185,8 +185,9 @@ class Compiler
 
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
         else
-          if    n[0] == :callm 
+          if    n[0] == :callm
             vars, env = find_vars(n[1], scopes, env, freq, in_lambda)
+
             if n[3]
               nodes = n[3]
               nodes = [nodes] if !nodes.is_a?(Array)
