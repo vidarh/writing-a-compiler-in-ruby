@@ -32,22 +32,32 @@ class Compiler
   end
 
 
-  def compile_div(scope, left, right)
+  def compile_div(scope, left, right, &block)
     @e.pushl(compile_eval_arg(scope,left))
     
     res = compile_eval_arg(scope,right)
+    # FIXME @bug
+    # block_given? does not work in nested
+    # lambdas
+    bg = block_given?
     @e.with_register(:edx) do |dividend|
+      xdividend = dividend
       @e.with_register do |divisor|
+        # FIXME: @bug
+        # dividend gets set incorrectly due to a compiler
+        # bug in handling of nested lambdas, so using xdividend above instead.
+
         @e.movl(res,divisor)
-        
         # We need the dividend in %eax *and* sign extended into %edx, so 
         # it doesn't matter which one of them we pop it into:
-        @e.popl(@e.result) 
-        @e.movl(@e.result, dividend)
-        @e.sarl(31, dividend)
+        @e.popl(@e.result)
+        @e.movl(@e.result, xdividend)
+        @e.sarl(31, xdividend)
         @e.idivl(divisor)
 
-        yield if block_given?
+        if bg
+          block.call
+        end
       end
     end
     Value.new([:subexpr])
