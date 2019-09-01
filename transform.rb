@@ -70,7 +70,7 @@ class Compiler
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
-      # FIXME: This is a workaround for a compile bug
+      # FIXME: This is a workaround for a compiler @bug
       bug=e
       e.each_with_index do |s,i|
         if s.is_a?(String)
