@@ -12,11 +12,10 @@ See <http://www.hokstad.com/compiler>
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
-New since August 19th:
+New Sep 1, 2019:
 
- * The "hello world" compiled with the bootstrapped/compiled compiler now
-   assembles, but crashes due to one of the remaining differences.
- * More, but not all, of the fixes from my local tree is now on Github.
+ * The "hello world" compiled with the bootstrapped/compiled compiler now *runs*
+ * Most, *but not all*, of the fixes from my local tree is now on Github.
    What's holding me up is trying to reduce the workarounds to the minimum
    necessary set.
 
