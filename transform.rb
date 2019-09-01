@@ -80,7 +80,7 @@ class Compiler
             @string_constants[s] = lab
           end
           # FIXME: This is a workaround for a compiler bug
-          STDERR.puts(bug.inspect)
+          # STDERR.puts(bug.inspect)
           bug[i] = E[:sexp, E[:call, :__get_string, lab.to_sym]]
 
           # FIXME: This is a horrible workaround to deal with a parser
