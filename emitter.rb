@@ -528,7 +528,7 @@ class Emitter
     movl("#{off*Emitter::PTR_SIZE}(%#{areg.to_s})", result_value)
   end
 
-  def func(name, position = nil,varfreq= nil)
+  def func(name, position = nil,varfreq= nil, minarty = nil, maxarity = nil, strname = "")
     emit("")
     emit("")
     emit("")
