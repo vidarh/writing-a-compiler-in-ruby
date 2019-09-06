@@ -247,9 +247,11 @@ class Compiler
   end
 
   def rewrite_env_vars(exp, env)
+    seen = false
     exp.depth_first do |e|
       # We need to expand "yield" before we rewrite.
       if e.is_a?(Array) && e[0] == :call && e[1] == :yield
+        seen = true
         args = e[2]
         e[0] = :callm
         e[1] = :__closure__
@@ -266,11 +268,13 @@ class Compiler
         next if i == 0 && ex == :index
         num = env.index(ex)
         if num
+          seen = true
           # FIXME: @bug; e[i] causes segfault.
           eary[i] = E[:index, :__env__, num]
         end
       end
     end
+    seen
   end
 
   # Visit the child nodes as follows:
