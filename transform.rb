@@ -353,11 +353,12 @@ class Compiler
 
       if rest
         vars << rest.to_sym
+        # FIXME: @bug Removing the E[] below causes segmentation fault
         rest_func =
-          [:sexp,
+          [E[:sexp,
            # Corrected to take into account statically provided arguments.
            [:assign, rest.to_sym, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
-          ]
+          ]]
       else
         rest_func = []
       end
