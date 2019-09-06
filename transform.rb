@@ -40,9 +40,11 @@ class Compiler
   # much easier to debug - it can be turned on and off to 
   # see how the code gets transformed.
   def rewrite_lambda(exp)
+    seen = false
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       if e[0] == :lambda || e[0] == :proc
+        seen = true
         args = e[1] || E[]
         body = e[2] || nil
 
@@ -50,17 +52,27 @@ class Compiler
           body = rewrite_proc_return(body)
         end
 
-        e.clear
-        e[0] = :do
-        e[1] = E[:assign, [:index, :__env__,0], [:stackframe]]
-        e[2] = E[:assign, :__tmp_proc,
-          E[:defun, @e.get_local,
-            E[:self,:__closure__,:__env__]+args.collect{|a| [a, :default, :nil] },
-            body]
-        ]
-        e[3] = E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self, args.length]]]
+        # FIXME: Putting this inline further down appears to break.
+        len = args.length
+
+        e.replace(
+          E[:do,
+            [:assign, [:index, :__env__,0], [:stackframe]],
+            [:assign, :__tmp_proc,
+              [:defun, "__lambda_#{@e.get_local[1..-1]}",
+                [:self,:__closure__,:__env__]+args.collect{|a| [a, :default, :nil] },
+                body
+              ]
+            ],
+            # FIXME: Compiler bug: This works
+            [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, len]]]
+            # But this crashes:
+            #E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self, len]]]
+          ]
+        )
       end
     end
+    return seen
   end
 
 
@@ -161,6 +173,16 @@ class Compiler
     if sc.size == 0 && !env.member?(v) && !is_special_name?(v)
       scopes[-1] << v 
     end
+  end
+
+  def find_vars_ary(ary, scopes, env, freq, in_lambda = false, in_assign = false)
+    vars = []
+    ary.each do |e|
+      vars2, env2 = find_vars(e, scopes, env, freq, in_lambda, in_assign)
+      vars += vars2
+      env  += env2
+    end
+    return vars
   end
 
   # FIXME: Rewrite using "depth first"?
@@ -309,6 +331,9 @@ class Compiler
 
       ri = -1
       r = e[2][ri]
+      # FIXME: compiler bug; rest does not correctly get initialized to
+      # nil in the control flows where it's not assigned.
+      rest = nil
       if r
         if r[-1] != :rest
           ri -= 1
@@ -333,27 +358,40 @@ class Compiler
       aenv = [:__stackframe__] + env.to_a
       env << :__stackframe__
 
+      body = e[3]
+      prologue = nil
       vars -= args.to_a
+      seen = false
       if env.size > 0
-        body = e[3]
+        seen = rewrite_env_vars(body, aenv)
 
-        rewrite_env_vars(body, aenv)
         notargs = env - args - [:__closure__]
+
+        # FIXME: Due to compiler bug
+        ex = e
         extra_assigns = (env - notargs).to_a.collect do |a|
-          E[e.position,:assign, E[e.position,:index, :__env__, aenv.index(a)], a]
+          ai = aenv.index(a)
+          # FIXME: "ex" instead of "e" due to compiler bug.
+          E[ex.position, :assign, E[ex.position,:index, :__env__, ai], a]
         end
-        e[3] = [E[:sexp,E[:assign, :__env__, E[:call, :malloc,  [aenv.size * 4]]]]]
-        e[3].concat(extra_assigns)
+        prologue = [E[:sexp, E[:assign, :__env__, E[:call, :__alloc_mem,  [aenv.size * 4]]]]]
+        if !extra_assigns.empty?
+          prologue.concat(extra_assigns)
+        end
         if body.empty?
           body = [:nil]
         end
-        e[3].concat(body)
       end
-      # Always adding __env__ here is a waste, but it saves us (for now)
-      # to have to intelligently decide whether or not to reference __env__
-      # in the rewrite_lambda method
-      vars << :__env__
-      vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
+
+      # FIXME: seen |= ... and seen = seen | ... both failed to compile.
+      if rewrite_lambda(body)
+        seen = true
+      end
+
+      if seen
+        vars << :__env__
+        vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
+      end
 
       if rest
         vars << rest.to_sym
@@ -364,13 +402,31 @@ class Compiler
            [:assign, rest.to_sym, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
           ]]
       else
-        rest_func = []
+        rest_func = nil
       end
 
-      e[3] = E[e.position,:let, vars, rest_func,*e[3]]
-      # We store the variables by descending frequency for future use in register
-      # allocation.
-      e[3].extra[:varfreq] = freq.sort_by {|k,v| -v }.collect{|a| a.first }
+      e[3] = []
+      if rest_func
+        e[3].concat(rest_func)
+      end
+
+      if seen && prologue # seen && prologue
+        e[3].concat(prologue)
+      end
+
+      e[3].concat(body)
+
+      # FIXME: Compiler bug: Changing the below to "if !vars.empty?" causes seg fault.
+      empty = vars.empty?
+      if empty == false
+        e[3] = E[e.position,:let, vars, *e[3]]
+        # We store the variables by descending frequency for future use in register
+        # allocation.
+        # FIXME: Compiler bug: -v fails.
+        e[3].extra[:varfreq] = freq.sort_by {|k,v| 0 - v }.collect{|a| a.first }
+      else
+        e[3] = E[e.position, :do, *e[3]]
+      end
 
       :skip
     end
@@ -544,6 +600,5 @@ class Compiler
     rewrite_operators(exp)
     rewrite_yield(exp)
     rewrite_let_env(exp)
-    rewrite_lambda(exp)
   end
 end
