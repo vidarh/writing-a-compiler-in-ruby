@@ -452,8 +452,7 @@ class Compiler
           type = e[1]
           syms = e[2]
 
-          e[0] = :do
-          e.slice!(1..-1)
+          e.replace(E[:do])
           syms.each do |mname|
             mname = mname.to_s[1..-1].to_sym
             if (type == :attr_reader || type == :attr_accessor)
