@@ -7,17 +7,17 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of August 23rd 2019
+## Status as of September 9th 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
-New Sep 1, 2019:
+New Sep 9, 2019:
 
- * The "hello world" compiled with the bootstrapped/compiled compiler now *runs*
- * Most, *but not all*, of the fixes from my local tree is now on Github.
-   What's holding me up is trying to reduce the workarounds to the minimum
-   necessary set.
+ * The "hello world" compiled with the bootstrapped/compiled compiler now *runs* and the
+   compiled source is identical if care is taken about filesystem paths.
+ * All the fixes from my local tree is now on Github *except* for the garbage collection
+   integration, so next up: Garbage collection article. Finally in progress.
 
 This is *all new* as of April, as I finally started playing with it again:
 
