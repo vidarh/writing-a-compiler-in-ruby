@@ -79,24 +79,27 @@ class Scanner
   end
 
   def unget(c)
+    @buf << c.reverse
+
+    if c.respond_to?(:position)
+      pos = c.position
+      if pos
+        @lineno = pos.lineno
+        @filename = pos.filename
+        @col = pos.col
+        return
+      end
+    end
+
     if c.is_a?(String)
-      c = c.reverse
       @col -= c.length
       ten = 10 # FIXME: This is a temporary hack to get the compiler linking
       @lineno -= c.count(ten.chr)
     else
       @col -= 1
     end
-    if c.respond_to?(:position) and pos = c.position
-      @lineno = pos.lineno
-      @filename = pos.filename
-      @col = pos.filename
-    else
-      #STDERR.puts "unget without position: #{c}"
-    end
-    @buf << c
   end
-  
+
   # If &block is passed, it is a callback to parse an expression
   # that will be passed on to the method.
   def expect(str,&block)
