@@ -313,6 +313,10 @@ def test_scanner_basics
   expect_eq(s.position.lineno, 2, "Scanner lineno should increase")
   s.unget("foo\n")
   expect_eq(s.position.lineno, 1, "Unget of a line with LF should reduce lineno")
+
+  s = mock_scanner("%")
+  s.expect("%s")
+  expect_eq(s.position.lineno, 1, "A failed Scanner#expect should not change the line number")
 end
 
 
@@ -438,7 +442,17 @@ def test_parser
 
   test_exp("def flatten level=0; end", "[:do, [:defm, :flatten, [[:level, :default, 0]], []]]")
 end
+  prog = mock_parse("require 'core/base'\n{}\n")
+  expect_eq(prog[2].position.lineno, 2, "Parser position")
 
+  prog = mock_parse('
+  class Foo
+    def __x
+      bar = baz
+    end
+  end
+')
+  expect_eq(prog[1][3][0][3][0].position.lineno, 4, "Parser line number should match")
 def test_destructuring
   test_exp("a,b = [42,123]", "[:do, [:assign, [:destruct, :a, :b], [:array, 42, 123]]]")
 end
