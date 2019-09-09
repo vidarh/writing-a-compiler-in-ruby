@@ -238,7 +238,13 @@ class Parser < ParserBase
     pos = position
     ws
     ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_lambda || parse_break || parse_next || parse_subexp || parse_require
-    ret.position = pos if ret.respond_to?(:position)
+    if ret.respond_to?(:position)
+      ret.position = pos
+    # FIXME: @bug this below is needed for MRI, but not for the selfhosted compiler...
+    # Unsure why, but they should not behave differently...
+    elsif ret.is_a?(Array)
+      ret = E[pos].concat(ret)
+    end
     nolfws
     if sym = expect(:if, :while, :rescue)
       # FIXME: This is likely the wrong way to go in some situations involving blocks
@@ -442,8 +448,11 @@ class Parser < ParserBase
     ws
     pos = position
     ret = parse_class || parse_module || parse_def || parse_include || parse_defexp || expect("protected")
-    ret = E[pos].concat(ret) if ret.is_a?(Array)
-    ret.position = pos if ret.respond_to?(:position) && !ret.position
+    if ret.is_a?(Array)
+      ret = E[pos].concat(ret)
+    elsif ret.respond_to?(:position) && !ret.position
+      ret.position = pos
+    end
     ws; expect(";"); ws
     return ret
   end
