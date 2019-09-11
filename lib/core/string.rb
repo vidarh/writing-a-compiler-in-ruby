@@ -292,7 +292,15 @@ class String
   end
 
   def count c = nil
-    1
+    return length if !c
+    l = 0
+    c = c.ord
+    each_byte do |b|
+      if b == c
+        l = l + 1
+      end
+    end
+    l
   end
 
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
