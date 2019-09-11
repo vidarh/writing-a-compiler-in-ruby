@@ -47,11 +47,9 @@ class Compiler
 
   # FIXME: compiler @bug workaround. See #compile_eigenclass
   def compile_ary_do(lscope, exps)
-      debug("lscope", lscope)
-      exps.each do |e|
-      lscope
-      debug("per exp", lscope)
-      compile_do(lscope, e)
+    exps.each do |e|
+        lscope
+        compile_do(lscope, e)
     end
   end
 
