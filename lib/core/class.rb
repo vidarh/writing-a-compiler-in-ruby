@@ -2,7 +2,7 @@
 %s(defun __new_class_object (size superclass ssize classob)
   (let (ob i)
    (if (eq classob 0) (assign classob Class))
-   (assign ob (calloc size 4)) # Assumes 32 bit
+   (assign ob (__array size))
    (assign i 6) # Skips the initial instance vars
  #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
   (while (lt i ssize) (do

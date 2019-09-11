@@ -70,7 +70,7 @@ class Fixnum < Integer
 
   def chr
    %s(let (buf)
-       (assign buf (malloc 2))
+       (assign buf (__alloc_leaf 2))
        (snprintf buf 2 "%c" @value)
        (__get_string buf)
        )

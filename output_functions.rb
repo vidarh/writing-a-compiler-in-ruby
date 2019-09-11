@@ -49,7 +49,9 @@ class Compiler
     # appears to rewrite the method name to a closure relative expression.
     #
     @e.func(label, pos, varfreq, xfunc.minargs, xfunc.rest? ? 1000 : xfunc.maxargs, strconst(label)) do
-      output_arity_check(fscope, label, xfunc)
+      if xfunc.arity_check
+        output_arity_check(fscope, label, xfunc)
+      end
 
       if xfunc.defaultvars > 0
         @e.with_stack(xfunc.defaultvars) do

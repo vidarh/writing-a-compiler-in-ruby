@@ -9,7 +9,7 @@ class IO < Object
   def initialize fd
     @fd = fd
 
-    %s(assign tmp (malloc 256))
+    %s(assign tmp (__alloc_leaf 256))
     @rawbuf = tmp
   end
 

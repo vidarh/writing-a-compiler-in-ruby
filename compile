@@ -15,7 +15,13 @@ end
 
 puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
 if dr("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} 2>&1 >out/#{bname}.s")
-  if dr("gcc #{asmdebug} -m32 -o out/#{bname} out/#{bname}.s")
+  if dr("gcc -Wall #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
+    puts "+++ \e[32mCompiled tgc\e[37m"
+  else
+    STDERR.puts "*** \e[31mCompiling tgc failed.\e[37m"
+    exit(1)
+  end
+  if dr("gcc #{asmdebug} -m32 -o out/#{bname} out/#{bname}.s out/tgc.o")
     puts "+++ \e[32mCompiled to out/#{bname}\e[37m"
   else
     STDERR.puts "*** \e[31mAssembly failed.\e[37m"

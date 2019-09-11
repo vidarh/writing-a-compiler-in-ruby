@@ -32,8 +32,8 @@ class Array
     %s(assign @capacity (add (div (mul newlen 4) 3) 4))
 
     %s(if (ne @ptr 0)
-         (assign @ptr (realloc @ptr (mul @capacity 4)))
-         (assign @ptr (calloc @capacity 4))
+         (assign @ptr (__realloc @ptr (mul @capacity 4)))
+         (assign @ptr (__array @capacity))
          )
   end
 

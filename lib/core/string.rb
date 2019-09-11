@@ -134,7 +134,7 @@ class String
 
   def __copy_raw(str,len)
     %s(assign len (add (callm len __get_raw) 1))
-    %s(assign @buffer (malloc len))
+    %s(assign @buffer (__alloc_leaf len))
     %s(memmove @buffer str len)
     %s(assign (bindex @buffer (sub len 1)) 0)
     nil
@@ -317,7 +317,7 @@ class String
          (assign bsize (strlen @buffer))
          (assign size (add bsize osize))
          (assign size (add size 1))
-         (assign newb (malloc size))
+         (assign newb (__alloc_leaf size))
          (strcpy newb @buffer)
          (strcat newb ro)
          (assign @buffer newb)
