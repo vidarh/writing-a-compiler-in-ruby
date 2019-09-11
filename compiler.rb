@@ -268,7 +268,7 @@ class Compiler
   def compile_defun(scope, name, args, body, break_label = nil)
     raise "Internal error: Expecting a name; got #{name.inspect}" if name.is_a?(Array)
 
-    f = Function.new(name,args, body, scope, break_label || @e.get_local)
+    f = Function.new(name,args, body, scope, break_label || @e.get_local, false)
     name = clean_method_name(name)
 
     # add function to the global list of functions defined so far

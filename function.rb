@@ -30,7 +30,7 @@ end
 # Represents a function.
 # Takes arguments and a body of code.
 class Function
-  attr_reader :args, :body, :scope, :name, :break_label
+  attr_reader :args, :body, :scope, :name, :break_label, :arity_check
 
   # Number of variables with defaults that we need to
   # allocate local stack space for.
@@ -40,10 +40,11 @@ class Function
   # Takes an argument list, a body of expressions as well as
   # the scope the function was defined in. For methods this is a
   # class scope.
-  def initialize(name, args, body, scope, break_label)
+  def initialize(name, args, body, scope, break_label, arity_check = true)
     @name = name
     @body = body || []
     @rest = false
+    @arity_check = arity_check
     args ||= []
 
     @defaultvars = 0
