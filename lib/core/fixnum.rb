@@ -162,9 +162,25 @@ class Fixnum < Integer
   end
 end
 
+%s(assign FixNum_cache_size 10)
+%s(assign FixNum_cache (__array_leaf (mul FixNum_cache_size 2)))
 
-%s(defun __get_fixnum (val) (let (num)
-  (assign num (callm Fixnum allocate))
-  (callm num __set_raw (val))
-  num
-))
+%s(defun __get_fixnum (val)
+    (let (num)
+      (if (and (ge val 0) (lt val FixNum_cache_size))
+        (do
+          # 32 bit class-ptr + 32 bit int; Naughty assumptions again. FIXME
+          (assign num (add FixNum_cache (mul val 8)))
+          (if (eq (index num 0) 0) (do
+            (assign (index num 0) Fixnum)  # class-ptr
+            (callm num __set_raw (val))
+            (return num)
+          ))
+          (return num)
+        )
+      )
+      (assign num (callm Fixnum allocate))
+      (callm num __set_raw (val))
+      (return num)
+    )
+  )
