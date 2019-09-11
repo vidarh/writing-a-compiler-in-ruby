@@ -43,6 +43,8 @@ class Emitter
     @allocator = RegisterAllocator.new
 
     @debug = :stabs
+    @lineno = nil
+    @linelabel = 0
   end
 
 
@@ -591,6 +593,7 @@ class Emitter
   end
 
   def include(filename)
+    @lineno = nil
     return yield if !filename
     @section += 1
     stabs("\"#{filename}\",130,0,0,0")
@@ -598,12 +601,11 @@ class Emitter
     stabn("162,0,0,0")
     @section -= 1
     comment ("End include \"#{filename}\"")
+    @lineno = nil
     ret
   end
 
   def lineno(position)
-    @lineno ||= nil
-    @linelabel ||= 0
     if position.lineno != @lineno
       # Annoyingly, the linenumber stabs use relative addresses inside include sections
       # and absolute addresses outside of them.
