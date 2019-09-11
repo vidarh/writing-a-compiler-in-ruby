@@ -19,3 +19,4 @@
 )
 
 %s(defun __array (size) (malloc (mul size 4)))
+%s(defun __alloc_mem (size) (calloc size 4))
