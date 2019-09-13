@@ -7,27 +7,16 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of September 9th 2019
+## Status as of September 13th 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
-New Sep 9, 2019:
-
+ * Garbage collector is integrated; garbage collection article nearly done.
+ * ARGV works, and as a result the separate bootstrap version of the compiler driver is
+   obsolete.
  * The "hello world" compiled with the bootstrapped/compiled compiler now *runs* and the
    compiled source is identical if care is taken about filesystem paths.
- * All the fixes from my local tree is now on Github *except* for the garbage collection
-   integration, so next up: Garbage collection article. Finally in progress.
-
-This is *all new* as of April, as I finally started playing with it again:
-
- * Using the bootstrapped compiler for a "hello world" now runs through the
-   full code generation step. (~70k lines; mostly the runtime) with my latest
-   changes (not all of which have been pushed to Github yet, as I'm still trying
-   to ensure the changes are minimized to just what is required). There are
-   some discrepancies in output that looks likely to be caused by 1-2 different
-   minor bugs. There are likely to be more code-generation bugs lurking that will
-   show up when trying to compile larger code.
  * This includes a number of ugly workarounds for compiler bugs that have
    not been nailed down yet. I'm trying to ensure sites of known workarounds
    for bugs in the compiler are marked with `@bug`.
@@ -44,21 +33,14 @@ This is *all new* as of April, as I finally started playing with it again:
        allocating the env as part of the Proc object, but not sure it's worthwhile
      * Capture stats on number of allocated objects per class, and output,
 
- * When compiling the compiler with itself with a slightly modified driver,
- it successfully parses all of itself and produces identical output to when
- run under MRI. This does not mean the parse is complete (it absolutely is not),
- or bug free - it means the parser acts correctly on the very specific subset
- of expressions currently present in the compiler itself.
- * The AST transformation steps (in transform.rb) gives identical results
- under the compiler itself and MRI.
- * I have a GC under preparation (it is working, but I need to put some effort
- into cleaning things up); **A new blog post or two that covers integration of the GC is coming as a continuation of the original series**
- (currently I'm unsure if I'll finish that before or after making the bootstrapped
- compiler at least compile a "hello world"; depends how many problems I run into
- with that)
+ * When compiling the compiler with itself it successfully parses all of itself
+ and produces identical output to when run under MRI. This does not mean the
+ parse is complete (it absolutely is not), or bug free - it means the parser
+ acts correctly on the very specific subset of expressions currently present
+ in the compiler itself.
 
 Assuming I get time to continue current progress, the compiler might fully compile
-itself and the compiled version might be able to compile itself by (late) summer.
+itself and the compiled version might be able to compile itself this autumn.
 
 (to make that clear, what I want to get to is:
 
