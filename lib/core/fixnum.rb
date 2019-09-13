@@ -162,7 +162,7 @@ class Fixnum < Integer
   end
 end
 
-%s(assign FixNum_cache_size 10)
+%s(assign FixNum_cache_size 1000)
 %s(assign FixNum_cache (__array_leaf (mul FixNum_cache_size 2)))
 
 %s(defun __get_fixnum (val)
