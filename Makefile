@@ -9,11 +9,14 @@ clean:
 compiler: *.rb
 	./compile driver.rb -I . -g
 
-compiler2: *.rb
-	./compile driver2.rb -I . -g
+compiler-nodebug: *.rb
+	./compile driver.rb -I .
 
-compiler2b: *.rb
-	./compile driver2.rb -I .
+out/driver.l: *.rb
+	ruby -I. driver.rb -I. --parsetree driver.rb >out/driver.l
+
+hello: compiler
+	./out/driver <examples/hello.rb
 
 push:
 	git push origin master
