@@ -93,6 +93,7 @@ require 'core/enumerator'
 # Other support
 #
 
+require 'core/args'
 require 'core/stdio'
 require 'core/stubs'       # Stubbed out/non-functional missing pieces
 require 'core/debug'       # Low level debug support

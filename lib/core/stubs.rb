@@ -43,12 +43,9 @@ end
 )
 
 # FIXME
-ARGV=[]
 LOAD_PATH=[]
 
 # FIXME: We'll pick something else for this; for now I just
 # need *something* to distinguish from MRI.
 RUBY_ENGINE="vidarh/compiler"
 
-# $0
-__D_0="<script name>"
