@@ -51,6 +51,10 @@ class Compiler
     @e.func(label, pos, varfreq, xfunc.minargs, xfunc.rest? ? 1000 : xfunc.maxargs, strconst(label)) do
       if xfunc.arity_check
         output_arity_check(fscope, label, xfunc)
+      else
+        # FIXME: This is strictly only needed for lambdas, as the "self" in scope
+        # at the start will be the calling object, not the object that created the lambda.
+        @e.evict_regs_for(:self)
       end
 
       if xfunc.defaultvars > 0
