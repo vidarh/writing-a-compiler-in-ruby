@@ -7,6 +7,12 @@ class Fixnum < Integer
     %s(assign @value 0)
   end
 
+  def self.allocate
+    %s(assign ob (__array_leaf 2))
+    %s(assign (index ob 0) self)
+    ob
+  end
+
   def % other
     %s(assign r (callm other __get_raw))
     %s(assign m (mod @value r))
