@@ -116,8 +116,15 @@ class Compiler
       ex = e
       e.each_with_index do |v,i|
         if v.is_a?(Integer)
+          if v == -1
+            ex[i] = E[:sexp, :__m1]
+          elsif v >= 0 && v <= 9
           # FIXME: Parsing breaks.
-          ex[i] = E[:sexp, E[:call, :__get_fixnum, v]]
+            s = "__#{v}".to_sym
+            ex[i] = E[:sexp, s] #"__#{v}".to_sym]
+          else
+            ex[i] = E[:sexp, E[:call, :__get_fixnum, v]]
+          end
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
