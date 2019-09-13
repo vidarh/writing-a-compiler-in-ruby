@@ -18,7 +18,7 @@ class File < IO
     @path = path
     %s(assign rpath (callm path __get_raw))
     %s(assign fd (open rpath 0))
-    %s(perror 0)
+
    # FIXME: Error checking
     %s(if (le fd 0) (do
          (printf "Failed to open '%s' got %ld\n" rpath fd)
