@@ -29,8 +29,8 @@ class File < IO
     super(fd)
   end
 
-  def self.open(path)
-    f = File.new(path)
+  def self.open(path, mode = "r")
+    f = File.new(path, mode)
   end
 
   def self.exists?(path)
