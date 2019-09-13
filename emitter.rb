@@ -641,18 +641,14 @@ class Emitter
     export(:main, :function)
     label(:main)
     @out.label(".LFBB0")
-    leal("4(%esp)", :ecx)
-    andl(-16, :esp)
-    pushl("-4(%ecx)")
     pushl(:ebp)
     movl(:esp, :ebp)
     pushl(:ecx)
-  
+
     yield
 
     popl(:ecx)
     popl(:ebp)
-    leal("-4(%ecx)", :esp)
     ret()
     emit(".size", "main", ".-main")
   end
