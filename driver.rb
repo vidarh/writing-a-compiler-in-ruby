@@ -33,7 +33,6 @@ require 'compiler'
 
      elsif File.exists?(arg)
        input_source = File.open(arg, "r")
-       STDERR.puts "reading from file: #{arg}"
      else
        STDERR.puts "No such file or argument: #{arg}"
        exit(1)
