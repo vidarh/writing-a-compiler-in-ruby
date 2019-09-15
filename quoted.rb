@@ -3,11 +3,22 @@ module Tokens
   class Quoted
     def self.escaped(s,q = '"'[0])
       return nil if s.peek == q
-      if s.expect("\\")
+      e = s.get
+      if e == 92.chr
         raised "Unexpected EOF" if !s.peek
-        return "\\"+s.get
+        e = s.get
+        case e
+        when 'e'
+          return 27.chr
+        when 't'
+          return 9.chr
+        when 'n'
+          return 10.chr
+        else
+          return e
+        end
       end
-      return s.get
+      return e
     end
 
     def self.expect_dquoted(s,q='"')
@@ -71,9 +82,7 @@ module Tokens
     def self.expect_squoted(s,q = "'" )
       buf = ""
       while (e = s.get) && e != q
-        if e == '"'
-          buf << "\\\""
-        elsif e == "\\" && (s.peek == ?' || s.peek == "\\"[0])
+        if e == "\\" && (s.peek == ?' || s.peek == "\\"[0])
           buf << "\\" + s.get
         else
           buf << e

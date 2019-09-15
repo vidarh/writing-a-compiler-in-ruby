@@ -35,19 +35,22 @@ class String
   end
 
   def inspect
-    buf = "\""
+    buf = 34.chr
+    esc = 92.chr
     each_byte do |b|
       if b == 34
-        buf << "\\\""
+        buf << esc << 34.chr
+      elsif b == 27
+        buf << esc << 'e'
       elsif b == 92
-        buf << "\\\\"
+        buf << esc << esc
       elsif b == 10
-        buf << "\\n"
+        buf << esc << 'n'
       else
         buf << b.chr
       end
     end
-    buf << "\""
+    buf << 34.chr
     buf
   end
 

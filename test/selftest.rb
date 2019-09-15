@@ -365,6 +365,47 @@ def test_sexp_basics
 
   tree = SEXParser.new(mock_scanner("%s(index self -4)")).parse
   expect_eq(tree.inspect, "[:sexp, [:index, :self, -4]]", "Parsing %s(index self -4)")
+
+end
+
+def test_escapes
+  esc = 27.chr # Doing this as comparing again "\\" if the parsing of "\\" is broken won't work very well.
+
+  escstr = ""
+  escstr << 92.chr  # \
+  escstr << "e"
+
+  expect_eq(esc.ord, 27, "esc")
+  expect_eq("\ee - esc 2".ord, 27, "esc 2")
+  expect_eq("\e - esc 3".length, 9, "esc 3")
+  expect_eq('\e - esc 4'.ord, 92, "esc 4")
+  expect_eq('\e - esc 5'.length, 10, "esc 5")
+  expect_eq('\e - esc 6'[1].chr, 'e', "esc 6")
+
+  escistr = ""
+  escistr << 34.chr # "
+  escistr << 92.chr # \
+  escistr << 92.chr # \
+  escistr << "e"
+  escistr << 34.chr # "
+  expect_eq(escstr.inspect, escistr, "Inspect")
+
+  s = mock_scanner("\\e")
+  expect_eq(s.expect("\\"), "\\", "Expect Scanner#expect to return quoted backslash")
+  str = "\e"
+  expect_eq(str.ord, 27, "Expect double-quoted string with backslash-e to translate to esc")
+  s = mock_scanner(str)
+  expect_eq(s.expect(esc), esc, "Expect Scanner.expect(esc) to return esc when string is esc")
+  s = mock_scanner('\e')
+  expect_eq(s.expect("\\"), "\\", "Expect Scanner#expect to find backslash in single-quoted '\\e'")
+
+  str = 34.chr
+  str << 92.chr
+  str << 'e and more'
+  str << 34.chr # "\e"
+  s = mock_scanner(str)
+  t = Tokens::Quoted.expect(s)
+  expect_eq(t, 27.chr + " and more", "Tokens::Quotes need to be able to handle escapes")
 end
 
 def test_tokenizer
@@ -422,7 +463,7 @@ def test_parser
   test_exp("def foo; puts 'Hello World'; end", "[:do, [:defm, :foo, [], [[:call, :puts, [\"Hello World\"]]]]]")
   test_exp("e[i]", "[:do, [:callm, :e, :[], [:i]]]")
   test_exp("e[i] = E[:foo]", "[:do, [:callm, :e, :[]=, [:i, [:callm, :E, :[], [:\":foo\"]]]]]")
-  test_exp('"\e"',"[:do, \"\\\\e\"]")
+  test_exp('"\e"',"[:do, \"\\e\"]")
   test_exp("Set[* e[2].to_a]","[:do, [:callm, :Set, :[], [[:splat, [:callm, [:callm, :e, :[], [2]], :to_a]]]]]")
   test_exp("def foo; name.gsub(foo.bar) { }; end ","[:do, [:defm, :foo, [], [[:callm, :name, :gsub, [[:callm, :foo, :bar]], [:proc]]]]]")
   test_exp('STDERR.puts "defm: #{args.inspect}"', "[:do, [:callm, :STDERR, :puts, [[:concat, \"defm: \", [:callm, :args, :inspect]]]]]")
@@ -603,6 +644,7 @@ test_sym
 test_atom
 test_respond_to
 test_sexp_basics
+test_escapes
 test_tokenizer
 test_methodname_tokenizer
 test_shunting

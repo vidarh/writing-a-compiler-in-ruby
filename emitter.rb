@@ -483,8 +483,19 @@ class Emitter
     local(l)
     if str # nil here is bizarre and probably a bug - it means get_arg() was called with nil
       # FIXME: Should rewrite a lot more thoroughly here...
-      str = str.gsub("\n","\\n")
-      emit(".string", "\"#{str}\"")
+      buf = ""
+      str.each_byte do |b|
+        if b < 32 || b == 92
+          buf << 92.chr
+          buf << b.to_s(8)
+        elsif b == 34
+          buf << '\"'
+        else
+          buf << b.chr
+        end
+      end
+
+      emit(".asciz", "\"#{buf}\"")
     end
   end
 
