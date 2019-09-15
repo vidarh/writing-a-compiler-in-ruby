@@ -575,7 +575,7 @@ def test_compiler
       h = h * 33 + c
     end
   ')
-  p prog
+
   res = c.find_vars(prog, [[:h]], Set.new, Hash.new(0))
   expect_eq(res.inspect, "[[], #<Set: {:h}>]", "find_vars should identify all variables in a proc")
 
@@ -585,7 +585,7 @@ def test_compiler
       @e.save_result(scope,right)
     end
   ')
-  p prog
+
   res = c.find_vars(prog, [[:scope, :left, :right]], Set.new, Hash.new(0))
   expect_eq(res.inspect, "[[:left], #<Set: {:scope, :right}>]", "find_vars_should identify all variables in a proc")
 
@@ -599,7 +599,6 @@ def test_compiler
   res = c.find_vars(prog[1][3][2][0][3], [[:scope, :left, :right]], Set.new, Hash.new(0), true)
   expect_eq(res.inspect, "[[:left], #<Set: {:scope, :right}>]", "find_vars_should identify all variables in a proc")
 
-  p prog[1][3][2]
   res = c.find_vars(prog[1][3][2], [[:scope, :left, :right]], Set.new, Hash.new(0), true)
   expect_eq(res.inspect, "[[:left], #<Set: {:scope, :right}>]", "find_vars_should identify all variables in a proc [x]")
 
