@@ -598,17 +598,6 @@ def test_compiler
   expect_eq(res.inspect, "[[], #<Set: {:arg, :arg2}>]", "find_vars should identify all variables references in method body")
 
   c = Compiler.new(e)
-  prog = E[:defm, :foo, E[:arg, :arg2], E[E[dummypos,:proc, [], [[:call, :p, [:arg, :arg2]]]]]]
-  c.rewrite_let_env(prog)
-
-  prog2 = E[:defm, :foo, E[:arg, :arg2], E[E[dummypos,:proc, [], [:arg, [:call, :p, [:arg, :arg2]]]]]]
-  c.rewrite_let_env(prog2)
-
-  p1=(prog.flatten - [:arg])
-  p2=(prog2.flatten - [:arg])
-  expect_eq(p1.inspect, p2.inspect, "def foo(arg,arg2); proc do p(arg,arg2); end vs. def foo(arg,arg2); proc do arg; p(arg,arg2); end")
-
-  c = Compiler.new(e)
   prog = mock_parse('
   def foo
     yield
