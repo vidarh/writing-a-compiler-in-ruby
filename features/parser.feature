@@ -21,7 +21,7 @@ Feature: Parser
       | "foo(1,2)"                                   | [:do,[:call,:foo,[1,2]]]                                                   | Simple function/method call                        |
       | "foo { }"                                    | [:do,[:call,:foo,[], [:proc]]]                                             | Testing empty blocks                               |
       | "foo(1) { }"                                 | [:do,[:call,:foo,1, [:proc]]]                                              | Testing empty blocks                               |
-      | "@s.expect(Quoted) { }"    | [:do, [:callm, :@s, :expect, :Quoted, [:proc]]]  | |
+      | "@s.expect(Quoted) { }"    | [:do, [:callm, :@s, :expect, [:Quoted], [:proc]]]  | |
       | "foo(1) { bar }"                             | [:do,[:call,:foo,1, [:proc, [],[:bar]]]]                                  | Testing function calls inside a block              |
       | "foo(1) { bar 1 }"                           | [:do,[:call,:foo,1, [:proc, [],[[:call,:bar,[1]]]]]]                      | Testing function calls inside a block              |
       | "foo { bar[0] }"                             | [:do,[:call,:foo,[],[:proc, [],[[:callm,:bar,:[],[0]]]]]]                 | Testing index operator inside a block              |

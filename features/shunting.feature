@@ -84,7 +84,7 @@ Feature: Shunting Yard
       | "return foo.bar().baz"  | [:return, [:callm, [:callm, :foo, :bar], :baz]]                    |
       | "foo.bar(*[a].flatten)" | [:callm, :foo, :bar, [[:splat, [:callm, [:array, :a], :flatten]]]] |
       | "name.gsub(foo.bar) { } "   | [:callm, :name, :gsub, [[:callm, :foo, :bar]], [:block]]       |
-      | "name.gsub(1) { }"      | [:callm, :name, :gsub, 1, [:block]]                                |
+      | "name.gsub(1) { }"      | [:callm, :name, :gsub, [1], [:block]]                              |
 
     @arrays @arrays1
 	Scenario Outline: Array syntax
@@ -123,7 +123,7 @@ Feature: Shunting Yard
       | "s.foo[0]"   | [:callm, [:callm,:s,:foo],:[],[0]]    |       |
       | "foo[1] = 2" | [:callm, :foo, :[]=, [1,2]]           | Tree rewrite |
       | "puts([42])" | [:call, :puts, [[:array, 42]]]          | |
-      | "puts [42]"  | [:call, :puts, [:array, 42]]            | |
+      | "puts [42]"  | [:call, :puts, [42]]            | |
 
     @func
     Scenario Outline: Function calls
@@ -188,10 +188,10 @@ Feature: Shunting Yard
 	  | "foo {}"            | [:call, :foo, [],[:block]]                 |
       | "foo() {}"          | [:call, :foo, [],[:block]]                 |
       | "foo(1) {}"         | [:call, :foo, 1,[:block]]                  |
-      | "e.foo(vars) { }"   | [:callm, :e, :foo, :vars, [:block]]      |
+      | "e.foo(vars) { }"   | [:callm, :e, :foo, [:vars], [:block]]      |
       | "e.foo(vars)"       | [:callm, :e, :foo, [:vars]]                |
 	  | "foo 1 {}"	        | [:call, :foo, 1,[:block]]                  |
       | "foo(1,2) {}"       | [:call, :foo, [1,2],[:block]]              |
-      | "@s.expect(Quoted) { }"    | [:callm, :@s, :expect, :Quoted, [:block]]       |
-	  | "foo = bar {}"	    | [:assign, :foo, [:call, :bar, [],[:block]]]|
-      | "&foo"              | [:to_block, :foo]                          |
+      | "@s.expect(Quoted) { }" | [:callm, :@s, :expect, [:Quoted], [:block]]       |
+	  | "foo = bar {}"	        | [:assign, :foo, [:call, :bar, [],[:block]]]|
+      | "&foo"                  | [:to_block, :foo]                          |

@@ -39,7 +39,7 @@ When /^I compile it and run it$/ do
       `#{cmd}`
       Tempfile.open('ruby-compiler') do |exe|
 #        STDERR.puts "Asm file is in #{tmp.path}.s"
-        `gcc 2>#{tmp.path} -m32 -gstabs -o #{exe.path}-binary #{tmp.path}.s`
+        system("gcc 2>#{tmp.path} -m32 -gstabs -o #{exe.path}-binary #{tmp.path}.s out/tgc.o")
         @output = `echo test | #{exe.path}-binary`
       end
     end
