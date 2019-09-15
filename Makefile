@@ -6,8 +6,10 @@ clean:
 	@rm -f *~ *.o *.s *\#
 	@rm -rf doc/
 
-compiler: *.rb
+out/driver: *.rb lib/core/*.rb
 	./compile driver.rb -I . -g
+
+compiler: out/driver
 
 compiler-nodebug: *.rb
 	./compile driver.rb -I .
@@ -16,7 +18,8 @@ out/driver.l: *.rb
 	ruby -I. driver.rb -I. --parsetree driver.rb >out/driver.l
 
 hello: compiler
-	./out/driver <examples/hello.rb
+	./out/driver examples/hello.rb >out/hello5.s
+	gcc -m32 -o out/hello5 out/hello5.s out/tgc.o
 
 push:
 	git push origin master
@@ -33,6 +36,15 @@ selftest:
 	./compile test/selftest.rb -I . -g
 	@echo "== Compiled:"
 	${DR} ./out/selftest
+
+selftest-c: compiler
+	-ruby -I. driver.rb --parsetree -I. test/selftest.rb >out/selftest.l
+	-./out/driver --parsetree -I. test/selftest.rb >out/selftest2.l
+	diff -u out/selftest.l out/selftest2.l | less
+
+	./out/driver -I. test/selftest-reduced.rb >out/selftest2.s
+	gcc -m32 out/selftest2 out/selftest2.s out/tgc.o
+
 
 valgrind: selftest
 	${DR} valgrind --track-origins=yes ./out/selftest 2>&1
