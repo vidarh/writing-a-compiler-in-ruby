@@ -100,7 +100,22 @@ def msg_pass(message, right)
 end
 
 def msg_fail(message, left,right)
-  puts "#{col(1)}FAIL#{col(7)}: #{message} [expected #{right.inspect}, got #{left.inspect}]"
+  if !left.is_a?(String)
+    li = left.inspect
+    ri = right.inspect
+  else
+    li = left
+    ri = right
+  end
+  if li.length < 50 && ri.length < 50
+    puts "#{col(1)}FAIL#{col(7)}: #{message} [expected #{right.inspect}, got #{left.inspect}]"
+  else
+    puts "#{col(1)}FAIL#{col(7)}: #{message} [cont]"
+    puts "==EXPECTED:"
+    puts ri
+    puts "==GOT:"
+    puts li
+  end
 end
 
 def expect_eq(left, right, message)
