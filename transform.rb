@@ -579,8 +579,9 @@ class Compiler
         e[0] = :let
         e[1] = [:__destruct]
         e[2] = [:do, [:assign, :__destruct, r]]
+        ex = e
         vars.each_with_index do |v,i|
-          e[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
+          ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
         end
       end
     end
