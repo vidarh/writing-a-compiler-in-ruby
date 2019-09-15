@@ -631,6 +631,8 @@ def test_string
 
   expect_eq("e" <=> "d", 1, "String#<=> should return 1 if left string sorts after right string")
   expect_eq("foo" <=> "f", 1, "String#<=> should return 1 for 'foo' <=> 'f'")
+
+  expect_eq("foo bar baz".split(" "), ["foo", "bar", "baz"], "String#split(' ') should return an array of the split string")
 end
 
 test_fixnum

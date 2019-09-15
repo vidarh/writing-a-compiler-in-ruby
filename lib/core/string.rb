@@ -383,6 +383,27 @@ class String
     end
     str
   end
+
+  # Initial, partial implementation.
+  # This explicitly ignores a whole load of the
+  # full behaviour of #split
+  def split(pat = ' ')
+    ary = []
+    cur = ""
+    self.each_byte do |c|
+      if c.chr == pat
+        ary << cur
+        cur = ""
+      elsif pat == ' ' && (c == 10 || c == 13 || c == 9)
+        ary << cur
+        cur = ""
+      else
+        cur << c.chr
+      end
+    end
+    ary << cur if cur != ""
+    ary
+  end
 end
 
 # FIXME: This is an interesting bootstrapping problem
