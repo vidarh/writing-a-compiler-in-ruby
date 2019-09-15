@@ -457,6 +457,8 @@ def test_shunting
 
   # Handling of single argument with lambda wrongly used to return a non-array argument list
   expect_eq(mock_shunting("foo.bar(x) {}\n").parse.inspect, "[:callm, :foo, :bar, [:x], [:proc]]", "Shunting foo.bar(x) {}")
+
+  expect_eq(mock_shunting('x.y 42').parse.inspect, "[:callm, :x, :y, 42]", "")
 end
 
 
@@ -482,6 +484,8 @@ def test_parser
   test_exp("Set[* e[2].to_a]","[:do, [:callm, :Set, :[], [[:splat, [:callm, [:callm, :e, :[], [2]], :to_a]]]]]")
   test_exp("def foo; name.gsub(foo.bar) { }; end ","[:do, [:defm, :foo, [], [[:callm, :name, :gsub, [[:callm, :foo, :bar]], [:proc]]]]]")
   test_exp('STDERR.puts "defm: #{args.inspect}"', "[:do, [:callm, :STDERR, :puts, [[:concat, \"defm: \", [:callm, :args, :inspect]]]]]")
+  test_exp('STDERR.puts "test"', "[:do, [:callm, :STDERR, :puts, \"test\"]]")
+  test_exp('STDERR.puts("test")', "[:do, [:callm, :STDERR, :puts, [\"test\"]]]")
   test_exp("self.== other","[:do, [:callm, :self, :==, :other]]")
 
   # Testing basic operator associativity.
