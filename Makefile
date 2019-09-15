@@ -38,12 +38,12 @@ selftest:
 	${DR} ./out/selftest
 
 selftest-c: compiler
-	-ruby -I. driver.rb --parsetree -I. test/selftest.rb >out/selftest.l
-	-./out/driver --parsetree -I. test/selftest.rb >out/selftest2.l
+	ruby -I. driver.rb --parsetree -I. test/selftest.rb >out/selftest.l
+	./out/driver --parsetree -I. test/selftest.rb >out/selftest2.l
 	diff -u out/selftest.l out/selftest2.l | less
 
-	./out/driver -I. test/selftest-reduced.rb >out/selftest2.s
-	gcc -m32 out/selftest2 out/selftest2.s out/tgc.o
+#	./out/driver -I. test/selftest-reduced.rb >out/selftest2.s
+#	gcc -m32 out/selftest2 out/selftest2.s out/tgc.o
 
 
 valgrind: selftest
