@@ -123,7 +123,12 @@ module OpPrec
         rightv = E[rightv]
         lv = leftv[3]
         lv = [lv] if lv && !lv.is_a?(Array)
-        args = lv ? lv +rightv : rightv
+        # FIXME: Workaround for compiler @bug: Putting the above as a ternary if causes selftest-c target to fail.
+        if lv
+          args = lv + rightv
+        else
+          args = rightv
+        end
 
         # FIXME: For some reason "eq" gets mis-identified as method call.
         eq = "#{leftv[2].to_s}="
