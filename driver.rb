@@ -71,7 +71,7 @@ require 'compiler'
     if dump || dumpsymtabs
       print_sexp prog if dump
       c.global_scope.dump if dumpsymtabs
-      exit(1)
+      exit(0)
     end
     
     c.compile(prog)
