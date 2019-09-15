@@ -7,10 +7,23 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of September 13th 2019
+## Status as of September 15th 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
+
+ * The bootstrapped compiler will now generate a full parse for the
+   selftest. There are minor differences down to compiler bugs:
+   * the last entry of the `Operators` hash does not get output.
+   * The argument to `STDERR.puts` in `expect_dquoted` gets parsed as false
+     (I believe the bug causing this is already captured as a testcase)
+   * Most of the other differences appears to be caused by the same issue
+     as the bug causing problems in `expect_quoted`.
+   * Next focus is to weed out the above, and then attempt to get the
+     selftest to run after compilation by the bootstrapped compiler,
+     and then collate and find test-cases covering the 30+ places in the
+     compiler currently annotated with @bug, as they're likely also affecting
+     other parts of the compiler.
 
  * Garbage collector is integrated; garbage collection article nearly done.
  * ARGV works, and as a result the separate bootstrap version of the compiler driver is
