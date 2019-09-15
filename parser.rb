@@ -228,6 +228,10 @@ class Parser < ParserBase
     pos = position
     return nil if !expect(:next)
     exps = parse_subexp
+    # FIXME: Compiler @bug workaround:
+    # Current splat handling crashes if argument is not
+    # an array.
+    exps = Array(exps)
     return E[pos, :next, *exps]
   end
 
