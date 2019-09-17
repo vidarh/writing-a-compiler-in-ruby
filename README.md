@@ -7,23 +7,26 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of September 15th 2019
+## Status as of September 17th 2019
 
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
  * The bootstrapped compiler will now generate a full parse for the
-   selftest. There are minor differences down to compiler bugs:
-   * the last entry of the `Operators` hash does not get output.
-   * The argument to `STDERR.puts` in `expect_dquoted` gets parsed as false
-     (I believe the bug causing this is already captured as a testcase)
-   * Most of the other differences appears to be caused by the same issue
-     as the bug causing problems in `expect_quoted`.
-   * Next focus is to weed out the above, and then attempt to get the
-     selftest to run after compilation by the bootstrapped compiler,
-     and then collate and find test-cases covering the 30+ places in the
-     compiler currently annotated with @bug, as they're likely also affecting
-     other parts of the compiler.
+   selftest. There's one minor difference left in the output.
+ * Trying to compile the full selftest with the bootstrapped compiler
+   crashes during code generation in compile_case. Given that `case`
+   is only used in a handful of places in the compiler this bug ought
+   to be reasonably easy to track down.
+ * Immediate focus is to fix whatever prevents it from completing the
+   compilation and get the selftest compiled by the bootstrapped compiler
+   to run.
+ * Next goal is to collate and find test-cases covering the 30+ places in the
+   compiler currently annotated with @bug, and fix them, as they're likely
+   also affecting other parts of the compiler.
+ * Third priority will then be to either reduce GC overhead (see below) *or*
+   get an initial subset of the [Ruby Spec Suite](https://github.com/ruby/spec)
+   to compile. 
 
  * Garbage collector is integrated; garbage collection article nearly done.
  * ARGV works, and as a result the separate bootstrap version of the compiler driver is
@@ -33,10 +36,10 @@ state only)
  * This includes a number of ugly workarounds for compiler bugs that have
    not been nailed down yet. I'm trying to ensure sites of known workarounds
    for bugs in the compiler are marked with `@bug`.
- * Current biggest problem is actually reducing garbage collection overhead
-   as compiling even a minimal hello world takes several minutes, so the next
-   few rounds of changes might be focused on that. A few easy wins, and avenues
-   to investigate:
+ * One of the current big problems is actually reducing garbage collection overhead
+   as compiling even a minimal hello world with the bootstrapped compiler takes
+   several minutes, so the next few rounds of changes might be focused on that.
+   A few easy wins, and avenues to investigate:
      * Pre-create objects for all constants (numeric and string in particular,
        as symbols are already looked up; symbols would cut code size, but not
        do anything for GC). String would require supporting the frozen string
