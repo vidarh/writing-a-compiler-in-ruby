@@ -65,9 +65,7 @@ module OpPrec
         else
           @vstack << E[:assign, leftv, [:callm, leftv, :"+", r]]
         end
-      
     end
-    
 
     def oper_call_right(leftv, o, rightv)
       s = rightv[1]
@@ -86,8 +84,7 @@ module OpPrec
       expr << block if block
       @vstack << expr
     end
-    
-    
+
     def oper(o)
       raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
       rightv = @vstack.pop if o.arity > 0
