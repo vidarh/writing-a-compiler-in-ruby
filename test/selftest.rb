@@ -233,6 +233,15 @@ def test_array
   expect_eq([:a,[:b,:c]].flatten, [:a, :b, :c], "Array#flatten on a nested array")
   expect_eq([:a,[:b,[:c]]].flatten, [:a, :b, :c], "Array#flatten on a more deeply nested array")
   expect_eq([:a,[:b,[:c]]].flatten(1), [:a, :b, [:c]], "Array#flatten(1)q on a more deeply nested array")
+
+  # Range indexes
+  a = [:a, :b]
+  expect_eq(a[1..1], [:b], "Array#[]: Single element range")
+  expect_eq(a[1..2], [:b], "Array#[]: Range extending past the end")
+  b = [:a, :b, :c, :d, :e]
+  expect_eq(b[1..2], [:b, :c], "Array#[]: Two element range")
+  expect_eq(b[1..3], [:b, :c, :d], "Array#[]: Three element range")
+  expect_eq(b[2..4], [:c, :d, :e], "Array#[]: Range hitting end")
 end
 
 def test_set
@@ -501,6 +510,9 @@ def test_parser
   test_exp("foo.bar(x) {}", "[:do, [:callm, :foo, :bar, [:x], [:proc]]]")
 
   test_exp("def flatten level=0; end", "[:do, [:defm, :flatten, [[:level, :default, 0]], []]]")
+
+  # Trailing ','
+  test_exp("{ :foo => 42, } ","[:do, [:hash, [:pair, :\":foo\", 42]]]")
 end
   prog = mock_parse("require 'core/base'\n{}\n")
   expect_eq(prog[2].position.lineno, 2, "Parser position")

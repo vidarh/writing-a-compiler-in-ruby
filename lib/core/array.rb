@@ -236,6 +236,10 @@ class Array
        return Array.new
      end
 
+     if xend < 0
+       xend = length - 1
+     end
+
      # Single item gets passed back to #[]
      #return self.[](start) if start == xend
 
