@@ -77,7 +77,6 @@ that extra step.
 ### Before getting too excited about trying to use the compiler at the point when it bootstraps fully, note:
 
  * The compiler itself carefully avoids known missing functionality, and/or I work around some during testing the bootstrap. The big ones:
-   * ARGV (used by the compiler; when testing bootstrapping I currently hardcode options)
    * Exceptions (used by the compiler, but only begin/rescue causes problems and that's only used once; commented out for testing)
    * Regexp (not used by the compiler)
    * Float (not used by the compiler)
@@ -88,7 +87,6 @@ that extra step.
 
 Once the compiler is bootstrapped w/workarounds, my next steps are:
 
- * Add support for for ARGV
  * Add support for exceptions (prob. worth a blog post)
  * Go through the current FIXME's and explicitly check which are still relevant (some have likely been fixed as a result of other bug fixes); add test cases, and fix them in turn.
  * Make [mspec](https://github.com/ruby/mspec) compile
