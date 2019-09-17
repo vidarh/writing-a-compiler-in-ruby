@@ -12,7 +12,7 @@ module OpPrec
       # FIXME: Pass this in instead of storing it.
       @tokenizer = TokenizerAdapter.new(tokenizer,parser)
       @parser = parser
-      
+
       # Tricky hack:
       #
       # We need a call operator with high priority, but *if* parentheses are not used around
@@ -64,7 +64,7 @@ module OpPrec
       @ostack = old
       :infix_or_postfix
     end
-    
+
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
 
       if op.sym == :hash_or_block || op.sym == :block
@@ -91,7 +91,7 @@ module OpPrec
         reduce(ostack, op)
         opstate = shunt_subexpr([op],src)
         ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
-        
+
         # Handling function calls and a[1] vs [1]
         #
         # - If foo is a method, then "foo [1]" is "foo([1])"
@@ -107,7 +107,7 @@ module OpPrec
       end
       opstate
     end
-    
+
     def shunt(src)
       ostack = @ostack
       possible_func = false     # was the last token a possible function name?
@@ -137,7 +137,7 @@ module OpPrec
            !ostack.last ||
            ostack.last.type != :infix ||
            token == :end)
-          
+
           src.unget(token)
           break
         end
