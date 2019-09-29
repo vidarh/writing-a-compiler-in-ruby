@@ -38,8 +38,9 @@ selftest:
 	${DR} ./out/selftest
 
 selftest-c: compiler
-	./out/driver -I. test/selftest.rb >out/selftest2.s
-	gcc -m32 out/selftest2 out/selftest2.s out/tgc.o
+	./compile2 test/selftest.rb -I. -g
+#	./out/driver -I. test/selftest.rb >out/selftest2.s
+#	gcc -m32 -o out/selftest2 out/selftest2.s out/tgc.o
 #	ruby -I. driver.rb --parsetree -I. test/selftest.rb >out/selftest.l
 #	./out/driver --parsetree -I. test/selftest.rb >out/selftest2.l
 #	diff -u out/selftest.l out/selftest2.l | less

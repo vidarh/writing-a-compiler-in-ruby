@@ -1,0 +1,33 @@
+#!/usr/bin/ruby
+fname = ARGV[0]
+dir = File.dirname(__FILE__)
+
+bname = File.basename(fname).split(".")[0..-2].join(".")
+
+# If we want to pass the "-g" flag to gas, pass "-g",
+# and you will be able to debug at the assembler level.
+asmdebug = ARGV.include?("-g") ? "-g" : ""
+
+def dr(cmd)
+  puts cmd
+  system("docker run -v #{Dir.pwd}:/app -t -i ruby-compiler-buildenv bash -c '#{cmd}'")
+end
+
+puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}2"
+if dr("#{dir}/out/driver #{ARGV.join(" ")} 2>&1 >out/#{bname}2.s")
+  if dr("gcc -Wall #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
+    puts "+++ \e[32mCompiled tgc\e[37m"
+  else
+    STDERR.puts "*** \e[31mCompiling tgc failed.\e[37m"
+    exit(1)
+  end
+  if dr("gcc #{asmdebug} -m32 -o out/#{bname}2 out/#{bname}2.s out/tgc.o")
+    puts "+++ \e[32mCompiled to out/#{bname}2\e[37m"
+  else
+    STDERR.puts "*** \e[31mAssembly failed.\e[37m"
+    exit(1)
+  end
+else
+  STDERR.puts "*** \e[31mCompilation failed.\e[37m"
+  exit(1)
+end
