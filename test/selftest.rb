@@ -651,6 +651,14 @@ def test_string
   expect_eq("foo bar baz".split(" "), ["foo", "bar", "baz"], "String#split(' ') should return an array of the split string")
 end
 
+def test_file
+  expect_eq(File.expand_path('lib/core/string.rb','/app'), '/app/lib/core/string.rb', "Expanding path wo/trailing / on base")
+  expect_eq(File.expand_path('lib/core/string.rb','/app/'), '/app/lib/core/string.rb', "Expanding path w/trailing / on base")
+  expect_eq(File.expand_path('lib//core', '/app'), '/app/lib/core', "Expanding path w/repeated slash")
+  expect_eq(File.dirname("/app/examples/case.rb"), "/app/examples", "Basic dirname")
+  expect_eq(File.basename("/app/examples/case.rb"), "case.rb", "Basic basename")
+end
+
 test_fixnum
 test_symbol
 test_array
@@ -673,5 +681,5 @@ test_parser
 test_destructuring
 test_depth_first
 test_string
+test_file
 test_compiler
-

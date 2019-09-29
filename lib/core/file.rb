@@ -42,7 +42,16 @@ class File < IO
   end
 
   def self.basename(name)
-    name
+    i = name.rindex(SEPARATOR)
+    if !i && ALT_SEPARATOR
+      i = name.rindex(ALT_SEPARATOR)
+    end
+
+    if i
+      i = i + 1
+      return name[i .. -1]
+    end
+    return name
   end
 
   def self.dirname(dname)
@@ -51,7 +60,8 @@ class File < IO
       i = dname.rindex(ALT_SEPARATOR)
     end
 
-    if i
+    if i && i > 0
+      i = i - 1
       r = 0..i
       d = dname[r]
       return d
@@ -61,9 +71,22 @@ class File < IO
 
   def self.expand_path(path, dir_string = Dir.pwd)
     return path if path[0] == ?/
-    if path[0..1] == "./"
-      return "#{dir_string}#{path[1..-1]}"
+
+    str = "#{dir_string}/#{path}".split("/")
+
+    out = []
+    str.each do |e|
+      if e == "."
+        # nop
+      elsif e == ""
+        # nop
+      elsif e == ".."
+        out.pop
+      else
+        out << e
+      end
     end
-    return path "#{dir_string}/#{path[1..-1]}"
+
+    return "/#{out.join("/")}"
   end
 end
