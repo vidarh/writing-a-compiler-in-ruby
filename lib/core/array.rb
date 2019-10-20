@@ -316,13 +316,8 @@ class Array
   end
 
   def slice(idx)
-    # same as [](idx)
+    self[idx]
   end
-
-  def slice(start, length)
-    # same as []...
-  end
-
 
   # Searches through an array whose elements are also arrays comparing obj with the
   # first element of each contained array using obj.==. Returns the first contained
