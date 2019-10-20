@@ -12,12 +12,10 @@ See <http://www.hokstad.com/compiler>
 (see commit history for README.md for past updates; I will consolidate this regularly to be current
 state only)
 
- * The bootstrapped compiler will now generate a full parse for the
-   selftest. There's one minor difference left in the output.
  * Trying to compile the full selftest with the bootstrapped compiler
-   crashes during code generation in compile_case. Given that `case`
-   is only used in a handful of places in the compiler this bug ought
-   to be reasonably easy to track down.
+   completes code generation (but *very* slowly due to GC inefficiencies)
+   but fails to generate code for the `case` condition.
+
  * Immediate focus is to fix whatever prevents it from completing the
    compilation and get the selftest compiled by the bootstrapped compiler
    to run.
@@ -28,27 +26,17 @@ state only)
    get an initial subset of the [Ruby Spec Suite](https://github.com/ruby/spec)
    to compile. 
 
+### Older highlights
+
  * Garbage collector is integrated; garbage collection article nearly done.
- * ARGV works, and as a result the separate bootstrap version of the compiler driver is
-   obsolete.
- * The "hello world" compiled with the bootstrapped/compiled compiler now *runs* and the
-   compiled source is identical if care is taken about filesystem paths.
- * This includes a number of ugly workarounds for compiler bugs that have
-   not been nailed down yet. I'm trying to ensure sites of known workarounds
-   for bugs in the compiler are marked with `@bug`.
- * One of the current big problems is actually reducing garbage collection overhead
-   as compiling even a minimal hello world with the bootstrapped compiler takes
-   several minutes, so the next few rounds of changes might be focused on that.
+ * A number of compiler bugs have been worked around to get this far.
+   Most sites in the compiler affected are marked with `@bug`
+ * Current garbage collection overhead is a problem.
    A few easy wins, and avenues to investigate:
-     * Pre-create objects for all constants (numeric and string in particular,
-       as symbols are already looked up; symbols would cut code size, but not
-       do anything for GC). String would require supporting the frozen string
-       constant pragma to do it *safely*
-     * Ensure all objects that can be allocated as leaves are.
+     * Pre-create objects for all constants (numeric and string in particular)
      * Currently Proc and env objects are created separately; might be worth
        allocating the env as part of the Proc object, but not sure it's worthwhile
      * Capture stats on number of allocated objects per class, and output,
-
  * When compiling the compiler with itself it successfully parses all of itself
  and produces identical output to when run under MRI. This does not mean the
  parse is complete (it absolutely is not), or bug free - it means the parser
