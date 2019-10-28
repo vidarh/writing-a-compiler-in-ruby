@@ -24,7 +24,7 @@ class File < IO
          (printf "Failed to open '%s' got %ld\n" rpath fd)
         (div 0 0)
     ))
-    %s(assign fd (__get_fixnum fd))
+    %s(assign fd (__int fd))
 
     super(fd)
   end

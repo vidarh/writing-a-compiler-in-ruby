@@ -24,7 +24,7 @@ class IO < Object
     %s(do
          (assign len (read (callm @fd __get_raw) @rawbuf 1))
          (if (le len 0) (return nil))
-         (assign c (__get_fixnum (bindex @rawbuf 0)))
+         (assign c (__int (bindex @rawbuf 0)))
          )
     c
   end

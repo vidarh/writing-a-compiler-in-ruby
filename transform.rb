@@ -106,9 +106,21 @@ class Compiler
   end
 
 
+  def int_name(v)
+    if v < 0
+      # FIXME: @bug #{-v} causes error, because it tries to call Fixnum#- with single argument
+      s = "__Ineg#{0 - v}"
+    else
+      s = "__I#{v}"
+    end
+    s.to_sym
+  end
+
+
   # Rewrite a numeric constant outside %s() to
-  # %s(call __get_fixnum val)
-  def rewrite_fixnumconst(exp)
+  # %s(sexp __[num]) and output a list later
+  def rewrite_integer_constant(exp)
+    @integers = Set[]
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
@@ -116,15 +128,10 @@ class Compiler
       ex = e
       e.each_with_index do |v,i|
         if v.is_a?(Integer)
-          if v == -1
-            ex[i] = E[:sexp, :__m1]
-          elsif v >= 0 && v <= 9
-          # FIXME: Parsing breaks.
-            s = "__#{v}".to_sym
-            ex[i] = E[:sexp, s] #"__#{v}".to_sym]
-          else
-            ex[i] = E[:sexp, E[:call, :__get_fixnum, v]]
+          if !@integers.member?(v)
+            @integers << v
           end
+          ex[i] = E[:sexp, int_name(v)]
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
@@ -606,7 +613,7 @@ class Compiler
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_strconst(exp)
-    rewrite_fixnumconst(exp)
+    rewrite_integer_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
     rewrite_let_env(exp)

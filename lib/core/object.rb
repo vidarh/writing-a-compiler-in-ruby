@@ -20,7 +20,7 @@ class Object
   end
 
   def object_id
-    %s(__get_fixnum self)
+    %s(__int self)
   end
 
   def hash

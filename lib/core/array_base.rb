@@ -3,7 +3,7 @@
 # splat method call
 #
 class Array
-  # __get_fixum should technically be safe to call, but lets not tempt fate
+  # __int should technically be safe to call, but lets not tempt fate
   # NOTE: The order of these is important, as it is relied on elsewhere
   def __initialize
     %s(assign @len 0)
@@ -25,7 +25,7 @@ class Array
     # growing. Too rapid growth and it wastes memory; to slow and
     # it is, well, slow to append to.
 
-    # FIXME: This called __get_fixnum, which means it fails when called
+    # FIXME: This called __int, which means it fails when called
     # from __new_empty. May want to create new method to handle the whol
     # basic nasty splat allocation
     # @capacity = (newlen * 4 / 3) + 4

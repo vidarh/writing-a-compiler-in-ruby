@@ -27,7 +27,7 @@ class String
     %s(if (lt numargs 3)
          (assign @buffer "")
          (do 
-            (assign first (callm str [] ((__get_fixnum 0))))
+            (assign first (callm str [] (__I0)))
             (assign len (callm first length))
             (callm self __copy_raw ((callm first __get_raw) len))
           )
@@ -116,7 +116,7 @@ class String
     end
     %s(assign index (callm index __get_raw))
     %s(assign c (bindex @buffer index))
-    %s(__get_fixnum c)
+    %s(__int c)
   end
 
   def []= pos, str
@@ -287,7 +287,7 @@ class String
     # FIXME: yes, we should not assume C-strings
     # FIXME: Also, this is not nice if @buffer == -
     %s(assign l (strlen @buffer))
-    %s(__get_fixnum l)
+    %s(__int l)
   end
 
   def size

@@ -49,7 +49,7 @@ end
       (do
         (assign ptr (index __vtable_names i))
         (if (ne ptr 0)
-          (callm h []= ((__get_symbol ptr) (__get_fixnum i)))
+          (callm h []= ((__get_symbol ptr) (__int i)))
         )
         (assign i (add i 1))
       )

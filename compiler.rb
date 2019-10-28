@@ -19,6 +19,7 @@ require 'compile_calls'
 require 'compile_class'
 require 'compile_control'
 require 'compile_include'
+require 'compile_pragma'
 
 require 'trace'
 require 'stackfence'
@@ -44,7 +45,8 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
-                   :protected, :array, :splat, :mod, :or_assign, :break, :next
+                   :protected, :array, :splat, :mod, :or_assign, :break, :next,
+                   :__compiler_internal # See `compile_pragma.rb`
                   ]
 
   Keywords = @@keywords

@@ -16,7 +16,7 @@ class Array
     # This would work better/be simpler with tagger pointers, as in
     # that case, using Fixnum would not trigger object creation.
     # A cleaner option (over using low level stuff in Array) may be
-    # to not use Fixnum#new in __get_fixnum, but wire that up specially.
+    # to not use Fixnum#new in __int, but wire that up specially.
     #
     # We'd still be limited in what to do here, but not as strictly.
     #
@@ -27,7 +27,7 @@ class Array
   end
 
   def capacity
-    %s(__get_fixnum @capacity)
+    %s(__int @capacity)
   end
 
   #FIXME: Private. Assumes idx < @len && idx >= 0
@@ -229,8 +229,8 @@ class Array
   def __range_get(idx)
      start = idx.first
      xend  = idx.last
-     %s(assign start (__get_fixnum (callm self __offset_to_pos(start))))
-     %s(assign xend  (__get_fixnum (callm self __offset_to_pos(xend))))
+     %s(assign start (__int (callm self __offset_to_pos(start))))
+     %s(assign xend  (__int (callm self __offset_to_pos(xend))))
 
      if (start < 0)
        return Array.new
@@ -738,7 +738,7 @@ class Array
 
   # Returns the number of elements in self. May be zero.
   def length
-    %s(__get_fixnum @len)
+    %s(__int @len)
   end
 
 

@@ -34,6 +34,6 @@ end
 %s(defun __new_proc (addr env self arity)
 (let (p)
    (assign p (callm Proc new))
-   (callm p __set_raw (addr env self (__get_fixnum arity)))
+   (callm p __set_raw (addr env self (__int arity)))
    p
 ))

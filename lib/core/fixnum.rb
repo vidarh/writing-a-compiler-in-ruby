@@ -18,7 +18,7 @@ class Fixnum < Integer
     %s(assign m (mod @value r))
     %s(if (eq (ge m 0) (lt r 0))
          (assign m (add m r)))
-    %s(__get_fixnum m)
+    %s(__int m)
   end
 
   def __set_raw(value)
@@ -83,11 +83,11 @@ class Fixnum < Integer
   end
 
   def + other
-    %s(call __get_fixnum ((add @value (callm other __get_raw))))
+    %s(call __int ((add @value (callm other __get_raw))))
   end
 
   def - other
-    %s(call __get_fixnum ((sub @value (callm other __get_raw))))
+    %s(call __int ((sub @value (callm other __get_raw))))
   end
 
   def <= other
@@ -137,11 +137,11 @@ class Fixnum < Integer
   end
 
   def div other
-    %s(call __get_fixnum ((div @value (callm other __get_raw))))
+    %s(call __int ((div @value (callm other __get_raw))))
   end
 
   def mul other
-    %s(call __get_fixnum ((mul @value (callm other __get_raw))))
+    %s(call __int ((mul @value (callm other __get_raw))))
   end
 
   # These two definitions are only acceptable temporarily,
@@ -171,7 +171,7 @@ end
 %s(assign FixNum_cache_size 1000)
 %s(assign FixNum_cache (__array_leaf (mul FixNum_cache_size 2)))
 
-%s(defun __get_fixnum (val)
+%s(defun __int (val)
     (let (num)
       (if (and (ge val 0) (lt val FixNum_cache_size))
         (do
@@ -191,14 +191,4 @@ end
     )
   )
 
-%s(assign __m1 (__get_fixnum -1))
-%s(assign __0 (__get_fixnum 0))
-%s(assign __1 (__get_fixnum 1))
-%s(assign __2 (__get_fixnum 2))
-%s(assign __3 (__get_fixnum 3))
-%s(assign __4 (__get_fixnum 4))
-%s(assign __5 (__get_fixnum 5))
-%s(assign __6 (__get_fixnum 6))
-%s(assign __7 (__get_fixnum 7))
-%s(assign __8 (__get_fixnum 8))
-%s(assign __9 (__get_fixnum 9))
+%s(__compiler_internal integer_list)

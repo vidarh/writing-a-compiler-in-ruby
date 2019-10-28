@@ -557,7 +557,7 @@ include AST
 def test_compiler
   e = Emitter.new
   c = Compiler.new(e)
-  exp = [E[:assign, :foo, [:array, [:sexp, [:call, :__get_fixnum, 1]]]], 
+  exp = [E[:assign, :foo, [:array, [:sexp, [:call, :__int, 1]]]], 
         [:callm, :foo, :each, [], E[:proc, [:e], [:arg, [:call, :puts, [:arg]]]]]]
   args = Set.new
   args << :arg
