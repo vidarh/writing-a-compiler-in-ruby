@@ -357,7 +357,10 @@ class Compiler
           rest = r[0]
         end
         if rest
-          r[0] = :__splat
+          # FIXME: This is a hacky workaround
+          if rest != :__copysplat
+            r[0] = :__splat
+          end
         end
       end
 
@@ -407,7 +410,7 @@ class Compiler
         vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
       end
 
-      if rest
+      if rest && rest != :__copysplat
         vars << rest.to_sym
         # FIXME: @bug Removing the E[] below causes segmentation fault
         rest_func =
