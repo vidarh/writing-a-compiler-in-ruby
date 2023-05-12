@@ -162,7 +162,10 @@ class RegisterAllocator
     debug_is_register?(r)
     cache.spill!
     @by_reg.delete(r)
-    @free_registers << r if r != @selfreg
+    # FIXME: BUG workaround? (was on one line)
+    if r != @selfreg
+      @free_registers << r
+    end
     r ? cache.var : nil
   end
 
