@@ -451,7 +451,9 @@ class Compiler
     if arg.respond_to?(:position) && arg.position != nil
       pos = arg.position.inspect
       if pos != @lastpos
-        @e.lineno(arg.position)
+        if arg[0] != :defm
+          @e.lineno(arg.position)
+        end
         # trace(arg.position,arg)
       end
       @lastpos = pos
