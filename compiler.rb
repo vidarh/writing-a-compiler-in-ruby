@@ -762,13 +762,7 @@ class Compiler
   # vtable slot and then jumps straight to __method_missing, instead
   # of wasting extra stack space and time on copying the objects.
   def output_vtable_thunks
-    @e.label("__vtable_thunks_start")
-    @vtableoffsets.vtable.each do |name,_|
-      @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
-      @e.pushl(:ebx)
-      # FIXME: Call get_symbol for these during initalization
-      # and then load them from a table instead.
-      res = compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym)
+    @e.label("__vtable_thunks_helper")
       @e.popl(:ebx) # numargs
       @e.movl("4(%esp)",:esi)  # self
 
@@ -784,13 +778,22 @@ class Compiler
       @e.movl(:ecx, "8(%esp)")
 
       # Symbol as first argument
-      @e.movl(res,"12(%esp)")
+      @e.movl(:eax,"12(%esp)")
 
       # Adjust argument count
       @e.addl(1,:ebx)
 
       load_class(@global_scope)
       @e.jmp("*__voff__method_missing(%eax)")
+
+    @e.label("__vtable_thunks_start")
+    @vtableoffsets.vtable.each do |name,_|
+      @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
+      @e.pushl(:ebx)
+      # FIXME: Call get_symbol for these during initalization
+      # and then load them from a table instead.
+      @e.save_result(compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym))
+      @e.jmp("__vtable_thunks_helper")
     end
     @e.label("__vtable_thunks_end")
 
