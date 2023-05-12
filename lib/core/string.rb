@@ -146,6 +146,7 @@ class String
   end
 
   def eql? other
+    %s(if (eq other 0) (do (puts "ERROR: eql? called with zero input\n") (div 1 0)))
     self.==(other)
   end
 
