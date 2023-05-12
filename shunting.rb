@@ -6,6 +6,10 @@ require 'tokenizeradapter'
 
 module OpPrec
   class ShuntingYard
+    FLATTEN= Operators["#flatten#"]
+    HASH   = Operators["#hash#"]
+    COMMA  = Operators[","]
+
     def initialize(output, tokenizer, parser, inhibit = [])
       @out = output
 
@@ -72,10 +76,10 @@ module OpPrec
           ocall = @ostack.last ? @ostack.last.sym == :call : false
           @out.value([]) if !ocall
           @out.value(parse_block(token))
-          @out.oper(Operators["#flatten#"])
+          @out.oper(FLATTEN)
           ostack << @opcall if !ocall
         elsif op.sym == :hash_or_block
-          opstate = shunt_subexpr([Operators["#hash#"]],src)
+          opstate = shunt_subexpr([HASH],src)
         else
           raise "Block not allowed here"
         end
@@ -83,7 +87,7 @@ module OpPrec
         @out.value(parse_quoted_exp)
       elsif op.type == :rp
         @out.value(nil) if lastlp
-        @out.value(nil) if src.lasttoken and src.lasttoken[1] == Operators[","]
+        @out.value(nil) if src.lasttoken and src.lasttoken[1] == COMMA
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break
