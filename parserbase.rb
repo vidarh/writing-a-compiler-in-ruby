@@ -28,6 +28,10 @@ class ParserBase
     @scanner.position
   end
 
+  def literal(str)
+    @scanner.expect_str(str)
+  end
+
   def expect(*args)
     args.each do |a|
       r = @scanner.expect(a)
