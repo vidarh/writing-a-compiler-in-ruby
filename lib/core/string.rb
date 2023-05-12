@@ -343,14 +343,24 @@ class String
     %s(do
          (assign ro (callm other __get_raw))
          (assign osize (strlen ro))
-         (assign bsize (strlen @buffer))
-         (assign size (add bsize osize))
-         (assign size (add size 1))
-         (assign newb (__alloc_leaf size))
-         (strcpy newb @buffer)
-         (strcat newb ro)
-         (assign @buffer newb)
-   )
+         (if (ge osize 1) (do
+           (assign bsize (strlen @buffer))
+           (assign size (add bsize osize))
+           (assign @length size)
+           (assign size (add size 1))
+           (if (gt size @capacity) (do
+               (assign @capacity (add size 8))
+               (assign newb (__stralloc @capacity))
+               (strcpy newb @buffer)
+               (strcat newb ro)
+               (assign @buffer newb)
+             )
+             (do
+               (strcat @buffer ro)
+             )
+           )
+         ))
+       )
     self
   end
 
