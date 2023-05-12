@@ -272,7 +272,7 @@ class Array
     # and the like with __offset_to_pos(), we return nil.
     %s(if (or (or 
                (eq @ptr 0) 
-               (gt idx @len)
+               (ge idx @len)
                ) 
            (lt idx 0))
          (return nil))
