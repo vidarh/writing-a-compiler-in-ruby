@@ -340,7 +340,7 @@ class RegisterAllocator
 
     # Mark the register as allocated, to prevent it from
     # being reused.
-    @allocated_registers << free
+    alloc!(free)
 
     yield(free)
 
