@@ -12,6 +12,20 @@ class Compiler
     Value.new([:subexpr], nil)
   end
 
+  def compile_shl(scope, left)
+    src = compile_eval_arg(scope, left)
+    @e.shl(src)
+    @e.save_result(src)
+    Value.new([:subexpr])
+  end
+
+  def compile_sar(scope, left)
+    src = compile_eval_arg(scope, left)
+    @e.sar(src)
+    @e.save_result(src)
+    Value.new([:subexpr])
+  end
+  
   def compile_add(scope, left, right)
     compile_2(scope,left,right) do |reg|
       @e.addl(reg, @e.result)

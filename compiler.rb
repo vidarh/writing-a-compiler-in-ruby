@@ -42,7 +42,7 @@ class Compiler
                    :do, :class, :defun, :defm, :if, :lambda,
                    :assign, :while, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
-                   :required, :add, :sub, :mul, :div, :eq, :ne,
+                   :required, :add, :sub, :mul, :div, :shl, :sar, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
