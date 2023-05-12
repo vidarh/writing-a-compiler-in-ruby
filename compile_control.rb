@@ -174,7 +174,7 @@ class Compiler
       l = @e.local
       r = @e.get_local
       @e.leave
-      @e.cmpl :eax, :ebp
+      @e.cmpl(:eax, :ebp)
       @e.jz r
       @e.addl(4,:esp)
       @e.jmp l
