@@ -432,6 +432,38 @@ class Emitter
     @out.emit(op, *args)
   end
 
+  # Avoid method_missing...
+
+  def movl src, dest; emit(:movl, src, dest); end
+  def addl src, dest; emit(:addl, src, dest); end
+  def subl src, dest; emit(:subl, src, dest); end
+  def cmpl src, dest; emit(:cmpl, src, dest); end
+  def testl src,dest; emit(:testl, src, dest); end
+  def movzbl src,dest; emit(:movzbl, src, dest); end
+  def jmp arg;   emit(:jmp,arg); end
+  def popl arg;  emit(:popl, arg); end
+  def pushl arg; emit(:pushl, arg); end
+  def je arg;    emit(:je, arg); end
+  def jz arg;    emit(:jz, arg); end
+
+  def ret; emit(:ret); end
+  def leave; emit(:leave); end
+
+  def sall *args
+    emit(:sall, *args)
+  end
+  def sarl *args
+    emit(:sarl, *args)
+  end
+  def idivl *args
+    emit(:idivl, *args)
+  end
+  def imull *args
+    emit(:imull, *args)
+  end
+  def leal *args
+    emit(:leal, *args)
+  end
 
   # Makes it easy to use the emitter to emit any kind of assembly calls, that are needed.
   #
