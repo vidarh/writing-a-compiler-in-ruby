@@ -336,8 +336,65 @@ class Compiler
     compile_callm(scope, :Hash, :[], pairs)
   end
 
+  # FIXME: Compiler @bug: This method was a self-recursive
+  # lambda in `#compile_case`
+  def compile_case_test(compare_exp, test_exprs)
+    test_value = test_exprs
+    xrest = []
+    if test_exprs.is_a?(Array)
+      #STDERR.puts test_exprs.inspect
+      if test_exprs[0] == :comma
+        test_value = test_exprs[1]
+        xrest = Array(test_exprs[2])
+      end
+      #STDERR.puts xrest.inspect
+    end
+    cmp = [:callm, test_value, :===, [compare_exp]]
+
+    if xrest.empty?
+      cmp
+    else
+      [:or, cmp, compile_case_test(compare_exp, xrest)]
+    end
+  end
+
+  # FIXME: This is unsafe. It only works for the compiler
+  # for now because none of the case expressions in the
+  # compiler itself have side effects.
+  def compile_whens(compare_exp, whens)
+    exp = whens.first
+
+    if exp[0] == :when
+      test_values = exp[1]
+
+      body = exp[2] # body to be executed, if compare_exp === test_value
+
+      @e.comment("test_value: #{test_values.inspect}")
+      @e.comment("body: #{body.inspect}")
+
+      xrest = whens.slice(1..-1)
+      if xrest.empty?
+        xrest = [:do]
+      else
+        xrest = compile_whens(compare_exp, xrest)
+      end
+      [:do, [:if, compile_case_test(compare_exp, test_values), [:do]+body, xrest]]
+    else
+      [:do]+exp
+    end
+  end
+
   def compile_case(scope, *args)
-#    error(":case not implemented yet", scope, [:case]+args)
+    # FIXME: Compiler @bug:
+    # The `xrest`'s below were `rest` but that causes `rest` in the
+    # expression `arg.rest` to be misinterpreted during rewrite to
+    # method call relative to the contents of the `rest` variable,
+    # which needless to say is a total disaster.
+    #
+    # Further, there is likely another problem here, in that it looks like
+    # a single, shared, environment is created for the two lambdas, but that
+    # may be unavoidable given Ruby semantics.
+
     # FIXME:
     # Implement like this: compile_eval_arg
     # save the register, and loop over the "when"'s.
@@ -345,58 +402,18 @@ class Compiler
     # is loaded from the stack and compared with the value
     # (or values) in the when clause
 
-
-    # experimental (need to look into saving to register etc..):
-    # but makes it compile all the way through for now...
-
     @e.comment("compiling case expression")
     compare_exp = args.first
 
     @e.comment("compare_exp: #{compare_exp}")
 
-    test = lambda do |test_exprs|
-      if test_exprs.is_a?(Array) && test_exprs[0] == :comma
-        test_value = test_exprs[1]
-        rest = test_exprs[2]
-      else
-        test_value = test_exprs
-        rest = []
-      end
-      cmp = [:callm, test_value, :===, [compare_exp]]
-
-      rest.empty? ? cmp : [:or, cmp, test.call(rest)]
+    xrest = args.rest
+    exprs = xrest[0]
+    if xrest[1]
+      exprs << xrest[1]
     end
 
-    r = lambda do |whens|
-      exp = whens.first
-
-      if exp[0] == :when
-        test_values = exp[1]
-
-        body = exp[2] # body to be executed, if compare_exp === test_value
-
-        @e.comment("test_value: #{test_values.inspect}")
-        @e.comment("body: #{body.inspect}")
-
-        rest = whens.slice(1..-1)
-        if rest.empty?
-          rest = [:do]
-        else
-          rest = r.call(rest)
-        end
-        [:do, [:if, test.call(test_values), [:do]+body, rest]]
-      else
-        [:do]+exp
-      end
-    end
-
-    rest = args.rest
-    exprs = rest[0]
-    if rest[1]
-      exprs << rest[1]
-    end
-
-    exprs = r.call(exprs)
+    exprs = compile_whens(compare_exp, exprs)
     compile_eval_arg(scope, exprs)
 
     return Value.new([:subexpr])
@@ -660,7 +677,9 @@ class Compiler
       pos = exp.position
     end
 
-    @e.lineno(pos) if pos
+    if pos && exp[0] != :defm
+      @e.lineno(pos) if pos
+    end
     #trace(pos,exp)
 
     # check if exp is within predefined keywords list
