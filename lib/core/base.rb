@@ -19,19 +19,19 @@
 )
 
 # Initialize the garbage collector
-%s(tgc_start (stackframe) __roots_start __roots_end)
+#%s(tgc_start (stackframe) __roots_start __roots_end)
 
 %s(defun __alloc (size opt)
   (let (ptr)
     (assign ptr (calloc size 1))
     (if (eq ptr 0) (return 0))
-    (return (tgc_add ptr size opt))
+    (return ptr)
   )
 )
 
 %s(defun __alloc_mem (size)  (return (__alloc size 0)))
 %s(defun __alloc_leaf (size) (return (__alloc size 1)))
-%s(defun __realloc (ptr size) (tgc_realloc ptr size))
+%s(defun __realloc (ptr size) (realloc ptr size))
 
 # FIXME: 32-bit assumption
 %s(defun __array (size)      (__alloc_mem  (mul size 4)))
@@ -48,4 +48,4 @@
   (printf "__cnt: %ld\n" __cnt)
 ))
 
-%s(atexit tgc_stop)
+#%s(atexit tgc_stop)
