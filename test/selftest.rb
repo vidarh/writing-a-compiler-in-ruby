@@ -532,7 +532,7 @@ def test_parser
 
   # Trailing ','
   test_exp("{ :foo => 42, } ","[:do, [:hash, [:pair, :\":foo\", 42]]]")
-end
+
   prog = mock_parse("require 'core/base'\n{}\n")
   expect_eq(prog[2].position.lineno, 2, "Parser position")
 
@@ -544,6 +544,8 @@ end
   end
 ')
   expect_eq(prog[1][3][0][3][0].position.lineno, 4, "Parser line number should match")
+end
+
 def test_destructuring
   test_exp("a,b = [42,123]", "[:do, [:assign, [:destruct, :a, :b], [:array, 42, 123]]]")
 end
