@@ -14,10 +14,10 @@ class SEXParser < ParserBase
   end
 
   def parse_sexp
-    expect("(") or return
+    literal("(") or return
     ws
-    exprs = zero_or_more(:exp)
-    expect(")") or expected("')'")
+    exprs = kleene { parse_exp }
+    literal(")") or expected("')'")
     return exprs
   end
 
@@ -28,4 +28,3 @@ class SEXParser < ParserBase
     return ret
   end
 end
-
