@@ -45,7 +45,9 @@
 %s(assign __cnt 0)
 %s(defun __docnt () (do
   (assign __cnt (add __cnt 1))
-  (printf "__cnt: %ld\n" __cnt)
+  (if (eq (mod __cnt 1000) 0)
+    (dprintf 2 "__cnt: %ld\n" __cnt)
+  )
 ))
 
 #%s(atexit tgc_stop)
