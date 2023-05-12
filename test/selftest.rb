@@ -128,8 +128,11 @@ end
 
 def test_fixnum
   expect_eq((40 % 10).inspect, "0", "40 % 10 == 0")
+  expect_eq(42 / 7, 6, "42 / 7 == 6")
   expect_eq(4096.to_s(10), "4096", "4096.to_s(10) => '4096'")
   expect_eq(4096.inspect, "4096", "4096.inspect => '4096'")
+  expect_eq(-4.to_s, "-4", "Converting -4 to a string")
+  expect_eq(0 - 4, -4, "0 - 4")
   expect_eq("-4".to_i.to_s,"-4", "Converting -4 from a string to Fixnum and back")
   expect_eq((-4).to_s,"-4", "Converting -4 to a string")
 
@@ -282,6 +285,22 @@ def test_hash
   h[:f] = :g
   expect_eq(h.inspect, "{:foo=>:baz, :a=>:b, :b=>:c, :d=>:e, :e=>:f, :f=>:g}", "Additional additions")
   expect_eq(h.keys.inspect, [:foo, :a, :b, :d, :e, :f].inspect, "#keys")
+
+  h.delete(:d)
+  expect_eq(h.keys.inspect, [:foo, :a, :b, :e, :f].inspect, "#keys post-delete")
+  h[:d] = :h
+  expect_eq(h.keys.inspect, [:foo, :a, :b, :e, :f, :d].inspect, "#keys post-delete and re-insert")
+  h.delete(:foo)
+  expect_eq(h.keys.inspect, [:a, :b, :e, :f, :d].inspect, "and another delete")
+  expect_eq(h.delete(:d), :h, "Return value of delete")
+  expect_eq(h.keys.inspect, [:a, :b, :e, :f].inspect, "and another delete")
+  expect_eq(h.delete(nil), nil, "delete nil")
+  expect_eq(h.delete(:b), :c, "Return value of delete")
+  expect_eq(h.keys.inspect, [:a, :e, :f].inspect, "and another delete")
+  expect_eq(h.to_a.inspect, [[:a, :b], [:e, :f], [:f, :g]].inspect, "#to_a after deletes")
+  h.delete(:a)
+  h.delete(:e)
+  expect_eq(h.to_a.inspect, [[:f, :g]].inspect, "Last element")
 end
 
 def while_loop
