@@ -63,12 +63,14 @@ class Scanner
     return @buf[-1]
   end
 
+  LF="\n"
+
   def get
     fill
     pos = position
     ch = @buf.slice!(-1,1)
     @col += 1
-    if ch == "\n"
+    if ch == LF
       @lineno += 1
       @col = 1
     end
@@ -93,8 +95,9 @@ class Scanner
 
     if c.is_a?(String)
       @col -= c.length
-      ten = 10 # FIXME: This is a temporary hack to get the compiler linking
-      @lineno -= c.count(ten.chr)
+      #ten = 10 # FIXME: This is a temporary hack to get the compiler linking
+      #@lineno -= c.count(ten.chr)
+      @lineno -= c.count(LF)
     else
       @col -= 1
     end
@@ -102,11 +105,16 @@ class Scanner
 
   # If &block is passed, it is a callback to parse an expression
   # that will be passed on to the method.
+  EMPTY=""
   def expect(str,&block)
-    return buf if str == ""
+    return buf if str == EMPTY
     return str.expect(self,&block) if str.respond_to?(:expect)
+    expect_str(str,&block)
+  end
 
+  def expect_str(str, &block)
     str = str.to_s
+    return false if peek != str[0]
     buf = ScannerString.new
     buf.position = self.position
     str.each_byte do |s|
@@ -117,22 +125,26 @@ class Scanner
       end
       buf << get
     end
-
     return buf
   end
 
+  # Avoid initialization on every call. Hacky workaround.
+  WS = [9,10,13,32,?#.ord,?;.ord]
+  C = ?#
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
   def ws
-    while (c = peek) && [9,10,13,32,?#.ord,?;.ord].member?(c.ord) do
+    while (c = peek) && WS.member?(c.ord) do
       get
-      if c == ?#
-        while (c = get) && c != "\n" do; end
+      if c == C
+        while (c = get) && c != LF do; end
       end
     end
   end
 
   # nolfws ::= [\t\r ]*
+  NOLFWS = [9,13,32]
+
   def nolfws
-    while (c = peek) && [9, 13, 32].member?(c.ord) do get; end
+    while (c = peek) && NOLFWS.member?(c.ord) do get; end
   end
 end
