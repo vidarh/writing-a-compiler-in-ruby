@@ -1,25 +1,39 @@
 
 module Tokens
   class Quoted
-    def self.escaped(s,q = '"'[0])
+    CSI = 92.chr
+    ESC = 27.chr
+    TAB = 9.chr
+    LF  = 10.chr
+
+    PCT="%"
+    LC=?a .. ?z
+    UC=?A .. ?Z
+    DIGITS=?0..?9
+
+    DQ='#'[0]
+
+    def self.escaped(s,q = DQ)
       return nil if s.peek == q
       e = s.get
-      if e == 92.chr
+      if e == CSI
         raised "Unexpected EOF" if !s.peek
         e = s.get
         case e
         when 'e'
-          return 27.chr
+          return ESC
         when 't'
-          return 9.chr
+          return TAB
         when 'n'
-          return 10.chr
+          return LF
         else
           return e
         end
       end
       return e
     end
+
+    HASH = "#"
 
     def self.expect_dquoted(s,q='"')
       ret = nil
@@ -64,7 +78,7 @@ module Tokens
             buf = ""
             s.get
             ret << yield
-            s.expect("}")
+            s.expect_str("}")
           end
         else
           buf << e
@@ -115,7 +129,7 @@ module Tokens
       dquoted = true
       if q == "'"
         dquoted = false
-      elsif q == "%"
+      elsif q == PCT
         c = s.peek
         case c
         when ?q
@@ -126,7 +140,11 @@ module Tokens
         when ?w
           words = true
           s.get
-        when ?a .. ?z, ?A .. ?Z, ?0..?9
+        when LC,UC
+          s.unget(c)
+          return nil
+        # FIXME: Separating this from above due to compiler bug
+        when DIGITS
           s.unget(c)
           return nil
         end
