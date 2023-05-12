@@ -240,7 +240,8 @@ class RegisterAllocator
     if free
       debug_is_register?(free)
       c = Cache.new(free,var)
-      @cached[var.to_sym] = c
+      k = var.to_sym
+      @cached[k] = c
       @by_reg[free] = c
     else
       # STDERR.puts "NO FREE REGISTER (consider evicting if more important var?)"
