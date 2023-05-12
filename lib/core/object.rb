@@ -76,8 +76,9 @@ class Object
     voff = m[method]
     return false if !voff # FIXME: Handle dynamically added.
 
+    c = self.class
     %s(assign raw (callm voff __get_raw))
-    %s(assign ptr (index (index self 0) raw))
+    %s(assign ptr (index c raw))
     %s(if (lt ptr __vtable_thunks_start) (return true))
     %s(if (gt ptr __vtable_thunks_end) (return true))
     return false
