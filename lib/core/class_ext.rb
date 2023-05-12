@@ -34,8 +34,36 @@ class Class
     end
   end
 
+  def ===(o)
+    o.is_a?(self)
+  end
+
   # FIXME: Belongs in Kernel
 end
+
+%s(sexp
+(defun __printerr (format a1 a2 a3) (do
+   (printf format a1 a2 a3)
+   (div 1 0)
+))
+
+(defun __minarg (name minargs actual) (do
+  (__printerr "ArgumentError: In %s - expected a minimum of %d arguments, got %d\n"
+          name minargs (sub actual 2))
+))
+
+
+(defun __maxarg (name maxargs actual) (do
+  (__printerr "ArgumentError: In %s - expected a maximum of %d arguments, got %d\n"
+          name maxargs (sub actual 2))
+))
+
+ (defun __eqarg (name eqargs actual) (do
+  (__printerr "ArgumentError: In %s - expected exactly %d arguments, got %d\n"
+          name eqargs (sub actual 2))
+))
+
+)
 
 #
 # Populate the Class.method_to_voff hash based on the __vtable_names
