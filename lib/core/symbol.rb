@@ -23,6 +23,7 @@ class Symbol
   # FIXME: Should be private, but we don't support that yet
   def initialize(name)
     @name = name
+    @hash = name.hash
   end
 
   def eql? other
@@ -79,7 +80,7 @@ class Symbol
   end
 
   def hash
-    to_s.hash
+    @hash
   end
 
   def [] i
