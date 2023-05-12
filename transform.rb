@@ -604,8 +604,10 @@ class Compiler
   end
 
   def setup_global_scope(exp)
-    @global_scope = GlobalScope.new(@vtableoffsets)
-    build_class_scopes(exp,@global_scope)
+    if !@global_scope
+      @global_scope = GlobalScope.new(@vtableoffsets)
+      build_class_scopes(exp,@global_scope)
+    end
   end
 
   def preprocess exp
