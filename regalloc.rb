@@ -163,7 +163,7 @@ class RegisterAllocator
     return if !cache
     @cached.delete(cache.var)
     r = cache.reg
-    debug_is_register?(r)
+    debug_is_register?(r, "evict_by_cache")
     cache.spill!
     @by_reg.delete(r)
     # FIXME: BUG workaround? (was on one line)
@@ -213,9 +213,9 @@ class RegisterAllocator
     r.spill = block if r
   end
 
-  def debug_is_register?(reg)
+  def debug_is_register?(reg, where)
     return if reg && reg.to_sym == @selfreg
-    raise "NOT A REGISTER: #{reg.to_s}" if !reg || !@registers.member?(reg.to_sym)
+    raise "NOT A REGISTER: #{reg.inspect} in #{where}" if !reg || !@registers.member?(reg.to_sym)
   end
 
   # Called to "cache" a variable in a register. If no register is
@@ -238,7 +238,7 @@ class RegisterAllocator
     end
 
     if free
-      debug_is_register?(free)
+      debug_is_register?(free, "cache_reg!")
       c = Cache.new(free,var)
       k = var.to_sym
       @cached[k] = c
@@ -267,7 +267,7 @@ class RegisterAllocator
   # Low level
   def free!(free)
     @allocated_registers.delete(free)
-    debug_is_register?(free)
+    debug_is_register?(free, "free!")
     @free_registers << free
   end
 
@@ -290,7 +290,9 @@ class RegisterAllocator
       # registers is in use as cache, see if we can evict one of
       # them.
 
-      if !@cached.empty?
+      if @cached.empty?
+        #STDERR.puts "No cached registers?"
+      else
         # Figure out which register to drop, based on order.
         # (least frequently used variable evicted first)
         r = @order.reverse
@@ -298,6 +300,7 @@ class RegisterAllocator
           # @FIXME: Workaround for @bug below
           if !free
             c = @cached[v]
+            #STDERR.puts "c: #{c.inspect}"
             if c
               if !c.locked
                 # @FIXME
@@ -316,8 +319,6 @@ class RegisterAllocator
       end
     end
 
-    debug_is_register?(free)
-
     if !free
       # This really should not happen, unless we are
       # very careless about #with_register blocks.
@@ -330,6 +331,8 @@ class RegisterAllocator
       #raise "Register allocation FAILED"
       1/0
     end
+
+    debug_is_register?(free, "with_register")
 
     # This is for debugging of the allocator - we store
     # a backtrace of where in the compiler the allocation
