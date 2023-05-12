@@ -124,6 +124,10 @@ class RegisterAllocator
     # Caller saved
     @caller_saved   = [:edx, :ecx, :edi]
 
+    reset!
+  end
+
+  def reset!
     # Initially, all registers start out as free.
     @free_registers = @registers.dup
 
