@@ -46,7 +46,7 @@ class Compiler
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :proc, :stackframe, :deref, :include,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
-                   :__compiler_internal # See `compile_pragma.rb`
+                   :__compiler_internal, # See `compile_pragma.rb`
                   ]
 
   Keywords = @@keywords

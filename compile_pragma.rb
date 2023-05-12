@@ -5,21 +5,18 @@
 #
 
 class Compiler
-  #
-  # FIXME: We could go one better with this, and generate the
-  # objects "raw". Will revisit that once I see if it is worth it.
-  #
-  def output_integer_list(scope)
-    @integers.each do |i|
-      compile_assign(scope, int_name(i), [:call, :__int, i])
+
+  def output_symbol_list(scope)
+    @symbols.each do |s|
+      compile_assign(scope, symbol_name(s), [:call, :__get_symbol, s])
     end
     Value.new([:global, :nil])
   end
 
   def compile___compiler_internal scope, type, *args
     case type
-    when :integer_list
-      return output_integer_list(scope)
+    when :symbol_list
+      return output_symbol_list(scope)
     end
 
     error("Unknown pragma: #{type}")

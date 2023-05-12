@@ -106,6 +106,8 @@ class Compiler
   end
 
 
+  def symbol_name(v)
+    s = "__S_#{clean_method_name(v)}"
   def int_name(v)
     if v < 0
       # FIXME: @bug #{-v} causes error, because it tries to call Fixnum#- with single argument
@@ -143,7 +145,35 @@ class Compiler
     end
   end
 
+  # Rewrite a symbol constant outside %s() to
+  # %s(sexp __[num]) and output a list later
+  def rewrite_symbol_constant(exp)
+    @symbols = Set[]
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      is_call = e[0] == :call || e[0] == :callm
+      # FIXME: e seems to get aliased by v
+      ex = e
+      e.each_with_index do |v,i|
+        name = v.to_s
+        if v.is_a?(Symbol) && name[0] == ?:
+          #STDERR.puts v.inspect
+          if !@symbols.member?(v)
+            @symbols << name[1..-1]
+          end
+          ex[i] = E[:sexp, symbol_name(name[1..-1])]
 
+          # FIXME: This is a horrible workaround to deal with a parser
+          # inconsistency that leaves calls with a single argument with
+          # the argument "bare" if it's not an array, which breaks with
+          # this rewrite.
+          ex[i] = E[ex[i]] if is_call && i > 1
+        end
+      end
+    end
+  end
+
+  
   # Rewrite operators that should be treated as method calls
   # so that e.g. (+ 1 2) is turned into (callm 1 + 2)
   #
@@ -619,6 +649,7 @@ class Compiler
     rewrite_range(exp)
     rewrite_strconst(exp)
     rewrite_integer_constant(exp)
+    rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
     rewrite_let_env(exp)

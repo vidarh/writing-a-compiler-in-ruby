@@ -109,3 +109,5 @@ class Symbol
 end
 
 %s(defun __get_symbol (name) (callm Symbol __get_symbol ((__get_string name))))
+
+%s(__compiler_internal symbol_list)
