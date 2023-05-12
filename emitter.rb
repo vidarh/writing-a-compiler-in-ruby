@@ -45,6 +45,8 @@ class Emitter
     @debug = :stabs
     @lineno = nil
     @linelabel = 0
+
+    @csi = 92.chr
   end
 
 
@@ -518,7 +520,7 @@ class Emitter
       buf = ""
       str.each_byte do |b|
         if b < 32 || b == 92
-          buf << 92.chr
+          buf << @csi
           buf << b.to_s(8)
         elsif b == 34
           buf << '\"'
