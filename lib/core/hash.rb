@@ -1,15 +1,24 @@
 
+
+
 class Hash
 
   class Deleted
-    def self.eql? other
+    def eql? other
       false
     end
+
+    #def self.nil?
+    #  true
+    #end
   end
+
+  DELETED = Deleted.new
 
   def initialize defval = nil
     @length   = 0
-    @capacity = 4
+    #@deleted  = 0
+    @capacity = 7
     _alloc_data
     @first = nil
     @last  = nil
@@ -20,12 +29,25 @@ class Hash
   # but to make code that just wants to create an empty literal 
   # Hash nicer, we do this:
   def self.[]
-    Hash.new
+    self.new
+  end
+
+  def _data
+    @data
+  end
+
+  def _state
+    [@first, @last]
   end
 
   def _alloc_data
     # FIXME: If there's a pre-existing array, resize it
     @data = Array.new(@capacity * 4)
+  end
+
+  def not_deleted?(o)
+    #%s(if (ne o Deleted) true false)
+    o != DELETED
   end
 
   # Bulk insert all entries found by probing from slot 'first'
@@ -34,10 +56,14 @@ class Hash
     cur = first
     while cur
       k = data[cur]
+      # FIXME: Check for `Deleted`?
       if k
-        # FIXME: Combining these on one line triggers bug.
-        v = data[cur + 1]
-        self[k] = v
+        if not_deleted?(k)
+          # FIXME: Doing k == Deleted or k != Deleted here fails.
+          # FIXME: Combining these on one line triggers bug.
+          v = data[cur + 1]
+          self[k] = v
+        end
       end
       cur = data[cur + 2]
     end
@@ -51,8 +77,8 @@ class Hash
     olddata  = @data
     oldfirst = @first
 
-    # Grow 
-    @capacity = @capacity * 2
+    # Grow
+    @capacity = @capacity * 4 + 1
     _alloc_data
 
     # For insertion order:
@@ -66,16 +92,55 @@ class Hash
   # the matching key *or* the first one that is unoccupied
   #
   def _find_slot(key)
-    pos = (key.hash % @capacity) * 4
+    h = key.hash
+#    s = key.to_s
+    pos = (h % @capacity) * 4
+#    %s(printf "key='%s'\n" (callm s __get_raw))
+#    %s(printf "hash=%ld,pos=%d\n" (callm h __get_raw) (callm pos __get_raw))
+    cap = @capacity * 4
+
+
+
+
+    # This should always eventually end as we require
+    # @capacity to be larger than @length, which should
+    # mean that there should always be at least one
+    # empty slot.
+    #
+    #puts "START FOR KEY: #{key}"
+    while !(d = @data[pos]).nil? and !key.eql?(d)
+      %s(__docnt)
+      pos = (pos + 4)
+      if pos >= cap
+        pos -= cap
+      end
+    end
+    pos
+  end
+
+  def _find_insertion_slot(key)
+    h = key.hash
+    pos = (h % @capacity) * 4
     cap = @capacity * 4
 
     # This should always eventually end as we require
     # @capacity to be larger than @length, which should
-    # mean that there should always be at least one 
+    # mean that there should always be at least one
     # empty slot.
     #
-    while d = @data[pos] and !key.eql?(d)
-      pos = (pos + 4 % cap)
+    #puts "START FOR KEY: #{key}"
+    while !(d = @data[pos]).nil? and !key.eql?(d)
+      oldpos = pos
+      pos = (pos + 4)
+      if pos >= cap
+        pos -= cap
+      end
+
+      if !not_deleted?(d)
+        if @data[pos].nil?
+          return oldpos
+        end
+      end
     end
     pos
   end
@@ -90,7 +155,7 @@ class Hash
   end
 
   def empty?
-    @length == 0
+    @first.nil?
   end
 
   def [] key
@@ -106,20 +171,25 @@ class Hash
   end
 
   def []= key,value
-    limit = (@capacity * 3) / 4
+    limit = @capacity / 2
 
     _grow if limit <= @length
 
     capacity_too_low if @capacity <= @length
 
-    slot = _find_slot(key)
+    slot = _find_insertion_slot(key)
     new = @data[slot].nil?
     if new
       @length = @length + 1
     end
 
     @data[slot+1] = value
-    return if !new
+    ndel = not_deleted?(@data[slot])
+    if !new
+      if ndel
+        return
+      end
+    end
 
     @data[slot]   = key
     # Maintain insertion order:
@@ -136,20 +206,6 @@ class Hash
     nil
   end
 
-  def __delete_first
-    return if !@first
-    old = @first
-    @first = @data[@first+2]
-    if old == @last
-      @last = @first
-    end
-    @data[old] = nil
-    @data[old+1] = nil
-    @data[old+2] = nil
-    @data[old+3] = nil
-    @length -= 1
-  end
-
   def shift
     return nil if !@first
 
@@ -157,7 +213,7 @@ class Hash
     key   = @data[slot]
     value = @data[slot+1]
 
-    __delete_first
+    delete(key)
     [key,value]
   end
 
@@ -182,7 +238,7 @@ class Hash
     capacity = @capacity * 2
     slot = @first
     while slot
-      if (key  = @data[slot]) && Deleted != key
+      if (key  = @data[slot]) && key != DELETED
         value = @data[slot + 1]
         yield key,value
       end
@@ -210,8 +266,27 @@ class Hash
     slot  = _find_slot(key)
     return nil if !@data[slot]
     value = @data[slot+1]
-    @data[slot]   = Deleted
+    @data[slot]   = DELETED
     @data[slot+1] = nil
+
+    # Unlink record
+    n    = @data[slot+2]
+    prev = @data[slot+3]
+    if prev
+      @data[prev+2] = n
+    end
+    if n
+      @data[n+3] = prev
+    end
+    if @first == slot
+      @first = n
+    end
+    if @last == slot
+      @last = prev
+    end
+
+    # FIXME: It fails without this, which indicates a bug.
+    #@length -= 1
     value
   end
 
