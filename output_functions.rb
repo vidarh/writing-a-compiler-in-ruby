@@ -13,17 +13,28 @@ class Compiler
   def output_arity_check(fscope, name, func)
 
     minargs = func.minargs
-    compile_if(fscope, [:lt, :numargs, minargs],
-                        [:sexp,[:call, :printf,
-                                ["ArgumentError: In %s - expected a minimum of %d arguments, got %d\n",
-                                name, minargs - 2, [:sub, :numargs,2]]], [:div,1,0] ])
-    if !func.rest?
-      maxargs = func.maxargs
-      compile_if(fscope, [:gt, :numargs, maxargs],
-                        [:sexp,[:call, :printf,
-                               ["ArgumentError: In %s - expected a maximum of %d arguments, got %d\n",
-                                name, maxargs - 2, [:sub, :numargs,2]]],  [:div,1,0] ])
+    maxargs = func.maxargs
+
+    l = @e.get_local
+    if minargs == maxargs && !func.rest?
+      @e.cmpl(minargs, :ebx)
+      @e.je(l)
+      compile_eval_arg(fscope,
+        [:sexp,[:call, :__eqarg, [name, minargs - 2, :numargs]]])
+    else
+      @e.cmpl(minargs, :ebx)
+      @e.jge(l)
+      compile_eval_arg(fscope,
+        [:sexp,[:call, :__minarg, [name, minargs - 2, :numargs]]])
+      if !func.rest?
+        @e.cmpl(maxargs, :ebx)
+        @e.jle(l)
+        compile_eval_arg(fscope,
+                        [:sexp,[:call, :__maxarg, [name, maxargs - 2, :numargs]]])
+      end
     end
+    @e.label(l)
+    @e.evict_all
   end
 
   def output_default_args(fscope, func)

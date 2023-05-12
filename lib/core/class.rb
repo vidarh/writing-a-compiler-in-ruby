@@ -64,6 +64,24 @@
 ))
 
 
+%s(defun __minarg (name minargs actual) (do
+  (printf "ArgumentError: In %s - expected a minimum of %d arguments, got %d\n"
+          name minargs (sub actual 2))
+  (div 1 0)
+))
+
+%s(defun __maxarg (name maxargs actual) (do
+  (printf "ArgumentError: In %s - expected a maximum of %d arguments, got %d\n"
+          name maxargs (sub actual 2))
+  (div 1 0)
+))
+
+#%s(defun __eqarg (name eqargs actual) (do
+#  (printf "ArgumentError: In %s - expected exactly %d arguments, got %d\n"
+#          name eqargs (sub actual 2))
+#  (div 1 0)
+#))
+
 
 # FIXME: Note that Class incorrectly does *NOT* inherit
 # from Object at this stage.
