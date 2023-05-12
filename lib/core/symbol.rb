@@ -68,6 +68,13 @@ class Symbol
     return ":-" if @name == "-"
     return ":/" if @name == "/"
     return ":%" if @name == "%"
+    return ":$:" if @name == "$:"
+
+    # FIXME Please tell me this is a bug (but MRI does this, and more)
+    return "::<=" if @name == ":<="
+    return "::>=" if @name == ":>="
+    return ":::>=" if @name == "::>="
+    return ":::[]=" if @name == :"::[]="
 
     o = @name[0].ord
     if (o >= 97 && o <= 122) ||
