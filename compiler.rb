@@ -823,13 +823,12 @@ class Compiler
   def compile exp
     alloc_vtable_offsets(exp)
     compile_main(exp)
-
     # after the main function, we ouput all functions and constants
     # used and defined so far.
     output_functions
     output_vtable_thunks
     output_vtable_names
     output_constants
+    @e.flush
   end
 end
-
