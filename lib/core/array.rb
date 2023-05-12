@@ -9,7 +9,7 @@ class Array
   # FIXME: initialize should take two optional arguments,
   # but we don't yet handle initializers, so not supporting that
   # for now.
-  def initialize *elements
+  def initialize *__copysplat
     # FIXME: See notes in lib/core/core.rb regarding bootstrapping
     # of splat handling, which causes the annoyance below:
     #
@@ -21,9 +21,11 @@ class Array
     # We'd still be limited in what to do here, but not as strictly.
     #
     __initialize
-    if elements.length > 0
-      __grow(elements[0].__get_raw)
-    end
+    %s(if (gt numargs 2) (callm self __copy_init ((index __copysplat 0))))
+  end
+
+  def __copy_init other
+    __grow(other.__get_raw)
   end
 
   def capacity

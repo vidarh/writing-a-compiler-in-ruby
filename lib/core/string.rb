@@ -1,4 +1,5 @@
 
+%s(defun __stralloc (len) (do (__alloc_leaf len)))
 # See Symbol for a discussion of type tagging.
 #
 # FIXME: For (right) now String objects are sort-of immutable.
@@ -15,7 +16,8 @@ class String
   # will be prone to order of bootstrapping the core
   # classes.
   #
-  def initialize *str
+
+  def initialize *__copysplat
     # @buffer contains the pointer to raw memory
     # used to contain the string.
     # 
@@ -24,14 +26,22 @@ class String
     # be an FixNum instance instead of the actual
     # value 0.
 
+    %s(assign @buffer 0)
+    @flags  = 0
+    @length = 0
+    %s(assign @capacity 0)
     %s(if (lt numargs 3)
-         (assign @buffer "")
-         (do 
-            (assign first (callm str [] (__I0)))
-            (assign len (callm first length))
-            (callm self __copy_raw ((callm first __get_raw) len))
-          )
-          )
+      (assign @buffer "")
+      (callm self __copy_initialize ((splat __copysplat)))
+    )
+  end
+
+  def __copy_initialize *str
+    %s(do
+        (assign first (callm str [] ((__int 0))))
+        (assign len (callm first length))
+        (callm self __copy_raw ((callm first __get_raw) len))
+      )
   end
 
   def inspect
@@ -152,7 +162,8 @@ class String
 
   def __copy_raw(str,len)
     %s(assign len (add (callm len __get_raw) 1))
-    %s(assign @buffer (__alloc_leaf len))
+    %s(assign @capacity (add len 8))
+    %s(assign @buffer (__stralloc @capacity))
     %s(memmove @buffer str len)
     %s(assign (bindex @buffer (sub len 1)) 0)
     nil

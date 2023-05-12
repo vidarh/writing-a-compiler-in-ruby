@@ -23,8 +23,8 @@ class Proc
     @arity
   end
 
-  def call *arg
-    %s(call @addr (@s 0 @env (splat arg)))
+  def call *__copysplat
+    %s(call @addr (@s 0 @env (splat __copysplat)))
 
     # WARNING: Do not do extra stuff here. If this is a 'proc'/bare block
     # code after the %s(call ...) above will not get executed.

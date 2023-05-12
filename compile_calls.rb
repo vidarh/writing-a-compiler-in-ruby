@@ -71,20 +71,28 @@ class Compiler
   # less efficient than it could be.
   #
   def compile_args_copysplat(scope, a, indir)
-    @e.comment("SPLAT")
     @e.with_register do |splatcnt|
-      param = compile_eval_arg(scope, a[1])
-      @e.addl(4,param)
-      @e.load_indirect(param, splatcnt)
-      @e.addl(4,param)
-      @e.load_indirect(param, :eax)
-      @e.testl(:eax,:eax)
-      l = @e.get_local
+      if a[1] == :__copysplat
+        @e.comment("SPLAT COPY")
+        param = @e.save_to_reg(compile_eval_arg(scope, [:sub, :numargs, 2]))
+        @e.movl(param, splatcnt)
+        param = compile_eval_arg(scope, a[1])
+        copy_splat_loop(splatcnt, indir)
+      else
+        @e.comment("SPLAT ARRAY")
+        param = compile_eval_arg(scope, a[1])
+        @e.addl(4,param)
+        @e.load_indirect(param, splatcnt)
+        @e.addl(4,param)
+        @e.load_indirect(param, :eax)
+        @e.testl(:eax,:eax)
+        l = @e.get_local
 
-      # If Array class ptr has not been allocated yet:
-      @e.je(l)
-      copy_splat_loop(splatcnt, indir)
-      @e.local(l)
+        # If Array class ptr has not been allocated yet:
+        @e.je(l)
+        copy_splat_loop(splatcnt, indir)
+        @e.local(l)
+      end
     end
 
   end
@@ -129,11 +137,15 @@ class Compiler
     exprlist = []
     args.each_with_index do |a, i|
       if a.is_a?(Array) && a[0] == :splat
-        # We do this, rather than Array#length, because the class may not
-        # have been created yet. This *requires* Array's @len ivar to be
-        # in the first ivar;
-        # FIXME: should enforce this.
-        exprlist << [:index, a[1], 1]
+        if a[1] == :__copysplat
+          exprlist << [:sub, :numargs, 2]
+        else
+          # We do this, rather than Array#length, because the class may not
+          # have been created yet. This *requires* Array's @len ivar to be
+          # in the first ivar;
+          # FIXME: should enforce this.
+          exprlist << [:index, a[1], 1]
+        end
       else
         num_fixed += 1
       end

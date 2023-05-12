@@ -124,9 +124,10 @@ class Class
     ob
   end
 
-  def new *rest
+  # FIXME: Optimizing this will shave massively off __splat_to_Array calls.
+  def new *__copysplat
     ob = allocate
-    ob.initialize(*rest)
+    ob.initialize(*__copysplat)
     ob
   end
 

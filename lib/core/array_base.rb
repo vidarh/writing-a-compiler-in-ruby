@@ -69,12 +69,14 @@ end
     (assign splat (callm Array __new))
     (assign pos 0)
     (assign max (sub na 2))
-    (callm splat __grow (max))
-    (while (lt pos max)
-       (do
-          (callm splat __set (pos (index r pos)))
-          (assign pos (add pos 1))
-          )
-        )
-  splat
+    (if (gt max 0) (do
+      (callm splat __grow (max))
+      (while (lt pos max)
+         (do
+           (callm splat __set (pos (index r pos)))
+           (assign pos (add pos 1))
+         )
+       )
+    ))
+    splat
   ))
