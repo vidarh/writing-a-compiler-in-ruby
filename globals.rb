@@ -4,20 +4,30 @@ class Globals
     @global_functions = {}
   end
 
+  def keys
+    @global_functions.keys
+  end
+
   # Returns the actual name
   def set(fname, function)
     suffix = ""
     i = 0
-    while @global_functions[fname + suffix]
-      i += 1
-      suffix = "__#{i}"
+    if @global_functions[fname]
+      while @global_functions[fname + suffix]
+        i += 1
+        suffix = "__#{i}"
+      end
+      fname = fname + suffix
     end
-    fname = fname + suffix
 
     # add the method to the global list of functions defined so far
     # with its "munged" name.
     @global_functions[fname] = function
     fname
+  end
+
+  def [] name
+    @global_functions[name]
   end
 
   # We on purpose provide this instead of "each"
