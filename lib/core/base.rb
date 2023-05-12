@@ -37,6 +37,10 @@
 %s(defun __array (size)      (__alloc_mem  (mul size 4)))
 %s(defun __array_leaf (size) (__alloc_leaf (mul size 4)))
 
+%s(defun __alloc_env (size)  (do
+  (__array size)
+))
+
 # We'll use this for various instrumentation
 %s(assign __cnt 0)
 %s(defun __docnt () (do

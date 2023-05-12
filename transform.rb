@@ -388,7 +388,7 @@ class Compiler
           # FIXME: "ex" instead of "e" due to compiler bug.
           E[ex.position, :assign, E[ex.position,:index, :__env__, ai], a]
         end
-        prologue = [E[:sexp, E[:assign, :__env__, E[:call, :__alloc_mem,  [aenv.size * 4]]]]]
+        prologue = [E[:sexp, E[:assign, :__env__, E[:call, :__alloc_env,  aenv.size]]]]
         if !extra_assigns.empty?
           prologue.concat(extra_assigns)
         end
