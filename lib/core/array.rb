@@ -201,9 +201,7 @@ class Array
 
   def self.[](*elements)
     a = self.new
-    elements.each do |e|
-      a << e
-    end
+    a.concat(elements)
     a
   end
 
