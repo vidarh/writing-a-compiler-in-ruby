@@ -11,8 +11,8 @@ class SexpPrinter
     @nest = 0
     @indent = 2
     @col = 0
-    @maxcol = 140
-    @brk = 105 # @maxcol * 3 / 4
+    @maxcol = 160
+    @brk = 120
     @line = 0
 
     @prune = opts[:prune]
@@ -25,6 +25,7 @@ class SexpPrinter
 
   def print str
     str = str.to_s
+    str = str.gsub("\n","\\n")
     if @col > @maxcol
       puts
     end
@@ -55,7 +56,9 @@ class SexpPrinter
   end
 
   def print_node node, nest = 0
-    if node.is_a?(Array)
+    if node.respond_to?(:print_node)
+      node.print_node(self, nest)
+    elsif node.is_a?(Array)
       # FIXME: Changed from @maxcol * 0.7 as compiler currently does not
       # support Float.
       puts if @col > @brk or
