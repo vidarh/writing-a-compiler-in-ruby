@@ -52,9 +52,9 @@ class Scanner
 
   def fill
     if @buf.empty?
-      c = @io.getc
-      c = c.chr if c
-      @buf = c ? c.to_s : ""
+      if c = @io.getc
+        @buf = c.chr
+      end
     end
   end
 
