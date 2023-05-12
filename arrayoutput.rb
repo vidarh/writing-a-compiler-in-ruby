@@ -23,4 +23,7 @@ class ArrayOutput
   def export label,type = nil
     @output << [:export,label,type]
   end
+
+  def flush
+  end
 end

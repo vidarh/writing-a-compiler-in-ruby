@@ -31,4 +31,7 @@ class IOOutput
     puts ".globl #{label}"
     puts "\t.type\t#{label}, @#{type.to_s}"
   end
+
+  def flush
+  end
 end

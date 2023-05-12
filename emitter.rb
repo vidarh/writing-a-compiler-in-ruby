@@ -434,6 +434,10 @@ class Emitter
     @out.emit(op, *args)
   end
 
+  def flush
+    @out.flush
+  end
+
   # Avoid method_missing...
 
   def movl src, dest; emit(:movl, src, dest); end
