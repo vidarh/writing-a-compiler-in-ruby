@@ -15,11 +15,10 @@ class ParserBase
     @scanner = scanner
   end
 
-  def zero_or_more(sym)
+  def kleene
     res = []
-    s = "parse_#{sym.to_s}".to_sym
-    while e = send(s)
-        res << e;
+    while e = yield
+      res << e
     end
     res
   end
