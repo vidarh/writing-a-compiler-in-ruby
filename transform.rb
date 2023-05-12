@@ -108,21 +108,13 @@ class Compiler
 
   def symbol_name(v)
     s = "__S_#{clean_method_name(v)}"
-  def int_name(v)
-    if v < 0
-      # FIXME: @bug #{-v} causes error, because it tries to call Fixnum#- with single argument
-      s = "__Ineg#{0 - v}"
-    else
-      s = "__I#{v}"
-    end
     s.to_sym
   end
 
 
   # Rewrite a numeric constant outside %s() to
-  # %s(sexp __[num]) and output a list later
+  # %s(sexp (__int num))
   def rewrite_integer_constant(exp)
-    @integers = Set[]
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
@@ -130,10 +122,8 @@ class Compiler
       ex = e
       e.each_with_index do |v,i|
         if v.is_a?(Integer)
-          if !@integers.member?(v)
-            @integers << v
-          end
-          ex[i] = E[:sexp, int_name(v)]
+          ex[i] = E[:sexp, [:__int, v]]
+
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
