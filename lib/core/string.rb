@@ -56,6 +56,20 @@ class String
 
   # DJB hash
   def hash
+    %s(assign h 5381)
+    %s(assign i 0)
+    %s(assign len (strlen @buffer))
+    %s(while (lt i len) (do
+      (assign c (bindex @buffer i))
+      (assign h (mul h 33))
+      (assign h (add h c))
+      (assign i (add i 1))
+    ))
+    %s(__int h)
+  end
+
+  # Original variant.
+  def _hash
     h = 5381
     each_byte do |c|
       h = h * 33 + c
