@@ -47,6 +47,7 @@ class Compiler
                    :preturn, :proc, :stackframe, :deref, :include,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
                    :__compiler_internal, # See `compile_pragma.rb`
+                   :__inline # See `inline.rb`
                   ]
 
   Keywords = @@keywords
