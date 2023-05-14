@@ -1,32 +1,19 @@
 class Fixnum < Integer
 
-  def initialize
-    # Can't use any Ruby expressions that use integers here,
-    # directly or indirectly, so best not use *any*, because
-    # it would cause recursion until running out of memory.
-    %s(assign @value 0)
-  end
-
-  def self.allocate
-    %s(assign ob (__array_leaf 2))
-    %s(assign (index ob 0) self)
-    ob
+  def class
+    Fixnum
   end
 
   def % other
     %s(assign r (callm other __get_raw))
-    %s(assign m (mod @value r))
+    %s(assign m (mod (sar self) r))
     %s(if (eq (ge m 0) (lt r 0))
          (assign m (add m r)))
     %s(__int m)
   end
 
-  def __set_raw(value)
-    @value = value
-  end
-
   def __get_raw
-    @value
+    %s(sar self)
   end
 
   def to_i
@@ -75,23 +62,24 @@ class Fixnum < Integer
   end
 
   def chr
-   %s(let (buf)
-       (assign buf (__alloc_leaf 2))
-       (snprintf buf 2 "%c" @value)
+    %s(let (buf)
+         (assign buf (__alloc_leaf 2))
+         (snprintf buf 2 "%c" (sar self))
        (__get_string buf)
-       )
+     )
   end
 
   def + other
-    %s(call __int ((add @value (callm other __get_raw))))
+    %s(__int (add (sar self) (callm other __get_raw)))
   end
 
   def - other
-    %s(call __int ((sub @value (callm other __get_raw))))
+    %s(__int (sub (sar self) (callm other __get_raw)))
   end
 
+  
   def <= other
-    %s(if (le @value (callm other __get_raw)) true false)
+    %s(if (le (sar self) (callm other __get_raw)) true false)
   end
 
   def == other
@@ -99,7 +87,7 @@ class Fixnum < Integer
       return false 
     end
     return false if !other.is_a?(Numeric)
-    %s(if (eq @value (callm other __get_raw)) true false)
+    %s(if (eq (sar self) (callm other __get_raw)) true false)
   end
 
   # FIXME: I don't know why '!' seems to get an argument...
@@ -110,19 +98,19 @@ class Fixnum < Integer
   def != other
     return true if !other.is_a?(Numeric)
     other = other.to_i
-    %s(if (ne @value (callm other __get_raw)) true false)
+    %s(if (ne (sar self) (callm other __get_raw)) true false)
   end
 
   def < other
-    %s(if (lt @value (callm other __get_raw)) true false)
+    %s(if (lt (sar self) (callm other __get_raw)) true false)
   end
 
   def > other
-    %s(if (gt @value (callm other __get_raw)) true false)
+    %s(if (gt (sar self) (callm other __get_raw)) true false)
   end
 
   def >= other
-    %s(if (ge @value (callm other __get_raw)) true false)
+    %s(if (ge (sar self) (callm other __get_raw)) true false)
   end
 
   def <=> other
@@ -137,22 +125,22 @@ class Fixnum < Integer
   end
 
   def div other
-    %s(call __int ((div @value (callm other __get_raw))))
+    %s(__int (div (sar self) (sar other)))
   end
 
   def mul other
-    %s(call __int ((mul @value (callm other __get_raw))))
+    %s(__int (mul (sar self) (sar other)))
   end
 
   # These two definitions are only acceptable temporarily,
   # because we will for now only deal with integers
 
   def * other
-    mul(other)
+    %s(__int (mul (sar self) (sar other)))
   end
 
   def / other
-    div(other)
+    %s(__int (div (sar self) (sar other)))
   end
 
   def ord
@@ -168,27 +156,7 @@ class Fixnum < Integer
   end
 end
 
-%s(assign FixNum_cache_size 1000)
-%s(assign FixNum_cache (__array_leaf (mul FixNum_cache_size 2)))
-
 %s(defun __int (val)
-    (let (num)
-      (if (and (ge val 0) (lt val FixNum_cache_size))
-        (do
-          # 32 bit class-ptr + 32 bit int; Naughty assumptions again. FIXME
-          (assign num (add FixNum_cache (mul val 8)))
-          (if (eq (index num 0) 0) (do
-            (assign (index num 0) Fixnum)  # class-ptr
-            (callm num __set_raw (val))
-            (return num)
-          ))
-          (return num)
-        )
-      )
-      (assign num (callm Fixnum allocate))
-      (callm num __set_raw (val))
-      (return num)
-    )
-  )
+  (add (shl val) 1)
+)
 
-%s(__compiler_internal integer_list)

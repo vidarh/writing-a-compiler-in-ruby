@@ -239,13 +239,36 @@ class Compiler
   end
 
 
-  # If adding type-tagging, this is the place to do it.
-  # In the case of type tagging, the value in %esi
-  # would be matched against the suitable type tags
-  # to determine the class, instead of loading the class
-  # from the first long of the object.
+  # Load class for the object whose pointer is in %esi.
+  #
+  # For now, this is done by testing bit 0, and if it
+  # is set we know this isn't a valid pointer to a Class
+  # object. Instead we assume it is a Fixnum.
+  #
+  # This is similar to MRI, but MRI uses type tags for
+  # more types of objects. We probably will here too
+  # in the future (e.g. Float when it's added, at least)
+  #
+  # Upside: Far less need for garbage collection.
+  # Downside: The cost of *this* every time we need the
+  # class pointer. This can be mitigated somewhat by
+  # better code generation (e.g. keeping class pointers
+  # for objects that are accessed multiple times;
+  # figuring out inlining and the like, but requires more
+  # effort to optimize. As a first stage, however, this
+  # will do as it makes self-compilation viable for this
+  # compiler for the first time.
+  #
   def load_class(scope)
+    @e.testl(1, :esi)
+    l1 = @e.get_local
+    l2 = @e.get_local
+    @e.jz(l1)
+    @e.load(:global, :Fixnum)
+    @e.jmp(l2)
+    @e.label(l1)
     @e.load_indirect(:esi, :eax)
+    @e.label(l2)
   end
 
   # Load the super-class pointer
