@@ -272,7 +272,7 @@ class Parser < ParserBase
 
   def parse_opt_defexp
     exps = E[position]
-    while ret = parse_defexp
+    while ret = parse_exp
       exps << ret
     end
     exps
@@ -364,6 +364,10 @@ class Parser < ParserBase
     type = keyword(:class) or return
     ws
     name = expect(Atom) || literal("\<\<") or expected("class name")
+    if name == "<<"
+      ob = parse_exp
+      name = [:eigen, ob]
+    end
     ws
     # FIXME: Workaround for initialization error
     superclass = nil

@@ -87,6 +87,10 @@ class Compiler
     superc = name == :Class ? nil : @classes[superclass]
     cscope = scope.find_constant(name)
 
+    if name.is_a?(Array)
+      return compile_eigenclass(scope, name[-1], *exps)
+    end
+
     @e.comment("=== class #{cscope.name} ===")
 
 

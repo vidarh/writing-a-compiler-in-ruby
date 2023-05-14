@@ -565,11 +565,15 @@ class Compiler
         elsif e[0] == :class
           superclass = e[2]
           superc = @classes[superclass.to_sym]
-          cscope = @classes[e[1].to_sym]
-          cscope = ClassScope.new(scope, e[1], @vtableoffsets, superc) if !cscope
+          name = e[1]
+          if name.is_a?(Array) && name[0] == :eigen
+            name = clean_method_name(name.to_s)
+          end
+          cscope = @classes[name.to_sym]
+          cscope = ClassScope.new(scope, name, @vtableoffsets, superc) if !cscope
           @classes[cscope.name.to_sym] =  cscope
           @global_scope.add_constant(cscope.name.to_sym,cscope)
-          scope.add_constant(e[1].to_sym,cscope)
+          scope.add_constant(name.to_sym,cscope)
           build_class_scopes(e[3], cscope)
         elsif e[0] == :module
           cscope   = @classes[e[1].to_sym]
