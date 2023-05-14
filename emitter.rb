@@ -21,6 +21,7 @@ end
 
 require 'iooutput'
 require 'arrayoutput'
+require 'peephole'
 
 # Emitter class.
 # Emits assembly code for x86 (32 Bit) architecture.
@@ -37,7 +38,7 @@ class Emitter
 
   def initialize out = IOOutput.new
     @seq = 0
-    @out = out
+    @out = Peephole.new(out)
     @basic_main = false
     @section = 0 # Are we in a stabs section?
     @allocator = RegisterAllocator.new
