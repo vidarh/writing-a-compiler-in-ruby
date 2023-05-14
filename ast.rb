@@ -47,6 +47,10 @@ module AST
       super(*elements)
     end
 
+    def type
+      elements.first
+    end
+
     # FIXME: For self-hosting, we temporarily rename this variable
     # as one of the tree transforms is too aggressive, and for
     # the time being it's easier to work around here.
