@@ -1,17 +1,21 @@
 IMAGE=ruby-compiler-buildenv
 DR=docker run --rm -ti --privileged -v ${PWD}:/app ${IMAGE}
+CFLAGS=-g
 all: compiler
 
 clean:
 	@rm -f *~ *.o *.s *\#
 	@rm -rf doc/
 
-out/driver: *.rb lib/core/*.rb
+out/driver: *.rb lib/core/*.rb *.c
 	./compile driver.rb -I . -g
+
+out/driver2: *.rb lib/core/*.rb *.c out/driver
+	./compile2 driver.rb -I . -g
 
 compiler: out/driver
 
-compiler-nodebug: *.rb
+compiler-nodebug: *.rb lib/core/*.rb *.c
 	./compile driver.rb -I .
 
 out/driver.l: *.rb
@@ -33,7 +37,7 @@ selftest-mri:
 	${DR} ruby -I. test/selftest.rb
 
 selftest:
-	./compile test/selftest.rb -I . -g
+	./compile test/selftest.rb -I. -g
 	@echo "== Compiled:"
 	${DR} ./out/selftest
 
@@ -41,6 +45,7 @@ selftest-c: compiler
 	./compile2 test/selftest.rb -I. -g
 #	./out/driver -I. test/selftest.rb >out/selftest2.s
 #	gcc -m32 -o out/selftest2 out/selftest2.s out/tgc.o
+	out/selftest2
 #	ruby -I. driver.rb --parsetree -I. test/selftest.rb >out/selftest.l
 #	./out/driver --parsetree -I. test/selftest.rb >out/selftest2.l
 #	diff -u out/selftest.l out/selftest2.l | less
