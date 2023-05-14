@@ -7,25 +7,20 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
-## Status as of September 17th 2019
+## Status as of May 14th 2023
 
-(see commit history for README.md for past updates; I will consolidate this regularly to be current
-state only)
-
- * Trying to compile the full selftest with the bootstrapped compiler
-   completes code generation (but *very* slowly due to GC inefficiencies)
-   but fails to generate code for the `case` condition.
-
- * Immediate focus is to fix whatever prevents it from completing the
-   compilation and get the selftest compiled by the bootstrapped compiler
-   to run.
- * Next goal is to collate and find test-cases covering the 30+ places in the
-   compiler currently annotated with @bug, and fix them, as they're likely
-   also affecting other parts of the compiler.
- * Third priority will then be to either reduce GC overhead (see below) *or*
-   get an initial subset of the [Ruby Spec Suite](https://github.com/ruby/spec)
-   to compile. 
-
+ * The compiler self-hosts, but is slow and GC is disabled.
+ * Self-hosting was achieved by working around a number of bugs that
+   still needs to be fixed.
+ * Type tagging has been put in place for integers, which drastically
+   reduces amount of object creation
+ * Starting to work through *some* of the updates needed to approach
+   Ruby 3.2 compatibility. That is a *very long* road.
+ * Starting looking at what will be needed to work with Ruby spec.
+   Challenge is figuring out how to make it work w/ahead of time
+   compilation without e.g. support for eval (which I *might* eventually
+   add, but that's far away.
+   
 ### Older highlights
 
  * Garbage collector is integrated; garbage collection article nearly done.
