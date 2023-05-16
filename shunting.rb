@@ -181,7 +181,7 @@ module OpPrec
         if ostack.last.minarity == 0
           @out.value(nil)
         else
-          raise "Missing value for prefix operator #{ostack[-1].sym.to_s}"
+          raise "Missing value for prefix operator #{ostack[-1].sym.to_s} / #{token.inspect} / #{token.position.short}"
         end
       end
 
