@@ -122,7 +122,7 @@ class Compiler
       ex = e
       e.each_with_index do |v,i|
         if v.is_a?(Integer)
-          ex[i] = E[:sexp, [:__int, v]]
+          ex[i] = E[:sexp, v*2+1]
 
 
           # FIXME: This is a horrible workaround to deal with a parser
