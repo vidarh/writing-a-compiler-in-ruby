@@ -107,7 +107,7 @@ module Tokens
     end
 
     def self.expect(s,&block)
-      q = s.expect('"') || s.expect("'") || s.expect("%") or return nil
+      q = s.expect('"') || s.expect("'") || s.expect("/") || s.expect("%") or return nil
 
       # Handle "special" quoted syntaxes. Currently we only handle generalized quoted
       # strings, no backticks, regexps etc.. Examples:

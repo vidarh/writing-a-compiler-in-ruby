@@ -127,13 +127,16 @@ module Tokens
       @s = scanner
       @parser = parser
       @keywords = Keywords.dup
+      @first = true
       @lastop = false
     end
 
     def each
+      @first = true
       while t = get and t[0]
         # FIXME: Fails without parentheses
         yield(*t)
+        @first = false
       end
     end
 
@@ -177,6 +180,12 @@ module Tokens
           return [buf,nil, :keyword]
         end
         return [buf, nil]
+      when ?/
+        if @first || @lastop
+          # FIXME: Parse regexp here?
+          return [[:callm, :Regexp, :new, get_quoted_exp], nil]
+        end
+        return [@s.get, Operators["/"]]
       when ?-
         @s.get
         if DIGITS.member?(@s.peek)
@@ -263,5 +272,3 @@ module Tokens
     end
   end
 end
-
-
