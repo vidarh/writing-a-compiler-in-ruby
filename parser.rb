@@ -271,22 +271,13 @@ class Parser < ParserBase
   end
 
   def parse_opt_defexp
-    exps = E[position]
-    while ret = parse_exp
-      exps << ret
-    end
-    exps
+    kleene { parse_exp }
   end
 
   # block_body ::=  ws * defexp*
   def parse_block_exps
-    pos = position
     ws
-    exps = E[pos]
-    while ret = parse_defexp
-      exps << ret
-    end
-    return exps
+    kleene { parse_defexp }
   end
 
   def parse_block(start = nil)
@@ -371,7 +362,7 @@ class Parser < ParserBase
     ws
     # FIXME: Workaround for initialization error
     superclass = nil
-    if expect("<")
+    if literal("<")
       ws
       superclass = expect(Atom) or expected("superclass")
     end

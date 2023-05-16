@@ -16,7 +16,7 @@ class ParserBase
   end
 
   def kleene
-    res = []
+    res = E[position]
     while e = yield
       res << e
     end
