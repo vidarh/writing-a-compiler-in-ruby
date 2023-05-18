@@ -791,9 +791,17 @@ class Compiler
     @vtableoffsets.vtable.each do |name,_|
       @e.label("__vtable_missing_thunk_#{clean_method_name(name)}")
       @e.pushl(:ebx)
-      # FIXME: Call get_symbol for these during initalization
-      # and then load them from a table instead.
-      @e.save_result(compile_eval_arg(@global_scope, ":#{name.to_s}".to_sym))
+      # FIXME: Call get_symbol for all of these during init?
+      # Currently only ones matching names statically mentioned
+      # in the source get optimized.
+      arg = nil
+      if @symbols.member?(name.to_s)
+        arg = symbol_name(name.to_s)
+      else
+        arg = ":#{name.to_s}".to_sym
+      end
+      
+      @e.save_result(compile_eval_arg(@global_scope, arg))
       @e.jmp("__vtable_thunks_helper")
     end
     @e.label("__vtable_thunks_end")
