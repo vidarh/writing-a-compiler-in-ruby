@@ -655,7 +655,7 @@ def test_compiler
   end
 ')
   c.preprocess(prog)
-  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_mem, [8]]]], [:assign, [:index, :__env__, 1], :__closure__], [:callm, [:index, :__env__, 1], :call, nil]]",
+  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]], [:assign, [:index, :__env__, 1], :__closure__], [:callm, [:index, :__env__, 1], :call, nil]]",
     "yield triggers a rewrite even with no arguments")
 
 end
