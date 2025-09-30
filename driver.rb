@@ -31,7 +31,7 @@ require 'compiler'
      elsif arg == "-g" # Implemented in ./compile
      elsif arg[0..1] == "--"
 
-     elsif File.exists?(arg)
+     elsif File.exist?(arg)
        input_source = File.open(arg, "r")
      else
        STDERR.puts "No such file or argument: #{arg}"
