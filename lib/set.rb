@@ -82,7 +82,7 @@ class Set
   def dup
     s = Set.new
     @set.each do |k,_|
-      s << k
+      s << k.dup
     end
     s
   end
