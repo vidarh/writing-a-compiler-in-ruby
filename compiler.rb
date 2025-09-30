@@ -811,6 +811,8 @@ class Compiler
     # pad this with the number of class ivar slots so that the
     # vtable layout is identical as for a normal class
     ClassScope::CLASS_IVAR_NUM.times { @e.long(0) }
+
+    # FIXME: the e[1] here appears to be incorrectly rewritten.
     @vtableoffsets.vtable.to_a.sort_by {|e| e[1] }.each do |e|
       @e.long("__vtable_missing_thunk_#{clean_method_name(e[0])}")
     end
