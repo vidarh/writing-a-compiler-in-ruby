@@ -1038,7 +1038,8 @@ class Array
     # For now we handle both Array's and Range's the same, but can't enumerate over
     # anything else
 
-    enums = args.collect{|a| a.to_enum}
+    # FIXME: @bug; b=a below is sufficient to prevent crash here for selftest
+    enums = args.collect{|a| b = a; a.to_enum}
 
     collect do |a|
       ary = [a]
