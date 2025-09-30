@@ -21,7 +21,7 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 - **Method call rewriting** (`compile_calls.rb:314`): callm rewrites trigger unexpected behavior
 
 #### Parser-Specific Bugs
-- **String parsing** (`test/selftest.rb:90`): Character literals require workarounds (27.chr)
+- @fixed **String parsing** (`test/selftest.rb:90`): Character literals require workarounds (27.chr) - now properly handles escape sequences like \e, \t, \n, \r in character literals (test in spec/character_literals.rb confirms fix)
 - **Negative numbers** (`test/selftest.rb:187`): Parsing fails for expressions with "-"
 - **Expression grouping** (`test/selftest.rb:199`): Certain expressions cause parse/compilation errors
 - **Comment parsing** (`parser.rb:107`): Specific comment patterns cause parser bugs

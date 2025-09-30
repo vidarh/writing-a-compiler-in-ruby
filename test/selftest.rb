@@ -86,10 +86,8 @@ class MockIO
   end
 end
 
-# FIXME: The 27.chr is a workaround for parser bug
-# with \e
 def col(num)
-  "#{27.chr}[3#{num.to_s}m"
+  "\e[3#{num.to_s}m"
 end
 
 def msg_pass(message, right)

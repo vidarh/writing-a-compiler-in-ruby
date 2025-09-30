@@ -210,9 +210,19 @@ module Tokens
             if second == "\\"
               third = @s.get
 
-              # FIXME: Handle the rest of the escapes
-              if third == "n"
-                return [10,nil]
+              # Handle common escape sequences
+              case third
+              when "e"
+                return [27, nil]  # ESC
+              when "t"
+                return [9, nil]   # TAB
+              when "n"
+                return [10, nil]  # LF
+              when "r"
+                return [13, nil]  # CR
+              else
+                # For other escapes, return the character itself
+                return [third[0].chr.ord, nil]
               end
             else
               return [second[0].chr.ord,nil]
