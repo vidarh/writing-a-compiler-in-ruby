@@ -1,5 +1,5 @@
 # -*- sh -*-
-FROM debian:unstable
+FROM debian:buster
 
 # Needed to be able to run Valgrind on m32 binaries
 RUN dpkg --add-architecture i386
