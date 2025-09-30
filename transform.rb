@@ -571,18 +571,9 @@ class Compiler
             end
           end
         elsif e[0] == :class
-          superclass = e[2]
-          superc = @classes[superclass.to_sym]
-          name = e[1]
-          if name.is_a?(Array) && name[0] == :eigen
-            name = clean_method_name(name.to_s)
-          end
-          cscope = @classes[name.to_sym]
-          cscope = ClassScope.new(scope, name, @vtableoffsets, superc) if !cscope
-          @classes[cscope.name.to_sym] =  cscope
-          @global_scope.add_constant(cscope.name.to_sym,cscope)
-          scope.add_constant(name.to_sym,cscope)
-          build_class_scopes(e[3], cscope)
+          # FIXME: While splitting this out is a reasonable
+          # refactoring step; it was done as a workaround for a compiler @bug
+          build_class_scopes_for_class(e, scope)
         elsif e[0] == :module
           cscope   = @classes[e[1].to_sym]
           cscope ||= ModuleScope.new(scope, e[1], @vtableoffsets, @classes[:Object])
@@ -600,6 +591,21 @@ class Compiler
     end
   end
 
+  def build_class_scopes_for_class(e, scope)
+    superclass = e[2]
+    superc = @classes[superclass.to_sym]
+    name = e[1]
+    if name.is_a?(Array) && name[0] == :eigen
+      name = clean_method_name(name.to_s)
+    end
+    cscope = @classes[name.to_sym]
+    cscope = ClassScope.new(scope, name, @vtableoffsets, superc) if !cscope
+    @classes[cscope.name.to_sym] =  cscope
+    @global_scope.add_constant(cscope.name.to_sym,cscope)
+    scope.add_constant(name.to_sym,cscope)
+    build_class_scopes(e[3], cscope)
+  end
+          
   # Handle destructuring (e.g. a,b = [1,2])
   # by rewriting to
   #

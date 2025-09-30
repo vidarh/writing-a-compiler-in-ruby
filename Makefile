@@ -23,7 +23,7 @@ out/driver.l: *.rb
 
 hello: compiler
 	./out/driver examples/hello.rb >out/hello5.s
-	gcc -m32 -o out/hello5 out/hello5.s out/tgc.o
+	${DR} gcc -m32 -o out/hello5 out/hello5.s out/tgc.o
 
 push:
 	git push origin master
@@ -39,7 +39,7 @@ selftest-mri:
 selftest:
 	./compile test/selftest.rb -I. -g
 	@echo "== Compiled:"
-	${DR} ./out/selftest
+	${DR} out/selftest
 
 out/selftest.l: test/selftest.rb *.rb lib/*.rb
 	ruby -I. ./driver.rb -I. -g --parsetree test/selftest.rb >out/selftest.l

@@ -4,6 +4,14 @@ This document tracks known bugs, missing features, and architectural issues that
 
 ## Critical Bugs
 
+- @fixed `make hello` crashes. It worked (though may require running the final
+gcc linking step via docker) in commit 9e28ed53b95b3c8b6fd938705fef39f9fa582fef
+and failed in subsequent commits. This is critical, as it is a serious
+regression. No other bugs should proceed before this has been fixed, but
+it is possible other bugs might produce clues as to why this is
+broken. - NOTE: This was fixed with a workaround, likely for the
+variable lifting bug mentioned below.
+
 ### Parser and Compilation Bugs
 
 #### Variable and Scope Issues
