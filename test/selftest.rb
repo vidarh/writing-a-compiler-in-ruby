@@ -181,9 +181,9 @@ def test_array
   #expect_eq([42,2,3,1].sort,     [1,2,3,42], "Array#sort")
   res = [42,2,3,1].sort_by {|v| v }
   expect_eq(res.inspect, [1,2,3,42].inspect , "Array#sort_by (ascending)")
-  # FIXME: The below fails due to "-"
-#  res = [42,2,3,1].sort_by {|v| -v }
-#  expect_eq(res, [42,3,2,1] , "Array#sort_by (descending)")
+
+  res = [42,2,3,1].sort_by {|v| -v }
+  expect_eq(res, [42,3,2,1] , "Array#sort_by (descending)")
 
   expect_eq(42 <=> 2, 1, "Fixnum#<=>(42,2)")
   expect_eq(42 <=> 3, 1, "Fixnum#<=>(42,3)")
