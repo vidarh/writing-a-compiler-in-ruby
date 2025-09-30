@@ -172,9 +172,17 @@ class Compiler
       next :skip if e[0] == :sexp
 
       if e[0].is_a?(Symbol) && OPER_METHOD.member?(e[0].to_s)
-        e[3] = E[e[2]] if e[2]
-        e[2] = e[0]
-        e[0] = :callm
+        # Handle unary minus specially: [:-, operand] => [:callm, 0, :-, [operand]]
+        if e[0] == :- && e.length == 2
+          e[3] = E[e[1]]  # args = [operand]
+          e[2] = :-       # method = :-
+          e[1] = E[:sexp, 1]  # object = 0 (tagged as fixnum: 0*2+1 = 1)
+          e[0] = :callm   # op = :callm
+        else
+          e[3] = E[e[2]] if e[2]
+          e[2] = e[0]
+          e[0] = :callm
+        end
       end
     end
   end

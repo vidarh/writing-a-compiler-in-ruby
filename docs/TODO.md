@@ -22,7 +22,7 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 
 #### Parser-Specific Bugs
 - @fixed **String parsing** (`test/selftest.rb:90`): Character literals require workarounds (27.chr) - now properly handles escape sequences like \e, \t, \n, \r in character literals (test in spec/character_literals.rb confirms fix)
-- **Negative numbers** (`test/selftest.rb:187`): Parsing fails for expressions with "-"
+- @fixed **Negative numbers** (`test/selftest.rb:187`): Unary minus operator now properly supported - rewrite_operators in transform.rb now handles prefix :- by converting to method call 0.-() with tagged fixnum zero (test in spec/negative_numbers_simple.rb confirms fix)
 - **Expression grouping** (`test/selftest.rb:199`): Certain expressions cause parse/compilation errors
 - **Comment parsing** (`parser.rb:107`): Specific comment patterns cause parser bugs
 - **Whitespace sensitivity** (`lib/core/array.rb:576`, `lib/core/array.rb:670`): Some expressions fail without specific whitespace
