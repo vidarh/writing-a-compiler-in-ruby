@@ -511,7 +511,7 @@ class Emitter
     # FIXME: If there are caller saved registers here that must be
     # saved/reloaded, we need to keep track.
     @allocator.evict_caller_saved
-    off = "#{off*Emitter::PTR_SIZE}" if off.is_a?(Fixnum)
+    off = "#{off*Emitter::PTR_SIZE}" if off.is_a?(Integer)
 
     emit(:call, "*#{off}(%#{reg.to_s})")
   end

@@ -124,9 +124,9 @@ class Compiler
   # Otherwise, we assume it's a string constant and treat it like one.
   def get_arg(scope, a, save = false)
     return compile_exp(scope, a) if a.is_a?(Array)
-    return get_arg(scope,:true, save) if a == true 
+    return get_arg(scope,:true, save) if a == true
     return get_arg(scope,:false, save) if a == false
-    return Value.new([:int, a]) if (a.is_a?(Fixnum))
+    return Value.new([:int, a]) if (a.is_a?(Integer))
     return Value.new([:int, a.to_i]) if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
 
     if a == :"block_given?"

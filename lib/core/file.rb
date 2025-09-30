@@ -33,7 +33,7 @@ class File < IO
     f = File.new(path, mode)
   end
 
-  def self.exists?(path)
+  def self.exist?(path)
     %s(assign rpath (callm path __get_raw))
     %s(assign fd (open rpath 0))
     %s(if (le fd 0) (return false))
