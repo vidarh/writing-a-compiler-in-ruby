@@ -180,12 +180,12 @@ module Tokens
           return [buf,nil, :keyword]
         end
         return [buf, nil]
-      when ?/
-        if @first || @lastop
-          # FIXME: Parse regexp here?
-          return [[:callm, :Regexp, :new, get_quoted_exp], nil]
-        end
-        return [@s.get, Operators["/"]]
+      #when ?/
+      #  if @first || @lastop
+      #    # FIXME: Parse regexp here?
+      #    return [[:callm, :Regexp, :new, get_quoted_exp], nil]
+      #  end
+      #  return [@s.get, Operators["/"]]
       when ?-
         @s.get
         if DIGITS.member?(@s.peek)
