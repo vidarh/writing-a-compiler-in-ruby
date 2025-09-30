@@ -26,6 +26,10 @@ class Symbol
     @hash = name.hash
   end
 
+  def dup
+    self
+  end
+
   def eql? other
     self.==(other)
   end
