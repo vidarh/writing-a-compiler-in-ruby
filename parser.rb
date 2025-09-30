@@ -17,9 +17,6 @@ class Parser < ParserBase
     # OpPrec::parser fails, though it works with MRI
     @shunting = OpPrec.parser(scanner, self)
 
-    # FIXME: If member variable is not explicitly assigned, it
-    # will be 0 rather than nil. Need to ensure instance vars
-    # are cleared.
     @include_paths = nil
     @include_paths = opts[:include_paths].dup if opts[:include_paths]
     @include_paths ||= []
