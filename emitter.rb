@@ -174,7 +174,10 @@ class Emitter
     when :indirect8
       emit(:movb,source, "(%#{dest})")
     when :global
-      emit(:movl, source, dest.to_s)
+      # Strip the $ prefix from global variable names for assembly
+      name = dest.to_s
+      name = name[1..-1] if name[0] == ?$
+      emit(:movl, source, name)
     when :lvar
       save_to_local_var(source, dest)
     when :ivar
@@ -242,7 +245,10 @@ class Emitter
 
 
   def load_global_var(aparam, reg = result_value)
-    movl(aparam.to_s, reg)
+    # Strip the $ prefix from global variable names for assembly
+    name = aparam.to_s
+    name = name[1..-1] if name[0] == ?$
+    movl(name, reg)
     return reg
   end
 

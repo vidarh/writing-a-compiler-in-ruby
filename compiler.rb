@@ -186,6 +186,8 @@ class Compiler
 
     # FIXME: Temporary workaround to add bss entries for "missing" globals
     vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq - ["__roots_start","__roots_end"]
+    # Strip $ prefix from global variable names for assembly
+    vars = vars.collect{|v| v[0] == ?$ ? v[1..-1] : v}
     @e.bss    do
       #@e.bsslong("__stack_top")
       @e.label("__roots_start")
@@ -725,6 +727,14 @@ class Compiler
       # so argc and argv get defined, but
       # that is for later.
       compile_eval_arg(@global_scope, [:sexp, [:assign, :__stack_top, [:stackframe]]])
+
+      # Initialize all global variables (starting with $) to nil
+      @global_scope.globals.keys.each do |g|
+        if g.to_s[0] == ?$
+          compile_eval_arg(@global_scope, [:assign, g, :nil])
+        end
+      end
+
       compile_eval_arg(@global_scope, exp)
       compile_eval_arg(@global_scope, [:sexp,[:exit, 0]])
       nil
@@ -830,12 +840,41 @@ class Compiler
     @e.comment("")
   end
 
+  # Output function to initialize global variables to nil if still uninitialized (0)
+  def output_global_init
+    @e.export("__init_globals", "function")
+    @e.label("__init_globals")
+    @e.emit(".LFBB__init_globals:")
+
+    # Check each variable in global scope - if it starts with $ and is still 0, initialize to nil
+    @global_scope.globals.keys.each do |g|
+      if g.to_s[0] == ?$
+        name = g.to_s[1..-1]  # Strip $ prefix
+        skip_label = @e.get_local
+
+        # Check if still 0 (uninitialized)
+        @e.movl(name, :eax)
+        @e.testl(:eax, :eax)
+        @e.jnz(skip_label)  # If not zero, skip
+
+        # Initialize to nil
+        @e.movl("nil", :eax)
+        @e.movl(:eax, name)
+
+        @e.label(skip_label)
+      end
+    end
+
+    @e.ret
+  end
+
   # Starts the actual compile process.
   def compile exp
     alloc_vtable_offsets(exp)
     compile_main(exp)
     # after the main function, we ouput all functions and constants
     # used and defined so far.
+    output_global_init
     output_functions
     output_vtable_thunks
     output_vtable_names

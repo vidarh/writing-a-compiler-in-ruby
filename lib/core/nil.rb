@@ -27,4 +27,7 @@ class NilClass
 end
 
 # FIXME: MRI does not allow creating an object of NilClass.
-nil  = NilClass.new 
+nil  = NilClass.new
+
+# Initialize uninitialized global variables to nil
+%s(__init_globals)

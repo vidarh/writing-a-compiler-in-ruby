@@ -10,8 +10,8 @@ This document tracks known bugs, missing features, and architectural issues that
 - **Variable lifting bug** (`shunting.rb:129`, `compile_calls.rb:18`): `find_vars` doesn't correctly identify variables in some contexts
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
-- **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of nil @fixed (test in spec/ivar.rb confirms this works correctly)
-
+- @fixed **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of
+nil - (test in spec/ivar.rb confirms this works correctly)
 #### Code Generation Bugs
 - **Segmentation faults**:
   - `compile_calls.rb:26`: Using 'yield' instead of 'block' causes seg-fault
@@ -39,7 +39,7 @@ This document tracks known bugs, missing features, and architectural issues that
 - **Hash operations** (`lib/core/hash.rb:62-63`): Equality checks for Deleted objects fail
 - **Array operations** (`lib/core/array.rb:1041`): Assignment workaround needed to prevent crashes in selftest
 - **String operations** (`lib/core/string.rb:191`): Empty string handling should throw ArgumentError
-- **Global variables** (`test/selftest.rb:23`): Globals appear broken at some point
+- @fixed **Global variables** (`test/selftest.rb:23`): Globals appear broken at some point - was generating incorrect assembly with $ prefix, now properly strips prefix and initializes uninitialized globals to nil (test in spec/global_vars.rb confirms fix)
 
 #### Memory Management
 - **Garbage collection overhead**: Current GC not optimized for large numbers of small objects

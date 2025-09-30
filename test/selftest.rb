@@ -20,9 +20,8 @@
 #    /tmp/selftest
 #
 
-# FIXME: At some point globals seems to have broken.
 # Don't output PASS's
-# $quiet = true
+$quiet = true
 
 require 'scanner'
 require 'parserbase'
@@ -94,9 +93,9 @@ def col(num)
 end
 
 def msg_pass(message, right)
-#  if !$quiet
-#    puts "#{col(2)}PASS#{col(7)}: #{message} [expected/got #{right.inspect}]"
-#  end
+  if !$quiet
+    puts "#{col(2)}PASS#{col(7)}: #{message} [expected/got #{right.inspect}]"
+  end
 end
 
 def msg_fail(message, left,right)

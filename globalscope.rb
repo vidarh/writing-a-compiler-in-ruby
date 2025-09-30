@@ -51,6 +51,12 @@ class GlobalScope < Scope
     return [:arg, 1] if a == :__argv
     return [:arg, 0] if a == :__argc
 
+    # Auto-register global variables (starting with $)
+    if a && a.to_s[0] == ?$
+      @globals[a] = true
+      return [:global, a]
+    end
+
     return [:global, a] if @globals.member?(a)
     return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
     return [:addr, a]

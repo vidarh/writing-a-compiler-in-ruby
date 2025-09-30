@@ -116,10 +116,25 @@ The compiler achieves self-hosting through a three-stage bootstrap:
 - Manages local variable allocation and access
 
 #### Specialized Scopes
+- `GlobalScope` (`globalscope.rb`): Global variables, constants, and built-ins
+  - Automatically registers variables starting with `$` as global variables
+  - Returns `[:global, name]` for registered globals, `[:addr, name]` for constants
+  - Special handling for `$:` (LOAD_PATH), `$0`, etc. via aliases
 - `ClassScope` (`classcope.rb`): Class definitions, instance variables, inheritance
 - `LocalVarScope` (`localvarscope.rb`): Method-local variables
 - `ControlScope` (`controlscope.rb`): Control flow constructs (blocks, loops)
 - `DebugScope` (`debugscope.rb`): Debug information and symbol tables
+
+#### Global Variable Implementation
+Global variables (starting with `$`) require special handling:
+
+1. **Registration**: When `GlobalScope.get_arg` encounters a symbol starting with `$`, it auto-registers it in the globals hash
+2. **Assembly naming**: The `$` prefix must be stripped for x86 assembly (done in `emitter.rb`)
+3. **Initialization**: Uninitialized globals default to 0 in BSS, requiring explicit nil initialization
+   - `__init_globals` function generated in `compiler.rb:output_global_init`
+   - Called from `lib/core/nil.rb` after nil is initialized
+   - Checks each `$`-prefixed global: if still 0, sets to nil
+   - Avoids overwriting already-initialized values (e.g., if user assigned before initialization ran)
 
 ### 8. Symbol Management (`sym.rb`)
 
