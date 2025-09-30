@@ -41,6 +41,12 @@ selftest:
 	@echo "== Compiled:"
 	${DR} ./out/selftest
 
+out/selftest.l: test/selftest.rb *.rb lib/*.rb
+	ruby -I. ./driver.rb -I. -g --parsetree test/selftest.rb >out/selftest.l
+
+out/selftest2.l: out/driver test/selftest.rb lib/*.rb
+	out/driver -I. -g --parsetree test/selftest.rb >out/selftest2.l
+
 selftest-c: compiler
 	./compile2 test/selftest.rb -I. -g
 #	./out/driver -I. test/selftest.rb >out/selftest2.s
