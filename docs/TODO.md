@@ -19,6 +19,15 @@ variable lifting bug mentioned below.
   **FIXED** (`transform.rb:254-255, 275-276, 279`): Fixed by wrapping both arguments AND receivers when passing to `find_vars`. This prevents AST nodes from being iterated element-by-element.
   **Status**: All 4 tests in `spec/variable_lifting.rb` pass. All 83 RSpec tests pass. selftest and selftest-c both pass.
   **Investigation notes** (`docs/VARIABLE_LIFTING_DEBUG.md`): Root cause was unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
+- **Nested block variable capture bug** (`transform.rb:86`, `transform.rb:331`, `transform.rb:567`): Outer block variables not correctly captured in nested blocks
+  **Workarounds**: Three `@bug` workarounds still required (all cause selftest-c crash if removed):
+    - `bug=e` in `rewrite_strconst` (line 86) - used with `e.each_with_index`
+    - `eary=e` in `rewrite_env_vars` (line 331) - used with `e.each_with_index`
+    - `ex=e` in attr_* handler (line 567) - used with `syms.each`
+  **Symptoms**: When outer block variable is referenced in nested `each_with_index` or `each`, wrong value used or crash occurs. Removing workarounds causes selftest-c to crash with floating point exception.
+  **Test cases**: `spec/nested_blocks_capture.rb` (2 tests, both fail)
+  **Example**: `outer.each do |arr| arr.each_with_index {|v,i| arr[i] } end` - uses wrong array reference
+  **Investigation**: This appears to be a different manifestation of variable capture issues, specifically when the outer loop variable from `depth_first` or `each` is referenced inside a nested `each` or `each_with_index` block.
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
 - @fixed **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of
