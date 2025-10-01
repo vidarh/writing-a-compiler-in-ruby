@@ -934,8 +934,6 @@ class Array
     pivot = self[0]
 
     part  = self[1..-1].partition do |e|
-      # FIXME: Had to add "pivot" here to work around bug in variable lifting
-      pivot
       (e <=> pivot)  <= 0
     end
 
