@@ -250,7 +250,9 @@ class Compiler
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
         else
           if    n[0] == :callm
-            vars, env = find_vars(n[1], scopes, env, freq, in_lambda)
+            # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
+            receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
+            vars, env = find_vars(receiver, scopes, env, freq, in_lambda)
 
             if n[3]
               nodes = n[3]
@@ -269,7 +271,9 @@ class Compiler
               env  += env3
             end
           elsif    n[0] == :call
-            vars, env = find_vars(n[1], scopes, env, freq, in_lambda)
+            # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
+            receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
+            vars, env = find_vars(receiver, scopes, env, freq, in_lambda)
             if n[2]
               nodes = n[2]
               nodes = [nodes] if !nodes.is_a?(Array)

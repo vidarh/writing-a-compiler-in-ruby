@@ -379,3 +379,34 @@ This suggests the issue is with nested `:callm` nodes where the receiver of an i
 1. Arguments that are literal values (need scope isolation)
 2. Arguments that are variable references (need capture)
 3. Block parameters vs outer variables (need different treatment)
+
+## COMPLETE FIX APPLIED
+
+### Additional Fix (transform.rb:254-255, 275-276)
+The partial fix addressed `:call` arguments but not nested `:callm` nodes used as receivers.
+
+**Problem:** When processing `n + x + y`, which becomes `[:callm, [:callm, :n, :+, [:x]], :+, [:y]]`:
+- The inner `:callm` node `[:callm, :n, :+, [:x]]` appears as the RECEIVER of the outer `:callm`
+- It was passed unwrapped to `find_vars(n[1], ...)` at line 253
+- This caused element-by-element iteration: `:callm`, `:n`, `:+`, `[:x]`
+- Variable `x` was never seen during lambda processing
+
+**Solution:** Conditionally wrap receivers before passing to `find_vars`:
+```ruby
+receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
+vars, env = find_vars(receiver, scopes, env, freq, in_lambda)
+```
+
+Applied to both `:callm` (line 254-255) and `:call` (line 275-276) handlers.
+
+### Test Results
+With both fixes:
+- ✓ All 4 variable lifting tests pass
+- ✓ `lambda { puts x + y }` works
+- ✓ `[1,2,3].each do |n| sum = n + x + y; puts sum end` works
+- ✓ Nested `:callm` operations correctly capture all variables
+- ✓ selftest passes
+- ✗ selftest-c fails (assembly error: ".size expression for __lambda_L499 does not evaluate to a constant")
+
+### Remaining Investigation
+The complete fix resolves all variable lifting test cases but causes a compilation failure in selftest-c. The error suggests an issue with lambda size calculation in generated assembly. This needs isolated test case to understand what pattern in the compiler source triggers this failure.
