@@ -16,6 +16,10 @@ variable lifting bug mentioned below.
 
 #### Variable and Scope Issues
 - **Variable lifting bug** (`shunting.rb:129`, `compile_calls.rb:18`): `find_vars` doesn't correctly identify variables in some contexts
+  **PARTIAL FIX APPLIED** (`transform.rb:279`): Fixed `:call` argument handling by wrapping arguments in array before passing to `find_vars`. This prevents `:callm` nodes from being iterated element-by-element.
+  **Status**: 3 out of 4 tests in `spec/variable_lifting.rb` now pass. Common cases like `lambda { puts x + y }` work correctly.
+  **Remaining issue**: Blocks with local assignments and nested `:callm` operations still fail. Example: `[1,2,3].each do |n| sum = n + x + y; puts sum end` - first variable `x` stays as local instead of being captured.
+  **Investigation notes** (`docs/VARIABLE_LIFTING_DEBUG.md`): Root cause involves interaction between `:call` and `:callm` argument scope handling. The `:callm` handler still adds extra scopes for arguments, and removing this breaks selftest-c.
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
 - @fixed **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of
@@ -32,6 +36,7 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 - @fixed **String parsing** (`test/selftest.rb:90`): Character literals require workarounds (27.chr) - now properly handles escape sequences like \e, \t, \n, \r in character literals (test in spec/character_literals.rb confirms fix)
 - @fixed **Negative numbers** (`test/selftest.rb:187`): Unary minus operator now properly supported - rewrite_operators in transform.rb now handles prefix :- by converting to method call 0.-() with tagged fixnum zero (test in spec/negative_numbers_simple.rb confirms fix)
 - **Expression grouping** (`test/selftest.rb:199`): Certain expressions cause parse/compilation errors
+- **Chained method calls on lambdas**: `lambda { x; y }.call` fails with "Missing value in expression" error in shunting yard parser (`treeoutput.rb:92`, `shunting.rb:52`) - works in MRI
 - **Comment parsing** (`parser.rb:107`): Specific comment patterns cause parser bugs
 - **Whitespace sensitivity** (`lib/core/array.rb:576`, `lib/core/array.rb:670`): Some expressions fail without specific whitespace
 

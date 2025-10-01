@@ -274,7 +274,7 @@ class Compiler
               nodes = n[2]
               nodes = [nodes] if !nodes.is_a?(Array)
               nodes.each do |n2|
-                vars2, env2 = find_vars(n2, scopes+[Set.new], env, freq, in_lambda)
+                vars2, env2 = find_vars([n2], scopes+[Set.new], env, freq, in_lambda)
                 vars += vars2
                 env  += env2
               end
