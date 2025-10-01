@@ -15,9 +15,6 @@ class Compiler
     adj = Emitter::PTR_SIZE * (args.length+4)
     @e.subl(adj, :esp)
     args.each_with_index do |a, i|
-      # FIXME: Temporary workaround for find_vars bug:
-      scope
-
       param = compile_eval_arg(scope, a)
       @e.save_to_stack(param, i)
     end
