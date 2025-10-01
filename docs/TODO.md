@@ -15,10 +15,9 @@ variable lifting bug mentioned below.
 ### Parser and Compilation Bugs
 
 #### Variable and Scope Issues
-- **Variable lifting bug** (`shunting.rb:129`, `compile_calls.rb:18`): `find_vars` doesn't correctly identify variables in some contexts
-  **COMPLETE FIX APPLIED** (`transform.rb:254-255, 275-276, 279`): Fixed by wrapping both arguments AND receivers when passing to `find_vars`. This prevents AST nodes from being iterated element-by-element.
-  **Status**: All 4 tests in `spec/variable_lifting.rb` pass. Common cases work: `lambda { puts x + y }`, blocks with nested operations, etc.
-  **Known issue**: Fix causes selftest-c to fail with assembly error ".size expression for __lambda_L499 does not evaluate to a constant". This appears to affect lambda size calculation in generated code. Needs isolated test case.
+- @fixed **Variable lifting bug** (`shunting.rb:129`, `compile_calls.rb:18`): `find_vars` doesn't correctly identify variables in some contexts
+  **FIXED** (`transform.rb:254-255, 275-276, 279`): Fixed by wrapping both arguments AND receivers when passing to `find_vars`. This prevents AST nodes from being iterated element-by-element.
+  **Status**: All 4 tests in `spec/variable_lifting.rb` pass. All 83 RSpec tests pass. selftest and selftest-c both pass.
   **Investigation notes** (`docs/VARIABLE_LIFTING_DEBUG.md`): Root cause was unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes

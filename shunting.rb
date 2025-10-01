@@ -126,13 +126,6 @@ module OpPrec
       src.each do |t,o,keyword|
         op = o
         token = t
-        # FIXME: @bug This is a workaround for a bug in find_vars that doesn't correctly
-        # identify variables used in methods calls.
-        # It appears it might also cause the env allocated for the
-        # block to not be correctly initialized.
-        ostack
-        opstate
-
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator
         if @inhibit.include?(token) or

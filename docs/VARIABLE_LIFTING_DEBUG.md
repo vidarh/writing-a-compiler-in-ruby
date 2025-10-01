@@ -402,11 +402,12 @@ Applied to both `:callm` (line 254-255) and `:call` (line 275-276) handlers.
 ### Test Results
 With both fixes:
 - ✓ All 4 variable lifting tests pass
+- ✓ All 83 RSpec tests pass
 - ✓ `lambda { puts x + y }` works
 - ✓ `[1,2,3].each do |n| sum = n + x + y; puts sum end` works
 - ✓ Nested `:callm` operations correctly capture all variables
 - ✓ selftest passes
-- ✗ selftest-c fails (assembly error: ".size expression for __lambda_L499 does not evaluate to a constant")
+- ✓ selftest-c passes
 
-### Remaining Investigation
-The complete fix resolves all variable lifting test cases but causes a compilation failure in selftest-c. The error suggests an issue with lambda size calculation in generated assembly. This needs isolated test case to understand what pattern in the compiler source triggers this failure.
+### Fix Complete
+The variable lifting bug is now fully resolved. All test cases pass and the compiler successfully self-hosts.
