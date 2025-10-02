@@ -120,6 +120,11 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 #### Core Classes Missing Features
 - **String**: Comprehensive methods missing (`lib/core/string.rb` has many FIXME items)
 - **Array**: Many Enumerable methods missing, inefficient implementations
+  - **Priority: Low** - Missing `Array#map` (alias for collect) and `Array#select` (filter by block)
+  - **Impact**: Workarounds needed in compiler code (must use .collect and .reject)
+  - **Discovered**: During nested block capture fix (selftest-c revealed method_missing errors)
+  - **Note**: Lower priority than fixing nested block parameter capture bug
+  - **See**: `docs/NESTED_BLOCK_CAPTURE_DEBUG.md` for details on discovery
 - **Hash**: Basic functionality only, no advanced features
 - **Numeric**: Only basic integer support
 - **Symbol**: Incomplete implementation (`lib/core/symbol.rb:53`)

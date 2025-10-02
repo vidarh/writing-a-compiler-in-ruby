@@ -388,6 +388,36 @@ Much more effective than trying to debug from assembly output or runtime crashes
 - selftest passes, but nested block tests still fail
 - selftest-c still crashes (regression)
 
+**Commit 3 (fb09d44):** Fix selftest-c regression - COMMITTED
+- Replace .map with .collect (map doesn't exist in lib/core/array.rb)
+- Replace .select with .reject (select doesn't exist)
+- selftest passes ✅
+- selftest-c passes ✅
+- Nested block tests still fail (parameter capture not working yet)
+
+### Key Lesson from Debugging selftest-c
+
+selftest-c (self-compilation test) revealed missing Array methods:
+- The compiler can compile itself with MRI Ruby (which has full stdlib)
+- But the compiled compiler uses lib/core/array.rb (limited implementation)
+- Methods like `.map` and `.select` don't exist, only `.collect` and `.reject`
+
+**Debugging process:**
+1. selftest-c crashed with method_missing FPE error
+2. Backtrace showed crash in rewrite_env_vars during depth_first
+3. Used gdb to identify the missing method call
+4. Replaced unsupported methods with supported alternatives
+5. Verified both selftest and selftest-c pass
+
+**TODO:** lib/core/array.rb needs these methods implemented:
+- `Array#map` (alias for collect)
+- `Array#select` (filter elements matching block)
+- These are lower priority than fixing the nested block capture bug
+- See TODO.md for tracking
+
+This demonstrates the importance of testing self-compilation to catch
+dependencies on MRI-specific features.
+
 ### Core Challenge Discovered
 
 **The fundamental problem with adding parameters to scope:**
