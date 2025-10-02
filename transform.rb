@@ -240,11 +240,15 @@ class Compiler
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
         elsif n[0] == :lambda || n[0] == :proc
-          vars, env2= find_vars(n[2], scopes + [Set.new],env, freq, true)
+          params = n[1] || []
+          # Add parameters to scope so nested lambdas can capture them
+          param_scope = Set.new(params)
+          vars, env2= find_vars(n[2], scopes + [param_scope],env, freq, true)
 
           # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
-          vars  -= n[1] if n[1]
-          env2  -= n[1] if n[1]
+          vars  -= params
+          # Don't remove params from env2 - they're needed for nested lambda capture
+          # env2  -= params
           env += env2
 
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
@@ -317,6 +321,50 @@ class Compiler
   def rewrite_env_vars(exp, env)
     seen = false
     exp.depth_first do |e|
+      # Handle lambda/proc/defun specially - process body but not parameter list
+      if e.is_a?(Array) && (e[0] == :lambda || e[0] == :proc || e[0] == :defun)
+        # Get parameter list and body index
+        param_list = e[0] == :defun ? e[2] : e[1]
+        body_index = e[0] == :defun ? 3 : 2
+
+        # Extract parameter names (handle tuples like [:param, :default, :nil])
+        params = (param_list || []).map { |p| p.is_a?(Array) ? p[0] : p }
+
+        # Find which parameters are in env (need initialization)
+        captured_params = params.select { |p| env.include?(p) }
+
+        # First, process the body to rewrite variable references
+        if e[body_index]
+          # FIXME: seen |= ... failed to compile
+          if rewrite_env_vars(e[body_index], env)
+            seen = true
+          end
+        end
+
+        # Then insert initialization for captured parameters (after rewriting)
+        # This way the RHS (parameter) won't be rewritten
+        if !captured_params.empty? && e[body_index]
+          param_inits = captured_params.map do |p|
+            idx = env.index(p)
+            E[:assign, E[:index, :__env__, idx], p]
+          end
+
+          # Insert at start of body
+          body = e[body_index]
+          if body.is_a?(Array) && body[0] == :let
+            # Insert after let declaration
+            e[body_index] = E[body.position, :let, body[1], *param_inits, *body[2..-1]]
+          elsif body.is_a?(Array) && body[0] == :do
+            e[body_index] = E[:do, *param_inits, *body[1..-1]]
+          else
+            e[body_index] = E[:do, *param_inits, body]
+          end
+          seen = true
+        end
+
+        next :skip  # Don't let depth_first process children (would rewrite params)
+      end
+
       # We need to expand "yield" before we rewrite.
       if e.is_a?(Array) && e[0] == :call && e[1] == :yield
         seen = true
@@ -331,7 +379,7 @@ class Compiler
       eary = e
       e.each_with_index do |ex, i|
         # FIXME: This is necessary in order to avoid rewriting compiler keywords in some
-        # circumstances. The proper solution would be to introduce more types of 
+        # circumstances. The proper solution would be to introduce more types of
         # expression nodes in the parser
         next if i == 0 && ex == :index
         num = env.index(ex)
