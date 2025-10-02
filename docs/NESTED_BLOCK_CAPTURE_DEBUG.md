@@ -373,7 +373,81 @@ This allows directly observing:
 
 Much more effective than trying to debug from assembly output or runtime crashes.
 
-## Current Status (2025-10-02 - Working Fix with Regression)
+## Current Status (2025-10-02 - Partial Fix, Core Challenge Identified)
+
+### Changes Committed
+
+**Commit 1 (fa0c561):** Initial fix attempt - REVERTED
+- Added parameters to scope in find_vars
+- Added parameter initialization in rewrite_env_vars
+- Tests passed but selftest crashed with FPE
+
+**Commit 2 (7a000ab):** Partial infrastructure fix - COMMITTED
+- lib/set.rb: Add Set.new(enum) support
+- transform.rb: Protect lambda/proc parameter lists from rewriting
+- selftest passes, but nested block tests still fail
+- selftest-c still crashes (regression)
+
+### Core Challenge Discovered
+
+**The fundamental problem with adding parameters to scope:**
+
+When parameters are added to a lambda's scope, nested expression processing incorrectly treats them as outer variables:
+
+1. Lambda has `params = [:c]`, creates `param_scope = Set.new([:c])`
+2. Calls `find_vars(body, scopes + [param_scope], ...)`
+3. Body processing encounters `:callm` with arguments (line 265)
+4. Argument processing adds empty scope: `scopes + [Set.new]`
+5. Now scopes = `[...outer..., param_scope, Set.new]`
+6. Symbol lookup checks `scopes[0..-2]` (all except current)
+7. Finds `:c` in `param_scope` at position [-2]
+8. Incorrectly treats `:c` as outer variable, adds to env
+
+**Result:** Parameters get captured even when they shouldn't be.
+
+**Test failure:** `find_vars should identify all variables in a proc`
+- Expected: `[[], #<Set: {:h}>]`
+- Got: `[[], #<Set: {:h, :c}>]`
+- Parameter `:c` incorrectly added to env
+
+### Why This is Hard
+
+The scope hierarchy is designed for LOCAL VARIABLES:
+- First assignment creates variable in current scope (position -1)
+- Later references in nested lambdas find it in outer scopes (position -2+)
+- Outer scope variables are moved to env for capture
+
+But PARAMETERS are never "assigned" - they appear directly in the signature. Adding them to the current scope makes them look like outer variables to any child expression that adds a new scope (which is common - argument evaluation, nested calls, etc.).
+
+### Possible Solutions to Explore
+
+**Option 1: Track parameters separately from scopes**
+- Pass lambda parameters as separate argument through find_vars
+- Check against parameter list before checking scopes
+- Only capture if found in ACTUAL outer scopes, not current lambda's params
+
+**Option 2: Use negative depth markers**
+- Mark parameter scopes differently (e.g., with a wrapper)
+- Update in_scopes to skip parameter scopes when they're at position -1
+- Only treat as capturable when found in truly outer lambdas
+
+**Option 3: Two-pass approach**
+- First pass: identify which params are REFERENCED by nested lambdas
+- Second pass: add only those params to scope and env
+- More complex but avoids false positives
+
+**Option 4: Post-process to add initialization**
+- Keep current approach (don't add params to scope)
+- After transformation, scan for lambdas that reference outer lambda params
+- Insert initialization code at that point
+- Challenge: identifying which references need initialization
+
+**Option 5: Accept manual workarounds**
+- Document that users must manually shadow: `arr_shadow = arr`
+- Three places in compiler already use this pattern
+- Simplest but not ideal for users
+
+## Previous Status (2025-10-02 - Working Fix with Regression)
 
 ### Fix Implementation
 
