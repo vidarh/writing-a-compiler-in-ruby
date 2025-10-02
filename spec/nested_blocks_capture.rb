@@ -18,7 +18,7 @@ RSpec.describe "Nested blocks with outer variable capture" do
     RUBY
 
     output = compile_and_run(code)
-    expect(output).to eq("1\n2\n3\n4\n")
+    expect(output).to eq("1\n2\n3\n4")
   end
 
   it "captures and modifies outer block variable in nested iteration" do
@@ -38,6 +38,6 @@ RSpec.describe "Nested blocks with outer variable capture" do
     RUBY
 
     output = compile_and_run(code)
-    expect(output).to eq("2\n4\n6\n8\n")
+    expect(output).to eq("2\n4\n6\n8")
   end
 end

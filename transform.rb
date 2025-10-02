@@ -217,10 +217,10 @@ class Compiler
     end
   end
 
-  def find_vars_ary(ary, scopes, env, freq, in_lambda = false, in_assign = false)
+  def find_vars_ary(ary, scopes, env, freq, in_lambda = false, in_assign = false, current_params = Set.new)
     vars = []
     ary.each do |e|
-      vars2, env2 = find_vars(e, scopes, env, freq, in_lambda, in_assign)
+      vars2, env2 = find_vars(e, scopes, env, freq, in_lambda, in_assign, current_params)
       vars += vars2
       env  += env2
     end
@@ -228,19 +228,23 @@ class Compiler
   end
 
   # FIXME: Rewrite using "depth first"?
-  def find_vars(e, scopes, env, freq, in_lambda = false, in_assign = false)
+  def find_vars(e, scopes, env, freq, in_lambda = false, in_assign = false, current_params = Set.new)
     return [],env, false if !e
     e = [e] if !e.is_a?(Array)
     e.each do |n|
       if n.is_a?(Array)
         if n[0] == :assign
-          vars1, env1 = find_vars(n[1],     scopes + [Set.new],env, freq, in_lambda, true)
-          vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, freq, in_lambda)
+          vars1, env1 = find_vars(n[1],     scopes + [Set.new],env, freq, in_lambda, true, current_params)
+          vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, freq, in_lambda, false, current_params)
           env = env1 + env2
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
         elsif n[0] == :lambda || n[0] == :proc
-          vars, env2= find_vars(n[2], scopes + [Set.new],env, freq, true)
+          # Extract parameter names (handle arrays like [:param, default])
+          params_raw = n[1] || []
+          param_names = params_raw.is_a?(Array) ? params_raw.collect { |p| p.is_a?(Array) ? p[0] : p } : []
+          param_scope = Set.new(param_names)
+          vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, param_scope)
 
           # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
           vars  -= n[1] if n[1]
@@ -252,13 +256,13 @@ class Compiler
           if    n[0] == :callm
             # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
             receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
-            vars, env = find_vars(receiver, scopes, env, freq, in_lambda)
+            vars, env = find_vars(receiver, scopes, env, freq, in_lambda, false, current_params)
 
             if n[3]
               nodes = n[3]
               nodes = [nodes] if !nodes.is_a?(Array)
               nodes.each do |n2|
-                vars2, env2 = find_vars([n2], scopes+[Set.new], env, freq, in_lambda)
+                vars2, env2 = find_vars([n2], scopes+[Set.new], env, freq, in_lambda, false, current_params)
                 vars += vars2
                 env  += env2
               end
@@ -266,31 +270,31 @@ class Compiler
 
             # If a block is provided, we need to find variables there too
             if n[4]
-              vars3, env3 = find_vars([n[4]], scopes, env, freq, in_lambda)
+              vars3, env3 = find_vars([n[4]], scopes, env, freq, in_lambda, false, current_params)
               vars += vars3
               env  += env3
             end
           elsif    n[0] == :call
             # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
             receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
-            vars, env = find_vars(receiver, scopes, env, freq, in_lambda)
+            vars, env = find_vars(receiver, scopes, env, freq, in_lambda, false, current_params)
             if n[2]
               nodes = n[2]
               nodes = [nodes] if !nodes.is_a?(Array)
               nodes.each do |n2|
-                vars2, env2 = find_vars([n2], scopes+[Set.new], env, freq, in_lambda)
+                vars2, env2 = find_vars([n2], scopes+[Set.new], env, freq, in_lambda, false, current_params)
                 vars += vars2
                 env  += env2
               end
             end
 
             if n[3]
-              vars2, env2 = find_vars([n[3]], scopes, env, freq, in_lambda)
+              vars2, env2 = find_vars([n[3]], scopes, env, freq, in_lambda, false, current_params)
               vars += vars2
               env  += env2
             end
           else
-            vars, env = find_vars(n[1..-1], scopes, env, freq, in_lambda)
+            vars, env = find_vars(n[1..-1], scopes, env, freq, in_lambda, false, current_params)
           end
 
           vars.each {|v| push_var(scopes,env,v); }
@@ -300,7 +304,7 @@ class Compiler
         freq[n] += 1 if !is_special_name?(n)
         if sc.size == 0
           push_var(scopes,env,n) if in_assign && !is_special_name?(n)
-        elsif in_lambda
+        elsif in_lambda && !current_params.include?(n)
           sc.first.delete(n)
           env << n
         end
