@@ -324,10 +324,12 @@ class Compiler
         body_index = e[0] == :defun ? 3 : 2
 
         # Extract parameter names (handle tuples like [:param, :default, :nil])
-        params = (param_list || []).map { |p| p.is_a?(Array) ? p[0] : p }
+        # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
+        params = (param_list || []).collect { |p| p.is_a?(Array) ? p[0] : p }
 
         # Find which parameters are in env (need initialization)
-        captured_params = params.select { |p| env.include?(p) }
+        # Note: using reject with negation because .select doesn't exist in lib/core/array.rb
+        captured_params = params.reject { |p| !env.include?(p) }
 
         # First, process the body to rewrite variable references
         if e[body_index]
@@ -340,7 +342,8 @@ class Compiler
         # Then insert initialization for captured parameters (after rewriting)
         # This way the RHS (parameter) won't be rewritten
         if !captured_params.empty? && e[body_index]
-          param_inits = captured_params.map do |p|
+          # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
+          param_inits = captured_params.collect do |p|
             idx = env.index(p)
             E[:assign, E[:index, :__env__, idx], p]
           end
