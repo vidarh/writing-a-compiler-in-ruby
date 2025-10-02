@@ -240,15 +240,11 @@ class Compiler
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
         elsif n[0] == :lambda || n[0] == :proc
-          params = n[1] || []
-          # Add parameters to scope so nested lambdas can capture them
-          param_scope = Set.new(params)
-          vars, env2= find_vars(n[2], scopes + [param_scope],env, freq, true)
+          vars, env2= find_vars(n[2], scopes + [Set.new],env, freq, true)
 
           # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
-          vars  -= params
-          # Don't remove params from env2 - they're needed for nested lambda capture
-          # env2  -= params
+          vars  -= n[1] if n[1]
+          env2  -= n[1] if n[1]
           env += env2
 
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]

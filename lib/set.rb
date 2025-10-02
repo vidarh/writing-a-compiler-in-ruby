@@ -14,8 +14,11 @@ end
 # to get some of the basics in place
 #
 class Set
-  def initialize
+  def initialize(enum = nil)
     @set = Hash.new # Told you it was dirty
+    if enum
+      enum.each { |e| self << e }
+    end
   end
 
   def size
