@@ -442,10 +442,12 @@ But PARAMETERS are never "assigned" - they appear directly in the signature. Add
 - Insert initialization code at that point
 - Challenge: identifying which references need initialization
 
-**Option 5: Accept manual workarounds**
+**Option 5: Accept manual workarounds** ❌ NOT ACCEPTABLE
 - Document that users must manually shadow: `arr_shadow = arr`
 - Three places in compiler already use this pattern
-- Simplest but not ideal for users
+- **This is NOT an acceptable solution - the bug must be fixed**
+- The compiler should handle this automatically
+- Manual workarounds are error-prone and defeat the purpose of closures
 
 ## Previous Status (2025-10-02 - Working Fix with Regression)
 
