@@ -82,8 +82,6 @@ class Compiler
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
-      # FIXME: This is a workaround for a compiler @bug
-      bug=e
       e.each_with_index do |s,i|
         if s.is_a?(String)
           lab = @string_constants[s]
@@ -91,15 +89,13 @@ class Compiler
             lab = @e.get_local
             @string_constants[s] = lab
           end
-          # FIXME: This is a workaround for a compiler bug
-          # STDERR.puts(bug.inspect)
-          bug[i] = E[:sexp, E[:call, :__get_string, lab.to_sym]]
+          e[i] = E[:sexp, E[:call, :__get_string, lab.to_sym]]
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
           # the argument "bare" if it's not an array, which breaks with
           # this rewrite.
-          bug[i] = E[bug[i]] if is_call && i > 1
+          e[i] = E[e[i]] if is_call && i > 1
         end
       end
     end
