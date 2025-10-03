@@ -19,9 +19,7 @@ variable lifting bug mentioned below.
   **FIXED** (`transform.rb:254-255, 275-276, 279`): Fixed by wrapping both arguments AND receivers when passing to `find_vars`. This prevents AST nodes from being iterated element-by-element.
   **Status**: All 4 tests in `spec/variable_lifting.rb` pass. All 83 RSpec tests pass. selftest and selftest-c both pass.
   **Investigation notes** (`docs/VARIABLE_LIFTING_DEBUG.md`): Root cause was unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
-- @fixed **Nested block variable capture bug**: Outer block parameters not correctly captured in nested blocks
-  **Status**: ✅ FIXED (commits 654fc39, 18fb8ad) - selftest and selftest-c both pass
-  **Details**: See `docs/NESTED_BLOCK_FIX_INVESTIGATION.md` and `docs/NESTED_BLOCK_CAPTURE_DEBUG.md`
+- @fixed **Nested block variable capture bug**: See `docs/NESTED_BLOCK_FIX_INVESTIGATION.md` and `docs/NESTED_BLOCK_CAPTURE_DEBUG.md`
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
 - @fixed **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of

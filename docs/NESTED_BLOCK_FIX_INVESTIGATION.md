@@ -373,4 +373,4 @@ vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, Set.
 
 ### Status: ✅ COMPLETE
 
-The nested block parameter capture feature is fully working. The three `@bug` workarounds in the codebase can now be safely removed.
+The nested block parameter capture feature is fully working. All three `@bug` workarounds have been successfully removed (commits e04e466, be06b8b, e5cd7fe).
