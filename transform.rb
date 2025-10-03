@@ -610,15 +610,13 @@ class Compiler
           syms = e[2]
 
           e.replace(E[:do])
-          # FIXME: Workaround for compiler @bug
-          ex = e
           syms.each do |mname|
             mname = mname.to_s[1..-1].to_sym
             if (type == :attr_reader || type == :attr_accessor)
-              ex << E[:defm, mname, [], ["@#{mname}".to_sym]]
+              e << E[:defm, mname, [], ["@#{mname}".to_sym]]
             end
             if (type == :attr_writer || type == :attr_accessor)
-              ex << E[:defm, "#{mname}=".to_sym, [:value], [[:assign, "@#{mname}".to_sym, :value]]]
+              e << E[:defm, "#{mname}=".to_sym, [:value], [[:assign, "@#{mname}".to_sym, :value]]]
             end
           end
         elsif e[0] == :class
