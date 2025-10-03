@@ -376,8 +376,6 @@ class Compiler
         e[3] = args
       end
 
-      # FIXME: @bug; see below.
-      eary = e
       e.each_with_index do |ex, i|
         # FIXME: This is necessary in order to avoid rewriting compiler keywords in some
         # circumstances. The proper solution would be to introduce more types of
@@ -386,8 +384,7 @@ class Compiler
         num = env.index(ex)
         if num
           seen = true
-          # FIXME: @bug; e[i] causes segfault.
-          eary[i] = E[:index, :__env__, num]
+          e[i] = E[:index, :__env__, num]
         end
       end
     end
