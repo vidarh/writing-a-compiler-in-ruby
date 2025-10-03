@@ -2,7 +2,7 @@
 module CompilationHelper
   # Compiles Ruby code, assembles it, and runs it in Docker
   # Returns the stdout output from the compiled binary
-  def compile_and_run(code)
+  def compile_and_run(code, compiler_flags = "")
     require 'fileutils'
 
     src_file = "out/test_#{Process.pid}_#{rand(10000)}.rb"
@@ -13,7 +13,7 @@ module CompilationHelper
       File.write(src_file, code)
 
       # Compile Ruby to assembly
-      compile_result = system("ruby -I. driver.rb #{src_file} >#{asm_file} 2>#{asm_file}.err")
+      compile_result = system("ruby -I. driver.rb #{src_file} #{compiler_flags} >#{asm_file} 2>#{asm_file}.err")
       unless compile_result
         err = File.read("#{asm_file}.err") if File.exist?("#{asm_file}.err")
         raise "Compilation failed: #{err}"
