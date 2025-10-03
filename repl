@@ -1,0 +1,4 @@
+#!/bin/bash
+
+pry -I. -r./compiler -r./repl.rb
+

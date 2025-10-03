@@ -1,0 +1,23 @@
+\n%s(do
+  (defm test_single () 
+    (let (pivot __env__ __tmp_proc)
+      (sexp (assign __env__ (call __alloc_env 2)))
+      (assign (index __env__ 1) __closure__)
+      (assign pivot (sexp 21))
+      (callm (array (sexp 3) (sexp 5) (sexp 7)) each () (do
+          (assign (index __env__ 0) (stackframe))
+          (assign __tmp_proc 
+            (defun "__lambda_L0" (self __closure__ __env__ (e default nil)) 
+              (let ()
+                (call puts (
+                    (callm e < (pivot))))
+              )
+            ))
+          (sexp (call __new_proc (__tmp_proc __env__ self 1)))
+
+        ))
+    )
+  )
+  test_single
+
+)

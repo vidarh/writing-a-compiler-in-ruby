@@ -248,7 +248,8 @@ class Compiler
 
           # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
           vars  -= n[1] if n[1]
-          env2  -= n[1] if n[1]
+          # Don't remove params from env2 - if they're captured by nested lambdas,
+          # they need to propagate up. The rewrite_env_vars will add initialization.
           env += env2
 
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]

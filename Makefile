@@ -73,7 +73,7 @@ bundle:
 	${DR} bundle install
 
 rspec:
-	${DR} bundle exec rspec --format=doc ./spec/*.rb
+	bundle exec rspec --format=doc ./spec/*.rb
 
 .PHONY: features
 features:

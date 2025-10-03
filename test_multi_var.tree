@@ -1,0 +1,26 @@
+\n%s(do
+  (defm test_multiple () 
+    (let (x __env__ __tmp_proc)
+      (sexp (assign __env__ (call __alloc_env 4)))
+      (assign (index __env__ 3) __closure__)
+      (assign x (sexp 11))
+      (assign (index __env__ 1) (sexp 21))
+      (callm (array (sexp 3) (sexp 5) (sexp 7)) each () (do
+          (assign (index __env__ 0) (stackframe))
+          (assign __tmp_proc 
+            (defun "__lambda_L0" (self __closure__ __env__ (n default nil)) 
+              (let ()
+                (assign (index __env__ 2) (callm (callm n + (x)) + (
+                      (index __env__ 1))))
+                (call puts (
+                    (index __env__ 2)))
+              )
+            ))
+          (sexp (call __new_proc (__tmp_proc __env__ self 1)))
+
+        ))
+    )
+  )
+  test_multiple
+
+)

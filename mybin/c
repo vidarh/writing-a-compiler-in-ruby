@@ -1,0 +1,93 @@
+#!/usr/bin/env vruby
+
+require 'json'
+require 'shellwords'
+
+s = ARGV[0]
+
+cmd = nil
+args = []
+if s && s[0] != ?-
+  ext = File.basename(s).split(".")[-1]
+  if ext == "json"
+    cmd = "jq -C . "
+    opts = "--lexer plain"
+  elsif ext == "csv"
+    cmd = "mlr --opprint cat "
+  else
+    opts = ""
+  end
+  args = ARGV
+else
+  opts = ""
+end
+
+str = "cat "
+##{cmd}rougify highlight #{opts} "
+
+if !args.empty?
+  if cmd
+    str = cmd
+    args = ARGV
+  else
+    #str += " -i "
+  end
+
+  args.each do |arg|
+    #STDOUT.puts [cmd,opts,args].inspect
+    puts
+    puts "\e[30;42m  #{arg}  \e[0m"
+    q = "#{str} #{arg.shellescape} | /home/vidarh/bin/num"
+    system(q)
+  end
+else
+  puts
+  str = "num"
+  IO.popen(str,"w+") do |out|
+    finish = false
+    t = Thread.new do
+      while !finish
+        begin
+          while r = out.read_nonblock(16384)
+            print r
+          end
+        rescue IO::WaitReadable
+        end
+      end
+      while r = out.read(16384)
+        print r
+      end
+    end
+
+    data = ARGF.read
+    json = JSON.load(data) rescue nil
+    if json
+      IO.popen("jq --unbuffered -C .","a+") do |jq|
+        jq.puts data;
+        jq.close_write;
+        out.print jq.read
+      end
+    else
+      data.split("\n").each do |line|
+        if (JSON.load(line) rescue nil)
+          out.puts "#{ANSI.reverse}#{ANSI.red}jq <<<#{ANSI.normal}"
+          IO.popen("jq --unbuffered -C .","a+") do |jq|
+            jq.puts line;
+            jq.close_write;
+            out.print jq.read
+          end
+          out.puts "#{ANSI.reverse}#{ANSI.red}>>> jq#{ANSI.normal}"
+        else
+          out.puts line
+        end
+
+      end
+    end
+    finish = true
+    out.close_write
+    t.join
+    STDOUT.flush
+  end
+end
+
+puts
