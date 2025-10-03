@@ -244,7 +244,8 @@ class Compiler
           params_raw = n[1] || []
           param_names = params_raw.is_a?(Array) ? params_raw.collect { |p| p.is_a?(Array) ? p[0] : p } : []
           param_scope = Set.new(param_names)
-          vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, param_scope)
+          # Pass a copy of param_scope as current_params to prevent it from being modified
+          vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, Set.new(param_names))
 
           # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
           vars  -= n[1] if n[1]
@@ -451,7 +452,8 @@ class Compiler
       # We use this to assign registers
       freq   = Hash.new(0)
 
-      vars,env= find_vars(e[3],scopes,Set.new, freq)
+      s = Set.new
+      vars,env= find_vars(e[3],scopes,s, freq)
 
       env << :__closure__
 
