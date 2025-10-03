@@ -325,18 +325,52 @@ each_byte {|c| h = h * 33 + c}
             - Result: {:h} ✓ correct
 ```
 
-### Next Steps
-
-1. **Investigate selftest crash**: Use gdb to identify what's causing the segfault
-2. **Possible causes**:
-   - Edge case in how compiler methods use closures
-   - Interaction with splat parameters (`*args`)
-   - Specific method in compiler code that triggers the crash
-3. **Approach**: Compare assembly or trace execution to find the failure point
-
-### Files Modified
+### Files Modified (commit 654fc39)
 
 - `transform.rb`: Added current_params tracking throughout find_vars
 - `spec/simple_nested_capture.rb`: Fixed test expectations
 - `spec/nested_blocks_capture.rb`: Fixed test expectations
 
+## FINAL FIX - 2025-10-03 (commit 18fb8ad)
+
+### The Remaining Bug
+
+The selftest crash was caused by a subtle mutation bug in `transform.rb:247`:
+
+```ruby
+param_scope = Set.new(param_names)
+vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, param_scope)
+```
+
+**Problem**: `param_scope` was passed as both:
+1. The last element of the `scopes` array
+2. The `current_params` parameter
+
+This made them the same Set object. When `push_var` added variables to `scopes[-1]`, it also modified `current_params`.
+
+### How the Bug Manifested
+
+In `rewrite_let_env`, when processing:
+```ruby
+args = Set[*e[2].collect{|a| ...}]
+ac = 0
+e[2].each{|a| ac += 1 if ! a.kind_of?(Array)}
+```
+
+1. `args` was added to scope with `current_params = {:e}` ✓
+2. `ac` was added with `current_params = {:e, :args}` ✗ (corrupted!)
+3. Later, `args` was incorrectly treated as a parameter and moved to env
+4. This caused variable storage corruption, turning `args` into a Fixnum
+
+### The Fix (commit 18fb8ad)
+
+```ruby
+# Pass a copy of param_scope as current_params to prevent it from being modified
+vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, Set.new(param_names))
+```
+
+**Result**: Both selftest and selftest-c now run successfully with all tests passing.
+
+### Status: ✅ COMPLETE
+
+The nested block parameter capture feature is fully working. The three `@bug` workarounds in the codebase can now be safely removed.

@@ -19,18 +19,9 @@ variable lifting bug mentioned below.
   **FIXED** (`transform.rb:254-255, 275-276, 279`): Fixed by wrapping both arguments AND receivers when passing to `find_vars`. This prevents AST nodes from being iterated element-by-element.
   **Status**: All 4 tests in `spec/variable_lifting.rb` pass. All 83 RSpec tests pass. selftest and selftest-c both pass.
   **Investigation notes** (`docs/VARIABLE_LIFTING_DEBUG.md`): Root cause was unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
-- **Nested block variable capture bug** (`transform.rb:242-253`, `transform.rb:307`, `transform.rb:322-370`): Outer block **parameters** not correctly captured in nested blocks
-  **Status**: ✅ CORE FIX WORKING (commit 654fc39) - all 5 test cases pass, but selftest runtime crash needs investigation
-  **Fix implemented**: Track `current_params` in `find_vars` to prevent current lambda's parameters from being incorrectly captured
-  **Test cases**: `spec/nested_blocks_capture.rb` (2 tests), `spec/simple_nested_capture.rb` (3 tests) - ✅ ALL PASSING
-  **Example that now works**: `[[1]].each do |arr| arr.each {|x| puts arr.length } end` - outputs "1"
-  **Remaining issue**: Selftest compiles but crashes at runtime with segmentation fault after `__cnt: 1000`
-  **Investigation**: `docs/NESTED_BLOCK_FIX_INVESTIGATION.md` (see UPDATE 2025-10-03 section)
-  **Workarounds still present**: Three `@bug` workarounds remain in code (can be removed once selftest crash is fixed):
-    - `bug=e` in `rewrite_strconst` (line 86) - used with `e.each_with_index`
-    - `eary=e` in `rewrite_env_vars` (line 331) - used with `e.each_with_index`
-    - `ex=e` in attr_* handler (line 567) - used with `syms.each`
-  **Next step**: Debug selftest runtime crash to complete the fix
+- @fixed **Nested block variable capture bug**: Outer block parameters not correctly captured in nested blocks
+  **Status**: ✅ FIXED (commits 654fc39, 18fb8ad) - selftest and selftest-c both pass
+  **Details**: See `docs/NESTED_BLOCK_FIX_INVESTIGATION.md` and `docs/NESTED_BLOCK_CAPTURE_DEBUG.md`
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
 - @fixed **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of
