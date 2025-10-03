@@ -21,7 +21,8 @@
 #
 
 # Don't output PASS's
-$quiet = true
+# $quiet = true
+$quiet = false
 
 require 'scanner'
 require 'parserbase'
@@ -704,3 +705,4 @@ test_depth_first
 test_string
 test_file
 test_compiler
+puts "DONE"
