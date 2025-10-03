@@ -4,26 +4,11 @@ This document tracks known bugs, missing features, and architectural issues that
 
 ## Critical Bugs
 
-- @fixed `make hello` crashes. It worked (though may require running the final
-gcc linking step via docker) in commit 9e28ed53b95b3c8b6fd938705fef39f9fa582fef
-and failed in subsequent commits. This is critical, as it is a serious
-regression. No other bugs should proceed before this has been fixed, but
-it is possible other bugs might produce clues as to why this is
-broken. - NOTE: This was fixed with a workaround, likely for the
-variable lifting bug mentioned below.
-
 ### Parser and Compilation Bugs
 
 #### Variable and Scope Issues
-- @fixed **Variable lifting bug** (`shunting.rb:129`, `compile_calls.rb:18`): `find_vars` doesn't correctly identify variables in some contexts
-  **FIXED** (`transform.rb:254-255, 275-276, 279`): Fixed by wrapping both arguments AND receivers when passing to `find_vars`. This prevents AST nodes from being iterated element-by-element.
-  **Status**: All 4 tests in `spec/variable_lifting.rb` pass. All 83 RSpec tests pass. selftest and selftest-c both pass.
-  **Investigation notes** (`docs/VARIABLE_LIFTING_DEBUG.md`): Root cause was unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
-- @fixed **Nested block variable capture bug**: See `docs/NESTED_BLOCK_FIX_INVESTIGATION.md` and `docs/NESTED_BLOCK_CAPTURE_DEBUG.md`
 - **Variable name conflicts** (`regalloc.rb:307`): Variables with names matching method names cause compilation issues
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
-- @fixed **Member variable assignment** (`parser.rb:20`): Instance variables not explicitly assigned become 0 instead of
-nil - (test in spec/ivar.rb confirms this works correctly)
 #### Code Generation Bugs
 - **Segmentation faults**:
   - `compile_calls.rb:26`: Using 'yield' instead of 'block' causes seg-fault
@@ -33,8 +18,6 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 - **Method call rewriting** (`compile_calls.rb:314`): callm rewrites trigger unexpected behavior
 
 #### Parser-Specific Bugs
-- @fixed **String parsing** (`test/selftest.rb:90`): Character literals require workarounds (27.chr) - now properly handles escape sequences like \e, \t, \n, \r in character literals (test in spec/character_literals.rb confirms fix)
-- @fixed **Negative numbers** (`test/selftest.rb:187`): Unary minus operator now properly supported - rewrite_operators in transform.rb now handles prefix :- by converting to method call 0.-() with tagged fixnum zero (test in spec/negative_numbers_simple.rb confirms fix)
 - **Expression grouping** (`test/selftest.rb:199`): Certain expressions cause parse/compilation errors
 - **Chained method calls on lambdas**: `lambda { x; y }.call` fails with "Missing value in expression" error in shunting yard parser (`treeoutput.rb:92`, `shunting.rb:52`) - works in MRI
 - **Comment parsing** (`parser.rb:107`): Specific comment patterns cause parser bugs
@@ -52,7 +35,6 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 - **Hash operations** (`lib/core/hash.rb:62-63`): Equality checks for Deleted objects fail
 - **Array operations** (`lib/core/array.rb:1041`): Assignment workaround needed to prevent crashes in selftest
 - **String operations** (`lib/core/string.rb:191`): Empty string handling should throw ArgumentError
-- @fixed **Global variables** (`test/selftest.rb:23`): Globals appear broken at some point - was generating incorrect assembly with $ prefix, now properly strips prefix and initializes uninitialized globals to nil (test in spec/global_vars.rb confirms fix)
 
 #### Memory Management
 - **Garbage collection overhead**: Current GC not optimized for large numbers of small objects
@@ -206,10 +188,9 @@ nil - (test in spec/ivar.rb confirms this works correctly)
 ## Priority Assessment
 
 ### Must Fix (for basic functionality)
-1. Variable lifting and scoping bugs
-2. Segmentation faults
-3. Exception handling implementation
-4. Register allocation issues
+1. Segmentation faults
+2. Exception handling implementation
+3. Register allocation issues
 
 ### Should Fix (for self-hosting robustness)
 1. Parser whitespace sensitivity
