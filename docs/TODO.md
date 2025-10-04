@@ -19,7 +19,7 @@ This document tracks known bugs, missing features, and architectural issues that
 
 #### Parser-Specific Bugs
 - **Expression grouping** (`test/selftest.rb:199`): Certain expressions cause parse/compilation errors
-- **Chained method calls on lambdas**: `lambda { x; y }.call` fails with "Missing value in expression" error in shunting yard parser (`treeoutput.rb:92`, `shunting.rb:52`) - works in MRI
+- **@fixed Chained method calls on lambdas**: Fixed by removing `:lambda` from keyword list and converting `[:call, :lambda, [], [:proc, ...]]` to `[:lambda, ...]` in treeoutput.rb. Lambda now parses like `proc` (as method call with block), allowing method chaining. Test: `spec/lambda_chained_call.rb`
 - **Comment parsing** (`parser.rb:107`): Specific comment patterns cause parser bugs
 - **Whitespace sensitivity** (`lib/core/array.rb:576`, `lib/core/array.rb:670`): Some expressions fail without specific whitespace
 

@@ -157,7 +157,14 @@ module OpPrec
       elsif ra and rightv[0] == :comma and o.sym != :comma
         @vstack << E[o.sym, leftv, flatten(rightv)].compact
       elsif ra and rightv[0] == :flatten
-        @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
+        # Convert [:call, :lambda, [], [:proc, ...]] to [:lambda, ...]
+        # This allows lambda to work like a method call while generating proper lambda nodes
+        if o.sym == :call && leftv == :lambda && rightv[2].is_a?(Array) && rightv[2][0] == :proc
+          proc_node = rightv[2]
+          @vstack << E[:lambda, proc_node[1], proc_node[2]]
+        else
+          @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
+        end
       else
         # FIXME This seemingly fixes issue where single argument function call does not get its arguments wrapped.
         # FIXME Need to verify that this doesn't fail any other tests than the ones it should
@@ -176,6 +183,7 @@ module OpPrec
         if o.sym == :assign && lv.is_a?(Array)
             lv = [:destruct] + lv
         end
+
         @vstack << E[o.sym, lv, rightv].compact
       end
       return

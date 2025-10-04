@@ -6,7 +6,7 @@ module Tokens
 
   Keywords = Set[
     :begin, :break, :case, :class, :def, :do, :else, :end, :if, :include,
-    :module, :require, :rescue, :then, :unless, :when, :elsif, :lambda,
+    :module, :require, :rescue, :then, :unless, :when, :elsif,
     :protected, :next
   ]
 
