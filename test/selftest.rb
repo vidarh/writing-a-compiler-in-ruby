@@ -23,6 +23,7 @@
 # Don't output PASS's
 # $quiet = true
 $quiet = false
+$fails = 0
 
 require 'scanner'
 require 'parserbase'
@@ -98,6 +99,7 @@ def msg_pass(message, right)
 end
 
 def msg_fail(message, left,right)
+  $fails += 1
   if !left.is_a?(String)
     li = left.inspect
     ri = right.inspect
@@ -706,3 +708,4 @@ test_string
 test_file
 test_compiler
 puts "DONE"
+puts "Fails: "+$fails.to_s
