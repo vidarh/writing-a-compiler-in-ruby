@@ -66,8 +66,6 @@ class Compiler
     @vtableoffsets = VTableOffsets.new
     @trace = false
 
-    # FIXME: Added as workaround as compiler does not auto-initialize
-    # member variables (yuck)
     @global_scope = nil
     @lastpos = nil
     @linelabel = 0
