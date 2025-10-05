@@ -302,8 +302,6 @@ class Emitter
 
   def load_indirect8(arg)
     movzbl("(#{to_operand_value(arg,:stripdollar)})", :eax)
-    # FIXME: gcc includes this second movzbl; why is it needed?
-    movzbl(:al,:eax)
     :eax
   end
 
