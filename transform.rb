@@ -65,7 +65,7 @@ class Compiler
               ]
             ],
             # FIXME: Compiler bug: This works
-            [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, len]]]
+            [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, len, :__closure__]]]
             # But this crashes:
             #E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self, len]]]
           ]

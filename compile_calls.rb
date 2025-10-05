@@ -20,13 +20,7 @@ class Compiler
     end
     @e.movl(args.length, :ebx)
 
-    # FIXME: Using 'yield' instead of 'block' here causes a seg-fault as
-    # the internal __closure__ is 0. There are two issues here:
-    # __closure__ should *never* be 0 - for ease (avoiding a check on
-    # each call) it should be a "dummy" that triggers an error/execption on #call
-    # Secondly, 'yield' probably needs to be transformed early enough to have
-    # the reference to __closure__ rewritten.
-    block.call
+    yield
 
     if dynamic_adj
       # Always dynamically adjust the stack based on %ebx for method calls

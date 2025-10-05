@@ -39,12 +39,12 @@ class Compiler
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
   @@keywords = Set[
-                   :do, :class, :defun, :defm, :if, :lambda,
+                   :do, :class, :defun, :defm, :if,
                    :assign, :while, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :proc, :stackframe, :deref, :include,
+                   :preturn, :stackframe, :deref, :include,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline # See `inline.rb`
