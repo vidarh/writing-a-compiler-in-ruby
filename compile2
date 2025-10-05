@@ -10,7 +10,7 @@ asmdebug = ARGV.include?("-g") ? "-g" : ""
 
 def dr(cmd)
   puts cmd
-  system("docker run -v #{Dir.pwd}:/app -t -i ruby-compiler-buildenv bash -c '#{cmd}'")
+  system("docker run -v #{Dir.pwd}:/app -i ruby-compiler-buildenv bash -c '#{cmd}'")
 end
 
 puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}2"
