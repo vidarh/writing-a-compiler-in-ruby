@@ -146,3 +146,13 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 **Testing**: selftest-c passes
 
 **Commits**: 201c57f, 6a3f966
+
+### Array#zip Variable Capture Workaround
+**Location**: `lib/core/array.rb:1056` (zip method)
+**Problem**: Crash in selftest when using block parameter directly in nested block. Required workaround: `args.collect{|a| b = a; a.to_enum}` instead of `args.collect{|a| a.to_enum}`
+
+**Fix**: Variable capture in nested blocks now works correctly. Can refer directly to block parameters in nested blocks.
+
+**Testing**: selftest-c passes
+
+**Related**: Fixed as part of the same variable capture improvements that fixed compile_calls.rb issues

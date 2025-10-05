@@ -31,7 +31,6 @@ This document tracks known bugs, missing features, and architectural issues that
 
 #### Object Model Issues
 - **Hash operations** (`lib/core/hash.rb:62-63`): Equality checks for Deleted objects fail
-- **Array operations** (`lib/core/array.rb:1041`): Assignment workaround needed to prevent crashes in selftest
 - **String operations** (`lib/core/string.rb:191`): Empty string handling should throw ArgumentError
 
 #### Memory Management
