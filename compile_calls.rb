@@ -83,9 +83,6 @@ class Compiler
   end
 
   def compile_args_splat_loop(scope, args, indir)
-    # @FIXME @bug
-    # Probably another findvars bug
-    xindir = indir
     args.each do |a|
       ary = a.is_a?(Array)
       sp = false
@@ -96,11 +93,11 @@ class Compiler
       end
       # ary && (a[0] == :splat)
       if sp
-        compile_args_copysplat(scope, a, xindir)
+        compile_args_copysplat(scope, a, indir)
       else
         param = compile_eval_arg(scope, a)
-        @e.save_indirect(param, xindir)
-        @e.addl(4, xindir)
+        @e.save_indirect(param, indir)
+        @e.addl(4, indir)
       end
     end
   end
