@@ -11,4 +11,5 @@ publish
 vendor/*
 features/inputs/*
 out/*
-test_*.rb
+test_*
+debug_*
