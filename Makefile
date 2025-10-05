@@ -1,5 +1,5 @@
 IMAGE=ruby-compiler-buildenv
-DR=docker run --rm -ti --privileged -v ${PWD}:/app ${IMAGE}
+DR=docker run --rm -i --privileged -v ${PWD}:/app ${IMAGE}
 CFLAGS=-g
 all: compiler
 
@@ -39,7 +39,7 @@ selftest-mri:
 selftest:
 	./compile test/selftest.rb -I. -g
 	@echo "== Compiled:"
-	${DR} out/selftest
+	out/selftest
 
 out/selftest.l: test/selftest.rb *.rb lib/*.rb
 	ruby -I. ./driver.rb -I. -g --parsetree test/selftest.rb >out/selftest.l
@@ -56,6 +56,10 @@ selftest-c: compiler
 #	./out/driver --parsetree -I. test/selftest.rb >out/selftest2.l
 #	diff -u out/selftest.l out/selftest2.l | less
 
+selftest-c2: out/driver2
+	./out/driver2 -I. test/selftest.rb >out/selftest3.s
+	${DR} gcc -m32 -o out/selftest3 out/selftest3.s out/tgc.o
+	out/selftest3
 
 valgrind: selftest
 	${DR} valgrind --track-origins=yes ./out/selftest 2>&1
