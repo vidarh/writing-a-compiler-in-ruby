@@ -11,7 +11,6 @@ This document tracks known bugs, missing features, and architectural issues that
 - **Initialization errors** (`parser.rb:120`, `parser.rb:363`): Local variables not properly initialized in some scopes
 #### Code Generation Bugs
 - **Segmentation faults**:
-  - @fixed `compile_calls.rb:23`: Yield inside block passed to another method caused seg-fault. Fixed by passing outer method's __closure__ to Proc#call instead of 0. Modified `lib/core/proc.rb` to store @closure and pass it in call, and `transform.rb` rewrite_lambda to pass __closure__ to __new_proc. Removed workaround in compile_calls.rb. Test: `spec/yield_in_block_segfault.rb` first two tests.
   - **Top-level lambda with __closure__ reference**: Lambdas created at top-level that reference __closure__ (via rewrite_lambda) fail because __closure__ doesn't exist at top-level. Test: `spec/yield_in_block_segfault.rb` third test. Workaround: wrap lambda creation in method.
   - `test/selftest.rb:180`: Inlining certain expressions into method calls causes crashes
   - `compiler.rb:695`: Certain AST traversal patterns trigger segfaults
@@ -20,7 +19,6 @@ This document tracks known bugs, missing features, and architectural issues that
 
 #### Parser-Specific Bugs
 - **Expression grouping** (`test/selftest.rb:199`): Certain expressions cause parse/compilation errors
-- **@fixed Chained method calls on lambdas**: Fixed by removing `:lambda` from keyword list and converting `[:call, :lambda, [], [:proc, ...]]` to `[:lambda, ...]` in treeoutput.rb. Lambda now parses like `proc` (as method call with block), allowing method chaining. Test: `spec/lambda_chained_call.rb`
 - **Comment parsing** (`parser.rb:107`): Specific comment patterns cause parser bugs
 - **Whitespace sensitivity** (`lib/core/array.rb:576`, `lib/core/array.rb:670`): Some expressions fail without specific whitespace
 
@@ -94,7 +92,6 @@ This document tracks known bugs, missing features, and architectural issues that
 #### Core Classes Missing Features
 - **String**: Comprehensive methods missing (`lib/core/string.rb` has many FIXME items)
 - **Array**: Many Enumerable methods missing, inefficient implementations
-  - @fixed Added `Array#map` (alias for collect using &block forwarding) and `Array#select` (filter by block). Test: `spec/array_map_select.rb`. Enabled by yield-in-block segfault fix.
 - **Hash**: Basic functionality only, no advanced features
 - **Numeric**: Only basic integer support
 - **Symbol**: Incomplete implementation (`lib/core/symbol.rb:53`)

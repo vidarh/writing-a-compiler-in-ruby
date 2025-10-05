@@ -66,3 +66,37 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 **Fix**: Now properly strips prefix and initializes uninitialized globals to nil.
 
 **Testing**: Test in `spec/global_vars.rb` confirms fix.
+
+## Code Generation Bugs (Fixed)
+
+### Yield Inside Block Segfault
+**Location**: `compile_calls.rb:23`
+**Problem**: Using `yield` inside a block passed to another method caused segmentation fault. The __closure__ was 0 when yield was called from within a nested block context.
+
+**Fix**: Modified `lib/core/proc.rb` to store @closure instance variable and pass it to the lambda in Proc#call instead of 0. Updated `transform.rb` rewrite_lambda to pass __closure__ to __new_proc. Removed workaround in compile_calls.rb (changed block.call to yield). Also removed :proc and :lambda from compiler.rb @@keywords since they're handled by transformation phase.
+
+**Testing**: Tests in `spec/yield_in_block_segfault.rb` (first two tests pass). Selftest passes.
+
+**Commit**: 4d2af15
+
+**Note**: This fix enables Array#map implementation but exposes a separate bug where top-level lambdas fail when they reference __closure__ (third test in spec documents this).
+
+### Chained Method Calls on Lambdas
+**Location**: Parser
+**Problem**: Chained method calls on lambda literals didn't work (e.g., `lambda { }.call`)
+
+**Fix**: Removed `:lambda` from keyword list and added conversion in treeoutput.rb to transform `[:call, :lambda, [], [:proc, ...]]` to `[:lambda, ...]`. Lambda now parses like `proc` (as method call with block), allowing method chaining.
+
+**Testing**: Test in `spec/lambda_chained_call.rb` confirms fix.
+
+## Standard Library Features (Fixed)
+
+### Array#map and Array#select
+**Location**: `lib/core/array.rb`
+**Problem**: Array#map (alias for collect) and Array#select (filter by block) were missing
+
+**Fix**: Implemented Array#map as proper alias using &block parameter forwarding: `def map(&block); collect(&block); end`. Array#select was already implemented. Both methods now work correctly thanks to yield-in-block segfault fix.
+
+**Testing**: All 5 tests in `spec/array_map_select.rb` pass.
+
+**Commit**: 3a16997
