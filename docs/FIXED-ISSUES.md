@@ -100,3 +100,49 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 **Testing**: All 5 tests in `spec/array_map_select.rb` pass.
 
 **Commit**: 3a16997
+
+## Compiler Workarounds Removed
+
+### Symbol Comparison in emitter.rb
+**Location**: `emitter.rb:153` (save_result method)
+**Problem**: Symbol comparison `param != :eax` didn't work reliably, required using `param.inspect != ":eax"` workaround
+
+**Fix**: Direct symbol comparison now works correctly. Removed workaround and simplified to `if param != :eax`.
+
+**Testing**: selftest-c passes
+
+**Commit**: 7e3bfa3
+
+### Block Passing and yield Support
+**Location**: `emitter.rb:320-343` (with_local and with_stack methods)
+**Problem**:
+- Couldn't pass block directly to with_stack, required intermediate variable and block.call
+- yield didn't work in with_stack, had to use block.call instead
+
+**Fix**: Both issues resolved:
+- Can now pass block parameter directly: `with_stack(args+1, &block)`
+- Can now use `yield` instead of `block.call`
+
+**Testing**: selftest-c passes
+
+**Commit**: 7e3bfa3
+
+### Redundant movzbl Instruction
+**Location**: `emitter.rb:304` (load_indirect8 method)
+**Problem**: Second `movzbl(:al,:eax)` instruction included based on GCC output, but purpose unclear
+
+**Fix**: First `movzbl` already zero-extends the byte to eax, second instruction is unnecessary. Removed.
+
+**Testing**: selftest-c passes
+
+**Commit**: 0b26717
+
+### Variable Capture in Block Parameters
+**Location**: `compile_calls.rb:40-94` (copy_splat_loop and compile_args_splat_loop methods)
+**Problem**: Referring directly to method parameters inside block/lambda caused incorrect variable capture, required creating temporary local variable (e.g., `xindir = indir`)
+
+**Fix**: Variable capture in blocks now works correctly. Can refer directly to parameters inside blocks.
+
+**Testing**: selftest-c passes
+
+**Commits**: 201c57f, 6a3f966

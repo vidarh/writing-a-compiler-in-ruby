@@ -26,7 +26,6 @@ This document tracks known bugs, missing features, and architectural issues that
 - **Stack management** (`compiler.rb:622-628`): Issues with local variable stack allocation and `with_local` calls
 - **Method dispatch** (`compiler.rb:815`): Array indexing gets incorrectly rewritten
 - **Type checking** (`compile_calls.rb:133`): Type enforcement not implemented but mentioned
-- **Closure handling** (`compile_calls.rb:286`): Block handling may need rewrite due to variable capture issues
 
 ### Runtime Bugs
 
