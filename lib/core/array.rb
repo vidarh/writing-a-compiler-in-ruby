@@ -67,6 +67,17 @@ class Array
     a
   end
 
+  # Inverse of reject - keeps items where block returns true
+  def select
+    a = self.class.new
+    each do |item|
+      if yield(item)
+        a << item
+      end
+    end
+    a
+  end
+
   # FIXME: Cut and paste from Enumerable
   def collect
     if block_given?
@@ -78,6 +89,11 @@ class Array
     else
       return self
     end
+  end
+
+  # Alias for collect
+  def map(&block)
+    collect(&block)
   end
 
 
