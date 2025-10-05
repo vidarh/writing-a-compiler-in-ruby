@@ -37,20 +37,14 @@ class Compiler
   end
 
   def copy_splat_loop(splatcnt, indir)
-    # @FIXME @bug
-    # Seems to pick up the wrong argument if we
-    # refer directly to `indir` inside the lambda.
-    xindir = indir
-    # @FIXME @bug
-    # Should be fine to leave out second arg here.
     @e.loop do |br,_|
       @e.testl(splatcnt, splatcnt)
       @e.je(br)
       # x86 will be the death of me.
       @e.pushl("(%eax)")
-      @e.popl("(%#{xindir.to_s})")
+      @e.popl("(%#{indir.to_s})")
       @e.addl(4,:eax)
-      @e.addl(4,xindir)
+      @e.addl(4,indir)
       @e.subl(1,splatcnt)
     end
   end
