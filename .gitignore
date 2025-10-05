@@ -11,3 +11,4 @@ publish
 vendor/*
 features/inputs/*
 out/*
+test_*.rb
