@@ -60,7 +60,7 @@ run_single_spec() {
             echo "✗ (compilation failed)"
         fi
         rm -f "$TEMP_SPEC"
-        return 1
+        return 3
     fi
 }
 
@@ -74,6 +74,7 @@ if [ -d "$TARGET" ]; then
     PASSED=0
     FAILED_COMPILE=0
     SEGFAULT=0
+    FAILED=0
 
     # Find all .rb files recursively
     while IFS= read -r -d '' SPEC_FILE; do
@@ -83,13 +84,16 @@ if [ -d "$TARGET" ]; then
         RESULT=$?
 
         if [ $RESULT -eq 0 ]; then
-            echo "[PASS] $SPEC_FILE"
+            echo -e "\e[32m[PASS] $SPEC_FILE"
             PASSED=$((PASSED + 1))
+        elif [ $RESULT -eq 1 ]; then
+            echo -e "\e[31m[FAIL] $SPEC_FILE"
+            FAILED=$((FAILED + 1))
         elif [ $RESULT -eq 2 ]; then
-            echo "[SEGFAULT] $SPEC_FILE"
+            echo -e "\e[34m[SEGFAULT] $SPEC_FILE"
             SEGFAULT=$((SEGFAULT + 1))
         else
-            echo "[COMPILE FAIL] $SPEC_FILE"
+            echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE"
             FAILED_COMPILE=$((FAILED_COMPILE + 1))
         fi
     done < <(find "$TARGET" -name "*.rb" -type f -print0 | sort -z)
@@ -99,6 +103,7 @@ if [ -d "$TARGET" ]; then
     echo "Summary:"
     echo "  Total spec files: $TOTAL_FILES"
     echo "  Passed: $PASSED"
+    echo "  Failed: $FAILED"
     echo "  Segfault/Runtime error: $SEGFAULT"
     echo "  Failed to compile: $FAILED_COMPILE"
 
@@ -142,7 +147,7 @@ elif [ -f "$TARGET" ]; then
         echo "================================"
         echo "$COMPILE_OUTPUT"
         rm -f "$TEMP_SPEC"
-        exit 1
+        exit 3
     fi
 else
     echo "Error: $TARGET is neither a file nor a directory"
