@@ -8,7 +8,7 @@ class Method
   end
   
   def owner
-    nil #NilClass #@target.class
+    @target.class
   end
 end
 

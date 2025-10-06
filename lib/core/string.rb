@@ -274,14 +274,23 @@ class String
       neg = true
       i+=1
     end
+
+    # 29-bit limit (accounting for 1-bit tagging)
+    # Stop parsing if number gets too big to prevent overflow
+    max_safe = 134217728  # 2^27 - Stop before we overflow
+
     while i <  len
       s = self[i]
       break if !(?0..?9).member?(s)
+
+      # Stop if next digit would cause overflow
+      break if num > max_safe
+
       num = num*10 + s - ?0
       i = i + 1
     end
     if neg
-      return num * (-1)
+      num = num * (-1)
     end
     return num
   end

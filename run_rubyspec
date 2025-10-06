@@ -23,7 +23,24 @@ run_single_spec() {
     # Replace the spec_helper require with our own and wrap in a method
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
+
+    # Process shared example requires - load them inline
+    SPEC_DIR=$(dirname "$SPEC_FILE")
+    while IFS= read -r line; do
+        if echo "$line" | grep -q "require_relative.*shared"; then
+            # Extract the shared file path
+            SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+            SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
+            if [ -f "$SHARED_PATH" ]; then
+                # Include shared file content, converting keyword args to hash syntax
+                cat "$SHARED_PATH" | sed "s/, *shared: *true *do/, {:shared => true} do/" >> "$TEMP_SPEC"
+                echo "" >> "$TEMP_SPEC"
+            fi
+        fi
+    done < "$SPEC_FILE"
+
     echo "def run_specs" >> "$TEMP_SPEC"
+    # Filter out require_relative lines and append the spec content
     cat "$SPEC_FILE" | grep -v "require_relative" >> "$TEMP_SPEC"
     echo "end" >> "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
@@ -76,7 +93,7 @@ if [ -d "$TARGET" ]; then
     SEGFAULT=0
     FAILED=0
 
-    # Find all .rb files recursively
+    # Find all .rb files recursively, excluding shared/ directories
     while IFS= read -r -d '' SPEC_FILE; do
         TOTAL_FILES=$((TOTAL_FILES + 1))
 
@@ -96,7 +113,7 @@ if [ -d "$TARGET" ]; then
             echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE"
             FAILED_COMPILE=$((FAILED_COMPILE + 1))
         fi
-    done < <(find "$TARGET" -name "*.rb" -type f -print0 | sort -z)
+    done < <(find "$TARGET" -name "*.rb" -type f -not -path "*/shared/*" -print0 | sort -z)
 
     echo
     echo "================================"
@@ -116,7 +133,24 @@ elif [ -f "$TARGET" ]; then
     # Replace the spec_helper require with our own and wrap in a method
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
+
+    # Process shared example requires - load them inline
+    SPEC_DIR=$(dirname "$SPEC_FILE")
+    while IFS= read -r line; do
+        if echo "$line" | grep -q "require_relative.*shared"; then
+            # Extract the shared file path
+            SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+            SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
+            if [ -f "$SHARED_PATH" ]; then
+                # Include shared file content, converting keyword args to hash syntax
+                cat "$SHARED_PATH" | sed "s/, *shared: *true *do/, {:shared => true} do/" >> "$TEMP_SPEC"
+                echo "" >> "$TEMP_SPEC"
+            fi
+        fi
+    done < "$SPEC_FILE"
+
     echo "def run_specs" >> "$TEMP_SPEC"
+    # Filter out require_relative lines and append the spec content
     cat "$SPEC_FILE" | grep -v "require_relative" >> "$TEMP_SPEC"
     echo "end" >> "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"

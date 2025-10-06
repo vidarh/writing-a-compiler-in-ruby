@@ -76,7 +76,12 @@ Operators = {
   "and"       => Oper.new(  1, :and,      :infix),
 
   "=>"        => Oper.new(  5, :pair,     :infix),
-  "&"         => Oper.new(  5, :to_block, :prefix), # This will need to be treated like "*" when I add bitwise and.
+
+  # & is context-sensitive: prefix for block conversion, infix for bitwise AND
+  "&"         => {
+    :infix_or_postfix => Oper.new( 11, :"&",      :infix, 2, 2, :left),
+    :prefix           => Oper.new(  5, :to_block, :prefix)
+  },
 
   "="         => Oper.new(  5, :assign,   :infix),
   "||="       => Oper.new(  5, :or_assign,:infix),
@@ -91,7 +96,15 @@ Operators = {
   "||"        => Oper.new(  6, :or,       :infix),
 
   "!"         => Oper.new(  8, :"!",      :prefix),
+  "~"         => Oper.new(  8, :"~",      :prefix),
   "<<"        => Oper.new(  8, :<<,       :infix, 2, 2, :left),
+  ">>"        => Oper.new(  8, :>>,       :infix, 2, 2, :left),
+
+  # Bitwise operators (in Ruby precedence order: & then ^ then |)
+  # Note: & is defined above as context-sensitive
+
+  "^"         => Oper.new( 12, :"^",      :infix, 2, 2, :left),
+  "|"         => Oper.new( 13, :"|",      :infix, 2, 2, :left),
 
   "<"         => Oper.new(  9, :"\<",       :infix),
   "<="        => Oper.new(  9, :"<=",       :infix),
@@ -116,6 +129,7 @@ Operators = {
     :infix_or_postfix => Oper.new( 20, :"*",   :infix, 2, 2, :left),
     :prefix           => Oper.new( 8, :splat, :prefix)
   },
+  "**"        => Oper.new( 21, :"**",   :infix, 2, 2, :right), # Power/exponentiation (right-associative)
 
   # "Fake" operator for function calls
   "#call#"    => Oper.new( 99, :call,     :prefix,2,1),

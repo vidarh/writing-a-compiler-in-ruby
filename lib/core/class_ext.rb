@@ -39,9 +39,9 @@ class Class
     end
   end
 
-  def ===(o)
-    o.is_a?(self)
-  end
+#  def ===(o)
+#    o.is_a?(self)
+#  end
 
   # FIXME: Belongs in Kernel
 end

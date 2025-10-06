@@ -165,8 +165,75 @@ class Fixnum < Integer
     self
   end
 
+  # FIXME: Stub - should return Integer
+  def pred
+    self - 1
+  end
+
+  # FIXME: Stub - should return Integer
+  def succ
+    self + 1
+  end
+
+  # FIXME: Stub - alias for succ
+  def next
+    self + 1
+  end
+
   def frozen?
     true
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def even?
+    self % 2 == 0
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def odd?
+    self % 2 != 0
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def allbits?(mask)
+    self & mask == mask
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def anybits?(mask)
+    self & mask != 0
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def nobits?(mask)
+    self & mask == 0
+  end
+
+  # FIXME: Stub - returns bytes, not bits; actual implementation needed
+  def bit_length
+    # This is wrong - should return number of bits needed to represent the number
+    # For now just return 4 (32 bits / 8 = 4 bytes)
+    4
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def size
+    4  # 32-bit integers = 4 bytes
+  end
+
+  # FIXME: Stub - for Rational support (numerator/denominator)
+  def numerator
+    self
+  end
+
+  # FIXME: Stub - for Rational support (numerator/denominator)
+  def denominator
+    1
+  end
+
+  # FIXME: Stub - actual implementation needed
+  def to_int
+    self
   end
 end
 

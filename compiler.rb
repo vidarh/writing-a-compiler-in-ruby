@@ -52,6 +52,9 @@ class Compiler
 
   Keywords = @@keywords
 
+  # Note: Only operators with full compilation support should be here
+  # Bitwise operators (&, |, ^, ~, >>, **) are defined in operators.rb
+  # but don't have compiler methods yet, so they're not included here
   @@oper_methods = Set[ :<< ]
 
   def initialize emitter = Emitter.new
@@ -116,7 +119,6 @@ class Compiler
 
   # Returns an argument with its type identifier.
   #
-  # If an Array is given, we have a subexpression, which needs to be compiled first.
   # If a Fixnum is given, it's an int ->   [:int, a]
   # If it's a Symbol, its a variable identifier and needs to be looked up within the given scope.
   # Otherwise, we assume it's a string constant and treat it like one.

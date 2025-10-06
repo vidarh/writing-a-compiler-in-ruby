@@ -40,7 +40,7 @@ class Symbol
 
   def <=> other
     if other.is_a?(Symbol)
-      return to_s == other.to_s
+      return to_s <=> other.to_s
     end
     nil
   end
