@@ -13,3 +13,6 @@ features/inputs/*
 out/*
 test_*
 debug_*
+rubyspec_temp*
+rubyspec/*
+!rubyspec/simple_tests/
