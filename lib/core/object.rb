@@ -35,6 +35,10 @@ class Object
     self.==(other)
   end
 
+  def equal?(other)
+    object_id == other.object_id
+  end
+
   def inspect
     %s(assign buf (__alloc_leaf 20))
     %s(snprintf buf 20 "%p" self)

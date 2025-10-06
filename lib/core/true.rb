@@ -16,6 +16,10 @@ class TrueClass
   def == other
     %s(if (eq other true) true false)
   end
+
+  def dup
+    self
+  end
 end
 
 # FIXME: MRI does not allow creating an object of TrueClass

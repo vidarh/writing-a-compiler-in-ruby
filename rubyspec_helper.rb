@@ -95,6 +95,16 @@ class BeNilMatcher
   end
 end
 
+class EqualObjectMatcher < Matcher
+  def match?(actual)
+    actual.equal?(@expected)
+  end
+
+  def failure_message(actual)
+    "Expected #{@expected.inspect} (object_id: #{@expected.object_id}), got #{actual.inspect} (object_id: #{actual.object_id})"
+  end
+end
+
 # Proxy for chained matchers like obj.should.frozen?
 class ShouldProxy
   def initialize(target)
@@ -141,6 +151,10 @@ end
 # Matcher methods
 def ==(expected)
   EqualMatcher.new(expected)
+end
+
+def equal(expected)
+  EqualObjectMatcher.new(expected)
 end
 
 def be_true

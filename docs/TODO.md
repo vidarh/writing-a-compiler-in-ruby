@@ -4,6 +4,49 @@ This document tracks known bugs, missing features, and architectural issues that
 
 ## Critical Bugs
 
+### TOP PRIORITY - RubySpec Compilation Failures
+
+These parser issues prevent basic RubySpec tests from compiling. They represent fundamental gaps in parser functionality:
+
+#### Lambda Syntax (`->`) Not Supported
+- **Files affected**: `rubyspec/core/false/falseclass_spec.rb`, `rubyspec/core/false/singleton_method_spec.rb`
+- **Error**: "Missing value in expression / {-/1 pri=20}" in `treeoutput.rb:89`
+- **Root cause**: The stabby lambda syntax `-> { }` is being parsed as a minus operator followed by greater-than
+- **Example failing code**: `-> do FalseClass.allocate end.should raise_error(TypeError)`
+- **Impact**: **CRITICAL** - Blocks all tests using modern lambda syntax, prevents testing most Ruby 1.9+ code
+
+#### Curly Brace Parsing with `|` and `^` Operators
+- **Files affected**: `rubyspec/core/false/or_spec.rb`, `rubyspec/core/false/xor_spec.rb`
+- **Error**: "Syntax error. [{/0 pri=99}]" in `shunting.rb:183`
+- **Root cause**: Curly braces in certain expression contexts cause parser to fail
+- **Example failing code**: `(false | false).should == false` with blocks using `mock('x')`
+- **Impact**: **HIGH** - Blocks tests using `|` (bitwise OR) and `^` (XOR) operators in certain contexts
+
+#### Parenthesized Expression with Method Chaining
+- **Files affected**: `rubyspec/core/false/and_spec.rb`
+- **Error**: "Incomplete expression - [:false, [:==, [:callm, [:to_block, :false], :should], :false]]" in `treeoutput.rb:197`
+- **Root cause**: Parser fails to handle `(expr).method` pattern when expr contains certain operators
+- **Example failing code**: `(false & false).should == false`
+- **Impact**: **HIGH** - Blocks tests with parenthesized expressions followed by method calls
+
+#### Mock/Test Double Support
+- **Files affected**: Multiple spec files using `mock('x')`
+- **Status**: `mock()` method not defined in rubyspec_helper
+- **Impact**: **MEDIUM** - Prevents testing with mock objects
+
+### Runtime Missing Methods
+
+#### String#frozen? Not Implemented
+- **Files affected**: `rubyspec/core/false/to_s_spec.rb` (test fails but doesn't crash)
+- **Status**: Method not implemented, returns nil/false causing test failures
+- **Impact**: **MEDIUM** - Object immutability checks not supported
+
+#### FalseClass#to_s String Caching Not Implemented
+- **Files affected**: `rubyspec/core/false/to_s_spec.rb`
+- **Issue**: `false.to_s` should return the same String object each time (for efficiency)
+- **Status**: Returns new string each time
+- **Impact**: **LOW** - Correctness issue but not functional blocker
+
 ### Parser and Compilation Bugs
 
 #### Variable and Scope Issues

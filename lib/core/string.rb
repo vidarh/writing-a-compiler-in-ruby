@@ -95,6 +95,10 @@ class String
     false
   end
 
+  # FIXME: We don't support frozen strings yet.
+  def frozen?
+    false
+  end
 
   def [] index
     l = length

@@ -1,6 +1,9 @@
 #!/bin/bash
 # run_rubyspec - Compile and run rubyspec files or directories
 
+# Suppress bash job control messages
+set +m 2>/dev/null
+
 if [ $# -eq 0 ]; then
     echo "Usage: ./run_rubyspec <spec_file_or_directory>"
     echo "Example: ./run_rubyspec rubyspec/core/integer/even_spec.rb"
@@ -15,6 +18,7 @@ run_single_spec() {
     local SPEC_FILE="$1"
     local SPEC_NAME=$(basename "$SPEC_FILE" .rb)
     local TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
+    local VERBOSE="${2:-0}"
 
     # Replace the spec_helper require with our own and wrap in a method
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
@@ -26,19 +30,35 @@ run_single_spec() {
     echo "run_specs" >> "$TEMP_SPEC"
     echo "print_spec_results" >> "$TEMP_SPEC"
 
-    echo -n "Compiling $(basename $SPEC_FILE)... "
+    if [ "$VERBOSE" -eq 1 ]; then
+        echo -n "Compiling $(basename $SPEC_FILE)... "
+    fi
+
     ./compile "$TEMP_SPEC" -I. < /dev/null > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
-        echo "✓"
         # The binary name is based on the temp file name
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
-        ./out/${TEMP_SPEC_NAME} < /dev/null 2>/dev/null
+        bash -c "./out/${TEMP_SPEC_NAME} < /dev/null > /tmp/spec_output_$$ 2>&1" 2>/dev/null
         EXIT_CODE=$?
+
+        if [ "$VERBOSE" -eq 1 ]; then
+            cat /tmp/spec_output_$$
+            echo
+        fi
+
+        rm -f /tmp/spec_output_$$
         rm -f "$TEMP_SPEC"
+
+        if [ $EXIT_CODE -eq 136 ] || [ $EXIT_CODE -eq 139 ]; then
+            # 136 = SIGFPE (Floating point exception), 139 = SIGSEGV (Segmentation fault)
+            return 2
+        fi
         return $EXIT_CODE
     else
-        echo "✗ (compilation failed)"
+        if [ "$VERBOSE" -eq 1 ]; then
+            echo "✗ (compilation failed)"
+        fi
         rm -f "$TEMP_SPEC"
         return 1
     fi
@@ -51,33 +71,39 @@ if [ -d "$TARGET" ]; then
     echo
 
     TOTAL_FILES=0
-    COMPILED_FILES=0
+    PASSED=0
     FAILED_COMPILE=0
+    SEGFAULT=0
 
     # Find all .rb files recursively
     while IFS= read -r -d '' SPEC_FILE; do
         TOTAL_FILES=$((TOTAL_FILES + 1))
 
-        echo "[$TOTAL_FILES] $SPEC_FILE"
-        run_single_spec "$SPEC_FILE"
+        run_single_spec "$SPEC_FILE" 0
         RESULT=$?
 
         if [ $RESULT -eq 0 ]; then
-            COMPILED_FILES=$((COMPILED_FILES + 1))
+            echo "[PASS] $SPEC_FILE"
+            PASSED=$((PASSED + 1))
+        elif [ $RESULT -eq 2 ]; then
+            echo "[SEGFAULT] $SPEC_FILE"
+            SEGFAULT=$((SEGFAULT + 1))
         else
+            echo "[COMPILE FAIL] $SPEC_FILE"
             FAILED_COMPILE=$((FAILED_COMPILE + 1))
         fi
-        echo
     done < <(find "$TARGET" -name "*.rb" -type f -print0 | sort -z)
 
+    echo
     echo "================================"
     echo "Summary:"
     echo "  Total spec files: $TOTAL_FILES"
-    echo "  Successfully compiled: $COMPILED_FILES"
+    echo "  Passed: $PASSED"
+    echo "  Segfault/Runtime error: $SEGFAULT"
     echo "  Failed to compile: $FAILED_COMPILE"
 
 elif [ -f "$TARGET" ]; then
-    # Single file mode
+    # Single file mode - show full output
     SPEC_FILE="$TARGET"
     SPEC_NAME=$(basename "$SPEC_FILE" .rb)
     TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
@@ -93,9 +119,10 @@ elif [ -f "$TARGET" ]; then
     echo "print_spec_results" >> "$TEMP_SPEC"
 
     echo "Compiling $SPEC_FILE..."
-    ./compile "$TEMP_SPEC" -I.
+    COMPILE_OUTPUT=$(./compile "$TEMP_SPEC" -I. 2>&1)
 
     if [ $? -eq 0 ]; then
+        echo "✓ Compilation successful"
         echo
         echo "Running spec..."
         echo "================================"
@@ -103,9 +130,17 @@ elif [ -f "$TARGET" ]; then
         ./out/${TEMP_SPEC_NAME}
         EXIT_CODE=$?
         rm -f "$TEMP_SPEC"
+
+        if [ $EXIT_CODE -eq 136 ] || [ $EXIT_CODE -eq 139 ]; then
+            echo
+            echo "✗ Segfault/Runtime error (exit code: $EXIT_CODE)"
+            exit 2
+        fi
         exit $EXIT_CODE
     else
-        echo "Compilation failed!"
+        echo "✗ Compilation failed!"
+        echo "================================"
+        echo "$COMPILE_OUTPUT"
         rm -f "$TEMP_SPEC"
         exit 1
     fi
