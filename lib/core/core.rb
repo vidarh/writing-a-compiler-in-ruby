@@ -70,7 +70,7 @@ require 'core/class_ivarinit'
 
 #require 'core/enumerable'
 require 'core/range'
-require 'core/array' 
+require 'core/array'
 require 'core/string'
 require 'core/hash'
 require 'core/io'
@@ -88,11 +88,15 @@ require 'core/exception'
 require 'core/pp'
 require 'core/regexp'
 require 'core/enumerator'
+require 'core/complex'
+require 'core/env'
+require 'core/method'
 
 #
 # Other support
 #
 
+require 'core/constants'
 require 'core/args'
 require 'core/stdio'
 require 'core/stubs'       # Stubbed out/non-functional missing pieces

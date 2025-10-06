@@ -20,6 +20,10 @@ class FalseClass
   def dup
     self
   end
+
+  def & other
+    false
+  end
 end
 
 # FIXME: MRI does not allow creating an object of FalseClass

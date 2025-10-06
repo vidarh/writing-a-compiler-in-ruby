@@ -95,9 +95,15 @@ class String
     false
   end
 
+  # FIXME. This is wrong.
+  def freeze
+    @frozen = true
+    self
+  end
+
   # FIXME: We don't support frozen strings yet.
   def frozen?
-    false
+    @frozen
   end
 
   def [] index
@@ -204,6 +210,16 @@ class String
     len = length
     while i <  len
       yield(self[i])
+      i = i + 1
+    end
+    self
+  end
+
+  def map!
+    i = 0
+    len = length
+    while i <  len
+      self[i] = yield(self[i])
       i = i + 1
     end
     self
@@ -444,6 +460,7 @@ class String
     ary << cur if cur != ""
     ary
   end
+
 end
 
 # FIXME: This is an interesting bootstrapping problem

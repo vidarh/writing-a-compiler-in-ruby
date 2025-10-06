@@ -33,3 +33,9 @@ class IO < Object
     false
   end
 end
+
+class IOError
+end
+
+class IOSpecs
+end

@@ -7,6 +7,11 @@
 class Class
   @method_to_voff = {}
 
+  # FIXME
+  def self.new(super=nil)
+    self
+  end
+  
   def self.method_to_voff
     @method_to_voff
   end

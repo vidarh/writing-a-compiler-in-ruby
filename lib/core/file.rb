@@ -10,10 +10,14 @@ class File < IO
     io.is_a?(File)
   end
 
+  def self.absolute_path?(path)
+    false
+  end
+
   def path
     @path
   end
-
+  
   def initialize(path, mode = "r")
     @path = path
     %s(assign rpath (callm path __get_raw))

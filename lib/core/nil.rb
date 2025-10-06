@@ -24,6 +24,25 @@ class NilClass
   def inspect
     "nil"
   end
+
+  def dup
+    self
+  end
+
+  def to_i
+    0
+  end
+
+  def to_a
+    []
+  end
+
+  def to_h
+    {}
+  end
+
+  def rationalize(arg=nil)
+  end
 end
 
 # FIXME: MRI does not allow creating an object of NilClass.

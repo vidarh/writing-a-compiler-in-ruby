@@ -93,7 +93,11 @@ module Tokens
     def self.expect(s)
       tmp = ""
       tmp << s.get if s.peek == ?-
-      while (c = s.peek) && (?0 .. ?9).member?(c)
+      c = s.peek
+      if (c == nil) || (?0 .. ?9).member?(c) == false
+        return nil
+      end
+      while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
         tmp << s.get
       end
       return nil if tmp == ""
@@ -193,6 +197,10 @@ module Tokens
           return [@s.expect(Int), nil]
         end
         @lastop = true
+        if @s.peek == ?>
+          @s.get
+          return [:lambda, nil, :atom]
+        end
         if @s.peek == ?=
           @s.get
           return ["-=",Operators["-="]]

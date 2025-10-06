@@ -16,7 +16,16 @@ class Fixnum < Integer
     %s(sar self)
   end
 
+  def zero?
+    %s(if (eq self 1) true false)
+  end
+  
   def to_i
+    self
+  end
+
+  # FIXME: Incomplete
+  def ceil(prec=nil)
     self
   end
 
@@ -153,10 +162,14 @@ class Fixnum < Integer
       yield
       i +=1
     end
+    self
+  end
+
+  def frozen?
+    true
   end
 end
 
 %s(defun __int (val)
   (add (shl val) 1)
 )
-

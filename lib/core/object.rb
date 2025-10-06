@@ -72,7 +72,7 @@ class Object
     %s(div 0 0)
   end
 
-  def respond_to?(method)
+    def respond_to?(method)
     # The vtable thunks make up a contiguous sequence of memory,
     # bounded by __vtable_thunks_start and __vtable_thunks_end
     m = Class.method_to_voff
@@ -195,4 +195,14 @@ class Object
     # FIXME
     self.class.new
   end
+
+  # FIXME: The commented out implementation is obviously
+  # incomplete.
+  #
+  # But uncommenting this causes integer/constants_spec
+  # to incorrectly pass (likely due to bug in matchers
+  #
+  # def const_defined?(name)
+  #   true
+  # end
 end

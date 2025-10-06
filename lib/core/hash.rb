@@ -25,6 +25,10 @@ class Hash
     @defval = defval
   end
 
+  def default
+    @defval
+  end
+
   # The full version is thorny to handle this early in bootstrap, 
   # but to make code that just wants to create an empty literal 
   # Hash nicer, we do this:

@@ -26,6 +26,10 @@ class Symbol
     @hash = name.hash
   end
 
+  def intern
+    self
+  end
+
   def dup
     self
   end
@@ -35,10 +39,10 @@ class Symbol
   end
 
   def <=> other
-    if eql?(other)
-      return 0
+    if other.is_a?(Symbol)
+      return to_s == other.to_s
     end
-    to_s <=> other.to_s
+    nil
   end
 
   def to_s
