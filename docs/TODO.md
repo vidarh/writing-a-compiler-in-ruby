@@ -2,6 +2,103 @@
 
 This document tracks known bugs, missing features, and architectural issues that need to be addressed. Items are prioritized: critical bugs first, missing language features second, and architectural improvements third.
 
+## Integer Spec Test Results (2025-10-07)
+
+**Summary**: 68 spec files total
+- **PASS**: 6 specs (9%)
+- **FAIL**: 3 specs (4%)
+- **SEGFAULT**: 25 specs (37%)
+- **COMPILE_FAIL**: 34 specs (50%)
+
+### PASS (6 specs)
+Working correctly:
+- `next_spec.rb` - Integer#next with shared examples
+- `ord_spec.rb` - Integer#ord
+- `pred_spec.rb` - Integer#pred with shared examples
+- `succ_spec.rb` - Integer#succ with shared examples
+- `to_int_spec.rb` - Integer#to_int
+- `to_i_spec.rb` - Integer#to_i
+
+### FAIL (3 specs)
+Tests run but have assertion failures:
+
+1. **`constants_spec.rb`** - Missing `Object#const_defined?` method
+   - Error: `Method missing Object#const_defined?`
+
+2. **`integer_spec.rb`** - Missing `Integer#include?` method
+   - Error: `Method missing Integer#include?`
+
+3. **`zero_spec.rb`** - Type mismatch: returns Fixnum instead of Integer
+   - Error: `Expected Integer but got Fixnum`
+   - Test verifies `Integer#zero?` overrides `Numeric#zero?`
+   - 1 passing, 1 failing
+
+### SEGFAULT (25 specs)
+Tests compile but crash at runtime. Grouped by missing method/feature:
+
+#### Missing Bitwise Operators (9 specs)
+- **Missing `Fixnum#&` (bitwise AND)**: `allbits_spec.rb`, `anybits_spec.rb`, `bit_and_spec.rb`, `nobits_spec.rb`
+- **Missing `Fixnum#|` (bitwise OR)**: `bit_or_spec.rb`
+- **Missing `Fixnum#^` (bitwise XOR)**: `bit_xor_spec.rb`
+- **Missing `Fixnum#~` (bitwise NOT/complement)**: `complement_spec.rb`
+- **Missing `Fixnum#<<` (left shift)**: `left_shift_spec.rb`
+- **Missing `Fixnum#>>` (right shift)**: `right_shift_spec.rb`
+
+#### Missing Math/Numeric Methods (6 specs)
+- **Missing `Fixnum#**` (exponentiation)**: `even_spec.rb`, `odd_spec.rb`
+- **Missing `Fixnum#ceildiv`**: `ceildiv_spec.rb`
+- **Missing `Fixnum#gcd`**: `gcd_spec.rb`
+- **Missing `Fixnum#gcdlcm`**: `gcdlcm_spec.rb`
+- **Missing `Fixnum#lcm`**: `lcm_spec.rb`
+- **Missing `Fixnum#truncate`**: `truncate_spec.rb`
+
+#### Other Missing Methods (7 specs)
+- **Missing `NilClass#-`**: `times_spec.rb`
+- **Missing `Object#xff`**: `bit_length_spec.rb` (likely hex parsing issue)
+- **Missing `Object#index`**: `dup_spec.rb`
+- **Missing `Object#c_long_size`**: `size_spec.rb` (test helper method)
+- **Mock method issues**: `case_compare_spec.rb`, `equal_value_spec.rb` (missing `Mock#should_receive`)
+
+#### Not Yet Investigated (3 specs)
+- `denominator_spec.rb` - No error shown in initial analysis
+- `numerator_spec.rb` - No error shown in initial analysis
+- `uminus_spec.rb` - No error shown in initial analysis
+
+### COMPILE_FAIL (34 specs)
+Tests fail to compile. Grouped by error type:
+
+#### Parser Bug: `tokens.rb:320 undefined method '[]' for nil:NilClass` (12 specs)
+Common parsing error - needs investigation:
+- `ceil_spec.rb`, `coerce_spec.rb`, `comparison_spec.rb`, `div_spec.rb`
+- `downto_spec.rb`, `exponent_spec.rb`, `fdiv_spec.rb`, `floor_spec.rb`
+- `pow_spec.rb`, `remainder_spec.rb`, `to_f_spec.rb`, `upto_spec.rb`
+
+**TODO**: Investigate what syntax/pattern triggers this parser error
+
+#### Missing Exception/Class Definitions (4 specs)
+- **`ZeroDivisionError` undefined**: `divmod_spec.rb`
+- **`Rational` undefined**: `rationalize_spec.rb`, `to_r_spec.rb`
+- **`RuntimeError` undefined**: `try_convert_spec.rb`
+
+**Fix**: Add stub classes to `lib/core/exception.rb`
+
+#### Not Yet Investigated (18 specs)
+No error details captured - needs individual investigation:
+- `abs_spec.rb`, `chr_spec.rb`, `digits_spec.rb`, `element_reference_spec.rb`
+- `gte_spec.rb`, `gt_spec.rb`, `lte_spec.rb`, `lt_spec.rb`
+- `magnitude_spec.rb`, `minus_spec.rb`, `modulo_spec.rb`, `multiply_spec.rb`
+- `plus_spec.rb`, `round_spec.rb`, `sqrt_spec.rb`, `to_s_spec.rb`
+
+**TODO**: Run each spec individually to capture specific compilation errors
+
+### Next Steps
+1. Investigate remaining SEGFAULT specs (3 specs without error details)
+2. Investigate remaining COMPILE_FAIL specs (18 specs without error details)
+3. Fix parser bug causing `tokens.rb:320` nil errors (affects 12 specs)
+4. Add missing exception class stubs (affects 4 specs)
+5. Implement missing bitwise operators (affects 9 specs)
+6. Implement missing math methods (affects 6+ specs)
+
 ## Rubyspec Testing Session Results (2025-10-06)
 
 ### Assertion Tracking Improvements
