@@ -1,6 +1,6 @@
 
 class Rational
-  def initizalize(numerator, denominator)
+  def initialize(numerator, denominator)
     # FIXME: Requires gcd...
 
     @numerator = numerator

@@ -131,3 +131,4 @@ The goal is a three-stage bootstrap:
 
 ### Docker Environment
 Development requires i386 toolchain and specific dependencies managed via Docker. The `ruby-compiler-buildenv` image provides the complete build environment including GCC multilib, Valgrind, and Ruby 2.5.
+- Rubyspecs are run with ./run_rubyspec [path to the spec directory or file].

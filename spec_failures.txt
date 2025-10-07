@@ -30,12 +30,12 @@ Running all specs in rubyspec/core/integer/...
 [33m[COMPILE FAIL] rubyspec/core/integer/fdiv_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/fixtures/classes.rb
 [34m[SEGFAULT] rubyspec/core/integer/floor_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/gcdlcm_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/gcd_spec.rb
+[31m[FAIL] rubyspec/core/integer/gcdlcm_spec.rb
+[31m[FAIL] rubyspec/core/integer/gcd_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/gte_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/gt_spec.rb
 [31m[FAIL] rubyspec/core/integer/integer_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/lcm_spec.rb
+[31m[FAIL] rubyspec/core/integer/lcm_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/left_shift_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/lte_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/lt_spec.rb
@@ -74,6 +74,6 @@ Running all specs in rubyspec/core/integer/...
 Summary:
   Total spec files: 68
   Passed: 7
-  Failed: 12
-  Segfault/Runtime error: 20
+  Failed: 15
+  Segfault/Runtime error: 17
   Failed to compile: 29

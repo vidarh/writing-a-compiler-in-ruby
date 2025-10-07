@@ -315,6 +315,10 @@ def be_an_instance_of(klass)
   InstanceOfMatcher.new(klass)
 end
 
+def be_kind_of(klass)
+  InstanceOfMatcher.new(klass)
+end
+
 # Guards - stub out for now
 def ruby_version_is(*args)
   if block_given?
