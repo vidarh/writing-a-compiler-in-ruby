@@ -2,19 +2,20 @@
 
 This document tracks known bugs, missing features, and architectural issues. Items are prioritized: critical bugs first, missing language features second, architectural improvements third.
 
-## Current Integer Spec Test Status (2025-10-07 PM - LATEST)
+## Current Integer Spec Test Status (2025-10-07 PM - FINAL)
 
 **Summary**: 68 spec files total
 - **PASS**: 7 specs (10%)
-- **FAIL**: 15 specs (22%)
-- **SEGFAULT**: 22 specs (32%) - compile but crash at runtime
-- **COMPILE_FAIL**: 24 specs (35%) - fail to compile
+- **FAIL**: 16 specs (24%) - compile and run but have assertion failures
+- **SEGFAULT**: 23 specs (34%) - compile but crash at runtime
+- **COMPILE_FAIL**: 22 specs (32%) - fail to compile
 
-**Recent Progress**:
+**Session Progress** (started at 29 COMPILE_FAIL):
 - Added `be_kind_of` matcher → moved 3 specs from SEGFAULT to FAIL
 - Fixed `require_relative` for fixtures → moved 5 specs from COMPILE_FAIL
-- Added Encoding/Math stubs → moved 3 specs from COMPILE_FAIL to SEGFAULT
-- **Net**: 11 fewer COMPILE_FAIL (29→24), specs now running tests
+- Added Encoding/Math stubs → moved 3 specs from COMPILE_FAIL
+- Added String#encoding, Fixnum#digits → moved 2 specs from SEGFAULT
+- **Net**: -7 COMPILE_FAIL (29→22), +4 SEGFAULT (17→23 intermediate, now 23), +1 FAIL (15→16)
 
 ### Top Blockers for Compile Failures (29 specs)
 
@@ -85,12 +86,14 @@ Causes "failure to resolve" class names in error messages.
 - Added `Integer#numerator`, `Integer#denominator`, `Integer#to_r`
 - Required in `lib/core/core.rb`
 
-**Spec Helper Improvements** - WORKING
+**Spec Helper Improvements** - COMPLETE FOR THIS SESSION
 - ✅ Added `be_kind_of` matcher (moved 3 specs from SEGFAULT to FAIL)
 - ✅ Added `Mock#and_raise` method
 - ✅ Fixed `require_relative` for fixtures (moved 5 specs from COMPILE_FAIL)
-- ✅ Added Encoding stub class (moved to_s_spec from COMPILE_FAIL)
-- ✅ Added Math::DomainError (moved digits_spec, sqrt_spec from COMPILE_FAIL)
+- ✅ Added Encoding stub class with constants (US_ASCII, UTF_8, etc.)
+- ✅ Added Math::DomainError exception class
+- ✅ Added String#encoding method (to_s_spec now runs, passes encoding tests)
+- ✅ Added Fixnum#digits stub method (digits_spec now runs)
 - Already has: `context`, `platform_is`, `ruby_version_is`, matchers, shared examples
 
 ### 🐛 Known Bugs
