@@ -41,11 +41,17 @@ This document tracks known bugs, missing features, and architectural issues that
 - Parser doesn't handle binary literals with underscores (e.g., `0b1010_1010` → treated as `Object#b1010_1010`)
 
 ### Critical Issue Discovered
-**Defining operators in `lib/core/fixnum.rb` breaks the compiler bootstrap!**
-- Adding `def -@`, `def <<`, `def >>`, etc. causes integer literal corruption during compilation
-- Example: `42` becomes `2`, `4096` becomes `6`, `100` becomes `0`
-- Cause: These operator definitions interfere with the parser when compiling the core library
+**Defining operators in `lib/core/fixnum.rb` breaks compiled programs!**
+- Adding `def -@`, `def <<`, `def >>`, etc. causes runtime crashes
+- Symptoms: "Method missing NilClass#chr" or integer literal corruption
+- Integer literals *before* the operator definition work fine
+- Integer literals *after* the operator definition get corrupted or cause crashes
+- Example test: defining `def -@; self; end` causes "Method missing NilClass#chr"
+- **Cause unclear**: Could be in tokenizer (tokens.rb:120 shadows scanner variable `s`),
+  String#to_i (uses `num * (-1)`), or unary minus transform (converts `-x` to `0.-(x)`)
 - **Cannot add operator stubs until this compiler bug is fixed**
+
+**User's insight**: selftest runs on MRI, so it won't catch this. selftest-c (self-hosted) would catch it.
 
 ### Next Steps
 1. **Fix compiler/parser to handle operator definitions in core library** - Critical blocker
