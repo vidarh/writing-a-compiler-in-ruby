@@ -2,43 +2,38 @@
 
 This document tracks known bugs, missing features, and architectural issues. Items are prioritized: critical bugs first, missing language features second, architectural improvements third.
 
-## Current Integer Spec Test Status (2025-10-07)
+## Current Integer Spec Test Status (2025-10-07 PM)
 
 **Summary**: 68 spec files total
 - **PASS**: 7 specs (10%)
-- **FAIL**: 12 specs (18%) - compile and run but have assertion failures
-- **SEGFAULT**: 20 specs (29%) - compile but crash at runtime
+- **FAIL**: 15 specs (22%) - compile and run but have assertion failures (+3 from be_kind_of fix)
+- **SEGFAULT**: 17 specs (25%) - compile but crash at runtime (-3 from be_kind_of fix)
 - **COMPILE_FAIL**: 29 specs (43%) - fail to compile
 
-### Top Blockers for Compile Failures
+### Top Blockers for Compile Failures (29 specs)
 
-#### 1. Missing `context` Support - BLOCKS ~29 SPECS
-**Impact**: PRIMARY blocker for compile failures
+#### Parser/Compiler Limitations
+These are NOT spec helper issues - they're fundamental parser/compiler gaps:
 
-**Issue**: Many specs use `context` blocks (RSpec/MSpec feature), which aren't implemented in spec helper.
-
-**Example failing spec** (`to_f_spec.rb`):
-```ruby
-describe "Integer#to_f" do
-  context "fixnum" do    # <- Not implemented!
-    it "returns self converted to a Float" do
-      0.to_f.should == 0.0
-    end
-  end
-end
-```
-
-**Error**: Parser error at `tokens.rb:383` - `undefined method '[]' for nil:NilClass`
-
-**Fix needed**: Implement `context` as alias for `describe` in spec helper
-
-**Why floats didn't help**: Float literals NOW WORK, but specs using floats also use `context`, so they fail at parse time before float code runs.
+1. **abs_spec.rb** - "Missing value in expression / op: {pair/2 pri=5}" in treeoutput.rb:92
+2. **chr_spec.rb** - "Unable to resolve: Encoding::UTF_8 statically" - Encoding not supported
+3. **coerce_spec.rb, comparison_spec.rb** - Parser errors (need investigation)
+4. **digits_spec.rb** - Parser error
+5. **divide_spec.rb, divmod_spec.rb, div_spec.rb** - Parser errors
+6. **downto_spec.rb, upto_spec.rb** - Parser errors (likely block syntax)
+7. **element_reference_spec.rb** - Parser error
+8. **exponent_spec.rb, fdiv_spec.rb, pow_spec.rb** - Parser errors
+9. **gte_spec.rb, gt_spec.rb, lte_spec.rb, lt_spec.rb** - Comparison operator parsing issues
+10. **magnitude_spec.rb, minus_spec.rb, modulo_spec.rb, multiply_spec.rb, plus_spec.rb** - Arithmetic operator parsing
+11. **remainder_spec.rb, round_spec.rb, sqrt_spec.rb** - Parser errors
+12. **to_f_spec.rb, to_s_spec.rb** - Parser errors (likely related to `context` keyword triggering tokenizer bug)
 
 #### 2. Missing Spec Helper Methods/Matchers
-- `be_kind_of` matcher - affects gcdlcm_spec
-- `Object#Integer` method - affects multiple specs
-- Mock functionality incomplete
-- `platform_is` not implemented
+- [x] `be_kind_of` matcher - **FIXED** (moved 3 specs from SEGFAULT to FAIL)
+- [x] `context` - already implemented (alias for describe)
+- [x] `platform_is` - already implemented (stub)
+- [ ] `Object#Integer()` conversion method - not yet seen in failures
+- [ ] Mock functionality - partially implemented, needs work
 
 #### 3. Missing `require_relative` Support
 **Impact**: Affects specs that load fixtures
@@ -79,17 +74,16 @@ Causes "failure to resolve" class names in error messages.
 - Predicates: `even?`, `odd?` (mostly working)
 - Result: 8+ specs moved from SEGFAULT to FAIL
 
-**Rational Support** - PARTIAL
-- Added `Rational` class (`lib/core/rational.rb`) - **HAS TYPO: "initizalize" → should be "initialize"**
+**Rational Support** - WORKING
+- Added `Rational` class (`lib/core/rational.rb`) - ✅ Fixed typo (was "initizalize")
 - Added `Integer#numerator`, `Integer#denominator`, `Integer#to_r`
 - Required in `lib/core/core.rb`
 
-### 🐛 Known Bugs
+**Spec Helper Improvements** - WORKING
+- ✅ Added `be_kind_of` matcher (moved 3 specs from SEGFAULT to FAIL)
+- Already has: `context`, `platform_is`, `ruby_version_is`, matchers, shared examples
 
-#### Typo in Rational Class
-**File**: `lib/core/rational.rb:3`
-**Issue**: `def initizalize` should be `def initialize`
-**Impact**: Rational objects can't be initialized properly
+### 🐛 Known Bugs
 
 #### Parser Bugs
 - `tokens.rb:383` - nil error triggered by `context` keyword usage

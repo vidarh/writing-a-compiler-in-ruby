@@ -68,8 +68,13 @@ class Mock
     self
   end
 
-  # FIXME: Need to trrack/enforce
+  # FIXME: Need to track/enforce
   def and_return(result)
+    self
+  end
+
+  # FIXME: Need to track/enforce - should actually raise the error
+  def and_raise(error)
     self
   end
 

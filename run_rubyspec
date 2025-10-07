@@ -20,23 +20,63 @@ run_single_spec() {
     local TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
     local VERBOSE="${2:-0}"
 
-    # Replace the spec_helper require with our own and wrap in a method
+    # Replace the spec_helper require with our own
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
+    echo "" >> "$TEMP_SPEC"
+
+    # Process fixtures first - scan spec file and shared files for fixture requires
+    # and inline all fixtures at TOP LEVEL (before def run_specs)
+    SPEC_DIR=$(dirname "$SPEC_FILE")
+
+    # First pass: find and inline all fixture files
+    while IFS= read -r line; do
+        if echo "$line" | grep -q "require_relative.*fixtures"; then
+            # Extract the fixture file path
+            FIXTURE_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+            FIXTURE_PATH="$SPEC_DIR/$FIXTURE_FILE"
+            if [ -f "$FIXTURE_PATH" ]; then
+                cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                echo "" >> "$TEMP_SPEC"
+            fi
+        fi
+        if echo "$line" | grep -q "require_relative.*shared"; then
+            # Also check shared files for fixture requires
+            SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+            SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
+            if [ -f "$SHARED_PATH" ]; then
+                while IFS= read -r shared_line; do
+                    if echo "$shared_line" | grep -q "require_relative.*fixtures"; then
+                        FIXTURE_FILE=$(echo "$shared_line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+                        # Resolve relative path from shared file's directory
+                        SHARED_DIR=$(dirname "$SHARED_PATH")
+                        FIXTURE_PATH="$SHARED_DIR/$FIXTURE_FILE"
+                        if [ -f "$FIXTURE_PATH" ]; then
+                            cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                            echo "" >> "$TEMP_SPEC"
+                        fi
+                    fi
+                done < "$SHARED_PATH"
+            fi
+        fi
+    done < "$SPEC_FILE"
+
+    # Now start the run_specs method - shared examples and spec content go inside
     echo "" >> "$TEMP_SPEC"
     echo "def run_specs" >> "$TEMP_SPEC"
 
-    # Process shared example requires - load them inline INSIDE the method
+    # Second pass: process shared example requires - load them inline INSIDE the method
     # (blocks at top level are buggy)
-    SPEC_DIR=$(dirname "$SPEC_FILE")
     while IFS= read -r line; do
         if echo "$line" | grep -q "require_relative.*shared"; then
             # Extract the shared file path
             SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
             SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
             if [ -f "$SHARED_PATH" ]; then
-                # Include shared file content, converting keyword args to hash syntax,
+                # Include shared file content, filtering out require_relative lines,
+                # converting keyword args to hash syntax,
                 # replacing @method with $spec_shared_method, and adding parentheses (bug workaround)
                 cat "$SHARED_PATH" | \
+                    grep -v "require_relative" | \
                     sed "s/, *shared: *true *do/, {:shared => true} do/" | \
                     sed "s/@method/\$spec_shared_method/g" | \
                     sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' \
@@ -141,23 +181,63 @@ elif [ -f "$TARGET" ]; then
     SPEC_NAME=$(basename "$SPEC_FILE" .rb)
     TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
 
-    # Replace the spec_helper require with our own and wrap in a method
+    # Replace the spec_helper require with our own
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
+    echo "" >> "$TEMP_SPEC"
+
+    # Process fixtures first - scan spec file and shared files for fixture requires
+    # and inline all fixtures at TOP LEVEL (before def run_specs)
+    SPEC_DIR=$(dirname "$SPEC_FILE")
+
+    # First pass: find and inline all fixture files
+    while IFS= read -r line; do
+        if echo "$line" | grep -q "require_relative.*fixtures"; then
+            # Extract the fixture file path
+            FIXTURE_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+            FIXTURE_PATH="$SPEC_DIR/$FIXTURE_FILE"
+            if [ -f "$FIXTURE_PATH" ]; then
+                cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                echo "" >> "$TEMP_SPEC"
+            fi
+        fi
+        if echo "$line" | grep -q "require_relative.*shared"; then
+            # Also check shared files for fixture requires
+            SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+            SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
+            if [ -f "$SHARED_PATH" ]; then
+                while IFS= read -r shared_line; do
+                    if echo "$shared_line" | grep -q "require_relative.*fixtures"; then
+                        FIXTURE_FILE=$(echo "$shared_line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
+                        # Resolve relative path from shared file's directory
+                        SHARED_DIR=$(dirname "$SHARED_PATH")
+                        FIXTURE_PATH="$SHARED_DIR/$FIXTURE_FILE"
+                        if [ -f "$FIXTURE_PATH" ]; then
+                            cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                            echo "" >> "$TEMP_SPEC"
+                        fi
+                    fi
+                done < "$SHARED_PATH"
+            fi
+        fi
+    done < "$SPEC_FILE"
+
+    # Now start the run_specs method - shared examples and spec content go inside
     echo "" >> "$TEMP_SPEC"
     echo "def run_specs" >> "$TEMP_SPEC"
 
-    # Process shared example requires - load them inline INSIDE the method
+    # Second pass: process shared example requires - load them inline INSIDE the method
     # (blocks at top level are buggy)
-    SPEC_DIR=$(dirname "$SPEC_FILE")
     while IFS= read -r line; do
         if echo "$line" | grep -q "require_relative.*shared"; then
             # Extract the shared file path
             SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
             SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
             if [ -f "$SHARED_PATH" ]; then
-                # Include shared file content, converting keyword args to hash syntax,
+                # Include shared file content, filtering out require_relative lines,
+                # converting keyword args to hash syntax,
                 # replacing @method with $spec_shared_method, and adding parentheses (bug workaround)
                 cat "$SHARED_PATH" | \
+                    grep -v "require_relative" | \
                     sed "s/, *shared: *true *do/, {:shared => true} do/" | \
                     sed "s/@method/\$spec_shared_method/g" | \
                     sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' \
