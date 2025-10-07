@@ -47,7 +47,8 @@ class Compiler
                    :preturn, :stackframe, :deref, :include,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
                    :__compiler_internal, # See `compile_pragma.rb`
-                   :__inline # See `inline.rb`
+                   :__inline, # See `inline.rb`
+                   :bitand, :bitor, :bitxor # Bitwise operators
                   ]
 
   Keywords = @@keywords

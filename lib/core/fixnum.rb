@@ -162,19 +162,19 @@ class Fixnum < Integer
     1
   end
 
-  # FIXME: Stub - actual bitwise AND implementation needed
+  # Bitwise AND
   def & other
-    0
+    %s(bitand (callm self __get_raw) (callm other __get_raw))
   end
 
-  # FIXME: Stub - actual bitwise OR implementation needed
+  # Bitwise OR
   def | other
-    self
+    %s(bitor (callm self __get_raw) (callm other __get_raw))
   end
 
-  # FIXME: Stub - actual bitwise XOR implementation needed
+  # Bitwise XOR
   def ^ other
-    0
+    %s(bitxor (callm self __get_raw) (callm other __get_raw))
   end
 
   # Bitwise NOT: flips all bits

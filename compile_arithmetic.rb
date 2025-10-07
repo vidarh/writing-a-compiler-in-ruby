@@ -49,6 +49,24 @@ class Compiler
     end
   end
 
+  def compile_bitand(scope, left, right)
+    compile_2(scope,left,right) do |reg|
+      @e.andl(reg, @e.result)
+    end
+  end
+
+  def compile_bitor(scope, left, right)
+    compile_2(scope,left,right) do |reg|
+      @e.orl(reg, @e.result)
+    end
+  end
+
+  def compile_bitxor(scope, left, right)
+    compile_2(scope,left,right) do |reg|
+      @e.xorl(reg, @e.result)
+    end
+  end
+
   def compile_mul(scope, left, right)
     compile_2(scope,left,right) do |reg|
       @e.imull(reg,:eax)
