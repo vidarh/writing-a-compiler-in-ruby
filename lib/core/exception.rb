@@ -25,3 +25,6 @@ end
 
 class RuntimeError < StandardError
 end
+
+class FloatDomainError < StandardError
+end

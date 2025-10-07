@@ -65,4 +65,9 @@ class Float
   def >= other
     false
   end
+
+  # FIXME: Stub for internal coercion - needed by comparison operators
+  def __get_raw
+    0
+  end
 end

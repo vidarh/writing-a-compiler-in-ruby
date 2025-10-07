@@ -81,6 +81,11 @@ class Mock
   def to_s
     @name
   end
+
+  # FIXME: Stub - return 0 for integer conversion
+  def to_i
+    0
+  end
 end
 
 def mock(name)
@@ -420,6 +425,22 @@ end
 def c_long_size
   # Size of C long in bytes (32-bit = 4 bytes)
   4
+end
+
+# Helper to create mock object that responds to to_int
+# FIXME: This is a minimal stub class, not a proper mock
+class MockInt
+  def initialize(value)
+    @value = value
+  end
+
+  def to_int
+    @value
+  end
+end
+
+def mock_int(value)
+  MockInt.new(value)
 end
 
 # Call this at end of spec file manually
