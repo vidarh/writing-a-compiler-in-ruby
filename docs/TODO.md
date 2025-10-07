@@ -2,13 +2,19 @@
 
 This document tracks known bugs, missing features, and architectural issues. Items are prioritized: critical bugs first, missing language features second, architectural improvements third.
 
-## Current Integer Spec Test Status (2025-10-07 PM)
+## Current Integer Spec Test Status (2025-10-07 PM - LATEST)
 
 **Summary**: 68 spec files total
 - **PASS**: 7 specs (10%)
-- **FAIL**: 15 specs (22%) - compile and run but have assertion failures (+3 from be_kind_of fix)
-- **SEGFAULT**: 17 specs (25%) - compile but crash at runtime (-3 from be_kind_of fix)
-- **COMPILE_FAIL**: 29 specs (43%) - fail to compile
+- **FAIL**: 15 specs (22%)
+- **SEGFAULT**: 22 specs (32%) - compile but crash at runtime
+- **COMPILE_FAIL**: 24 specs (35%) - fail to compile
+
+**Recent Progress**:
+- Added `be_kind_of` matcher → moved 3 specs from SEGFAULT to FAIL
+- Fixed `require_relative` for fixtures → moved 5 specs from COMPILE_FAIL
+- Added Encoding/Math stubs → moved 3 specs from COMPILE_FAIL to SEGFAULT
+- **Net**: 11 fewer COMPILE_FAIL (29→24), specs now running tests
 
 ### Top Blockers for Compile Failures (29 specs)
 
@@ -81,6 +87,10 @@ Causes "failure to resolve" class names in error messages.
 
 **Spec Helper Improvements** - WORKING
 - ✅ Added `be_kind_of` matcher (moved 3 specs from SEGFAULT to FAIL)
+- ✅ Added `Mock#and_raise` method
+- ✅ Fixed `require_relative` for fixtures (moved 5 specs from COMPILE_FAIL)
+- ✅ Added Encoding stub class (moved to_s_spec from COMPILE_FAIL)
+- ✅ Added Math::DomainError (moved digits_spec, sqrt_spec from COMPILE_FAIL)
 - Already has: `context`, `platform_is`, `ruby_version_is`, matchers, shared examples
 
 ### 🐛 Known Bugs
