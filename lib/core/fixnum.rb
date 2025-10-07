@@ -177,9 +177,10 @@ class Fixnum < Integer
     0
   end
 
-  # FIXME: Stub - actual bitwise NOT implementation needed
+  # Bitwise NOT: flips all bits
+  # For two's complement: ~n = -n-1
   def ~
-    0
+    -(self + 1)
   end
 
   # FIXME: Stub - actual left shift implementation needed
