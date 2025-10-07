@@ -7,3 +7,5 @@ Running all specs in rubyspec/core/integer/...
 [34m[SEGFAULT] rubyspec/core/integer/bit_and_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/bit_length_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/bit_or_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/bit_xor_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/case_compare_spec.rb

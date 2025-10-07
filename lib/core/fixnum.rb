@@ -142,6 +142,10 @@ class Fixnum < Integer
     %s(__int (div (sar self) (sar other)))
   end
 
+  def divmod other
+    [self / other, self % other]
+  end
+
   def mul other
     %s(__int (mul (sar self) (sar other)))
   end
