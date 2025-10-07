@@ -2,7 +2,10 @@
 class Exception
 end
 
-class TypeError
+class StandardError < Exception
+end
+
+class TypeError < StandardError
 end
 
 class NoMethodError
@@ -15,4 +18,10 @@ class FrozenError
 end
 
 class RangeError
+end
+
+class ZeroDivisionError < StandardError
+end
+
+class RuntimeError < StandardError
 end

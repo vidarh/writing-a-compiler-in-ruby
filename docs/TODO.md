@@ -2,7 +2,62 @@
 
 This document tracks known bugs, missing features, and architectural issues that need to be addressed. Items are prioritized: critical bugs first, missing language features second, and architectural improvements third.
 
-## Integer Spec Test Results (2025-10-07)
+## Minimal Stubbing Progress (2025-10-07 PM)
+
+**Goal**: Move tests from SEGFAULT to FAIL by adding minimal stubs for missing methods/operators.
+
+### Stubs Added
+**In `lib/core/fixnum.rb`:**
+- Bitwise operators: `&`, `|`, `^`, `~`, `<<`, `>>` (return simple values: 0, self, etc.)
+- Exponentiation: `**` (returns 1 - causes Hash init issues, needs fix)
+- Unary minus: `-@` (implemented with s-expressions: `%s(__int (sub 0 (sar self)))`)
+- Math methods: `ceildiv`, `gcd`, `lcm`, `gcdlcm`, `truncate` (minimal implementations)
+
+**In `lib/core/nil.rb`:**
+- `NilClass#-` (returns nil)
+
+**In `lib/core/object.rb`:**
+- `Object#const_defined?` (returns true)
+
+**In `lib/core/exception.rb`:**
+- `StandardError`, `ZeroDivisionError`, `RuntimeError` class stubs
+
+**In `lib/core/numeric.rb`:**
+- `Rational` class with basic initialization and accessors
+
+### Results After Stubbing
+**Success cases (moved from SEGFAULT to PASS/FAIL):**
+- `truncate_spec.rb`: ✓ 4 passed, 6 failed (working correctly!)
+- `bit_and_spec.rb`: Shows FAIL messages before hitting parser issues with `0xffff` literals
+- `allbits_spec.rb`: Shows FAIL messages before hitting parser issues with `0b1010_1010` literals
+
+**Still segfaulting:**
+- Specs using `**` operator in test initialization (e.g., `even_spec.rb`, `odd_spec.rb`, `lcm_spec.rb`, `ceildiv_spec.rb`, `denominator_spec.rb`)
+- Cause: `**` stub returns 1, which breaks Hash initialization (crashes at address 0x00000001)
+- Specs with test helper methods: `uminus_spec.rb` (needs `fixnum_max`, `fixnum_min`, `bignum_value`)
+
+**New issues discovered:**
+- Parser doesn't handle hex literals (e.g., `0xffff` → treated as `Object#xffff`)
+- Parser doesn't handle binary literals with underscores (e.g., `0b1010_1010` → treated as `Object#b1010_1010`)
+
+### Critical Issue Discovered
+**Defining operators in `lib/core/fixnum.rb` breaks the compiler bootstrap!**
+- Adding `def -@`, `def <<`, `def >>`, etc. causes integer literal corruption during compilation
+- Example: `42` becomes `2`, `4096` becomes `6`, `100` becomes `0`
+- Cause: These operator definitions interfere with the parser when compiling the core library
+- **Cannot add operator stubs until this compiler bug is fixed**
+
+### Next Steps
+1. **Fix compiler/parser to handle operator definitions in core library** - Critical blocker
+2. **Add minimal stubs for non-operator methods only**:
+   - Math methods: `gcd`, `lcm`, `gcdlcm`, `truncate`, `ceildiv`
+   - Rational support: `numerator`, `denominator` (already present)
+   - Exception classes: (already added)
+3. **Fix hex/binary literal parsing** - Parser treats `0xffff` and `0b1010_1010` as method calls
+4. **Add test helper methods** - `fixnum_max`, `fixnum_min`, `bignum_value`
+5. **Re-test all integer specs** after fixes to get updated counts
+
+## Integer Spec Test Results (2025-10-07 AM)
 
 **Summary**: 68 spec files total
 - **PASS**: 6 specs (9%)
