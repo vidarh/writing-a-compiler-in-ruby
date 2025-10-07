@@ -380,7 +380,8 @@ module Tokens
       end
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
       @last = res
-      @lastop = res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
+      # FIXME: res can be nil in some contexts, causing crashes later
+      @lastop = res && res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
       @curtoken = res
       return res
     end
