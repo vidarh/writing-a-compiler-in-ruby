@@ -93,6 +93,8 @@ require 'core/complex'
 require 'core/env'
 require 'core/method'
 require 'core/rational'
+require 'core/encoding'
+require 'core/math'
 
 #
 # Other support
