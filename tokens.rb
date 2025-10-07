@@ -97,12 +97,41 @@ module Tokens
       if (c == nil) || (?0 .. ?9).member?(c) == false
         return nil
       end
-      while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
+
+      # Check for hex (0x) or binary (0b) prefix
+      radix = 10
+      if s.peek == ?0
         tmp << s.get
+        c = s.peek
+        if c == ?x || c == ?X
+          # Hexadecimal
+          radix = 16
+          tmp << s.get
+          while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c) || (?a .. ?f).member?(c) || (?A .. ?F).member?(c))
+            tmp << s.get
+          end
+        elsif c == ?b || c == ?B
+          # Binary
+          radix = 2
+          tmp << s.get
+          while (c = s.peek) && ((c == ?_) || c == ?0 || c == ?1)
+            tmp << s.get
+          end
+        else
+          # Regular number starting with 0
+          while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
+            tmp << s.get
+          end
+        end
+      else
+        # Regular decimal number
+        while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
+          tmp << s.get
+        end
       end
       return nil if tmp == ""
 
-      # Copy exact logic from lib/core/string.rb to_i
+      # Parse the number based on radix
       num = 0
       i = 0
       len = tmp.length
@@ -110,6 +139,13 @@ module Tokens
       if tmp[0] == ?-
         neg = true
         i += 1
+      end
+
+      # Skip 0x or 0b prefix
+      if radix == 16 && i < len && tmp[i] == ?0 && (tmp[i+1] == ?x || tmp[i+1] == ?X)
+        i += 2
+      elsif radix == 2 && i < len && tmp[i] == ?0 && (tmp[i+1] == ?b || tmp[i+1] == ?B)
+        i += 2
       end
 
       # 29-bit limit (accounting for 1-bit tagging)
@@ -123,12 +159,39 @@ module Tokens
         # Skip underscores in numbers (they're legal separators)
         if s == ?_
           # Continue to next iteration
-        elsif !(?0..?9).member?(s)
-          break
         else
-          # Stop if next digit would cause overflow
-          break if num > max_safe
-          num = num*10 + s.ord - ?0.ord
+          digit_value = nil
+          if radix == 10
+            if (?0..?9).member?(s)
+              digit_value = s.ord - ?0.ord
+            else
+              break
+            end
+          elsif radix == 16
+            if (?0..?9).member?(s)
+              digit_value = s.ord - ?0.ord
+            elsif (?a..?f).member?(s)
+              digit_value = s.ord - ?a.ord + 10
+            elsif (?A..?F).member?(s)
+              digit_value = s.ord - ?A.ord + 10
+            else
+              break
+            end
+          elsif radix == 2
+            if s == ?0
+              digit_value = 0
+            elsif s == ?1
+              digit_value = 1
+            else
+              break
+            end
+          end
+
+          if digit_value
+            # Stop if next digit would cause overflow
+            break if num > max_safe
+            num = num * radix + digit_value
+          end
         end
       end
       if neg

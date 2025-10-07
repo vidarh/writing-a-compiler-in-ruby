@@ -25,7 +25,17 @@ class Compiler
     @e.save_result(src)
     Value.new([:subexpr])
   end
-  
+
+  def compile_sarl(scope, left, right)
+    # FIXME: Dummy
+    compile_sar(scope,left)
+  end
+
+  def compile_sall(scope, left, right)
+    # FIXME: Dummy
+    compile_shl(scope,left)
+  end
+
   def compile_add(scope, left, right)
     compile_2(scope,left,right) do |reg|
       @e.addl(reg, @e.result)

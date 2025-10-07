@@ -315,6 +315,22 @@ class Emitter
     nil
   end
 
+  # Store a double (8 bytes) at the given address (base + offset)
+  # label is the label of a .double in rodata section
+  def storedouble(base, offset, label)
+    # Load the double value from the label onto the FPU stack and store it
+    fldl(label)
+    base_str = to_operand_value(base, :stripdollar)
+    fstpl("#{offset}(#{base_str})")
+    nil
+  end
+
+  # Load a double (8 bytes) from the given address (returns in FPU st0, but we don't track that)
+  def loaddouble(addr)
+    fldl("(#{to_operand_value(addr,:stripdollar)})")
+    :st0  # Return symbolic FPU register
+  end
+
   def with_local(args, &block)
     # FIXME: The "+1" is a hack because main contains a pushl %ecx
     with_stack(args+1, &block)
@@ -447,6 +463,10 @@ class Emitter
 
   def ret; emit(:ret); end
   def leave; emit(:leave); end
+
+  # Floating point instructions
+  def fldl src; emit(:fldl, src); end       # Load double onto FPU stack
+  def fstpl dest; emit(:fstpl, dest); end   # Store double from FPU stack and pop
 
   def sall *args
     emit(:sall, *args)

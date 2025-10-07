@@ -92,6 +92,7 @@ require 'core/enumerator'
 require 'core/complex'
 require 'core/env'
 require 'core/method'
+require 'core/rational'
 
 #
 # Other support

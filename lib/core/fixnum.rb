@@ -24,8 +24,13 @@ class Fixnum < Integer
     self
   end
 
-  # FIXME: Incomplete
-  def ceil(prec=nil)
+  # FIXME: Incomplete - for integers, ceil just returns self unless precision is negative
+  def ceil(prec=0)
+    self
+  end
+
+  # FIXME: Stub - for integers, floor just returns self unless precision is negative
+  def floor(prec=0)
     self
   end
 
@@ -152,6 +157,50 @@ class Fixnum < Integer
     %s(__int (div (sar self) (sar other)))
   end
 
+  # FIXME: Stub - actual exponentiation implementation needed
+  def ** other
+    1
+  end
+
+  # FIXME: Stub - actual bitwise AND implementation needed
+  def & other
+    0
+  end
+
+  # FIXME: Stub - actual bitwise OR implementation needed
+  def | other
+    self
+  end
+
+  # FIXME: Stub - actual bitwise XOR implementation needed
+  def ^ other
+    0
+  end
+
+  # FIXME: Stub - actual bitwise NOT implementation needed
+  def ~
+    0
+  end
+
+  # FIXME: Stub - actual left shift implementation needed
+  def << other
+    self
+  end
+
+  # FIXME: Stub - actual right shift implementation needed
+  def >> other
+    o = other.to_i + 1
+    %s(assign o (sar o)) # Strip type tag
+    %s(__int
+        (sarl o self)
+    )
+  end
+
+  # Unary minus
+  def -@
+    %s(__int (sub 0 (sar self)))
+  end
+
   def ord
     self
   end
@@ -165,17 +214,15 @@ class Fixnum < Integer
     self
   end
 
-  # FIXME: Stub - should return Integer
   def pred
     self - 1
   end
 
-  # FIXME: Stub - should return Integer
   def succ
     self + 1
   end
 
-  # FIXME: Stub - alias for succ
+  # FIXME: Alias for succ
   def next
     self + 1
   end
@@ -191,7 +238,7 @@ class Fixnum < Integer
 
   # FIXME: Stub - actual implementation needed
   def odd?
-    self % 2 != 0
+    (self % 2) != 0
   end
 
   # FIXME: Stub - actual implementation needed
@@ -212,8 +259,8 @@ class Fixnum < Integer
   # FIXME: Stub - returns bytes, not bits; actual implementation needed
   def bit_length
     # This is wrong - should return number of bits needed to represent the number
-    # For now just return 4 (32 bits / 8 = 4 bytes)
-    4
+    # For now just return 32
+    32
   end
 
   # FIXME: Stub - actual implementation needed
@@ -221,19 +268,33 @@ class Fixnum < Integer
     4  # 32-bit integers = 4 bytes
   end
 
-  # FIXME: Stub - for Rational support (numerator/denominator)
-  def numerator
+  def to_int
     self
   end
 
-  # FIXME: Stub - for Rational support (numerator/denominator)
-  def denominator
+  # FIXME: Stub - for integers, truncate just returns self
+  def truncate(ndigits=0)
+    self
+  end
+
+  # FIXME: Stub - actual GCD implementation needed
+  def gcd(other)
     1
   end
 
-  # FIXME: Stub - actual implementation needed
-  def to_int
-    self
+  # FIXME: Stub - actual LCM implementation needed
+  def lcm(other)
+    self * other
+  end
+
+  # FIXME: Stub - actual gcdlcm implementation needed
+  def gcdlcm(other)
+    [gcd(other), lcm(other)]
+  end
+
+  # FIXME: Stub - actual ceildiv implementation needed
+  def ceildiv(other)
+    self / other
   end
 end
 

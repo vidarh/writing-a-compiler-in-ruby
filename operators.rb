@@ -141,6 +141,7 @@ Operators = {
   "."         => Oper.new( 98, :callm,    :infix, 2,2,:left),
   "::"        => Oper.new(100, :deref,    :infix, 2,2,:left),
   ".."        => Oper.new( 97, :range,    :infix), # FIXME: Check pri; less wrong than it was, but may still not be right
+  "..."       => Oper.new( 97, :exclusive_range, :infix), # Exclusive range
 
 
   #### Parentheses ####
@@ -159,4 +160,4 @@ Operators = {
 }
 
 # Operators that are allowed as method names
-OPER_METHOD = %w{=== []= [] == <=> <= >= ** << >> != !~ =~ ! ~ + - * / % & | ^ < >}
+OPER_METHOD = %w{=== []= [] == <=> <= >= ** << >> != !~ =~ ! ~ +@ -@ + - * / % & | ^ < >}

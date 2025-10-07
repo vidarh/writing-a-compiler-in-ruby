@@ -58,6 +58,21 @@ class Mock
     @name = name
   end
 
+  # FIXME: Need to track
+  def should_receive(method)
+    self
+  end
+
+  # FIXME: Need to track/enforce
+  def any_number_of_times
+    self
+  end
+
+  # FIXME: Need to trrack/enforce
+  def and_return(result)
+    self
+  end
+
   def to_s
     @name
   end
@@ -391,6 +406,11 @@ def fixnum_min
   # Real value should be: -0x8000_0000_0000_0000
   # Using 32-bit fixnum min (accounting for 1-bit tagging)
   -1073741824  # -0x40000000
+end
+
+def c_long_size
+  # Size of C long in bytes (32-bit = 4 bytes)
+  4
 end
 
 # Call this at end of spec file manually

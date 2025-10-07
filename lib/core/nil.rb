@@ -43,6 +43,11 @@ class NilClass
 
   def rationalize(arg=nil)
   end
+
+  # FIXME: Stub - should raise TypeError
+  def - other
+    nil
+  end
 end
 
 # FIXME: MRI does not allow creating an object of NilClass.

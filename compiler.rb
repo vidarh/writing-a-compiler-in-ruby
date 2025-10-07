@@ -42,7 +42,7 @@ class Compiler
                    :do, :class, :defun, :defm, :if,
                    :assign, :while, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
-                   :required, :add, :sub, :mul, :div, :shl, :sar, :eq, :ne,
+                   :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :stackframe, :deref, :include,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
@@ -61,6 +61,7 @@ class Compiler
     @e = emitter
     @global_functions = Globals.new
     @string_constants = {}
+    @float_constants = {}  # Store float literals to emit in rodata
     @global_constants = Set.new
     @global_constants << :false
     @global_constants << :true
@@ -127,7 +128,19 @@ class Compiler
     return get_arg(scope,:true, save) if a == true
     return get_arg(scope,:false, save) if a == false
     return Value.new([:int, a]) if (a.is_a?(Integer))
-    return Value.new([:int, a.to_i]) if (a.is_a?(Float)) # FIXME: uh. yes. This is a temporary hack
+
+    if a.is_a?(Float)
+      # Allocate Float object and store the value
+      # Generate a label for this float constant
+      label = ".float_#{@float_constants.length}"
+      @float_constants[label] = a
+      # Use compile_exp to create the Float object
+      ptr = compile_exp(scope, [:callm, :Float, :new])
+      # Function calls return in %eax, so store the double there
+      # Store the double value at offset 4 (after vtable pointer)
+      @e.storedouble(:eax, 4, label)
+      return ptr
+    end
 
     if a == :"block_given?"
       return compile_exp(scope,
@@ -182,7 +195,13 @@ class Compiler
   # Outputs all constants used within the code generated so far.
   # Outputs them as string and global constants, respectively.
   def output_constants
-    @e.rodata { @string_constants.each { |c, l| @e.string(l, c) } }
+    @e.rodata do
+      @string_constants.each { |c, l| @e.string(l, c) }
+      @float_constants.each do |label, value|
+        @e.emit(label + ":")
+        @e.emit(".double", value)
+      end
+    end
 
     # FIXME: Temporary workaround to add bss entries for "missing" globals
     vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq - ["__roots_start","__roots_end"]
@@ -207,7 +226,9 @@ class Compiler
       ">=" => "__ge",   "<=" => "__le",
       "<"  => "__lt",   ">"  => "__gt",
       "/"  => "__div",  "*"  => "__mul",
-      "+"  => "__plus", "-"  => "__minus"}
+      "+"  => "__plus", "-"  => "__minus",
+      "-@" => "__uminus", "+@" => "__uplus",
+      "~"  => "__tilde"}
 
     pos = 0
     # FIXME: this is necessary because we

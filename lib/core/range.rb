@@ -3,17 +3,26 @@
 # Initial implementation
 # This implementation assumes simple ordering
 class Range
-  def initialize _min, _max
+  def initialize _min, _max, exclude_end = false
     @min = _min
     @max = _max
+    @exclude_end = exclude_end
   end
 
   def to_s
-    "#{@min}..#{@max}"
+    if @exclude_end
+      "#{@min}...#{@max}"
+    else
+      "#{@min}..#{@max}"
+    end
   end
 
   def inspect
     to_s
+  end
+
+  def exclude_end?
+    @exclude_end == true
   end
 
   def first
@@ -31,7 +40,11 @@ class Range
     if !val
       return false
     end
-    return val >= @min && val <= @max
+    if @exclude_end
+      return val >= @min && val < @max
+    else
+      return val >= @min && val <= @max
+    end
   end
 
   def include? val
@@ -44,9 +57,16 @@ class Range
 
   def each
     i = @min
-    while i <= @max
-      yield i
-      i += 1
+    if @exclude_end
+      while i < @max
+        yield i
+        i += 1
+      end
+    else
+      while i <= @max
+        yield i
+        i += 1
+      end
     end
   end
 

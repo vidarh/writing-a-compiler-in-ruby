@@ -532,6 +532,9 @@ class Compiler
     exp.depth_first do |e|
       if e[0] == :range
         e.replace(E[:callm, :Range, :new, e[1..-1]])
+      elsif e[0] == :exclusive_range
+        # For exclusive range (...), pass true as third argument
+        e.replace(E[:callm, :Range, :new, e[1], e[2], true])
       end
       :next
     end
