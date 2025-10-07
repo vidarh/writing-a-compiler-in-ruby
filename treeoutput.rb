@@ -175,7 +175,6 @@ module OpPrec
         #STDERR.puts "o=#{o.inspect} rightv=#{rightv.inspect} leftv=#{leftv.inspect}"
         if o.sym == :call || o.sym == :callm and
           o.type == :prefix and
-          ra and
           rightv && rightv[0] != :flatten and
           rightv[0] != :comma
           rightv = E[rightv]
