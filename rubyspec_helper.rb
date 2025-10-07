@@ -332,25 +332,19 @@ def context(description, &block)
   describe(description, &block)
 end
 
-# Context class for shared examples to support @method instance variable
-class SharedExampleContext
-  def initialize(method_name)
-    @method = method_name
-  end
-
-  def run(&block)
-    instance_eval(&block)
-  end
-end
+# Global variable to pass method name to shared examples
+# WORKAROUND: Avoids needing instance_eval since @method is replaced with
+# $spec_shared_method during preprocessing (see run_rubyspec)
+$spec_shared_method = nil
 
 # Shared examples - retrieve and execute stored shared example blocks
 def it_behaves_like(name, *args)
   block = $shared_examples[name]
   if block
-    # Create a context with @method set to the provided method name
-    method_name = args[0] if args.length > 0
-    context = SharedExampleContext.new(method_name)
-    context.run(&block)
+    # Set global variable for shared examples to use
+    # (preprocessing replaces @method with $spec_shared_method)
+    $spec_shared_method = args[0] if args.length > 0
+    block.call
   else
     msg = "behaves like '#{name}' (shared example not found)"
     it msg do

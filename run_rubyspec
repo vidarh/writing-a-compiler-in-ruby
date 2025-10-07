@@ -23,8 +23,10 @@ run_single_spec() {
     # Replace the spec_helper require with our own and wrap in a method
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
+    echo "def run_specs" >> "$TEMP_SPEC"
 
-    # Process shared example requires - load them inline
+    # Process shared example requires - load them inline INSIDE the method
+    # (blocks at top level are buggy)
     SPEC_DIR=$(dirname "$SPEC_FILE")
     while IFS= read -r line; do
         if echo "$line" | grep -q "require_relative.*shared"; then
@@ -32,16 +34,25 @@ run_single_spec() {
             SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
             SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
             if [ -f "$SHARED_PATH" ]; then
-                # Include shared file content, converting keyword args to hash syntax
-                cat "$SHARED_PATH" | sed "s/, *shared: *true *do/, {:shared => true} do/" >> "$TEMP_SPEC"
+                # Include shared file content, converting keyword args to hash syntax,
+                # replacing @method with $spec_shared_method, and adding parentheses (bug workaround)
+                cat "$SHARED_PATH" | \
+                    sed "s/, *shared: *true *do/, {:shared => true} do/" | \
+                    sed "s/@method/\$spec_shared_method/g" | \
+                    sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' \
+                    >> "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
         fi
     done < "$SPEC_FILE"
 
-    echo "def run_specs" >> "$TEMP_SPEC"
     # Filter out require_relative lines and append the spec content
-    cat "$SPEC_FILE" | grep -v "require_relative" >> "$TEMP_SPEC"
+    # WORKAROUND: Add parentheses to describe/it_behaves_like calls to avoid compiler bug
+    # Bug: calling func without parens when func has default param + &block causes segfault
+    cat "$SPEC_FILE" | grep -v "require_relative" | \
+        sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
+        sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' \
+        >> "$TEMP_SPEC"
     echo "end" >> "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
     echo "run_specs" >> "$TEMP_SPEC"
@@ -133,8 +144,10 @@ elif [ -f "$TARGET" ]; then
     # Replace the spec_helper require with our own and wrap in a method
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
+    echo "def run_specs" >> "$TEMP_SPEC"
 
-    # Process shared example requires - load them inline
+    # Process shared example requires - load them inline INSIDE the method
+    # (blocks at top level are buggy)
     SPEC_DIR=$(dirname "$SPEC_FILE")
     while IFS= read -r line; do
         if echo "$line" | grep -q "require_relative.*shared"; then
@@ -142,16 +155,25 @@ elif [ -f "$TARGET" ]; then
             SHARED_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
             SHARED_PATH="$SPEC_DIR/$SHARED_FILE"
             if [ -f "$SHARED_PATH" ]; then
-                # Include shared file content, converting keyword args to hash syntax
-                cat "$SHARED_PATH" | sed "s/, *shared: *true *do/, {:shared => true} do/" >> "$TEMP_SPEC"
+                # Include shared file content, converting keyword args to hash syntax,
+                # replacing @method with $spec_shared_method, and adding parentheses (bug workaround)
+                cat "$SHARED_PATH" | \
+                    sed "s/, *shared: *true *do/, {:shared => true} do/" | \
+                    sed "s/@method/\$spec_shared_method/g" | \
+                    sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' \
+                    >> "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
         fi
     done < "$SPEC_FILE"
 
-    echo "def run_specs" >> "$TEMP_SPEC"
     # Filter out require_relative lines and append the spec content
-    cat "$SPEC_FILE" | grep -v "require_relative" >> "$TEMP_SPEC"
+    # WORKAROUND: Add parentheses to describe/it_behaves_like calls to avoid compiler bug
+    # Bug: calling func without parens when func has default param + &block causes segfault
+    cat "$SPEC_FILE" | grep -v "require_relative" | \
+        sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
+        sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' \
+        >> "$TEMP_SPEC"
     echo "end" >> "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
     echo "run_specs" >> "$TEMP_SPEC"

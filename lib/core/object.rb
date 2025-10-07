@@ -69,6 +69,7 @@ class Object
   def method_missing (sym, *args)
     cname = self.class.inspect
     puts "Method missing #{cname}##{sym.to_s}"
+    %s(fflush 0)
     %s(div 0 0)
   end
 
