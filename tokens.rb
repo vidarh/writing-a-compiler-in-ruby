@@ -101,7 +101,40 @@ module Tokens
         tmp << s.get
       end
       return nil if tmp == ""
-      tmp.to_i
+
+      # Copy exact logic from lib/core/string.rb to_i
+      num = 0
+      i = 0
+      len = tmp.length
+      neg = false
+      if tmp[0] == ?-
+        neg = true
+        i += 1
+      end
+
+      # 29-bit limit (accounting for 1-bit tagging)
+      # Stop parsing if number gets too big to prevent overflow
+      max_safe = 134217728  # 2^27 - Stop before we overflow
+
+      while i < len
+        s = tmp[i]
+        i = i + 1
+
+        # Skip underscores in numbers (they're legal separators)
+        if s == ?_
+          # Continue to next iteration
+        elsif !(?0..?9).member?(s)
+          break
+        else
+          # Stop if next digit would cause overflow
+          break if num > max_safe
+          num = num*10 + s.ord - ?0.ord
+        end
+      end
+      if neg
+        num = num * (-1)
+      end
+      return num
     end
   end
 

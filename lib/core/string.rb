@@ -286,7 +286,7 @@ class String
       # Stop if next digit would cause overflow
       break if num > max_safe
 
-      num = num*10 + s - ?0
+      num = num*10 + s.ord - 48 # "0" == 48
       i = i + 1
     end
     if neg
