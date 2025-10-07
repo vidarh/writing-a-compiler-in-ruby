@@ -17,7 +17,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/complement_spec.rb
 [31m[FAIL] rubyspec/core/integer/constants_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/denominator_spec.rb
-[33m[COMPILE FAIL] rubyspec/core/integer/digits_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/digits_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/divide_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/divmod_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/div_spec.rb
@@ -56,7 +56,7 @@ Running all specs in rubyspec/core/integer/...
 [34m[SEGFAULT] rubyspec/core/integer/right_shift_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/round_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/size_spec.rb
-[33m[COMPILE FAIL] rubyspec/core/integer/sqrt_spec.rb
+[31m[FAIL] rubyspec/core/integer/sqrt_spec.rb
 [32m[PASS] rubyspec/core/integer/succ_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/times_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/to_f_spec.rb
@@ -74,6 +74,6 @@ Running all specs in rubyspec/core/integer/...
 Summary:
   Total spec files: 68
   Passed: 7
-  Failed: 15
-  Segfault/Runtime error: 22
-  Failed to compile: 24
+  Failed: 16
+  Segfault/Runtime error: 23
+  Failed to compile: 22

@@ -106,6 +106,12 @@ class String
     @frozen
   end
 
+  def encoding
+    # FIXME: Stub - always returns US-ASCII
+    # Proper implementation would track actual encoding
+    Encoding::US_ASCII
+  end
+
   def [] index
     l = length
 

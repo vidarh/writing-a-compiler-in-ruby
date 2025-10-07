@@ -296,6 +296,13 @@ class Fixnum < Integer
   def ceildiv(other)
     self / other
   end
+
+  # FIXME: Stub - actual digits implementation needed
+  def digits(base = 10)
+    # Should return array of digits in given base
+    # For now return empty array
+    []
+  end
 end
 
 %s(defun __int (val)
