@@ -127,6 +127,31 @@ Causes "failure to resolve" class names in error messages.
 - Stabby lambda `-> { }` not supported
 - Blocks ~30+ modern Ruby specs
 - Parser treats `->` as minus + greater-than
+- **Note**: Lambda usage in specs is mostly for exception testing - may be workable via rubyspec_helper workarounds
+
+### HEREDOC Syntax (HIGH PRIORITY)
+**Status**: NOT IMPLEMENTED - breaks multiple specs (plus_spec, to_f_spec, etc.)
+
+Two-phase implementation plan:
+
+#### Phase 1: Inline HEREDOCs (SIMPLER - DO FIRST)
+**Syntax**: `foo(<<HEREDOC\n...\nHEREDOC)`
+- Content is inline with the statement
+- Can potentially be treated as a token during scanning
+- Less complex to implement
+- **Approach**: Extend tokenizer to recognize and capture HEREDOC as complete token
+
+#### Phase 2: Deferred HEREDOCs (COMPLEX - DO LATER)
+**Syntax**: `foo(<<HEREDOC)\n...\nHEREDOC`
+- Content appears on following lines after the statement
+- Requires parser to handle deferred token stream
+- Less common in rubyspec tests
+- **Approach**: Parser state machine to defer HEREDOC body consumption
+
+**Files to modify**:
+- `tokens.rb` - Add HEREDOC token recognition
+- `scanner.rb` - Handle HEREDOC body scanning
+- `parser.rb` - Process HEREDOC tokens
 
 ### Module System
 - Include mechanism incomplete
