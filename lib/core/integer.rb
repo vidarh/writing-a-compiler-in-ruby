@@ -20,13 +20,16 @@ class Integer < Numeric
 
     # Newton's method for integer square root
     x = n
-    while true
+    done = 0
+    while done == 0
       x1 = (x + n / x) / 2
       if x1 >= x
-        return x
+        done = 1
+      else
+        x = x1
       end
-      x = x1
     end
+    x
   end
 
   # FIXME: Stub - should try to convert to Integer
