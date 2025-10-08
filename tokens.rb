@@ -252,8 +252,8 @@ module Tokens
       @s.expect(Quoted) { @parser.parse_defexp } #, nil]
     end
 
-    def get_raw
-      # FIXME: Workaround for a bug where "first" is not 
+    def get_raw(prev_lastop = false)
+      # FIXME: Workaround for a bug where "first" is not
       # identified as a variable if first introduced inside
       # the case block. Placing this here until the bug
       # is fixed.
@@ -281,7 +281,7 @@ module Tokens
         end
         return [buf, nil]
       when ?/
-        if @first || @lastop
+        if @first || prev_lastop
           # Parse regexp literal
           @s.get  # consume '/'
           pattern = ""
@@ -360,15 +360,27 @@ module Tokens
           if third = @s.get
             buf2 = buf + third
             op = Operators[buf2]
-            return [buf2, op] if op
+            if op
+              op_val = op.is_a?(Hash) ? op[:infix_or_postfix] : op
+              @lastop = true if op_val && (op_val.type == :infix || op_val.type == :lp || op_val.type == :prefix)
+              return [buf2, op]
+            end
             @s.unget(third)
           end
           op = Operators[buf]
-          return [buf, op] if op
+          if op
+            op_val = op.is_a?(Hash) ? op[:infix_or_postfix] : op
+            @lastop = true if op_val && (op_val.type == :infix || op_val.type == :lp || op_val.type == :prefix)
+            return [buf, op]
+          end
           @s.unget(second)
         end
         op = Operators[first]
-        return [first, op] if op
+        if op
+          op_val = op.is_a?(Hash) ? op[:infix_or_postfix] : op
+          @lastop = true if op_val && (op_val.type == :infix || op_val.type == :lp || op_val.type == :prefix)
+          return [first, op]
+        end
         @s.unget(first)
         return [nil, nil]
       end
@@ -397,9 +409,10 @@ module Tokens
           @s.nolfws
         end
 
+        prev_lastop = @lastop
         @lastop = false
         @lastpos = @s.position
-        res = get_raw
+        res = get_raw(prev_lastop)
       end
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
       @last = res
