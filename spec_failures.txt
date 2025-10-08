@@ -66,3 +66,14 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/to_s_spec.rb
 [31m[FAIL] rubyspec/core/integer/truncate_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/try_convert_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/uminus_spec.rb
+[33m[COMPILE FAIL] rubyspec/core/integer/upto_spec.rb
+[31m[FAIL] rubyspec/core/integer/zero_spec.rb
+
+================================
+Summary:
+  Total spec files: 68
+  Passed: 9
+  Failed: 17
+  Segfault/Runtime error: 32
+  Failed to compile: 10

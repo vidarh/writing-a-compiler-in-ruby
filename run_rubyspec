@@ -169,7 +169,7 @@ if [ -d "$TARGET" ]; then
             echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE"
             FAILED_COMPILE=$((FAILED_COMPILE + 1))
         fi
-    done < <(find "$TARGET" -name "*.rb" -type f -not -path "*/shared/*" -print0 | sort -z)
+    done < <(find "$TARGET" -name "*_spec.rb" -type f -not -path "*/shared/*" -print0 | sort -z)
 
     echo
     echo "================================"
