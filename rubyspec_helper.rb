@@ -9,6 +9,9 @@ $spec_descriptions = []
 $shared_examples = {}
 $spec_method = nil
 
+# Tolerance for floating point comparisons
+TOLERANCE = 0.00001
+
 def describe(description, options = nil, &block)
   # Handle hash options or block
   if options && options.is_a?(Hash) && options[:shared]
@@ -436,6 +439,10 @@ class MockInt
 
   def to_int
     @value
+  end
+
+  def __get_raw
+    %s(sar (callm @value __get_raw))
   end
 end
 

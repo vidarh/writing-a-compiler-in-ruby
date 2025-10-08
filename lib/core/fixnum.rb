@@ -282,17 +282,37 @@ class Fixnum < Integer
     self
   end
 
-  # FIXME: Stub - actual GCD implementation needed
+  # Euclidean algorithm for GCD
   def gcd(other)
-    1
+    a = self
+    b = other
+
+    # Make both positive
+    if a < 0
+      a = -a
+    end
+    if b < 0
+      b = -b
+    end
+
+    # Euclidean algorithm
+    while b > 0
+      t = b
+      b = a % b
+      a = t
+    end
+    a
   end
 
-  # FIXME: Stub - actual LCM implementation needed
+  # LCM using GCD
   def lcm(other)
-    self * other
+    return 0 if self == 0 || other == 0
+    a = self < 0 ? -self : self
+    b = other < 0 ? -other : other
+    (a / gcd(other)) * b
   end
 
-  # FIXME: Stub - actual gcdlcm implementation needed
+  # Return both GCD and LCM
   def gcdlcm(other)
     [gcd(other), lcm(other)]
   end
@@ -302,11 +322,21 @@ class Fixnum < Integer
     self / other
   end
 
-  # FIXME: Stub - actual digits implementation needed
+  # Return array of digits in given base (least significant first)
   def digits(base = 10)
-    # Should return array of digits in given base
-    # For now return empty array
-    []
+    result = []
+    n = self
+
+    if n == 0
+      return [0]
+    end
+
+    while n > 0
+      result << (n % base)
+      n = n / base
+    end
+
+    result
   end
 end
 
