@@ -136,5 +136,27 @@ Most compile failures fall into these categories:
 ### Recommended Next Steps
 1. **Fix Hash literal parsing** - highest impact (11 specs)
 2. **Investigate common segfault causes** - many specs still crash at runtime
-3. **Add `private def` syntax support** - moderate impact
+3. ~~**Add `private def` syntax support**~~ - DONE (parsing only)
 4. **Implement missing core methods** that cause method_missing errors
+
+## Progress Update
+
+### `private def` Syntax - FIXED
+Added parser support for `private def`, `protected def`, `public def` syntax:
+- Uses backtracking to distinguish from standalone visibility calls
+- Does not implement actual visibility functionality
+- Tested: works in classes, selftest passes
+
+After fixing this, minus_spec now hits the underlying Hash literal bug instead of parse error.
+
+### Hash Literal Parsing Bug - IN PROGRESS
+Error: `Syntax error. [{/0 pri=99}]` in shunting.rb:183
+
+Investigation shows:
+- Simple cases work: `test(:foo, :/)`, `describe("Integer#/") do ... end`
+- Hash literals in isolation work: `{:shared => true}`
+- Lambda with method calls work: `-> { 1 + 2 }.should == 3`
+
+The bug appears to be triggered by some specific combination of these elements in the generated specs. The error occurs in the shunting yard algorithm's handling of certain token sequences involving Hash literals, blocks, and operators.
+
+**Status**: Requires deeper investigation into shunting.rb and how it disambiguates Hash literals from blocks in complex expressions.
