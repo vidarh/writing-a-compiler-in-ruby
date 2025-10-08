@@ -357,6 +357,92 @@ module Tokens
           end
 
           buf = first + second
+
+          # Check for heredoc: << or <<- or <<~
+          # Only treat as heredoc if previous token was an operator (like =, ,, etc.)
+          if buf == "<<" && (@first || prev_lastop)
+            # Peek ahead to see if this is a heredoc
+            squiggly = false
+            dash = false
+            if @s.peek == ?~
+              squiggly = true
+              @s.get
+            elsif @s.peek == ?-
+              dash = true
+              @s.get
+            end
+
+            # Check if next character starts an identifier or quoted heredoc marker
+            if @s.peek && (ALPHA.member?(@s.peek) || @s.peek == ?_ || @s.peek == ?' || @s.peek == ?")
+              # This is a heredoc!
+              # Read the heredoc marker
+              marker = ""
+              quoted = false
+              quote_char = nil
+
+              if @s.peek == ?' || @s.peek == ?"
+                quote_char = @s.get
+                quoted = true
+                while @s.peek && @s.peek != quote_char
+                  marker << @s.get.chr
+                end
+                @s.get if @s.peek == quote_char  # consume closing quote
+              else
+                # Unquoted identifier
+                while @s.peek && (ALPHA.member?(@s.peek) || DIGITS.member?(@s.peek) || @s.peek == ?_)
+                  marker << @s.get.chr
+                end
+              end
+
+              # Now read until end of line (there might be more code on this line)
+              while @s.peek && @s.peek != ?\n
+                @s.get
+              end
+              @s.get if @s.peek == ?\n  # consume newline
+
+              # Read heredoc body until we find the marker
+              body = ""
+              while true
+                line = ""
+                while @s.peek && @s.peek != ?\n
+                  line << @s.get.chr
+                end
+
+                # Check if this line is the closing marker
+                if line.strip == marker
+                  @s.get if @s.peek == ?\n  # consume trailing newline
+                  break
+                end
+
+                # Add this line to the body
+                body << line
+                if @s.peek == ?\n
+                  body << "\n"
+                  @s.get
+                elsif @s.peek == nil
+                  raise "Unterminated heredoc (expected #{marker})"
+                end
+              end
+
+              # Process body based on heredoc type
+              if squiggly
+                # <<~ removes leading whitespace
+                lines = body.split("\n", -1)
+                # Find minimum indentation (ignoring empty lines)
+                min_indent = lines.select { |l| !l.strip.empty? }.map { |l| l[/^\s*/].length }.min || 0
+                body = lines.map { |l| l.strip.empty? ? l : l[min_indent..-1] || "" }.join("\n")
+              end
+
+              # Return the heredoc body as a string token
+              return [body, nil]
+            else
+              # Not a heredoc, put back the ~ or - if we consumed it
+              @s.unget("~") if squiggly
+              @s.unget("-") if dash
+              # Fall through to normal << operator handling
+            end
+          end
+
           if third = @s.get
             buf2 = buf + third
             op = Operators[buf2]
