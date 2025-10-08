@@ -280,7 +280,7 @@ class Parser < ParserBase
   # block_body ::=  ws * defexp*
   def parse_block_exps
     ws
-    kleene { parse_defexp }
+    kleene { parse_exp }
   end
 
   def parse_block(start = nil)

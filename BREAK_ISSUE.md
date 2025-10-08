@@ -122,9 +122,10 @@ Most compile failures fall into these categories:
    - Parser issue with Hash literals in certain contexts
    - **High impact fix**: Would unlock 11 specs at once
 
-2. **Unsupported `private def` syntax** (1+ specs): minus_spec
-   - Ruby 2.1+ inline visibility modifier syntax
-   - Parser doesn't support `private def method_name`
+2. **Class definitions in block contexts** (1 spec): minus_spec
+   - Parser expected expressions that couldn't include `class` within blocks, but Ruby allows this
+   - After fixing parser to allow class in blocks, compilation fails on meta/eigenclass features
+   - **Not a Hash literal issue** - separate problem from category #1
 
 3. **Linker errors** (1 spec): round_spec
    - Compiles but missing symbols
@@ -147,7 +148,7 @@ Added parser support for `private def`, `protected def`, `public def` syntax:
 - Does not implement actual visibility functionality
 - Tested: works in classes, selftest passes
 
-After fixing this, minus_spec now hits the underlying Hash literal bug instead of parse error.
+After fixing this, most specs parse correctly. However, minus_spec's failure is NOT due to the Hash literal bug - it's due to the parser not allowing `class` definitions within block expressions, and then failing to compile meta/eigenclass features.
 
 ### Hash Literal Parsing Bug - IN PROGRESS
 Error: `Syntax error. [{/0 pri=99}]` in shunting.rb:183
