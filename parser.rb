@@ -324,10 +324,27 @@ class Parser < ParserBase
     return name
   end
 
-  # def ::= "def" ws* name args? block_body
+  # def ::= ("private"|"protected"|"public")? ws* "def" ws* name args? block_body
   def parse_def
     pos = position
-    keyword(:def) or return nil
+    saved_pos = @scanner.position
+
+    # Try to parse optional visibility modifier followed by def
+    # If we see a visibility keyword not followed by def, backtrack
+    vis = keyword(:private) || keyword(:protected) || keyword(:public)
+    if vis
+      saved_after_vis = @scanner.position
+      ws
+      if !keyword(:def)
+        # Visibility modifier not followed by def, so backtrack completely
+        @scanner.position = saved_pos
+        return nil
+      end
+    else
+      # No visibility modifier, just try to parse def
+      keyword(:def) or return nil
+    end
+
     ws
     name = parse_defname
     args = parse_args || []
