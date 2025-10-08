@@ -77,6 +77,39 @@ module Tokens
           return :":>="
         end
         return :":>"
+      elsif s.peek == ?&
+        s.get
+        if s.peek == ?&
+          # Don't consume second & - :&& is not a valid symbol, && is a keyword
+          s.unget("&")
+          return nil
+        end
+        return :":&"
+      elsif s.peek == ?|
+        s.get
+        if s.peek == ?|
+          # Don't consume second | - :|| is not a valid symbol, || is a keyword
+          s.unget("|")
+          return nil
+        end
+        return :":|"
+      elsif s.peek == ?^
+        s.get
+        return :":^"
+      elsif s.peek == ?~
+        s.get
+        return :":~"
+      elsif s.peek == ?!
+        s.get
+        if s.peek == ?=
+          s.get
+          if s.peek == ?=
+            s.get
+            return :":!=="
+          end
+          return :":!="
+        end
+        return :":!"
       end
 
       c = s.peek
