@@ -306,10 +306,18 @@ class Fixnum < Integer
 
   # LCM using GCD
   def lcm(other)
-    return 0 if self == 0 || other == 0
-    a = self < 0 ? -self : self
-    b = other < 0 ? -other : other
-    (a / gcd(other)) * b
+    return 0 if self == 0
+    return 0 if other == 0
+    a = self
+    b = other
+    if a < 0
+      a = -a
+    end
+    if b < 0
+      b = -b
+    end
+    g = gcd(other)
+    (a / g) * b
   end
 
   # Return both GCD and LCM
