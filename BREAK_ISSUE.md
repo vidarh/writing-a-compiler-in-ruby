@@ -111,3 +111,30 @@ The break fix alone did **not** reduce segfaults in RubySpec tests. Many specs t
 - Failed specs: 14 → 17 (specs that were segfaulting now run and fail)
 
 The break fix enables proper non-local returns from blocks/procs, which is essential for Ruby semantics. However, most RubySpec segfaults are due to other missing features (exception handling, instance_eval, missing methods, etc.) rather than break specifically
+
+## Remaining Issues Analysis
+
+### Compile Failures (17 specs)
+Most compile failures fall into these categories:
+
+1. **Hash literal parsing bug** (11 specs): divide, downto, element_reference, coerce, exponent, fdiv, modulo, plus, pow, comparison, div
+   - Shunting errors like `Syntax error. [{/0 pri=99}]`
+   - Parser issue with Hash literals in certain contexts
+   - **High impact fix**: Would unlock 11 specs at once
+
+2. **Unsupported `private def` syntax** (1+ specs): minus_spec
+   - Ruby 2.1+ inline visibility modifier syntax
+   - Parser doesn't support `private def method_name`
+
+3. **Linker errors** (1 spec): round_spec
+   - Compiles but missing symbols
+
+4. **Float support needed** (1 spec): to_f_spec
+
+5. **Other** (3 specs): fixtures/classes.rb, upto_spec, remainder_spec
+
+### Recommended Next Steps
+1. **Fix Hash literal parsing** - highest impact (11 specs)
+2. **Investigate common segfault causes** - many specs still crash at runtime
+3. **Add `private def` syntax support** - moderate impact
+4. **Implement missing core methods** that cause method_missing errors

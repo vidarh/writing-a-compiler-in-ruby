@@ -51,3 +51,29 @@ Running all specs in rubyspec/core/integer/...
 [33m[COMPILE FAIL] rubyspec/core/integer/plus_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/pow_spec.rb
 [32m[PASS] rubyspec/core/integer/pred_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/rationalize_spec.rb
+[33m[COMPILE FAIL] rubyspec/core/integer/remainder_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/right_shift_spec.rb
+[33m[COMPILE FAIL] rubyspec/core/integer/round_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/size_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/sqrt_spec.rb
+[32m[PASS] rubyspec/core/integer/succ_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/times_spec.rb
+[33m[COMPILE FAIL] rubyspec/core/integer/to_f_spec.rb
+[32m[PASS] rubyspec/core/integer/to_int_spec.rb
+[32m[PASS] rubyspec/core/integer/to_i_spec.rb
+[31m[FAIL] rubyspec/core/integer/to_r_spec.rb
+[31m[FAIL] rubyspec/core/integer/to_s_spec.rb
+[31m[FAIL] rubyspec/core/integer/truncate_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/try_convert_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/uminus_spec.rb
+[33m[COMPILE FAIL] rubyspec/core/integer/upto_spec.rb
+[31m[FAIL] rubyspec/core/integer/zero_spec.rb
+
+================================
+Summary:
+  Total spec files: 68
+  Passed: 8
+  Failed: 17
+  Segfault/Runtime error: 26
+  Failed to compile: 17
