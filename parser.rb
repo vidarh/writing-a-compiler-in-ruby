@@ -404,7 +404,6 @@ class Parser < ParserBase
   # as opposed to being handled as post-processing later -
   # may refactor this as a separate tree-rewriting step later.
   def require q
-    STDERR.puts "REQUIRE: #{q.inspect} (from #{@scanner.filename rescue 'unknown'})" if ENV['DEBUG_REQUIRE']
     return true if @@requires[q]
     # FIXME: Handle include path
     paths = rel_include_paths(q)
