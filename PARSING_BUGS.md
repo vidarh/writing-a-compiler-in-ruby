@@ -57,9 +57,21 @@
 
 ## Progress Summary
 - Fixed 4 parsing bugs (negative Float, :%, :*, regexp partial)
+- Added 4 stub constants (Float::INFINITY, Float::MAX, Integer::MAX/MIN)
+- Fixed run_rubyspec to skip non-spec files
 - **5 specs now compile and run**: modulo, coerce, comparison, exponent, div
 - 3 specs fail to compile: divide (eigenclass), downto/fdiv (register allocation)
 - 3 specs have unresolved parsing issues: element_reference (regexp), plus (infinite loop), pow (syntax error)
+
+## Commits
+- ae4a181: Fix negative Float literal parsing
+- dbb2cdc: Fix :% symbol parsing
+- e8c2cfb: Add :* and :** symbol parsing
+- 039d167: Add basic regexp literal tokenization (WIP)
+- 6307ad4: Document parsing bug investigation progress
+- 5fdfa53: Add Float::INFINITY stub constant
+- 3bfbcd4: Add Float::MAX and Integer::MIN/MAX stub constants
+- 3df9ba4: Fix run_rubyspec to skip non-spec files
 
 ## Next Steps
 1. Continue investigating pow_spec and plus_spec parsing issues (complex/time-consuming)
