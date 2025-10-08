@@ -290,7 +290,7 @@ module Tokens
         @s.get
         if DIGITS.member?(@s.peek)
           @s.unget("-")
-          return [@s.expect(Int), nil]
+          return [@s.expect(Number), nil]
         end
         @lastop = true
         if @s.peek == ?>
