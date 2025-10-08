@@ -38,6 +38,13 @@ def it(description, &block)
   skipped_before = $spec_skipped
   assertions_before = $spec_assertions
 
+  # Run before :each blocks
+  i = 0
+  while i < $before_each_blocks.length
+    $before_each_blocks[i].call
+    i = i + 1
+  end
+
   block.call
 
   if $spec_skipped > skipped_before
