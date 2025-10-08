@@ -1,5 +1,9 @@
 
 class Integer < Numeric
+  # Stub constants - proper limits not implemented
+  # Using 29-bit signed integer limits (due to tagging)
+  MAX = 268435455   # 2^28 - 1
+  MIN = -268435456  # -2^28
 
   def numerator
     self
