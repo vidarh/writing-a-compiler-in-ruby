@@ -206,6 +206,11 @@ class Fixnum < Integer
     %s(__int (sub 0 (sar self)))
   end
 
+  # Unary plus (returns self)
+  def +@
+    self
+  end
+
   def ord
     self
   end

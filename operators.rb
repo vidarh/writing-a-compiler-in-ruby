@@ -115,7 +115,10 @@ Operators = {
   "!="        => Oper.new(  9, :"!=",       :infix),
   "<=>"       => Oper.new(  9, :"<=>",      :infix),
 
-  "+"         => Oper.new( 10, :+,      :infix, 2, 2, :left),
+  "+"         => {
+    :infix_or_postfix  => Oper.new( 10, :+,      :infix, 2, 2, :left),
+    :prefix => Oper.new( 20, :+,      :prefix)
+  },
   "-"         => {
     :infix_or_postfix  => Oper.new( 10, :-,      :infix, 2, 2, :left),
     :prefix => Oper.new( 20, :-,      :prefix)
