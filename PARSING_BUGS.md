@@ -20,13 +20,14 @@
 **Fix**: Added :* with lookahead for :**
 **Commit**: e8c2cfb
 
-## Remaining Issues
+### 4. Regexp Literals (PARTIAL FIX)
+**Error**: Various parsing errors with `/pattern/`
+**Fix**: Basic tokenization using @first/@lastop heuristic
+**Status**: Works for common cases like `raise_error(ArgumentError, /pattern/)` but needs parser state coordination for full correctness
+**Commit**: 039d167
+**TODO**: Implement proper parser-tokenizer coordination like `%` handling
 
-### 4. Regexp Literals (NOT FIXED - complex)
-**Status**: Regexp parsing not implemented at all
-**Impact**: Any spec with `/pattern/` will fail to compile
-**Examples**: element_reference_spec has `/The beginless range for Integer#\[\] results in infinity/`
-**Priority**: Lower - can be deferred
+## Remaining Issues
 
 ### 5. Eigenclass (class << obj) (NOT FIXED - very complex)
 **Error**: `undefined method 'klass_size' for #<LocalVarScope>`
@@ -45,22 +46,23 @@
 | modulo_spec | ✓ Compiles, runs | be_close not implemented (runtime) |
 | coerce_spec | ✓ Compiles, runs | Missing methods (runtime) |
 | comparison_spec | ✓ Compiles, runs | Segfaults (runtime) |
-| exponent_spec | ✓ Compiles | After adding :** support |
+| exponent_spec | ✓ Compiles, runs | After adding :** support |
+| div_spec | ✓ Compiles, runs | Missing methods (runtime) |
 | divide_spec | ✗ Fails | Eigenclass compilation |
 | downto_spec | ✗ Fails | Register allocation bug |
 | fdiv_spec | ✗ Fails | Register allocation bug |
-| element_reference_spec | ✗ Fails | Regexp literals |
-| plus_spec | ✗ Fails | Parse error (unknown) |
-| pow_spec | ✗ Fails | Syntax error |
-| div_spec | ? | Not tested |
+| element_reference_spec | ✗ Fails | Regexp literals (needs full fix) |
+| plus_spec | ✗ Fails | Parse infinite loop (unknown cause) |
+| pow_spec | ✗ Fails | Syntax error (unknown cause) |
 
 ## Progress Summary
-- Fixed 3 parsing bugs (negative Float, :%, :*)
-- 4 specs now compile and run (modulo, coerce, comparison, exponent)
-- Remaining failures: eigenclass (complex), register allocation (compiler bug), regexp (not implemented), plus_spec (TBD), pow_spec (TBD)
+- Fixed 4 parsing bugs (negative Float, :%, :*, regexp partial)
+- **5 specs now compile and run**: modulo, coerce, comparison, exponent, div
+- 3 specs fail to compile: divide (eigenclass), downto/fdiv (register allocation)
+- 3 specs have unresolved parsing issues: element_reference (regexp), plus (infinite loop), pow (syntax error)
 
 ## Next Steps
-1. Investigate pow_spec and plus_spec syntax errors
-2. Investigate div_spec
-3. Implement minimal regexp tokenization to allow specs to compile
-4. Leave eigenclass and register allocation bugs for later
+1. Continue investigating pow_spec and plus_spec parsing issues (complex/time-consuming)
+2. Improve regexp tokenization with proper parser state coordination
+3. Consider adding Float::INFINITY stub (simple fix per user suggestion)
+4. Leave eigenclass and register allocation bugs for later (complex compiler issues)
