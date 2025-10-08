@@ -39,6 +39,13 @@ module Tokens
       elsif s.peek == ?%
         s.get
         return :":%"
+      elsif s.peek == ?*
+        s.get
+        if s.peek == ?*
+          s.get
+          return :":**"
+        end
+        return :":*"
       elsif s.peek == ?=
         s.get
         if s.peek == ?=

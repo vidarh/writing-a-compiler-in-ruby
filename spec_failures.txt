@@ -41,7 +41,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/lt_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/magnitude_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/minus_spec.rb
-[33m[COMPILE FAIL] rubyspec/core/integer/modulo_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/modulo_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/multiply_spec.rb
 [32m[PASS] rubyspec/core/integer/next_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/nobits_spec.rb
@@ -75,5 +75,5 @@ Summary:
   Total spec files: 68
   Passed: 9
   Failed: 17
-  Segfault/Runtime error: 29
-  Failed to compile: 13
+  Segfault/Runtime error: 30
+  Failed to compile: 12
