@@ -56,7 +56,7 @@ Running all specs in rubyspec/core/integer/...
 [34m[SEGFAULT] rubyspec/core/integer/right_shift_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/round_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/size_spec.rb
-[33m[COMPILE FAIL] rubyspec/core/integer/sqrt_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/sqrt_spec.rb
 [32m[PASS] rubyspec/core/integer/succ_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/times_spec.rb
 [33m[COMPILE FAIL] rubyspec/core/integer/to_f_spec.rb
@@ -75,5 +75,5 @@ Summary:
   Total spec files: 68
   Passed: 7
   Failed: 14
-  Segfault/Runtime error: 29
-  Failed to compile: 18
+  Segfault/Runtime error: 30
+  Failed to compile: 17
