@@ -225,6 +225,12 @@ class Parser < ParserBase
   def parse_break
     pos = position
     return nil if !keyword(:break)
+    exps = parse_subexp
+    # FIXME: Compiler @bug workaround:
+    # Current splat handling crashes if argument is not
+    # an array.
+    exps = Array(exps) if exps
+    return E[pos, :break, *exps] if exps
     return E[pos, :break]
   end
 
@@ -245,7 +251,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_break || parse_next || parse_subexp || parse_require
+    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_break || parse_next || parse_subexp || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
     # FIXME: @bug this below is needed for MRI, but not for the selfhosted compiler...
@@ -442,6 +448,31 @@ class Parser < ParserBase
     if q.is_a?(Array) || @opts[:norequire]
       STDERR.puts "WARNING: NOT processing require for #{q.inspect}"
       return E[pos, :require, q]
+    end
+
+    self.require(q)
+  end
+
+  def parse_require_relative
+    pos = position
+    keyword(:require_relative) or return
+    ws
+    q = parse_subexp or expected("name of source to require_relative")
+    ws
+
+    # require_relative needs to resolve the path relative to the current file
+    # For now, treat it like require (the compile-time handling will need to be updated)
+    if q.is_a?(Array) || @opts[:norequire]
+      STDERR.puts "WARNING: NOT processing require_relative for #{q.inspect}"
+      return E[pos, :require, q]
+    end
+
+    # Resolve relative to current file
+    if @scanner.filename
+      dir = File.dirname(@scanner.filename)
+      if !q.start_with?('/')
+        q = File.join(dir, q)
+      end
     end
 
     self.require(q)

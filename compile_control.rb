@@ -159,14 +159,27 @@ class Compiler
   #
   # See also controlscope.rb
   #
-  def compile_break(scope)
+  def compile_break(scope, value = nil)
     br = scope.break_label
     @e.comment("BREAK")
+
     if br
+      # Simple break to a label (e.g., from a while loop)
+      # Compile the value if present and put it in %eax
+      if value
+        ret = compile_eval_arg(scope, value)
+        @e.movl(ret, :eax) if ret != :eax
+      end
       @e.jmp(br)
     else
       # Handling lexical break from block/proc's.
-      #
+      # Need to save the break value before manipulating %eax
+      if value
+        ret = compile_eval_arg(scope, value)
+        @e.save_result(ret)
+        @e.pushl(:eax)  # Save break value on stack
+      end
+
       #    If after leave, %ebp == __stackframe__
       #    then we're where we want to be.
       ret = compile_eval_arg(scope,[:index,:__env__,0])
@@ -179,6 +192,12 @@ class Compiler
       @e.addl(4,:esp)
       @e.jmp l
       @e.local(r)
+
+      # Restore break value from stack if we had one
+      if value
+        @e.popl(:eax)
+      end
+
       @e.movl("-4(%ebp)",:ebx)
       @e.ret
     end

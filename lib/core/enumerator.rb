@@ -6,7 +6,9 @@
 
 
 class Enumerator
-
+  def size
+    nil
+  end
 end
 
 class ArrayEnumerator < Enumerator
@@ -22,6 +24,29 @@ class ArrayEnumerator < Enumerator
     else
       return nil
     end
+  end
+end
+
+class IntegerEnumerator < Enumerator
+  def initialize(int)
+    @int = int
+    @pos = 0
+  end
+
+  def size
+    @int
+  end
+
+  def each
+    if !block_given?
+      return self
+    end
+    i = 0
+    while i < @int
+      yield i
+      i += 1
+    end
+    @int
   end
 end
 

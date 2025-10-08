@@ -216,6 +216,9 @@ class Fixnum < Integer
   end
   
   def times
+    if !block_given?
+      return IntegerEnumerator.new(self)
+    end
     i = 0
     while i < self
       yield i

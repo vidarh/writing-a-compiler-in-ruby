@@ -22,6 +22,8 @@ class Encoding
   UTF_8 = Encoding.new("UTF-8")
   IBM437 = Encoding.new("IBM437")
   SHIFT_JIS = Encoding.new("Shift_JIS")
+  CESU_8  = Encoding.new("CESU_8")
+  EUC_JP  = Encoding.new("EUC_JP")
 
   # Class methods
   def self.default_internal
