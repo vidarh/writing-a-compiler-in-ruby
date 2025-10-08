@@ -11,11 +11,9 @@ module Tokens
       buf = Atom.expect(s)
       bs = ":#{buf.to_s}"
       return bs.to_sym if buf
-      c = s.peek
-      buf = Quoted.expect(s)
-      bs = ":#{buf.to_s}"
-      return bs.to_sym if buf
 
+      # Check for operator symbols BEFORE Quoted.expect
+      # because some operators (like %) can start string literals
       # Lots more operators are legal.
       # FIXME: Need to check which set is legal - it's annoying inconsistent it appears
       if s.peek == ?[
@@ -38,6 +36,9 @@ module Tokens
       elsif s.peek == ?+
         s.get
         return :":+"
+      elsif s.peek == ?%
+        s.get
+        return :":%"
       elsif s.peek == ?=
         s.get
         if s.peek == ?=
@@ -70,6 +71,11 @@ module Tokens
         end
         return :":>"
       end
+
+      c = s.peek
+      buf = Quoted.expect(s)
+      bs = ":#{buf.to_s}"
+      return bs.to_sym if buf
       s.unget(":")
       return nil
    end
