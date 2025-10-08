@@ -173,29 +173,42 @@ class Compiler
       @e.jmp(br)
     else
       # Handling lexical break from block/proc's.
-      # Need to save the break value before manipulating %eax
-      if value
-        ret = compile_eval_arg(scope, value)
-        @e.save_result(ret)
-        @e.pushl(:eax)  # Save break value on stack
-      end
 
-      #    If after leave, %ebp == __stackframe__
-      #    then we're where we want to be.
+      # First, load the target stackframe from __env__[0]
       ret = compile_eval_arg(scope,[:index,:__env__,0])
       @e.movl(ret,:eax) if ret != :eax
-      l = @e.local
-      r = @e.get_local
+
+      # Now compile and save break value in %ecx AFTER loading __env__
+      # This avoids register conflicts during __env__ compilation
+      if value
+        @e.pushl(:eax)  # Save target stackframe on stack temporarily
+        ret = compile_eval_arg(scope, value)
+        @e.save_result(ret)
+        @e.movl(:eax, :ecx)  # Save break value in %ecx
+        @e.popl(:eax)  # Restore target stackframe to %eax
+      end
+
+      # Jump to test first to avoid doing leave twice
+      l_test = @e.get_local + "_test"
+      l_done = @e.get_local + "_done"
+      @e.jmp l_test
+
+      # Loop body: skip return address and continue
+      l_loop = @e.local
+      @e.addl(4,:esp)
+
+      # Test: unwind one frame and check if we're at target
+      @e.local(l_test)
       @e.leave
       @e.cmpl(:eax, :ebp)
-      @e.jz r
-      @e.addl(4,:esp)
-      @e.jmp l
-      @e.local(r)
+      @e.jnz l_loop
 
-      # Restore break value from stack if we had one
+      # Done unwinding
+      @e.local(l_done)
+
+      # Restore break value from %ecx to %eax if we had one
       if value
-        @e.popl(:eax)
+        @e.movl(:ecx, :eax)
       end
 
       @e.movl("-4(%ebp)",:ebx)
