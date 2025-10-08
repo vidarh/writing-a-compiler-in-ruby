@@ -1,5 +1,8 @@
 
 class Float
+  # Stub constant - proper IEEE 754 infinity not implemented
+  INFINITY = 999999999999999999999999999999999999999999999999999999999999999999999999
+
   # Reserve space for double value (8 bytes = 2 slots)
   # We use instance variables to ensure the compiler allocates space
   def initialize
