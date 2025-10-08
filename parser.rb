@@ -404,6 +404,7 @@ class Parser < ParserBase
   # as opposed to being handled as post-processing later -
   # may refactor this as a separate tree-rewriting step later.
   def require q
+    STDERR.puts "REQUIRE: #{q.inspect} (from #{@scanner.filename rescue 'unknown'})" if ENV['DEBUG_REQUIRE']
     return true if @@requires[q]
     # FIXME: Handle include path
     paths = rel_include_paths(q)
@@ -471,7 +472,8 @@ class Parser < ParserBase
     if @scanner.filename
       dir = File.dirname(@scanner.filename)
       if !q.start_with?('/')
-        q = File.join(dir, q)
+        # Use expand_path to normalize ".." and make absolute
+        q = File.expand_path(File.join(dir, q))
       end
     end
 

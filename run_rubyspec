@@ -13,6 +13,8 @@ fi
 
 TARGET="$1"
 
+echo "DEBUG: Starting run_rubyspec for $TARGET" >&2
+
 # Function to run a single spec file
 run_single_spec() {
     local SPEC_FILE="$1"
@@ -116,7 +118,7 @@ run_single_spec() {
         fi
 
         rm -f /tmp/spec_output_$$
-        rm -f "$TEMP_SPEC"
+        # rm -f "$TEMP_SPEC"
 
         if [ $EXIT_CODE -eq 136 ] || [ $EXIT_CODE -eq 139 ]; then
             # 136 = SIGFPE (Floating point exception), 139 = SIGSEGV (Segmentation fault)
@@ -127,7 +129,7 @@ run_single_spec() {
         if [ "$VERBOSE" -eq 1 ]; then
             echo "✗ (compilation failed)"
         fi
-        rm -f "$TEMP_SPEC"
+        # rm -f "$TEMP_SPEC"
         return 3
     fi
 }
@@ -270,7 +272,7 @@ elif [ -f "$TARGET" ]; then
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
         ./out/${TEMP_SPEC_NAME}
         EXIT_CODE=$?
-        rm -f "$TEMP_SPEC"
+        # rm -f "$TEMP_SPEC"
 
         if [ $EXIT_CODE -eq 136 ] || [ $EXIT_CODE -eq 139 ]; then
             echo
@@ -282,7 +284,7 @@ elif [ -f "$TARGET" ]; then
         echo "✗ Compilation failed!"
         echo "================================"
         echo "$COMPILE_OUTPUT"
-        rm -f "$TEMP_SPEC"
+        # rm -f "$TEMP_SPEC"
         exit 3
     fi
 else
