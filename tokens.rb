@@ -280,12 +280,35 @@ module Tokens
           return [buf,nil, :keyword]
         end
         return [buf, nil]
-      #when ?/
-      #  if @first || @lastop
-      #    # FIXME: Parse regexp here?
-      #    return [[:callm, :Regexp, :new, get_quoted_exp], nil]
-      #  end
-      #  return [@s.get, Operators["/"]]
+      when ?/
+        if @first || @lastop
+          # Parse regexp literal
+          @s.get  # consume '/'
+          pattern = ""
+          while true
+            c = @s.get
+            if c == ?/
+              # End of regexp, skip modifiers for now
+              while @s.peek && (@s.peek == ?i || @s.peek == ?m || @s.peek == ?x || @s.peek == ?o)
+                @s.get
+              end
+              return [[:callm, :Regexp, :new, pattern], nil]
+            elsif c == ?\
+              # Escape sequence
+              pattern << c.chr
+              next_c = @s.get
+              pattern << next_c.chr if next_c
+            elsif c == nil
+              raise "Unterminated regexp"
+            else
+              pattern << c.chr
+            end
+          end
+        else
+          # Division operator
+          @s.get
+          return ["/", Operators["/"]]
+        end
       when ?-
         @s.get
         if DIGITS.member?(@s.peek)
