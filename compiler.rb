@@ -665,7 +665,16 @@ class Compiler
   # Compiles a let expression.
   # Takes the current scope, a list of variablenames as well as a list of arguments.
   def compile_let(scope, varlist, *args)
-    let(scope, *varlist) do |ls|
+    # Filter out non-symbols from varlist - only actual variable names can be bound
+    # Non-symbol expressions (like [:index, ...]) should only appear in assignments
+    symbols_only = varlist.select {|v| v.is_a?(Symbol) }
+
+    if varlist.size != symbols_only.size
+      # Some elements were filtered - compile as a plain :do if no symbols remain
+      return compile_do(scope, *args) if symbols_only.empty?
+    end
+
+    let(scope, *symbols_only) do |ls|
       compile_do(ls, *args)
     end
     return Value.new([:subexpr])
