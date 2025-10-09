@@ -53,13 +53,28 @@ class Compiler
     end
   end
 
+  # Find the nearest ClassScope by traversing the scope chain
+  # Returns Object's ClassScope if no ClassScope found in chain
+  def find_class_scope(scope)
+    current = scope
+    while current
+      return current if current.is_a?(ClassScope)
+      current = current.instance_variable_get(:@next)
+    end
+    # No ClassScope found - return Object's ClassScope
+    @global_scope.class_scope
+  end
+
   def compile_eigenclass(scope, expr, exps)
     @e.comment("=== Eigenclass start")
+
+    # Find the enclosing ClassScope for klass_size
+    class_scope = find_class_scope(scope)
 
     ob      = mk_class(expr)
     classob = mk_class(expr)
     ret = compile_eval_arg(scope, [:assign, ob,
-                                   mk_new_class_object(scope.klass_size, ob, scope.klass_size, classob)
+                                   mk_new_class_object(class_scope.klass_size, ob, class_scope.klass_size, classob)
                                   ])
     @e.save_result(ret)
 
@@ -69,7 +84,7 @@ class Compiler
       # see-also Compiler#let
       scope
       # FIXME: This uses lexical scoping, which will be wrong in some contexts.
-      compile_exp(lscope, [:sexp, [:assign, [:index, :self ,2], "<#{scope.local_name.to_s} eigenclass>"]])
+      compile_exp(lscope, [:sexp, [:assign, [:index, :self ,2], "<#{class_scope.local_name.to_s} eigenclass>"]])
 
       compile_ary_do(lscope, exps)
       @e.load_local_var(1)
