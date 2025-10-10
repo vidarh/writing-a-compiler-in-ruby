@@ -197,6 +197,7 @@ module Tokens
       if neg
         num = num * (-1)
       end
+
       return num
     end
   end
@@ -205,6 +206,36 @@ module Tokens
     def self.expect(s)
       i = Int.expect(s)
       return nil if i.nil?
+
+      # Check for Rational literal: <number>r or <number>/<number>r
+      if s.peek == ?r
+        # Simple rational: 5r = Rational(5, 1)
+        s.get  # consume 'r'
+        return [:call, :Rational, [i, 1]]
+      elsif s.peek == ?/
+        # Could be rational literal: 6/5r
+        # Save state in case we need to backtrack
+        saved_peek = s.peek
+        s.get  # consume '/'
+
+        # Try to parse denominator
+        denom = Int.expect(s)
+        if denom && s.peek == ?r
+          # It's a rational literal!
+          s.get  # consume 'r'
+          return [:call, :Rational, [i, denom]]
+        else
+          # Not a rational literal, unget and continue
+          if denom
+            denom_str = denom.to_s
+            s.unget(denom_str)
+          end
+          s.unget("/")
+          # Fall through to check for float
+        end
+      end
+
+      # Check for float
       return i if s.peek != ?.
       s.get
       if !(?0..?9).member?(s.peek)
@@ -429,8 +460,44 @@ module Tokens
                 # <<~ removes leading whitespace
                 lines = body.split("\n", -1)
                 # Find minimum indentation (ignoring empty lines)
-                min_indent = lines.select { |l| !l.strip.empty? }.map { |l| l[/^\s*/].length }.min || 0
-                body = lines.map { |l| l.strip.empty? ? l : l[min_indent..-1] || "" }.join("\n")
+                min_indent = nil
+                i = 0
+                while i < lines.length
+                  l = lines[i]
+                  if !l.strip.empty?
+                    # Count leading whitespace
+                    ws_count = 0
+                    j = 0
+                    while j < l.length && (l[j] == " " || l[j] == "\t")
+                      ws_count += 1
+                      j += 1
+                    end
+                    if min_indent == nil || ws_count < min_indent
+                      min_indent = ws_count
+                    end
+                  end
+                  i += 1
+                end
+                min_indent = 0 if min_indent == nil
+
+                # Strip the minimum indentation from each line
+                result_lines = []
+                i = 0
+                while i < lines.length
+                  l = lines[i]
+                  if l.strip.empty?
+                    result_lines << l
+                  else
+                    # Remove min_indent characters from the start
+                    if l.length > min_indent
+                      result_lines << l[min_indent..-1]
+                    else
+                      result_lines << ""
+                    end
+                  end
+                  i += 1
+                end
+                body = result_lines.join("\n")
               end
 
               # Return the heredoc body as a string token
