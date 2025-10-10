@@ -35,7 +35,7 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 **Major Achievement**: All rubyspec/core/integer tests now compile successfully! This represents significant progress in parser/compiler completeness.
 
-**Current Focus**: Investigating and fixing segfaults (runtime crashes).
+**Current Focus**: Fixing bitwise operator coercion (see docs/BITWISE_OPERATOR_COERCION.md).
 
 **Root Causes Identified** (see docs/segfault_analysis_2025-10-09.md and docs/segfault_investigation_journal.md for details):
 

@@ -90,9 +90,10 @@ end
 
 module Tokens
   class Int
-    def self.expect(s)
+    def self.expect(s, allow_negative = true)
       tmp = ""
-      tmp << s.get if s.peek == ?-
+      # Only consume leading '-' if allowed (i.e., after an operator, not after ')')
+      tmp << s.get if allow_negative && s.peek == ?-
       c = s.peek
       if (c == nil) || (?0 .. ?9).member?(c) == false
         return nil
@@ -203,8 +204,8 @@ module Tokens
   end
 
   class Number
-    def self.expect(s)
-      i = Int.expect(s)
+    def self.expect(s, allow_negative = true)
+      i = Int.expect(s, allow_negative)
       return nil if i.nil?
 
       # Check for Rational literal: <number>r or <number>/<number>r
@@ -218,8 +219,8 @@ module Tokens
         saved_peek = s.peek
         s.get  # consume '/'
 
-        # Try to parse denominator
-        denom = Int.expect(s)
+        # Try to parse denominator (never negative in rational literals)
+        denom = Int.expect(s, false)
         if denom && s.peek == ?r
           # It's a rational literal!
           s.get  # consume 'r'
@@ -242,7 +243,8 @@ module Tokens
         s.unget(".")
         return i
       end
-      f = Int.expect(s)
+      # Fractional part is never negative
+      f = Int.expect(s, false)
       # FIXME: Yeah, this is ugly. Do it nicer later.
       num = "#{i}.#{f}"
       num.to_f
@@ -294,7 +296,7 @@ module Tokens
       when ?",?'
         return [get_quoted_exp, nil]
       when DIGITS
-        return [@s.expect(Number), nil]
+        return [Number.expect(@s, prev_lastop), nil]
       when ALPHA, ?@, ?$, ?:, ?_
         if @s.peek == ?:
           @s.get
@@ -342,9 +344,10 @@ module Tokens
         end
       when ?-
         @s.get
-        if DIGITS.member?(@s.peek)
+        # Only parse as negative number if last token was an operator (not after ')' etc.)
+        if prev_lastop && DIGITS.member?(@s.peek)
           @s.unget("-")
-          return [@s.expect(Number), nil]
+          return [Number.expect(@s, true), nil]
         end
         @lastop = true
         if @s.peek == ?>

@@ -68,10 +68,14 @@ end
 class Mock
   def initialize(name)
     @name = name
+    @expectations = {}
+    @current_method = nil
+    @current_return_value = nil
   end
 
-  # FIXME: Need to track
+  # Track which method we're setting up an expectation for
   def should_receive(method)
+    @current_method = method
     self
   end
 
@@ -80,8 +84,12 @@ class Mock
     self
   end
 
-  # FIXME: Need to track/enforce
+  # Store the return value for the current method
   def and_return(result)
+    if @current_method
+      @expectations[@current_method] = result
+    end
+    @current_return_value = result
     self
   end
 
@@ -93,6 +101,21 @@ class Mock
   # FIXME: Stub - should validate arguments match expectations
   def with(*args)
     self
+  end
+
+  # Handle method calls dynamically
+  def method_missing(method, *args)
+    if @expectations[method]
+      @expectations[method]
+    else
+      STDERR.puts("Mock: No expectation set for #{method}")
+      nil
+    end
+  end
+
+  # Say we respond to any method if an expectation is set
+  def respond_to?(method)
+    @expectations[method] || super
   end
 
   def to_s

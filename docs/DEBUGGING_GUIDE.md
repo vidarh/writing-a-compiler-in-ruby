@@ -25,9 +25,42 @@ This guide documents effective debugging patterns discovered while working on th
 | SIGSEGV at 0xfffffffd or similar | Invalid vtable call in s-expression | Move method call out of %s() to use normal dispatch |
 | "Unable to resolve X statically" | Missing class/constant | Check if class is defined, may need stub |
 | Parse error | Parser doesn't support syntax | Check parser.rb, may need new operator/keyword support |
-| Lambda at top-level crashes or doesn't compile | Top-level lambdas not transformed | Lambdas work in methods but not at top-level; use method wrapper |
+| Lambda at top-level crashes or doesn't compile | **KNOWN LIMITATION: Top-level lambdas not supported** | **IMPORTANT**: Lambdas work FINE in methods but CRASH at top-level; use method wrapper for testing |
 
 ## Debugging Compilation Failures
+
+### Pattern: Creating Minimal Test Cases
+
+**CRITICAL TECHNIQUE**: When a large test file crashes or fails, systematically reduce it to the smallest reproducible case.
+
+**Process:**
+1. Start with the full failing test
+2. Remove half the tests and check if it still fails
+3. Binary search to find the minimal failing case
+4. Once you have the minimal case, analyze WHY it fails
+
+**Example from bit_and_spec.rb investigation:**
+```bash
+# Full spec: 104 lines, crashes with no output
+./compile rubyspec_temp_bit_and_spec.rb  # CRASH
+
+# Test just fixnum context (50 lines): still crashes
+# Test just first 4 tests: still crashes
+# Test just first 2 tests: still crashes
+# Test just first test: WORKS (just has assertion failure)
+# Test just second test alone: CRASHES
+
+# Narrow down second test:
+# Line 1 alone: works
+# Line 2 alone: works
+# Lines 1-2 together: works
+# Lines 1-3 together: CRASHES
+
+# Found: The crash happens with 3+ certain bignum expressions together
+# NOT caused by the & operator itself, but by compiler bug with expression combinations
+```
+
+**Key insight**: The crash was NOT in the code being tested (& operator with coercion), but in how the compiler handles certain combinations of bignum expressions. This would have been impossible to find without systematic reduction.
 
 ### Pattern: Parse Tree Analysis
 

@@ -84,11 +84,15 @@ class Fixnum < Integer
   end
 
   def + other
-    %s(__int (add (sar self) (callm other __get_raw)))
+    # Mask result to keep it in 31-bit signed range (30 bits + sign)
+    %s(let (result) (assign result (add (sar self) (callm other __get_raw)))
+      (__int (bitand result 0x7fffffff)))
   end
 
   def - other
-    %s(__int (sub (sar self) (callm other __get_raw)))
+    # Mask result to keep it in 31-bit signed range (30 bits + sign)
+    %s(let (result) (assign result (sub (sar self) (callm other __get_raw)))
+      (__int (bitand result 0x7fffffff)))
   end
 
   
@@ -172,8 +176,20 @@ class Fixnum < Integer
       other_raw = other.__get_raw
       %s(__int (bitand (callm self __get_raw) other_raw))
     else
-      STDERR.puts("TypeError: Integer can't be coerced")
-      nil
+      if other.respond_to?(:coerce)
+        ary = other.coerce(self)
+        if ary.is_a?(Array)
+          a = ary[0]
+          b = ary[1]
+          a & b
+        else
+          STDERR.puts("TypeError: coerce must return [x, y]")
+          1/0
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced into Integer")
+        1/0
+      end
     end
   end
 
@@ -212,7 +228,8 @@ class Fixnum < Integer
       other_raw = other.__get_raw
       # Use sar to get numeric values from tagged integers
       # Note: sall/sarl are compiled with first arg as shift amount
-      %s(__int (sall other_raw (sar self)))
+      # Mask to 31 bits before tagging to prevent overflow (keeps 1 bit for tag)
+      %s(__int (bitand (sall other_raw (sar self)) 0x7fffffff))
     else
       STDERR.puts("TypeError: Integer can't be coerced")
       nil
@@ -235,7 +252,9 @@ class Fixnum < Integer
 
   # Unary minus
   def -@
-    %s(__int (sub 0 (sar self)))
+    # Mask result to keep it in 31-bit signed range (30 bits + sign)
+    %s(let (result) (assign result (sub 0 (sar self)))
+      (__int (bitand result 0x7fffffff)))
   end
 
   # Unary plus (returns self)

@@ -1,20 +1,5 @@
 Running all specs in rubyspec/core/integer/...
 ================================
 
-[34m[SEGFAULT] rubyspec/core/integer/abs_spec.rb
+[31m[FAIL] rubyspec/core/integer/abs_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/allbits_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/anybits_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/bit_and_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/bit_length_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/bit_or_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/bit_xor_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/case_compare_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/ceildiv_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/ceil_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/chr_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/coerce_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/comparison_spec.rb
-[31m[FAIL] rubyspec/core/integer/complement_spec.rb
-[31m[FAIL] rubyspec/core/integer/constants_spec.rb
-[32m[PASS] rubyspec/core/integer/denominator_spec.rb
-[31m[FAIL] rubyspec/core/integer/digits_spec.rb
