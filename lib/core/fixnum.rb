@@ -159,10 +159,22 @@ class Fixnum < Integer
   # because we will for now only deal with integers
 
   def * other
-    %s(__int (mul (sar self) (sar other)))
+    # Convert other to integer if it's not already an Integer
+    if !other.is_a?(Integer)
+      other = other.to_int
+    end
+    # Mask result to keep it in 31-bit signed range to prevent overflow
+    %s(let (result) (assign result (mul (sar self) (sar other)))
+      (__int (bitand result 0x7fffffff)))
   end
 
   def / other
+    # Convert other to integer if it's not already an Integer
+    if !other.is_a?(Integer)
+      other = other.to_int
+    end
+    # FIXME: Check for division by zero removed - causes issues in bootstrapping
+    # The hardware will trap on divide by zero with FPE signal
     %s(__int (div (sar self) (sar other)))
   end
 
