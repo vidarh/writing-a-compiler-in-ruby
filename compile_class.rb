@@ -59,7 +59,7 @@ class Compiler
     current = scope
     while current
       return current if current.is_a?(ClassScope)
-      current = current.instance_variable_get(:@next)
+      current = current.next
     end
     # No ClassScope found - return Object's ClassScope
     @global_scope.class_scope
