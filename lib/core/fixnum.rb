@@ -199,8 +199,20 @@ class Fixnum < Integer
       other_raw = other.__get_raw
       %s(__int (bitor (callm self __get_raw) other_raw))
     else
-      STDERR.puts("TypeError: Integer can't be coerced")
-      nil
+      if other.respond_to?(:coerce)
+        ary = other.coerce(self)
+        if ary.is_a?(Array)
+          a = ary[0]
+          b = ary[1]
+          a | b
+        else
+          STDERR.puts("TypeError: coerce must return [x, y]")
+          nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced into Integer")
+        nil
+      end
     end
   end
 
@@ -210,8 +222,20 @@ class Fixnum < Integer
       other_raw = other.__get_raw
       %s(__int (bitxor (callm self __get_raw) other_raw))
     else
-      STDERR.puts("TypeError: Integer can't be coerced")
-      nil
+      if other.respond_to?(:coerce)
+        ary = other.coerce(self)
+        if ary.is_a?(Array)
+          a = ary[0]
+          b = ary[1]
+          a ^ b
+        else
+          STDERR.puts("TypeError: coerce must return [x, y]")
+          nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced into Integer")
+        nil
+      end
     end
   end
 

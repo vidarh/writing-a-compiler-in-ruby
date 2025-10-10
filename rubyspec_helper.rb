@@ -79,6 +79,12 @@ class Mock
     self
   end
 
+  # FIXME: Stub - should verify method is never called
+  def should_not_receive(method)
+    @current_method = method
+    self
+  end
+
   # FIXME: Need to track/enforce
   def any_number_of_times
     self
@@ -417,6 +423,13 @@ end
 
 def conflicts_with(*args)
   # Skip conflicting specs
+end
+
+def not_supported_on(*args)
+  # Skip specs not supported on certain platforms
+  if block_given?
+    yield
+  end
 end
 
 # Context is an alias for describe
