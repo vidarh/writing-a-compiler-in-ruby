@@ -7,6 +7,13 @@ See <http://www.hokstad.com/compiler>
 
 **NOTE** This is still wildly incomplete.
 
+## Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** - Guide for Claude Code when working on this project
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Compiler architecture overview
+- **[docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md)** - Effective debugging patterns and techniques
+- **[docs/TODO.md](docs/TODO.md)** - Known issues and development roadmap
+
 ## Status as of May 14th 2023
 
  * The compiler self-hosts, but is slow and GC is disabled.

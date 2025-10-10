@@ -38,6 +38,7 @@ This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler 
 ### Debugging
 - `make valgrind` - Run selftest under Valgrind
 - Use `-g` flag for debug symbols in assembly output
+- **See [docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md) for comprehensive debugging patterns and techniques**
 
 ## Architecture
 

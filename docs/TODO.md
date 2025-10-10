@@ -2,6 +2,8 @@
 
 This document tracks known bugs, missing features, and architectural issues. Items are prioritized: critical bugs first, missing language features second, architectural improvements third.
 
+**For debugging help, see [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) for effective patterns and techniques.**
+
 ## Current Integer Spec Test Status (2025-10-10) - INVESTIGATION COMPLETE
 
 **Summary**: 67 spec files total
