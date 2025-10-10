@@ -69,6 +69,7 @@ class Mock
   def initialize(name)
     @name = name
     @expectations = {}
+    @call_counts = {}
     @current_method = nil
     @current_return_value = nil
   end
@@ -76,6 +77,7 @@ class Mock
   # Track which method we're setting up an expectation for
   def should_receive(method)
     @current_method = method
+    @call_counts[method] = 0
     self
   end
 
@@ -90,12 +92,26 @@ class Mock
     self
   end
 
-  # Store the return value for the current method
-  def and_return(result)
+  # FIXME: Stub - should validate exact number of calls
+  def exactly(count)
+    self
+  end
+
+  # FIXME: Stub - used with exactly to specify times
+  def times
+    self
+  end
+
+  # Store the return value(s) for the current method
+  # Can accept multiple values for sequential returns
+  def and_return(*results)
     if @current_method
-      @expectations[@current_method] = result
+      if results.length == 1
+        @expectations[@current_method] = results[0]
+      else
+        @expectations[@current_method] = results
+      end
     end
-    @current_return_value = result
     self
   end
 
@@ -112,7 +128,18 @@ class Mock
   # Handle method calls dynamically
   def method_missing(method, *args)
     if @expectations[method]
-      @expectations[method]
+      result = @expectations[method]
+      if result.is_a?(Array)
+        count = @call_counts[method]
+        @call_counts[method] = count + 1
+        if count < result.length
+          result[count]
+        else
+          result[-1]
+        end
+      else
+        result
+      end
     else
       STDERR.puts("Mock: No expectation set for #{method}")
       nil
