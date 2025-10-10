@@ -438,6 +438,12 @@ class Fixnum < Integer
       other = other.to_int
     end
 
+    # Check for division by zero
+    if other == 0
+      STDERR.puts("ZeroDivisionError: divided by 0")
+      return nil
+    end
+
     # Handle division by converting to proper formula
     # For positive divisor: (a + b - 1) / b
     # For negative divisor: a / b (truncates towards zero, which is ceiling for negative results)
