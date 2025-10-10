@@ -168,17 +168,35 @@ class Fixnum < Integer
 
   # Bitwise AND
   def & other
-    %s(__int (bitand (callm self __get_raw) (callm other __get_raw)))
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitand (callm self __get_raw) other_raw))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced")
+      nil
+    end
   end
 
   # Bitwise OR
   def | other
-    %s(__int (bitor (callm self __get_raw) (callm other __get_raw)))
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitor (callm self __get_raw) other_raw))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced")
+      nil
+    end
   end
 
   # Bitwise XOR
   def ^ other
-    %s(__int (bitxor (callm self __get_raw) (callm other __get_raw)))
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitxor (callm self __get_raw) other_raw))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced")
+      nil
+    end
   end
 
   # Bitwise NOT: flips all bits
@@ -190,17 +208,29 @@ class Fixnum < Integer
   # Left shift: self << other
   # Shift left by 'other' bits
   def << other
-    # Use sar to get numeric values from tagged integers
-    # Note: sall/sarl are compiled with first arg as shift amount
-    %s(__int (sall (sar other) (sar self)))
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      # Use sar to get numeric values from tagged integers
+      # Note: sall/sarl are compiled with first arg as shift amount
+      %s(__int (sall other_raw (sar self)))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced")
+      nil
+    end
   end
 
   # Right shift: self >> other
   # Arithmetic right shift by 'other' bits
   def >> other
-    # Use sar to get numeric values from tagged integers
-    # Note: sall/sarl are compiled with first arg as shift amount
-    %s(__int (sarl (sar other) (sar self)))
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      # Use sar to get numeric values from tagged integers
+      # Note: sall/sarl are compiled with first arg as shift amount
+      %s(__int (sarl other_raw (sar self)))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced")
+      nil
+    end
   end
 
   # Unary minus

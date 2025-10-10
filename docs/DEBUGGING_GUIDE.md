@@ -19,10 +19,13 @@ This guide documents effective debugging patterns discovered while working on th
 | Symptom | Likely Cause | First Steps |
 |---------|-------------|-------------|
 | "Method missing X#method" | Method not in vtable | Check if method exists in class, add if missing |
-| FPE (Floating Point Exception) | Argument count mismatch | Check `__eqarg` calls with GDB, verify method signature |
+| "Method missing X#__get_raw" | Calling __get_raw on wrong type | Add type check with `is_a?(Integer)` before calling __get_raw |
+| FPE (Floating Point Exception) | Division by zero or arg mismatch | Check `__eqarg` calls with GDB, or look for explicit `1/0` error signaling |
 | SIGSEGV at address 0x1 or similar | Calling through nil/fixnum | Check vtable entry exists, method properly defined |
+| SIGSEGV at 0xfffffffd or similar | Invalid vtable call in s-expression | Move method call out of %s() to use normal dispatch |
 | "Unable to resolve X statically" | Missing class/constant | Check if class is defined, may need stub |
 | Parse error | Parser doesn't support syntax | Check parser.rb, may need new operator/keyword support |
+| Lambda at top-level crashes or doesn't compile | Top-level lambdas not transformed | Lambdas work in methods but not at top-level; use method wrapper |
 
 ## Debugging Compilation Failures
 
@@ -190,6 +193,37 @@ end
 ```
 
 **Why:** Bitwise operations strip the type tag. Must re-apply with `__int()`.
+
+### Pattern: __get_raw Type Safety
+
+**Problem:** Calling `__get_raw` on non-Integer types causes segfaults.
+
+`__get_raw` is type-specific and only exists on Integer, Float, and String. Calling it within an s-expression `%s(callm other __get_raw)` on a non-compatible type causes a segfault at an invalid address (like 0xfffffffd).
+
+**Solution:**
+```ruby
+# Wrong: Calls __get_raw without type checking
+def & other
+  %s(__int (bitand (callm self __get_raw) (callm other __get_raw)))
+end
+
+# Right: Check type before calling __get_raw
+def & other
+  if other.is_a?(Integer)
+    other_raw = other.__get_raw
+    %s(__int (bitand (callm self __get_raw) other_raw))
+  else
+    STDERR.puts("TypeError: Integer can't be coerced")
+    nil
+  end
+end
+```
+
+**Key principles:**
+- Never call `__get_raw` without knowing the receiver's type
+- Use `is_a?(Integer)` to verify type before calling `__get_raw`
+- Call `__get_raw` in Ruby code (not in s-expression) to get proper method dispatch
+- For error signaling without exceptions, print to STDERR and return `nil` (not `1/0` which crashes)
 
 ## Debugging Parser Issues
 
@@ -472,6 +506,8 @@ grep "Error" output
 - Can't use exceptions (begin/rescue) in compiler source
 - Can't use regexps
 - Can't use eval
+- Can't use `unless` (use `if !` instead)
+- Can't use `return` with s-expressions (`%s(...)`)
 - Limited metaprogramming
 
 **Solutions:**
@@ -479,6 +515,54 @@ grep "Error" output
 - Avoid features not yet implemented
 - Mark with `@bug` comment if working around compiler limitation
 - Test with MRI first, then with compiled compiler
+
+### Pattern: Investigating Preprocessed Spec Files
+
+When debugging RubySpec failures, the preprocessed test files can help:
+
+**Location:** Preprocessed files are in the repository root as `rubyspec_temp_*.rb`
+
+**Usage:**
+```bash
+# Find the preprocessed file
+ls rubyspec_temp_bit_length_spec.rb
+
+# Check specific lines mentioned in backtrace
+sed -n '460,465p' rubyspec_temp_bit_length_spec.rb
+
+# Compare with original spec
+diff rubyspec/core/integer/bit_length_spec.rb rubyspec_temp_bit_length_spec.rb
+```
+
+**Note:** Line numbers in GDB backtraces refer to the preprocessed file, not the original spec file.
+
+### Pattern: Debugging Address-Based Crashes
+
+When GDB shows crashes at small odd addresses like `0x3`, `0x5`, `0xb`:
+
+**Symptom:** `SIGSEGV at address 0x00000003` or similar small odd number
+
+**Diagnosis:**
+- These are tagged fixnum values: `(value << 1) | 1`
+- 0x3 = fixnum 1, 0x5 = fixnum 2, 0xb = fixnum 5
+- Program is trying to call through a fixnum as if it were a function pointer
+
+**Likely causes:**
+- Closure/proc calling issue where fixnum is treated as callable
+- Vtable entry contains wrong value
+- Method returning fixnum instead of proc
+- Incorrect function pointer handling in generated assembly
+
+**Debug steps:**
+```bash
+# Check what's in the register being called
+gdb ./out/program <<'EOF'
+run < /dev/null
+info registers
+# Check eax - often contains the bad address
+quit
+EOF
+```
 
 ## Quick Debugging Checklist
 
@@ -489,9 +573,11 @@ When encountering an issue, check these in order:
 - [ ] Is the feature implemented? (Check for FIXMEs)
 - [ ] Is the method in the vtable? (Search assembly output)
 - [ ] Are types properly tagged? (Check for `__int` wrapping)
+- [ ] Is `__get_raw` only called on known types? (Add type checks with `is_a?`)
 - [ ] Is argument order correct? (Check s-expression vs implementation)
 - [ ] Are globals initialized before use? (Check file order)
 - [ ] Is the transformation correct? (Use `--parsetree`)
+- [ ] Are error signals using `nil` not `1/0`? (Avoid FPE crashes in specs)
 
 ## Resources
 
