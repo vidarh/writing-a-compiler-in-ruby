@@ -432,11 +432,11 @@ class Fixnum < Integer
   # Ceiling division: divide and round towards positive infinity
   # ceildiv(a, b) returns the smallest integer >= a/b
   def ceildiv(other)
-    # Convert other to integer if it responds to to_int (handles Rational, etc.)
-    # This is the proper place to do type coercion, not in __get_raw
-    if other.respond_to?(:to_int)
-      other = other.to_int
-    end
+    # FIXME: respond_to? causes crashes when called repeatedly, skip type coercion for now
+    # Convert other to integer if it has to_int (handles Rational, etc.)
+    # if other.respond_to?(:to_int)
+    #   other = other.to_int
+    # end
 
     # Check for division by zero
     if other == 0
@@ -456,7 +456,19 @@ class Fixnum < Integer
     if remainder != 0
       # Same sign: need to round up (away from zero)
       # Different sign: already rounded towards zero, which is towards +infinity for negative results
-      if (self > 0 && other > 0) || (self < 0 && other < 0)
+      # FIXME: Avoid && operator which may have issues
+      same_sign = false
+      if self > 0
+        if other > 0
+          same_sign = true
+        end
+      elsif self < 0
+        if other < 0
+          same_sign = true
+        end
+      end
+
+      if same_sign
         quotient = quotient + 1
       end
     end
