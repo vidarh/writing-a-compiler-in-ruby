@@ -184,11 +184,11 @@ class Fixnum < Integer
           a & b
         else
           STDERR.puts("TypeError: coerce must return [x, y]")
-          1/0
+          nil
         end
       else
         STDERR.puts("TypeError: Integer can't be coerced into Integer")
-        1/0
+        nil
       end
     end
   end

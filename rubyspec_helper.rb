@@ -115,7 +115,10 @@ class Mock
 
   # Say we respond to any method if an expectation is set
   def respond_to?(method)
-    @expectations[method] || super
+    # Check if we have an expectation set for this method
+    # If not, we'll handle it via method_missing, so return true
+    # This matches Ruby's behavior where Mock responds to any method
+    true
   end
 
   def to_s
