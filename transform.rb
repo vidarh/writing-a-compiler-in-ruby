@@ -174,6 +174,12 @@ class Compiler
           e[2] = :-       # method = :-
           e[1] = E[:sexp, 1]  # object = 0 (tagged as fixnum: 0*2+1 = 1)
           e[0] = :callm   # op = :callm
+        # Handle unary plus: [:+, operand] => [:callm, operand, :+@, []]
+        elsif e[0] == :+ && e.length == 2
+          e[3] = E[]       # args = []
+          e[2] = :+@       # method = :+@
+          e[1] = e[1]      # object = operand
+          e[0] = :callm    # op = :callm
         else
           e[3] = E[e[2]] if e[2]
           e[2] = e[0]

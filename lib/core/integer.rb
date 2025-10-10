@@ -17,6 +17,11 @@ class Integer < Numeric
     Rational.new(self,1)
   end
 
+  # Unary plus - returns self
+  def +@
+    self
+  end
+
   # Integer square root using Newton's method
   def self.sqrt(n)
     n = Integer(n)
