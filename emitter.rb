@@ -455,6 +455,9 @@ class Emitter
   def cmpl src, dest; emit(:cmpl, src, dest); end
   def testl src,dest; emit(:testl, src, dest); end
   def movzbl src,dest; emit(:movzbl, src, dest); end
+  def andl src, dest; emit(:andl, src, dest); end
+  def orl src, dest; emit(:orl, src, dest); end
+  def xorl src, dest; emit(:xorl, src, dest); end
   def jmp arg;   emit(:jmp,arg); end
   def popl arg;  emit(:popl, arg); end
   def pushl arg; emit(:pushl, arg); end
