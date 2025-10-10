@@ -168,17 +168,17 @@ class Fixnum < Integer
 
   # Bitwise AND
   def & other
-    %s(bitand (callm self __get_raw) (callm other __get_raw))
+    %s(__int (bitand (callm self __get_raw) (callm other __get_raw)))
   end
 
   # Bitwise OR
   def | other
-    %s(bitor (callm self __get_raw) (callm other __get_raw))
+    %s(__int (bitor (callm self __get_raw) (callm other __get_raw)))
   end
 
   # Bitwise XOR
   def ^ other
-    %s(bitxor (callm self __get_raw) (callm other __get_raw))
+    %s(__int (bitxor (callm self __get_raw) (callm other __get_raw)))
   end
 
   # Bitwise NOT: flips all bits
@@ -187,18 +187,20 @@ class Fixnum < Integer
     -(self + 1)
   end
 
-  # FIXME: Stub - actual left shift implementation needed
+  # Left shift: self << other
+  # Shift left by 'other' bits
   def << other
-    self
+    # Use sar to get numeric values from tagged integers
+    # Note: sall/sarl are compiled with first arg as shift amount
+    %s(__int (sall (sar other) (sar self)))
   end
 
-  # FIXME: Stub - actual right shift implementation needed
+  # Right shift: self >> other
+  # Arithmetic right shift by 'other' bits
   def >> other
-    o = other.to_i + 1
-    %s(assign o (sar o)) # Strip type tag
-    %s(__int
-        (sarl o self)
-    )
+    # Use sar to get numeric values from tagged integers
+    # Note: sall/sarl are compiled with first arg as shift amount
+    %s(__int (sarl (sar other) (sar self)))
   end
 
   # Unary minus
@@ -209,6 +211,20 @@ class Fixnum < Integer
   # Unary plus (returns self)
   def +@
     self
+  end
+
+  # Absolute value
+  def abs
+    if self < 0
+      -self
+    else
+      self
+    end
+  end
+
+  # Alias for abs
+  def magnitude
+    abs
   end
 
   def ord
@@ -285,6 +301,12 @@ class Fixnum < Integer
     self
   end
 
+  # Convert integer to Float
+  # FIXME: Stub - returns self as-is; proper implementation would convert to actual float
+  def to_f
+    self
+  end
+
   # FIXME: Stub - for integers, truncate just returns self
   def truncate(ndigits=0)
     self
@@ -334,8 +356,33 @@ class Fixnum < Integer
   end
 
   # FIXME: Stub - actual ceildiv implementation needed
+  # Ceiling division: divide and round towards positive infinity
+  # ceildiv(a, b) returns the smallest integer >= a/b
   def ceildiv(other)
-    self / other
+    # Convert other to integer if it responds to to_int (handles Rational, etc.)
+    # This is the proper place to do type coercion, not in __get_raw
+    if other.respond_to?(:to_int)
+      other = other.to_int
+    end
+
+    # Handle division by converting to proper formula
+    # For positive divisor: (a + b - 1) / b
+    # For negative divisor: a / b (truncates towards zero, which is ceiling for negative results)
+    # But we need to handle signs properly
+
+    quotient = self / other
+    remainder = self % other
+
+    # If there's a remainder and quotient should round up
+    if remainder != 0
+      # Same sign: need to round up (away from zero)
+      # Different sign: already rounded towards zero, which is towards +infinity for negative results
+      if (self > 0 && other > 0) || (self < 0 && other < 0)
+        quotient = quotient + 1
+      end
+    end
+
+    quotient
   end
 
   # Return array of digits in given base (least significant first)
