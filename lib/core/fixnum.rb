@@ -493,6 +493,25 @@ class Fixnum < Integer
 
     result
   end
+
+  # FIXME: Stub - minimal implementation for integer coercion
+  # In Ruby, coerce is used to convert arguments to compatible types for numeric operations
+  # For integers, it typically returns [other, self] as an array
+  def coerce(other)
+    # FIXME: Should handle different types properly:
+    # - For Integer arguments, return [other, self]
+    # - For Float arguments, convert both to Float (not implemented)
+    # - For String arguments, convert to Float (not implemented)
+    # - For objects with to_f, try conversion (not implemented)
+    # - Otherwise raise TypeError
+    if other.is_a?(Integer)
+      [other, self]
+    else
+      # FIXME: Should raise TypeError for unsupported types
+      # For now, just return [other, self] to avoid crashes
+      [other, self]
+    end
+  end
 end
 
 %s(defun __int (val)
