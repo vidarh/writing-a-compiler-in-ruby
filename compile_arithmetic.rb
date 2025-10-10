@@ -27,13 +27,43 @@ class Compiler
   end
 
   def compile_sarl(scope, left, right)
-    # FIXME: Dummy
-    compile_sar(scope,left)
+    # Arithmetic right shift
+    # S-expr: (sarl shift_amount value_to_shift)
+    # left = shift amount, right = value to shift
+    # x86 requires shift count in %cl
+
+    # Evaluate first arg (shift amount)
+    shift_amt = compile_eval_arg(scope, left)
+    # Move to %ecx (x86 shifts require count in %cl)
+    @e.movl(@e.result, :ecx)
+
+    # Evaluate second arg (value to shift)
+    val = compile_eval_arg(scope, right)
+
+    # Shift value (in %eax) by %cl
+    @e.sarl(:cl, @e.result)
+
+    Value.new([:subexpr])
   end
 
   def compile_sall(scope, left, right)
-    # FIXME: Dummy
-    compile_shl(scope,left)
+    # Left shift
+    # S-expr: (sall shift_amount value_to_shift)
+    # left = shift amount, right = value to shift
+    # x86 requires shift count in %cl
+
+    # Evaluate first arg (shift amount)
+    shift_amt = compile_eval_arg(scope, left)
+    # Move to %ecx (x86 shifts require count in %cl)
+    @e.movl(@e.result, :ecx)
+
+    # Evaluate second arg (value to shift)
+    val = compile_eval_arg(scope, right)
+
+    # Shift value (in %eax) by %cl
+    @e.sall(:cl, @e.result)
+
+    Value.new([:subexpr])
   end
 
   def compile_add(scope, left, right)
