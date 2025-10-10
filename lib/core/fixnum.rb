@@ -75,7 +75,8 @@ class Fixnum < Integer
     to_s
   end
 
-  def chr
+  def chr(encoding = nil)
+    # FIXME: Encoding parameter is ignored for now
     %s(let (buf)
          (assign buf (__alloc_leaf 2))
          (snprintf buf 2 "%c" (sar self))
@@ -432,11 +433,11 @@ class Fixnum < Integer
   # Ceiling division: divide and round towards positive infinity
   # ceildiv(a, b) returns the smallest integer >= a/b
   def ceildiv(other)
-    # FIXME: respond_to? causes crashes when called repeatedly, skip type coercion for now
-    # Convert other to integer if it has to_int (handles Rational, etc.)
-    # if other.respond_to?(:to_int)
-    #   other = other.to_int
-    # end
+    # Convert other to integer if it's not already an Integer
+    # This handles Rational and other numeric types
+    if !other.is_a?(Integer)
+      other = other.to_int
+    end
 
     # Check for division by zero
     if other == 0

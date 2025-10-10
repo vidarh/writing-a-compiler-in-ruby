@@ -25,6 +25,16 @@ This document tracks known bugs, missing features, and architectural issues. Ite
   - Added `Integer#+@` method in lib/core/integer.rb:21-23 (returns self)
   - Fixed double-wrapping bug: was doing `E[e[1]]` instead of `e[1]`
 - ✅ **abs_spec now passes!** (1 test passing, 2 bignum failures)
+- ✅ **FIXED**: ceildiv type coercion - now calls `to_int` on non-Integer arguments before using `%` or `/`
+  - Fixed lib/core/fixnum.rb:437-439 to use `is_a?(Integer)` check instead of broken `respond_to?`
+  - This allows Rational and other numeric types to be properly converted
+  - ceildiv itself works correctly now
+- ⚠️ **DISCOVERED**: Parser bug with negative numbers (see docs/parser_negative_number_bug.md)
+  - `-4.method` parsed as binary subtraction after expressions with negative args
+  - Blocks ceildiv_spec from passing (crashes due to misparsing)
+  - **Root cause**: Tokenizer `@lastop` flag not reset after newlines when expression is complete
+  - **Fix location**: Requires expression-aware context in `shunting.rb` or `parser.rb`, not tokenizer
+  - **Workaround**: Use `(-4).method` with parentheses
 - **Remaining issues**: Still investigating other segfaults
 
 **Latest Additions**:
@@ -174,6 +184,12 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 ### 🐛 Known Bugs
 
 #### Parser Bugs
+- **Negative Number Parsing Bug** (HIGH PRIORITY - see docs/parser_negative_number_bug.md)
+  - Parser treats `-4.method` as binary subtraction in certain contexts
+  - Occurs when negative-arg expression is followed by negative-receiver expression
+  - Example: `4.ceildiv(-3)` followed by `-4.ceildiv(3)` parses as subtraction
+  - Workaround: Use `(-4).ceildiv(3)` with parentheses
+  - Affects: ceildiv_spec and potentially other specs with consecutive negative numbers
 - `tokens.rb:383` - nil error triggered by `context` keyword usage
 - `tokens.rb:320` - affects some specs (gcd_spec, lcm_spec, pow_spec)
 

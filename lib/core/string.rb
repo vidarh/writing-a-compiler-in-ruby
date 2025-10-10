@@ -221,6 +221,14 @@ class String
     self
   end
 
+  def bytes
+    result = []
+    each_byte do |b|
+      result << b
+    end
+    result
+  end
+
   def map!
     i = 0
     len = length
