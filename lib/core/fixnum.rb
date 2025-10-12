@@ -105,13 +105,14 @@ class Fixnum < Integer
     %s(if (le (sar self) (callm other __get_raw)) true false)
   end
 
-  def == other
-    if other.nil?
-      return false
-    end
-    return false if !other.is_a?(Numeric)
-    %s(if (eq (sar self) (callm other __get_raw)) true false)
-  end
+  # Removed - now handled by Integer#==
+  # def == other
+  #   if other.nil?
+  #     return false
+  #   end
+  #   return false if !other.is_a?(Numeric)
+  #   %s(if (eq (sar self) (callm other __get_raw)) true false)
+  # end
 
   # FIXME: I don't know why '!' seems to get an argument...
   def ! *args

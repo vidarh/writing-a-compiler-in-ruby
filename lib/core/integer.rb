@@ -125,9 +125,13 @@ class Integer < Numeric
   # Add tagged fixnum to heap integer
   # Called when self is tagged fixnum and other is heap integer
   def __add_fixnum_to_heap(heap_int)
-    # TODO: Implement fixnum + heap integer
-    %s(dprintf 2 "fixnum + heap integer\n")
-    0
+    # Extract values and use __add_with_overflow
+    %s(
+      (let (my_val other_val)
+        (assign my_val (sar self))
+        (assign other_val (callm heap_int __get_raw))
+        (return (__add_with_overflow my_val other_val)))
+    )
   end
 
   # Add heap integer to another value
@@ -221,6 +225,18 @@ class Integer < Numeric
 
   def <= other
     %s(if (le (callm self __get_raw) (callm other __get_raw)) true false)
+  end
+
+  # Equality comparison - handles both tagged fixnums and heap integers
+  def == other
+    # Handle nil and non-Numeric types
+    if other.nil?
+      return false
+    end
+    return false if !other.is_a?(Numeric)
+
+    # Compare raw values using __get_raw for both sides
+    %s(if (eq (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   def numerator
