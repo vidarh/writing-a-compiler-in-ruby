@@ -150,14 +150,193 @@ class Integer < Numeric
   # Add heap integer to another value
   # Called when self is a heap-allocated integer
   def __add_heap(other)
-    # For now, use __get_raw for both operands
-    # TODO: Use multi-limb addition
+    # Dispatch based on whether other is fixnum or heap
+    # Check in s-expression and dispatch to appropriate Ruby method
     %s(
-      (let (a b)
-        (assign a (callm self __get_raw))
-        (assign b (callm other __get_raw))
-        (return (__add_with_overflow a b)))
+      (if (eq (bitand other 1) 1)
+        # Other is fixnum
+        (return (callm self __add_heap_and_fixnum other))
+        # Other is heap
+        (return (callm self __add_heap_and_heap other)))
     )
+  end
+
+  # Add heap integer to fixnum
+  def __add_heap_and_fixnum(fixnum_val)
+    my_sign = @sign
+    my_limbs = @limbs
+
+    # Extract fixnum value and determine sign, create limb array
+    # Do this all in s-expression to avoid assignment issues
+    %s(
+      (let (raw_val abs_val other_sign_val other_limb)
+        (assign raw_val (sar fixnum_val))
+        (if (lt raw_val 0)
+          (do
+            (assign other_sign_val -1)
+            (assign abs_val (sub 0 raw_val)))
+          (do
+            (assign other_sign_val 1)
+            (assign abs_val raw_val)))
+        (assign other_limb (__int abs_val))
+        # Call helper with extracted values
+        (return (callm self __add_magnitudes_fixnum (other_limb other_sign_val))))
+    )
+  end
+
+  # Helper for adding heap integer magnitude with fixnum magnitude
+  def __add_magnitudes_fixnum(other_limb, other_sign_val)
+    my_sign = @sign
+    my_limbs = @limbs
+    other_limbs = [other_limb]
+
+    # If signs are different, this becomes subtraction (not implemented yet)
+    if my_sign != other_sign_val
+      # TODO: Implement subtraction
+      # For now, fall back to simple approach using s-expression
+      %s(
+        (let (a b)
+          (assign a (callm self __get_raw))
+          (assign b (sar other_limb))
+          (if (lt other_sign_val 0)
+            (assign b (sub 0 b)))
+          (return (__add_with_overflow a b)))
+      )
+    else
+      # Same sign - add magnitudes
+      __add_magnitudes(my_limbs, other_limbs, my_sign)
+    end
+  end
+
+  # Add two heap integers
+  def __add_heap_and_heap(other_heap)
+    my_sign = @sign
+    my_limbs = @limbs
+    other_sign = other_heap.__get_sign
+    other_limbs = other_heap.__get_limbs
+
+    # If signs are different, this becomes subtraction (not implemented yet)
+    if my_sign != other_sign
+      # TODO: Implement subtraction
+      # For now, fall back to __get_raw
+      %s(
+        (let (a b)
+          (assign a (callm self __get_raw))
+          (assign b (callm other_heap __get_raw))
+          (return (__add_with_overflow a b)))
+      )
+    else
+      # Same sign - add magnitudes
+      __add_magnitudes(my_limbs, other_limbs, my_sign)
+    end
+  end
+
+  # Add two limb arrays (magnitudes only, no sign)
+  # Returns new Integer with given sign
+  def __add_magnitudes(limbs_a, limbs_b, sign)
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+
+    # Calculate max using helper
+    max_len = __max_fixnum(len_a, len_b)
+
+    result_limbs = []
+    carry = 0
+    i = 0
+
+    while __less_than(i, max_len) != 0
+      # Get limbs from arrays
+      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
+      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
+
+      # Add limbs with carry
+      sum_result = __add_limbs_with_carry(limb_a, limb_b, carry)
+
+      # Check for overflow (avoid large literal - use computed value)
+      limit = 1 << 30  # 2^30 = 1073741824
+      if __ge_fixnum(sum_result, limit) != 0
+        limb_to_store = sum_result - limit
+        result_limbs << limb_to_store
+        carry = 1
+      else
+        result_limbs << sum_result
+        carry = 0
+      end
+
+      i = i + 1
+    end
+
+    # If there's still a carry, add a new limb
+    if carry != 0
+      result_limbs << 1
+    end
+
+    # Check if result fits in a fixnum (single limb < 2^30)
+    result_len = result_limbs.length
+    first_limb = result_limbs[0]
+    half_max = 1 << 29  # 536870912 = 2^29
+
+    should_demote = 0
+    if result_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      # Convert to fixnum
+      val = first_limb
+      if sign < 0
+        val = 0 - val
+      end
+      return val
+    else
+      # Create heap integer
+      result = Integer.new
+      result.__set_heap_data(result_limbs, sign)
+      return result
+    end
+  end
+
+  # Add three limbs (a + b + carry) - all are tagged fixnums
+  # Returns tagged fixnum result
+  def __add_limbs_with_carry(a, b, c)
+    %s(
+      (let (a_raw b_raw c_raw sum)
+        (assign a_raw (sar a))
+        (assign b_raw (sar b))
+        (assign c_raw (sar c))
+        (assign sum (add a_raw b_raw))
+        (assign sum (add sum c_raw))
+        (return (__int sum)))
+    )
+  end
+
+  # Helper: max of two fixnums (avoids true/false issues)
+  def __max_fixnum(a, b)
+    %s((if (gt a b) (return a) (return b)))
+  end
+
+  # Helper: a < b for fixnums (avoids true/false issues)
+  # Returns 1 if true, 0 if false
+  def __less_than(a, b)
+    %s((if (lt a b) (return (__int 1)) (return (__int 0))))
+  end
+
+  # Helper: a >= b for fixnums (avoids true/false issues)
+  # Returns 1 if true, 0 if false
+  def __ge_fixnum(a, b)
+    %s((if (ge a b) (return (__int 1)) (return (__int 0))))
+  end
+
+  # Helper: get limb from array or 0 if out of bounds
+  def __get_limb_or_zero(arr, i, len)
+    # Use simple Ruby array indexing
+    if __less_than(i, len) != 0
+      arr[i]
+    else
+      0
+    end
   end
 
   # Helper to get sign for multi-limb operations

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Latest work:** Implementing multi-limb to_s support
+**Latest work:** Implementing multi-limb addition support
 
 ### What Works
 - ✅ **Heap integer limb storage WORKING!**
@@ -45,10 +45,12 @@
 - ✅ Phase 3: Allocation and creation (DONE - but single-limb only)
 - ✅ Phase 4: Basic Arithmetic (DONE - but single-limb only, delegates to __get_raw)
 - ✅ Phase 5: Operator scaffolding (DONE - all operators exist but use __get_raw)
-- ⏳ **Phase 6: Multi-Limb Support (CRITICAL - THE ENTIRE POINT)**
+- ⏳ **Phase 6: Multi-Limb Support (IN PROGRESS)**
   - [ ] Split values into proper 30-bit limbs in __init_overflow
-  - [ ] Multi-limb addition with carry propagation
-  - [ ] Multi-limb subtraction with borrow propagation
+  - ✅ Multi-limb addition with carry propagation (Step 3 - DONE for same-sign)
+    - ✅ Implemented __add_magnitudes with carry propagation
+    - ✅ Test: [1,1] + [2,0] → 1073741827 ✅
+  - [ ] Multi-limb subtraction with borrow propagation (Step 4 - TODO)
   - ✅ Multi-limb comparison (Step 1 - DONE)
   - ✅ Multi-limb to_s conversion (Step 2 - DONE)
     - ✅ Single-limb to_s working
@@ -486,3 +488,110 @@ Value directly in register/memory: (n << 1) | 1
 - ✅ selftest-c: 0 failures
 
 **Status: MULTI-LIMB TO_S WORKING! ✅**
+
+## Multi-Limb Addition (Step 3) ✅ COMPLETE
+
+### Implementation
+
+**Algorithm:** School addition with carry propagation
+1. Check if signs are same (addition) or different (subtraction)
+2. Get limb arrays from both operands
+3. Add limbs from least to most significant, propagating carry
+4. Handle overflow into new limb if needed
+5. Create result heap integer or demote to fixnum if fits
+
+**Key Implementation Details:**
+- Implemented `__add_heap` to dispatch to `__add_heap_and_fixnum` or `__add_heap_and_heap`
+- Implemented `__add_magnitudes` with limb-by-limb addition and carry propagation
+- Added helper methods to avoid true/false issues in comparisons:
+  - `__max_fixnum(a, b)` - returns max without using > operator
+  - `__less_than(a, b)` - returns 1 or 0 instead of true/false
+  - `__ge_fixnum(a, b)` - returns 1 or 0 for >= comparison
+  - `__get_limb_or_zero(arr, i, len)` - safely gets array element or 0
+  - `__add_limbs_with_carry(a, b, c)` - adds three limbs with s-expression
+- Avoided large integer literals (>= 2^30) to prevent bootstrap issues
+- Used computed values like `1 << 30` instead of `1073741824`
+
+**Key Bug Fixes:**
+- Fixed Fixnum#> returning true/false objects that don't work in all contexts
+- Fixed `__get_limb_or_zero` s-expression index operation - rewrote using Ruby array indexing
+- Avoided mixing Ruby control flow with s-expression comparisons
+
+**Test Results:**
+- ✅ [1,1] + [2,0] → 1073741827 (correct: 1073741825 + 2)
+- ✅ [3] + [2] → 5 (single-limb addition)
+- ✅ selftest-c: 0 failures
+
+**Status: Multi-limb addition WORKING for same-sign operands! ✅**
+
+### Remaining Work
+- [ ] Step 3.4: Handle subtraction (different signs) - currently falls back to __get_raw
+
+## Testing Approach
+
+### Test File Organization
+
+**Single-Limb Tests:**
+- `test_heap_minimal.rb` - Basic single-limb heap integer to_s
+- `test_negative_heap.rb` - Negative single-limb values
+- `test_radix.rb` - Various radixes on single-limb
+
+**Multi-Limb Tests:**
+- `test_multilimb.rb` - Multi-limb creation via multiplication (currently returns 0 - no multi-limb * yet)
+- `test_multilimb2.rb` - Direct multi-limb creation using `__set_heap_data([1,1], 1)`
+- `test_multilimb_radix.rb` - Multi-limb with various radixes
+- `test_debug_multilimb.rb` - Debug divmod on multi-limb values
+- `test_multilimb_add.rb` - **Shows current limitation**: [1,1] + [2,0] returns 2
+
+**Core Validation:**
+- `make selftest` - MRI-compiled compiler tests (fast, always passes)
+- `make selftest-c` - Self-compiled compiler tests (critical validation)
+- Manual verification of output values
+
+### Testing Strategy
+
+**Incremental Validation:**
+1. Write minimal test case for new feature
+2. Compile and run: `./compile test_foo.rb -g && timeout 5 ./out/test_foo`
+3. Verify output matches expected
+4. Run `make selftest-c` to ensure no regressions
+5. Document results in docs/bignums.md
+6. Commit working code with test results
+
+**Debug Approach:**
+- Use `gdb` for segfaults: `gdb -batch -ex 'run' -ex 'bt' ./out/test_foo`
+- Check assembly output when needed: `sed -n 'LINE1,LINE2p' out/test_foo.s`
+- Add debug output with puts to trace execution
+- Use `__get_limbs`, `__get_sign` helpers to inspect heap integer state
+
+**Validation Criteria:**
+- Test output matches expected value ✅
+- selftest-c passes with 0 failures ✅
+- No segfaults or FPEs ✅
+- Code works when self-compiled ✅
+
+### Current Status (Session End)
+
+**Completed in this session:**
+- ✅ Fixed multiple crashes in to_s implementation
+- ✅ Implemented multi-limb division by small radix
+- ✅ All to_s test cases passing
+- ✅ selftest-c: 0 failures
+- ✅ Committed working implementation
+
+**Test Results:**
+```
+test_heap_minimal.rb:     536870912.to_s → "536870912" ✅
+test_negative_heap.rb:    -536870913.to_s → "-536870913" ✅
+test_radix.rb:            536870912.to_s(16) → "20000000" ✅
+test_multilimb2.rb:       [1,1].to_s → "1073741825" ✅
+test_multilimb_radix.rb:  [1,1].to_s(16) → "40000001" ✅
+test_multilimb_add.rb:    [1,1] + [2,0] → 2 (FAILS - multi-limb + not implemented)
+```
+
+**Current Commit:** `d081db5` - Implement multi-limb to_s support for heap integers
+
+**Ready for Next Session:**
+- Multi-limb addition implementation (Phase 6 Step 3)
+- Test file ready: `test_multilimb_add.rb`
+- Algorithm documented in "Multi-Limb Addition (Step 3 - Next)" section above
