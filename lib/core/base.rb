@@ -54,18 +54,25 @@
 
 # Minimal bignum support - detect overflow and handle it
 %s(defun __add_with_overflow (a b)
-  (let (result high_bits)
+  (let (result high_bits obj sign shift_amt val_to_shift)
     (assign result (add a b))
     # Check if result fits in 30 bits by shifting right 29
-    (assign high_bits (sarl 29 result))
+    (assign shift_amt 29)
+    (assign val_to_shift result)
+    (assign high_bits (sarl shift_amt val_to_shift))
     # If high_bits is 0 or -1, result fits in fixnum
     (if (or (eq high_bits 0) (eq high_bits -1))
       (return (__int result))
       (do
-        # Overflow detected
-        (dprintf 2 "OVERFLOW: result=%ld high_bits=%ld\n" result high_bits)
-        # TODO: Allocate heap integer here
-        # For now, return wrapped value (incorrect but safe)
-        (return (__int result))))
+        # Overflow detected - allocate heap integer
+        (dprintf 2 "OVERFLOW: allocating heap integer (result=%ld)\n" result)
+        (assign obj (callm Integer new))
+        # Determine sign
+        (if (lt result 0)
+          (assign sign (__int -1))
+          (assign sign (__int 1)))
+        # Initialize with overflow value
+        (callm obj __init_overflow ((__int result) sign))
+        (return obj)))
   )
 )
