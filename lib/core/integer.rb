@@ -30,20 +30,58 @@ class Integer < Numeric
     @sign = sign
   end
 
+  # Initialize heap integer from overflow value
+  # Called from __add_with_overflow when allocation is needed
+  def __init_overflow(raw_value, sign)
+    # For now, store the full value in a single limb
+    # TODO: Properly split into 30-bit limbs
+    @limbs = [raw_value]
+    @sign = sign
+  end
+
+  # Get raw integer value
+  # For tagged fixnums: extract by right shift
+  # For heap integers: error for now (need proper conversion)
+  def __get_raw
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Tagged fixnum - extract raw value
+        (return (sar self))
+        # Heap integer - not yet implemented
+        (do
+          (dprintf 2 "ERROR: __get_raw called on heap integer\n")
+          (return 0)))
+    )
+  end
+
   # Addition - handles both tagged fixnums and heap integers
   def + other
     # Check bit 0 of self: if 1, it's a tagged fixnum; if 0, it's a heap object
     # Do this check entirely in s-expression to avoid bitand issues in Ruby code
     %s(
       (if (eq (bitand self 1) 1)
-        # Tagged fixnum - use existing arithmetic with overflow detection
-        (let (a b)
-          (assign a (sar self))
-          (assign b (callm other __get_raw))
-          (return (__add_with_overflow a b)))
+        # Tagged fixnum path
+        (do
+          # Check if other is also a tagged fixnum
+          (if (eq (bitand other 1) 1)
+            # Both tagged fixnums - use existing arithmetic with overflow detection
+            (let (a b)
+              (assign a (sar self))
+              (assign b (sar other))
+              (return (__add_with_overflow a b)))
+            # self is tagged fixnum, other is heap integer - dispatch to Ruby
+            (return (callm self __add_fixnum_to_heap other))))
         # Heap integer - dispatch to Ruby implementation
         (return (callm self __add_heap other)))
     )
+  end
+
+  # Add tagged fixnum to heap integer
+  # Called when self is tagged fixnum and other is heap integer
+  def __add_fixnum_to_heap(heap_int)
+    # TODO: Implement fixnum + heap integer
+    %s(dprintf 2 "fixnum + heap integer\n")
+    0
   end
 
   # Add heap integer to another value
@@ -51,8 +89,9 @@ class Integer < Numeric
   def __add_heap(other)
     # TODO: Implement proper heap integer arithmetic
     # For now, just return a placeholder to test the dispatch mechanism
-    STDERR.puts "Heap integer arithmetic not yet implemented"
-    nil
+    %s(dprintf 2 "__add_heap called\n")
+    # Return 0 for now
+    0
   end
 
   def numerator

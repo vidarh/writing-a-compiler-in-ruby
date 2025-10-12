@@ -64,8 +64,10 @@
       (do
         # Overflow detected
         (dprintf 2 "OVERFLOW\n")
-        # FIXME: Should allocate heap integer here
+        # TODO: Allocate heap integer here
         # (assign obj (callm Integer new))
+        # (callm obj __init_overflow ((__int result) sign))
+        # (return obj)
         # For now, return wrapped value (incorrect but safe)
         (return (__int result))))
   )
