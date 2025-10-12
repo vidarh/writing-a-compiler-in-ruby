@@ -2,11 +2,11 @@
 
 ## Current Status
 
-**Latest commit:** `5025610` - Add predicates and utility methods to Integer
+**Latest commit:** `f56e9c9` - Fix selftest-c: Replace large Float literals with computed values
 
 ### What Works
 - ✅ **Heap integer arithmetic working!**
-- ✅ **selftest-c PASSING with heap integer support!**
+- ✅ **selftest-c PASSING!** (Fixed by avoiding large literals)
 - Overflow detection and allocation (lib/core/base.rb:56)
 - Integer#__add_heap: heap integer + fixnum (lib/core/integer.rb:89)
 - **Test results:**
@@ -261,13 +261,36 @@ Optimize by converting small heap integers back to fixnums.
 
 ## Technical Constraints
 
-### Tokenizer Limitation
-⚠️ **CRITICAL:** `tokens.rb` currently truncates large integer literals because bignum support is incomplete.
+### CRITICAL: No Large Literals During Compilation
+⚠️ **MOST IMPORTANT CONSTRAINT:**
 
-**Workaround until Phase 2+ complete:**
-- DO NOT use large literals like `1000000000000`
-- Instead construct via operations: `1000000 * 1000000`
-- Or use shifts: `1 << 40` (but register allocation may be unsafe)
+The compiler can compile multi-limb bignum code, but it **CANNOT USE large literals** during compilation until multi-limb support is complete.
+
+**Why this matters:**
+- Large integer literals (> 30-bit) cause overflow during parsing
+- Overflow triggers heap integer allocation
+- Until multi-limb arithmetic is complete, heap integer operations may fail
+- This creates a bootstrap problem
+
+**REQUIRED workarounds in compiler source code:**
+- ✅ **DO**: Use computed values: `1 << 28`, `1000000 * 1000`
+- ❌ **DON'T**: Use large literals: `1000000000000000`
+- ✅ **DO**: Build large numbers via operations
+- ❌ **DON'T**: Write literals with > 9 digits
+
+**Example fix (Float::INFINITY):**
+```ruby
+# BAD - causes overflow during compilation:
+INFINITY = 999999999999999999999999999999
+
+# GOOD - computes value without literal overflow:
+INFINITY = 1 << 28
+```
+
+**This constraint only applies during self-compilation.** Once multi-limb support is complete, large literals will work everywhere.
+
+### Tokenizer Limitation
+`tokens.rb` truncates large integer literals to prevent parser crashes. This is intentional until multi-limb support is complete.
 
 ### Testing Strategy
 - `make selftest-c` MUST pass after each commit
