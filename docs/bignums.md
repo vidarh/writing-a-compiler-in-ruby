@@ -2,11 +2,13 @@
 
 ## Current Status
 
-**Latest commit:** `b61dd31` - Fix register clobbering bug in compile_sarl and compile_sall
+**Latest commit:** `0ff4338` - Update docs: document sarl/sall register clobbering fix
 
 ### What Works
-- Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
+- ✅ **Overflow detection working correctly** (lib/core/base.rb:56)
 - Detects when addition result doesn't fit in 30-bit signed integer
+- Uses sarl to shift result right by 29 bits
+- Checks if high_bits is 0 or -1 (fits in fixnum)
 - Currently prints "OVERFLOW" and returns wrapped value
 - **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:57)
 - **Integer#__get_raw** migrated from Fixnum#__get_raw (lib/core/integer.rb:45)
@@ -27,7 +29,8 @@
 - ✅ Phase 1: Integer bignum storage structure (documentation)
 - ✅ Phase 2: Detection helpers (stub implementation)
 - ✅ Phase 3.5: Integer#+ infrastructure (DONE)
-- ⏳ Phase 3: Allocation and creation (READY TO IMPLEMENT)
+- ✅ Phase 3.6: Overflow detection (DONE)
+- ⏳ Phase 3: Allocation and creation (NEXT - infrastructure ready)
 
 ### Current Representation
 
@@ -78,26 +81,29 @@ Add methods to detect whether an Integer is tagged or heap-allocated.
 **Commits:**
 - d357e52 - Add __is_heap_integer? stub method to Integer
 
-### Phase 3: Allocation and Creation (READY TO IMPLEMENT)
+### Phase 3: Allocation and Creation (READY - all blockers resolved)
 Replace overflow detection with actual bignum allocation.
 
 **Completed:**
 - ✅ Created `Integer#initialize` to set up @limbs/@sign (lib/core/integer.rb:21)
-- ✅ Created `Integer#__set_heap_data(limbs, sign)` helper (lib/core/integer.rb:28)
+- ✅ Created `Integer#__set_heap_data(limbs, sign)` helper (lib/core/integer.rb:26)
+- ✅ Created `Integer#__init_overflow(raw_value, sign)` helper (lib/core/integer.rb:33)
 - ✅ Verified `(callm Integer new)` allocates successfully
-- ✅ Identified blocker requirement: Integer#+ infrastructure
 - ✅ Implemented Integer#+ with representation dispatch (Phase 3.5)
-- ✅ Tag bit checking works in s-expression context
+- ✅ Fixed sarl/sall register clobbering bugs (Phase 3.6)
+- ✅ Overflow detection working correctly
 
-**Blocker Resolved:**
-The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
+**All Blockers Resolved:**
+- ✅ Integer#+ infrastructure complete
+- ✅ sarl bug fixed
+- ✅ Tag bit checking works
+- ✅ Dispatch mechanism tested
 
 **Next Steps:**
-1. Implement simple heap integer creation from overflow value
-2. Store value in @limbs array (initially single limb)
-3. Set @sign based on result sign
-4. Return heap integer from __add_with_overflow
-5. Test that it gets properly dispatched to __add_heap
+1. Enable heap integer allocation in __add_with_overflow
+2. Test heap integer creation and dispatch
+3. Migrate essential methods (comparisons, to_s, etc.)
+4. Implement heap integer arithmetic operations
 
 **Investigation Notes:**
 - bitand in nested s-expression context causes segfault (register allocation bug)
