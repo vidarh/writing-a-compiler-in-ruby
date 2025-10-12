@@ -309,6 +309,36 @@ class Integer < Numeric
     end
   end
 
+  # Predicates
+  def zero?
+    %s(if (eq (callm self __get_raw) 0) true false)
+  end
+
+  def even?
+    self % 2 == 0
+  end
+
+  def odd?
+    (self % 2) != 0
+  end
+
+  # Utility methods
+  def to_i
+    self
+  end
+
+  def succ
+    self + 1
+  end
+
+  def next
+    self + 1
+  end
+
+  def pred
+    self - 1
+  end
+
   # Comparison operators - for now, just delegate to __get_raw
   # This is a temporary workaround until proper heap integer comparisons are implemented
   def > other
