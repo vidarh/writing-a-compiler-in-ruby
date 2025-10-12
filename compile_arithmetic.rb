@@ -32,13 +32,15 @@ class Compiler
     # left = shift amount, right = value to shift
     # x86 requires shift count in %cl
 
-    # Evaluate first arg (shift amount)
+    # Evaluate first arg (shift amount) and save it
     shift_amt = compile_eval_arg(scope, left)
-    # Move to %ecx (x86 shifts require count in %cl)
-    @e.movl(@e.result, :ecx)
+    @e.pushl(@e.result)
 
     # Evaluate second arg (value to shift)
     val = compile_eval_arg(scope, right)
+
+    # Pop shift amount into %ecx
+    @e.popl(:ecx)
 
     # Shift value (in %eax) by %cl
     @e.sarl(:cl, @e.result)
@@ -52,13 +54,15 @@ class Compiler
     # left = shift amount, right = value to shift
     # x86 requires shift count in %cl
 
-    # Evaluate first arg (shift amount)
+    # Evaluate first arg (shift amount) and save it
     shift_amt = compile_eval_arg(scope, left)
-    # Move to %ecx (x86 shifts require count in %cl)
-    @e.movl(@e.result, :ecx)
+    @e.pushl(@e.result)
 
     # Evaluate second arg (value to shift)
     val = compile_eval_arg(scope, right)
+
+    # Pop shift amount into %ecx
+    @e.popl(:ecx)
 
     # Shift value (in %eax) by %cl
     @e.sall(:cl, @e.result)
