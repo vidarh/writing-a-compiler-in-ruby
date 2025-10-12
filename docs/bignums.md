@@ -2,15 +2,18 @@
 
 ## Current Status
 
-**Latest commit:** `1ca0338` - Enable heap integer allocation in __add_with_overflow
+**Latest commit:** `2137ee3` - Implement basic heap integer operations
 
 ### What Works
-- ✅ **Heap integer allocation working!** (lib/core/base.rb:56)
-- Overflow correctly detected when result exceeds 30-bit range
-- Heap integers allocated via Integer.new
-- __init_overflow initializes @limbs and @sign
-- Simple test: 536870911 + 1 = heap integer ✅
-- Heap integers can be created and returned
+- ✅ **Heap integer arithmetic working!**
+- Overflow detection and allocation (lib/core/base.rb:56)
+- Integer#to_s shows heap integer values (lib/core/integer.rb:117)
+- Integer#__add_heap: heap integer + fixnum (lib/core/integer.rb:89)
+- **Test results:**
+  - 536870911 + 1 = 536870912(heap) ✅
+  - heap + 5 = 536870917 ✅
+  - heap + 10 + 20 = 536870942 ✅
+- Heap integers work in expressions!
 - **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:57)
 - **Integer#__get_raw** migrated from Fixnum#__get_raw (lib/core/integer.rb:45)
 - **Tag bit checking** via bitand in s-expression context
@@ -31,8 +34,9 @@
 - ✅ Phase 2: Detection helpers (stub implementation)
 - ✅ Phase 3.5: Integer#+ infrastructure (DONE)
 - ✅ Phase 3.6: Overflow detection (DONE)
-- ✅ Phase 3: Allocation and creation (DONE - heap integers allocating!)
-- ⏳ Phase 4: Basic Arithmetic (NEXT - implement heap integer operations)
+- ✅ Phase 3: Allocation and creation (DONE)
+- ✅ Phase 4: Basic Arithmetic (DONE - heap + fixnum working!)
+- ⏳ Phase 5: Conversions and Comparisons (NEXT - to_i, ==, <, etc.)
 
 ### Current Representation
 
@@ -134,13 +138,23 @@ Replace overflow detection with actual bignum allocation.
 - f58c151 - Revert __add_with_overflow to simple implementation
 - b61dd31 - Fix register clobbering bug in compile_sarl and compile_sall
 
-### Phase 4: Basic Arithmetic
+### Phase 4: Basic Arithmetic ✅ COMPLETE (basic)
 Implement arithmetic operations on heap integers.
 
-**TODO:**
-- [ ] Update Integer#+ to handle heap integer + fixnum
-- [ ] Update Integer#+ to handle heap integer + heap integer
-- [ ] Automatic promotion in overflow cases
+**Completed:**
+- ✅ Integer#+ handles heap integer + fixnum (lib/core/integer.rb:89)
+- ✅ Integer#to_s shows heap integer values (lib/core/integer.rb:117)
+- ✅ Basic arithmetic working in expressions
+
+**Limitations (acceptable for Phase 4):**
+- Only single-limb heap integers (values up to 32-bit)
+- heap + heap not yet implemented
+- No overflow check in heap + fixnum result
+- Subtraction, multiplication, division not yet implemented
+
+**TODO for future:**
+- [ ] Handle heap integer + heap integer
+- [ ] Overflow detection in heap arithmetic
 - [ ] Update Integer#- (subtraction)
 - [ ] Update Integer#* (multiplication)
 - [ ] Update Integer#/ (division)
