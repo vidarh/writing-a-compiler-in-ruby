@@ -306,6 +306,32 @@ INFINITY = 1 << 28
   2. Then: multi-limb arithmetic operations
   3. Finally: proper limb splitting in __init_overflow
 
+**Heap Integer to_s Implementation Challenges:**
+Multiple approaches attempted, all hit bootstrap issues:
+
+1. **Approach 1: Extract + re-tag + Fixnum#to_s**
+   - Extract raw value from limb
+   - Re-tag with __int
+   - Call Fixnum#to_s
+   - Problem: Re-tagging 32-bit values causes overflow, creating invalid fixnums
+   - Result: Segfault in Fixnum#to_s
+
+2. **Approach 2: Add __raw_int_to_s helper in base.rb**
+   - Created s-expression function using snprintf
+   - Extract raw value, convert directly without tagging
+   - Problem: Function works but limb values corrupted (same address for different integers)
+   - Suggests Ruby array literal `@limbs = [value]` not working correctly
+   - Result: Wrong values displayed, arithmetic gives wrong results
+
+3. **Approach 3: Use s-expression Array.new + push**
+   - Replace `@limbs = [value]` with explicit Array creation in s-expressions
+   - Problem: Causes segfault during selftest-c compilation
+   - Result: Breaks bootstrap
+
+**Root Issue:** The limb storage mechanism via Ruby array literals appears problematic. Both heap integers showed same limb address (0x5fcaaf20), suggesting arrays aren't being created/populated correctly. Needs deeper investigation of how array literals work during initialization.
+
+**Current Solution:** Keep Integer#inspect returning "<heap-integer>" marker. Defer to_s implementation until after getting basic arithmetic working. Can test arithmetic correctness using equality checks without needing string conversion.
+
 **Key Insight:**
 The compiler CAN compile multi-limb code, but during self-compilation, large values trigger heap allocation. If those heap integer operations aren't complete, bootstrap fails. Solution: keep code simple and avoid operations that would exercise incomplete multi-limb code during compilation.
 
