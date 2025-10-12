@@ -46,11 +46,14 @@
 - ✅ Phase 4: Basic Arithmetic (DONE - but single-limb only, delegates to __get_raw)
 - ✅ Phase 5: Operator scaffolding (DONE - all operators exist but use __get_raw)
 - ⏳ **Phase 6: Multi-Limb Support (IN PROGRESS)**
-  - [ ] Split values into proper 30-bit limbs in __init_overflow
-  - ✅ Multi-limb addition with carry propagation (Step 3 - DONE for same-sign)
+  - [ ] Split values into proper 30-bit limbs in __init_overflow (Step 5 - TODO)
+  - ✅ Multi-limb addition with carry propagation (Step 3 - DONE)
     - ✅ Implemented __add_magnitudes with carry propagation
     - ✅ Test: [1,1] + [2,0] → 1073741827 ✅
-  - [ ] Multi-limb subtraction with borrow propagation (Step 4 - TODO)
+  - ✅ Multi-limb subtraction with borrow propagation (Step 4 - DONE)
+    - ✅ Implemented __subtract_magnitudes with borrow propagation
+    - ✅ Implemented __compare_magnitudes for magnitude comparison
+    - ✅ Test: [1,1] + (-[2,0]) → 1073741823 ✅
   - ✅ Multi-limb comparison (Step 1 - DONE)
   - ✅ Multi-limb to_s conversion (Step 2 - DONE)
     - ✅ Single-limb to_s working
@@ -489,43 +492,58 @@ Value directly in register/memory: (n << 1) | 1
 
 **Status: MULTI-LIMB TO_S WORKING! ✅**
 
-## Multi-Limb Addition (Step 3) ✅ COMPLETE
+## Multi-Limb Addition & Subtraction (Steps 3-4) ✅ COMPLETE
 
 ### Implementation
 
-**Algorithm:** School addition with carry propagation
+**Algorithm:**
+**Addition (same signs):** School addition with carry propagation
+**Subtraction (different signs):** Compare magnitudes, subtract smaller from larger
+
 1. Check if signs are same (addition) or different (subtraction)
-2. Get limb arrays from both operands
-3. Add limbs from least to most significant, propagating carry
-4. Handle overflow into new limb if needed
+2. For addition: add limbs with carry propagation
+3. For subtraction: compare magnitudes, subtract smaller from larger
+4. Handle carry/borrow between limbs
 5. Create result heap integer or demote to fixnum if fits
 
 **Key Implementation Details:**
 - Implemented `__add_heap` to dispatch to `__add_heap_and_fixnum` or `__add_heap_and_heap`
 - Implemented `__add_magnitudes` with limb-by-limb addition and carry propagation
-- Added helper methods to avoid true/false issues in comparisons:
+- Implemented `__subtract_magnitudes` with borrow propagation
+- Implemented `__compare_magnitudes` to determine which magnitude is larger
+- Added helper methods to avoid true/false and large literal issues:
   - `__max_fixnum(a, b)` - returns max without using > operator
   - `__less_than(a, b)` - returns 1 or 0 instead of true/false
   - `__ge_fixnum(a, b)` - returns 1 or 0 for >= comparison
   - `__get_limb_or_zero(arr, i, len)` - safely gets array element or 0
   - `__add_limbs_with_carry(a, b, c)` - adds three limbs with s-expression
-- Avoided large integer literals (>= 2^30) to prevent bootstrap issues
-- Used computed values like `1 << 30` instead of `1073741824`
+  - `__subtract_with_borrow(a, b, c)` - subtracts with borrow
+  - `__limb_base_raw()` - computes 2^30 in s-expression (returns raw untagged value)
+  - `__half_limb_base()` - computes 2^29 in s-expression
+  - `__check_limb_overflow(sum)` - checks overflow and adjusts
+  - `__check_limb_borrow(diff)` - checks for borrow and adjusts
+
+**CRITICAL Bootstrap Issue Solved:**
+- Cannot use large literals (>= 2^30) during self-compilation
+- Cannot use `1 << 30` or `1024 * 1024 * 1024` - they overflow during bootstrap!
+- Solution: Compute 2^30 in s-expression as raw untagged value
+  - `__limb_base_raw` computes using `mul` in s-expression
+  - Returns RAW value (not tagged with __int)
+  - Work with raw value in s-expression comparisons and arithmetic
 
 **Key Bug Fixes:**
 - Fixed Fixnum#> returning true/false objects that don't work in all contexts
 - Fixed `__get_limb_or_zero` s-expression index operation - rewrote using Ruby array indexing
+- Fixed large literal bootstrap issue - cannot tag 2^30 as fixnum!
 - Avoided mixing Ruby control flow with s-expression comparisons
 
 **Test Results:**
-- ✅ [1,1] + [2,0] → 1073741827 (correct: 1073741825 + 2)
+- ✅ [1,1] + [2,0] → 1073741827 (addition: 1073741825 + 2)
+- ✅ [1,1] + (-[2,0]) → 1073741823 (subtraction: 1073741825 - 2)
 - ✅ [3] + [2] → 5 (single-limb addition)
 - ✅ selftest-c: 0 failures
 
-**Status: Multi-limb addition WORKING for same-sign operands! ✅**
-
-### Remaining Work
-- [ ] Step 3.4: Handle subtraction (different signs) - currently falls back to __get_raw
+**Status: Multi-limb addition AND subtraction WORKING! ✅**
 
 ## Testing Approach
 

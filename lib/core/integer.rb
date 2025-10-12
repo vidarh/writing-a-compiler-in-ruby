@@ -190,18 +190,23 @@ class Integer < Numeric
     my_limbs = @limbs
     other_limbs = [other_limb]
 
-    # If signs are different, this becomes subtraction (not implemented yet)
+    # If signs are different, this becomes subtraction
     if my_sign != other_sign_val
-      # TODO: Implement subtraction
-      # For now, fall back to simple approach using s-expression
-      %s(
-        (let (a b)
-          (assign a (callm self __get_raw))
-          (assign b (sar other_limb))
-          (if (lt other_sign_val 0)
-            (assign b (sub 0 b)))
-          (return (__add_with_overflow a b)))
-      )
+      # Compare magnitudes
+      cmp = __compare_magnitudes(my_limbs, other_limbs)
+
+      if cmp == 0
+        # Magnitudes equal - result is 0
+        return 0
+      else
+        if cmp > 0
+          # |self| > |other| - subtract other from self, keep self's sign
+          __subtract_magnitudes(my_limbs, other_limbs, my_sign)
+        else
+          # |self| < |other| - subtract self from other, use other's sign
+          __subtract_magnitudes(other_limbs, my_limbs, other_sign_val)
+        end
+      end
     else
       # Same sign - add magnitudes
       __add_magnitudes(my_limbs, other_limbs, my_sign)
@@ -215,16 +220,23 @@ class Integer < Numeric
     other_sign = other_heap.__get_sign
     other_limbs = other_heap.__get_limbs
 
-    # If signs are different, this becomes subtraction (not implemented yet)
+    # If signs are different, this becomes subtraction
     if my_sign != other_sign
-      # TODO: Implement subtraction
-      # For now, fall back to __get_raw
-      %s(
-        (let (a b)
-          (assign a (callm self __get_raw))
-          (assign b (callm other_heap __get_raw))
-          (return (__add_with_overflow a b)))
-      )
+      # Subtract magnitudes: determine which is larger
+      cmp = __compare_magnitudes(my_limbs, other_limbs)
+
+      if cmp == 0
+        # Magnitudes equal - result is 0
+        return 0
+      else
+        if cmp > 0
+          # |self| > |other| - subtract other from self, keep self's sign
+          __subtract_magnitudes(my_limbs, other_limbs, my_sign)
+        else
+          # |self| < |other| - subtract self from other, use other's sign
+          __subtract_magnitudes(other_limbs, my_limbs, other_sign)
+        end
+      end
     else
       # Same sign - add magnitudes
       __add_magnitudes(my_limbs, other_limbs, my_sign)
@@ -252,16 +264,14 @@ class Integer < Numeric
       # Add limbs with carry
       sum_result = __add_limbs_with_carry(limb_a, limb_b, carry)
 
-      # Check for overflow (avoid large literal - use computed value)
-      limit = 1 << 30  # 2^30 = 1073741824
-      if __ge_fixnum(sum_result, limit) != 0
-        limb_to_store = sum_result - limit
-        result_limbs << limb_to_store
-        carry = 1
-      else
-        result_limbs << sum_result
-        carry = 0
-      end
+      # Check for overflow and subtract limb_base if needed
+      # Use s-expression to work with raw limb_base value
+      overflow_result = __check_limb_overflow(sum_result)
+      adjusted_limb = overflow_result[0]
+      new_carry = overflow_result[1]
+
+      result_limbs << adjusted_limb
+      carry = new_carry
 
       i = i + 1
     end
@@ -274,7 +284,7 @@ class Integer < Numeric
     # Check if result fits in a fixnum (single limb < 2^30)
     result_len = result_limbs.length
     first_limb = result_limbs[0]
-    half_max = 1 << 29  # 536870912 = 2^29
+    half_max = __half_limb_base
 
     should_demote = 0
     if result_len == 1
@@ -296,6 +306,133 @@ class Integer < Numeric
       result.__set_heap_data(result_limbs, sign)
       return result
     end
+  end
+
+  # Compare two magnitude arrays (ignoring sign)
+  # Returns: -1 if a < b, 0 if equal, 1 if a > b
+  def __compare_magnitudes(limbs_a, limbs_b)
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+
+    # Different lengths - longer one is larger
+    if len_a != len_b
+      if __less_than(len_a, len_b) != 0
+        return -1
+      else
+        return 1
+      end
+    end
+
+    # Same length - compare from most significant limb
+    i = len_a - 1
+    while __ge_fixnum(i, 0) != 0
+      limb_a = limbs_a[i]
+      limb_b = limbs_b[i]
+
+      if limb_a != limb_b
+        if __less_than(limb_a, limb_b) != 0
+          return -1
+        else
+          return 1
+        end
+      end
+
+      i = i - 1
+    end
+
+    # All limbs equal
+    return 0
+  end
+
+  # Subtract limbs_b from limbs_a (assumes limbs_a >= limbs_b)
+  # Returns new Integer with given sign
+  def __subtract_magnitudes(limbs_a, limbs_b, sign)
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+    max_len = __max_fixnum(len_a, len_b)
+
+    result_limbs = []
+    borrow = 0
+    i = 0
+
+    while __less_than(i, max_len) != 0
+      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
+      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
+
+      # Subtract: limb_a - limb_b - borrow
+      diff = __subtract_with_borrow(limb_a, limb_b, borrow)
+
+      # Check if we need to borrow and add limb_base if negative
+      borrow_result = __check_limb_borrow(diff)
+      adjusted_limb = borrow_result[0]
+      new_borrow = borrow_result[1]
+
+      result_limbs << adjusted_limb
+      borrow = new_borrow
+
+      i = i + 1
+    end
+
+    # Remove leading zeros
+    result_len = result_limbs.length
+    while result_len > 1
+      last_limb = result_limbs[result_len - 1]
+      if last_limb == 0
+        result_len = result_len - 1
+      else
+        break
+      end
+    end
+
+    # Trim array if needed
+    if result_len != result_limbs.length
+      trimmed = []
+      j = 0
+      while __less_than(j, result_len) != 0
+        trimmed << result_limbs[j]
+        j = j + 1
+      end
+      result_limbs = trimmed
+    end
+
+    # Check if result fits in a fixnum
+    first_limb = result_limbs[0]
+    half_max = __half_limb_base
+
+    should_demote = 0
+    if result_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      # Convert to fixnum
+      val = first_limb
+      if sign < 0
+        val = 0 - val
+      end
+      return val
+    else
+      # Create heap integer
+      result = Integer.new
+      result.__set_heap_data(result_limbs, sign)
+      return result
+    end
+  end
+
+  # Subtract limb_b and borrow from limb_a
+  # Returns tagged fixnum (may be negative)
+  def __subtract_with_borrow(a, b, borrow)
+    %s(
+      (let (a_raw b_raw borrow_raw diff)
+        (assign a_raw (sar a))
+        (assign b_raw (sar b))
+        (assign borrow_raw (sar borrow))
+        (assign diff (sub a_raw b_raw))
+        (assign diff (sub diff borrow_raw))
+        (return (__int diff)))
+    )
   end
 
   # Add three limbs (a + b + carry) - all are tagged fixnums
@@ -337,6 +474,79 @@ class Integer < Numeric
     else
       0
     end
+  end
+
+  # Helper: get 2^30 = 1073741824 (limb base) - RETURNS RAW UNTAGGED VALUE
+  # Computed in s-expression to avoid bootstrap issues
+  # IMPORTANT: This returns an untagged value because 2^30 cannot fit in a fixnum!
+  def __limb_base_raw
+    %s(
+      (let (k1 k2 result)
+        (assign k1 1024)
+        (assign k2 (mul k1 k1))  # 1024 * 1024 = 1048576
+        (assign result (mul k2 k1))  # 1048576 * 1024 = 1073741824
+        (return result))  # Return RAW, don't tag with __int!
+    )
+  end
+
+  # Check if sum overflowed limb boundary and adjust
+  # Returns [adjusted_limb, carry] where carry is 0 or 1
+  def __check_limb_overflow(sum)
+    %s(
+      (let (sum_raw limb_base adjusted carry_val)
+        (assign sum_raw (sar sum))
+        (assign limb_base (callm self __limb_base_raw))
+
+        # Check if sum_raw >= limb_base
+        (if (ge sum_raw limb_base)
+          (do
+            (assign adjusted (sub sum_raw limb_base))
+            (assign carry_val 1))
+          (do
+            (assign adjusted sum_raw)
+            (assign carry_val 0)))
+
+        # Return array [adjusted_limb, carry]
+        (return (callm self __make_overflow_result ((__int adjusted) (__int carry_val)))))
+    )
+  end
+
+  # Helper to create [limb, carry] array
+  def __make_overflow_result(limb, carry)
+    [limb, carry]
+  end
+
+  # Check if diff is negative and add limb_base if needed
+  # Returns [adjusted_limb, borrow] where borrow is 0 or 1
+  def __check_limb_borrow(diff)
+    %s(
+      (let (diff_raw limb_base adjusted borrow_val)
+        (assign diff_raw (sar diff))
+        (assign limb_base (callm self __limb_base_raw))
+
+        # Check if diff_raw < 0
+        (if (lt diff_raw 0)
+          (do
+            (assign adjusted (add diff_raw limb_base))
+            (assign borrow_val 1))
+          (do
+            (assign adjusted diff_raw)
+            (assign borrow_val 0)))
+
+        # Return array [adjusted_limb, borrow]
+        (return (callm self __make_overflow_result ((__int adjusted) (__int borrow_val)))))
+    )
+  end
+
+  # Helper: get 2^29 = 536870912 (half limb base, max fixnum magnitude)
+  def __half_limb_base
+    %s(
+      (let (k1 k2 result)
+        (assign k1 512)
+        (assign k2 (mul k1 1024))  # 512 * 1024 = 524288
+        (assign result (mul k2 1024))  # 524288 * 1024 = 536870912
+        (return (__int result)))
+    )
   end
 
   # Helper to get sign for multi-limb operations
