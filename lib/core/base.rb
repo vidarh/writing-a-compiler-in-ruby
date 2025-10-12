@@ -52,14 +52,14 @@
 
 #%s(atexit tgc_stop)
 
-# Create a heap-allocated integer with a single limb value
-# For now, this is a stub that just returns a wrapped fixnum
-# TODO: Allocate actual Integer object with @limbs and @sign
+# Create a heap-allocated integer - for now just returns wrapped value
+# TODO: Actually allocate Integer object with @limbs and @sign
 %s(defun __make_heap_integer (value sign)
   (do
-    (dprintf 2 "OVERFLOW\n")
-    # FIXME: Should allocate Integer object here
-    # For now, return wrapped value (incorrect but maintains current behavior)
+    (dprintf 2 "HEAP_INTEGER\n")
+    # FIXME: Should use (callm Integer new) but that requires
+    # Integer class to be defined first
+    # For now, return wrapped value (incorrect but safe)
     (return (__int value)))
 )
 
