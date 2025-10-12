@@ -2,21 +2,17 @@
 
 ## Current Status
 
-**Latest commit:** `f56e9c9` - Fix selftest-c: Replace large Float literals with computed values
+**Latest commit:** `5f336e1` - Fix Integer#inspect to avoid crash on heap integers
 
 ### What Works
-- ✅ **Heap integer arithmetic working!**
+- ✅ **Heap integer allocation working during compilation!**
 - ✅ **selftest-c PASSING!** (Fixed by avoiding large literals)
 - Overflow detection and allocation (lib/core/base.rb:56)
-- Integer#__add_heap: heap integer + fixnum (lib/core/integer.rb:89)
-- **Test results:**
-  - 536870911 + 1 = 536870912(heap) ✅
-  - heap + 5 = 536870917 ✅
-  - heap + 10 + 20 = 536870942 ✅
-- Heap integers work in expressions!
-- **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:57)
-- **Integer#__get_raw** extracts values from both fixnums and heap integers (lib/core/integer.rb:45)
-- **Integer#__heap_get_raw** handles single-limb heap integer extraction (lib/core/integer.rb:55)
+- Integer#__add_heap: heap integer + fixnum (lib/core/integer.rb)
+- Heap integers work in arithmetic expressions (but limited to 32-bit values)
+- **Integer#+** migrated from Fixnum#+ with representation dispatch
+- **Integer#__get_raw** extracts values from both fixnums and heap integers
+- **Integer#__heap_get_raw** handles single-limb heap integer extraction
 - **Tag bit checking** via bitand in s-expression context
 - Integer#+ dispatches on all 4 cases:
   - fixnum + fixnum → __add_with_overflow ✅
@@ -28,15 +24,15 @@
   - fixnum - heap → uses __get_raw ✅
   - heap - fixnum → uses __get_raw ✅
   - heap - heap → uses __get_raw ✅
-- **Integer#inspect** - Proper display of heap integers (lib/core/integer.rb:169)
-- **Integer#==** - Equality comparison for both fixnums and heap integers (lib/core/integer.rb:231)
+- **Integer#inspect** - Returns "<heap-integer>" marker (proper display pending multi-limb to_s)
+- **Integer#==** - Equality comparison for both fixnums and heap integers
 - Integer#__get_raw dispatches based on representation
 - **Comparison operators**: >, >=, <, <= (delegate to __get_raw)
 - **Arithmetic operators**: %, * (delegate to __get_raw, * checks overflow)
 - Integer class documented with dual representation architecture
 - `Integer#initialize` sets up @limbs and @sign for heap integers
 - `Integer#__set_heap_data` helper for initialization
-- `Integer#__init_overflow` helper for heap integer creation
+- `Integer#__init_overflow` helper for heap integer creation (single-limb only)
 
 ### Progress
 - ✅ Phase 1: Integer bignum storage structure (documentation)
@@ -291,6 +287,27 @@ INFINITY = 1 << 28
 
 ### Tokenizer Limitation
 `tokens.rb` truncates large integer literals to prevent parser crashes. This is intentional until multi-limb support is complete.
+
+### Bootstrap Challenges Discovered
+
+**Integer#inspect Issue:**
+- Heap integers cannot be converted back to fixnums for display if they don't fit in 30 bits
+- Previous approach: extract raw value → tag → convert to string
+- Problem: tagging a 32-bit value causes overflow
+- Solution: Return "<heap-integer>" marker until proper multi-limb to_s is implemented
+- Fixed in commit 5f336e1
+
+**Multi-Limb Implementation Challenges:**
+- Cannot easily test multi-limb code because printing results requires multi-limb to_s
+- Limb storage representation is tricky: tagged vs raw values
+- Array operations in s-expressions during bootstrap can cause issues
+- Need to implement multi-limb operations in correct order:
+  1. First: multi-limb to_s (for debugging/testing)
+  2. Then: multi-limb arithmetic operations
+  3. Finally: proper limb splitting in __init_overflow
+
+**Key Insight:**
+The compiler CAN compile multi-limb code, but during self-compilation, large values trigger heap allocation. If those heap integer operations aren't complete, bootstrap fails. Solution: keep code simple and avoid operations that would exercise incomplete multi-limb code during compilation.
 
 ### Testing Strategy
 - `make selftest-c` MUST pass after each commit
