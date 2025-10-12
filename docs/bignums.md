@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Latest commit:** `a22b922` - Add Integer#inspect to fix Float constant initialization
+**Latest commit:** `e5bb93e` - Add Integer#== and implement fixnum + heap integer
 
 ### What Works
 - ✅ **Heap integer arithmetic working!**
@@ -20,7 +20,7 @@
 - **Tag bit checking** via bitand in s-expression context
 - Integer#+ dispatches on all 4 cases:
   - fixnum + fixnum → __add_with_overflow ✅
-  - fixnum + heap → __add_fixnum_to_heap (stub)
+  - fixnum + heap → __add_fixnum_to_heap ✅
   - heap + fixnum → __add_heap ✅
   - heap + heap → __add_heap ✅
 - Integer#- dispatches on all 4 cases:
@@ -29,6 +29,7 @@
   - heap - fixnum → uses __get_raw ✅
   - heap - heap → uses __get_raw ✅
 - **Integer#inspect** - Proper display of heap integers (lib/core/integer.rb:169)
+- **Integer#==** - Equality comparison for both fixnums and heap integers (lib/core/integer.rb:231)
 - Integer#__get_raw dispatches based on representation
 - **Comparison operators**: >, >=, <, <= (delegate to __get_raw)
 - **Arithmetic operators**: %, * (delegate to __get_raw, * checks overflow)
@@ -176,6 +177,7 @@ Make heap integers interoperate properly.
 **Completed:**
 - ✅ Integer#__get_raw extracts from heap integers (lib/core/integer.rb:45)
 - ✅ Integer#>, >=, <, <= comparison operators (lib/core/integer.rb:206-219)
+- ✅ Integer#== equality comparison (lib/core/integer.rb:231)
 - ✅ Integer#% modulo operator (works via Fixnum with __get_raw)
 - ✅ Integer#* multiplication with overflow check (works via Fixnum)
 - ✅ Integer#/ division (works via Fixnum with __get_raw)
@@ -188,10 +190,9 @@ Make heap integers interoperate properly.
 
 **TODO:**
 - [ ] Implement proper Integer#to_s for heap integers
-- [ ] Update Integer#== to handle heap representation properly
 - [ ] Implement proper multi-limb comparisons
 - [ ] Add coercion support
-- [ ] Implement remaining operators (-, /, **, etc.)
+- [ ] Implement remaining operators (**, etc.)
 
 ### Phase 6: Automatic Demotion
 Optimize by converting small heap integers back to fixnums.
