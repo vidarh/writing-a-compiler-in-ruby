@@ -85,9 +85,8 @@ class Fixnum < Integer
   end
 
   def + other
-    # Mask result to keep it in 31-bit signed range (30 bits + sign)
-    %s(let (result) (assign result (add (sar self) (callm other __get_raw)))
-      (__int (bitand result 0x7fffffff)))
+    # Add without masking - allows full 32-bit result
+    %s(__int (add (sar self) (callm other __get_raw)))
   end
 
   def - other
