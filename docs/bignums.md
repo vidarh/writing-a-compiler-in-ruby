@@ -243,19 +243,25 @@ For this to work on heap integers, we need:
   - Compares limbs from most significant to least
 - ✅ Updated all comparison operators (<, >, <=, >=) to use __cmp
 
-**Step 2: Multi-limb division by small integer (for to_s)** ⏳ IN PROGRESS
-- ⏳ Implementing `__divmod_by_fixnum(radix)` - divides integer by small fixnum
-  - Returns [quotient_fixnum, remainder_fixnum]
-  - Currently implemented for single-limb heap integers
-  - Uses s-expression code to handle both fixnum and heap cases
-  - **BLOCKER**: Array creation in s-expressions causing crashes
-  - Need to debug array allocation pattern for returning results
-- ⏳ Implemented `__to_s_multi(radix)` based on Fixnum#to_s algorithm
-  - Uses __divmod_by_fixnum for digit extraction
-  - Handles radix 2-36
-  - **BLOCKED** by __divmod_by_fixnum array return issue
-- [ ] Update `Integer#/` to use __divmod_by_fixnum for heap / fixnum case
-- [ ] Update `Integer#%` to use __divmod_by_fixnum for heap % fixnum case
+**Step 2: Multi-limb division by small integer (for to_s)** ⏳ BLOCKED
+- ⏳ Attempted `__divmod_by_fixnum(radix)` - divides integer by small fixnum
+  - **BLOCKER**: Mixing Ruby `if` with s-expression conditions causes compilation issues
+    - `if %s((eq (bitand self 1) 1))` gets compiled as method call, crashes with FPE
+    - Solution: Put all logic in single s-expression block
+  - **BLOCKER**: Array return from s-expressions problematic
+    - Tried `(callm Array new)` + `(callm arr push ...)` - FPE in __eqarg (wrong arg count?)
+    - Tried `(callm arr << ...)` - `<<` treated as bit shift operator, not method
+    - Tried calling Ruby helper method to pack array - causes parser syntax errors
+  - **BLOCKER**: Parser issues with complex code
+    - "Syntax error. [{/0 pri=99}]" when trying various approaches
+    - Valid Ruby syntax but compiler parser rejects it
+    - Comments with `/` inside s-expressions may cause issues
+- ⏳ Attempted `__to_s_multi(radix)` based on Fixnum#to_s algorithm
+  - Skeleton implemented but blocked by __divmod_by_fixnum issues
+- **RECOMMENDATION**: Need to either:
+  1. Debug why array creation/method calls fail in s-expressions, OR
+  2. Implement __divmod_by_fixnum entirely in s-expression assembly, OR
+  3. Find alternative approach that avoids problematic patterns
 
 **Step 3: Multi-limb to_s**
 - [ ] Copy Fixnum#to_s algorithm structure
