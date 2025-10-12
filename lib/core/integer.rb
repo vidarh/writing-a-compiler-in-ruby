@@ -234,20 +234,15 @@ class Integer < Numeric
 
   # Inspect - return string representation
   def inspect
-    # For heap integers, extract raw value and convert to string
-    # For fixnums, delegate to Fixnum#inspect
+    # For heap integers, return placeholder marker
+    # TODO: Implement proper multi-limb to_s for accurate display
     %s(
       (if (eq (bitand self 1) 1)
         # Tagged fixnum - will use Fixnum#inspect
         (return 0)
-        # Heap integer - convert raw value to string
-        (let (raw_val)
-          (assign raw_val (callm self __get_raw))
-          (assign raw_val (__int raw_val))
-          (return (callm raw_val to_s 10))))
+        # Heap integer - return marker (can't safely convert large values to fixnum)
+        (return (__get_string "<heap-integer>")))
     )
-    # Fallback (never reached)
-    "0"
   end
 
   # Arithmetic operators - temporary delegation to __get_raw
