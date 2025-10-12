@@ -172,35 +172,90 @@ class Integer < Numeric
   # Add heap integer to another value
   # Called when self is a heap-allocated integer
   def __add_heap(other)
-    %s(dprintf 2 "__add_heap called (self=heap, other=0x%lx)\n" other)
+    # For now, use __get_raw for both operands
+    # TODO: Use multi-limb addition
+    %s(
+      (let (a b)
+        (assign a (callm self __get_raw))
+        (assign b (callm other __get_raw))
+        (return (__add_with_overflow a b)))
+    )
+  end
 
-    # For now, simple implementation: extract our limb value, add to other
-    # This is incomplete but allows basic testing
-    if @limbs && @limbs.length > 0
-      my_value_tagged = @limbs[0]
+  # Helper to get sign for multi-limb operations
+  def __get_sign
+    @sign
+  end
 
-      # Check if other is tagged fixnum or heap integer
+  # Helper to get limbs for multi-limb operations
+  def __get_limbs
+    @limbs
+  end
+
+  # Multi-limb addition: add two heap integers
+  # This is the core bignum addition algorithm with carry propagation
+  def __add_multi_limb(other)
+    my_sign = @sign
+    other_sign = other.__get_sign
+    my_sign_raw = my_sign.__get_raw
+    other_sign_raw = other_sign.__get_raw
+
+    # If signs differ, this is actually subtraction
+    if my_sign_raw != other_sign_raw
+      # TODO: Implement subtraction
+      # For now, fall back to __get_raw (breaks for large numbers)
       %s(
-        (if (eq (bitand other 1) 1)
-          # other is tagged fixnum - extract its value
-          (let (my_val other_val result)
-            # Extract raw value from our tagged limb
-            (assign my_val (sar my_value_tagged))
-            # Extract raw value from other tagged integer
-            (assign other_val (sar other))
-            # Add them
-            (assign result (add my_val other_val))
-            # Return with overflow check
-            (return (__add_with_overflow result 0)))
-          # other is also heap integer - extract both raw values and add
-          (let (my_val other_val)
-            (assign my_val (callm self __get_raw))
-            (assign other_val (callm other __get_raw))
-            (return (__add_with_overflow my_val other_val))))
+        (let (a b)
+          (assign a (callm self __get_raw))
+          (assign b (callm other __get_raw))
+          (return (__add_with_overflow a b)))
       )
-    else
-      0
+      return  # unreachable
     end
+
+    # Same sign: add magnitudes
+    my_limbs = @limbs
+    other_limbs = other.__get_limbs
+    my_len = my_limbs.length
+    other_len = other_limbs.length
+    max_len = my_len
+    if other_len > my_len
+      max_len = other_len
+    end
+
+    result_limbs = []
+    carry = 0
+    i = 0
+
+    # Add limb by limb with carry
+    limb_mask = (1 << 30) - 1  # 30-bit mask (0x3FFFFFFF)
+    while i < max_len
+      my_limb_val = 0
+      if i < my_len
+        my_limb_val = my_limbs[i].__get_raw
+      end
+
+      other_limb_val = 0
+      if i < other_len
+        other_limb_val = other_limbs[i].__get_raw
+      end
+
+      sum = my_limb_val + other_limb_val + carry
+      result_limbs << (sum & limb_mask)
+      carry = sum >> 30  # Carry is the overflow past 30 bits
+
+      i = i + 1
+    end
+
+    # If there's still carry, add another limb
+    if carry > 0
+      result_limbs << carry
+    end
+
+    # Create result heap integer
+    result = Integer.new
+    result.__set_heap_data(result_limbs, @sign)
+    result
   end
 
 
