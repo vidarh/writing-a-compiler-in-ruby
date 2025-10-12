@@ -2,20 +2,25 @@
 
 ## Current Status
 
-**Latest commit:** `dc2e2e9` - Add heap integer arithmetic dispatch in Integer#+
+**Latest commit:** `8d2948e` - Add Integer infrastructure for heap integer support
 
 ### What Works
 - Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
 - Detects when addition result doesn't fit in 30-bit signed integer
 - Currently prints "OVERFLOW" and returns wrapped value
-- **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:34)
+- **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:57)
+- **Integer#__get_raw** migrated from Fixnum#__get_raw (lib/core/integer.rb:45)
 - **Tag bit checking** via bitand in s-expression context
-- Integer#+ dispatches based on representation:
-  - Tagged fixnum → uses __add_with_overflow
-  - Heap integer → calls __add_heap (stub)
+- Integer#+ dispatches on all 4 cases:
+  - fixnum + fixnum → __add_with_overflow
+  - fixnum + heap → __add_fixnum_to_heap (stub)
+  - heap + fixnum → __add_heap (stub)
+  - heap + heap → __add_heap (stub)
+- Integer#__get_raw dispatches based on representation
 - Integer class documented with dual representation architecture
 - `Integer#initialize` sets up @limbs and @sign for heap integers
 - `Integer#__set_heap_data` helper for initialization
+- `Integer#__init_overflow` helper for heap integer creation
 - selftest-c: ✅ PASSING
 
 ### Progress
@@ -100,6 +105,11 @@ The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 - Solution: do tag checks entirely within s-expressions, not via Ruby methods
 - Proc allocation pattern: allocate, call setter method, return object
 
+**Known Issues:**
+- Overflow messages during selftest-c compilation suggest compiler bug
+- Compiler shouldn't be creating integers large enough to overflow
+- Need to investigate source of large integers during compilation
+
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
 - 3d43c41 - Add Integer#initialize for heap-allocated integers
@@ -110,6 +120,8 @@ The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 - b70ab14 - Migrate Fixnum#+ to Integer#+ with representation dispatch
 - 5c01a8c - Move representation check to s-expression in Integer#+
 - dc2e2e9 - Add heap integer arithmetic dispatch in Integer#+
+- c689865 - Update docs: Phase 3 blocker resolved, infrastructure complete
+- 8d2948e - Add Integer infrastructure for heap integer support
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
