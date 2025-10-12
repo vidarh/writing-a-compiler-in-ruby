@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Latest commit:** `69de528` - Fix: Remove Fixnum#+ to use Integer#+ instead
+**Latest commit:** `b61dd31` - Fix register clobbering bug in compile_sarl and compile_sall
 
 ### What Works
 - Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
@@ -105,11 +105,14 @@ The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 - Solution: do tag checks entirely within s-expressions, not via Ruby methods
 - Proc allocation pattern: allocate, call setter method, return object
 
-**Bug Fixed:**
-- ✅ Spurious overflow messages during compilation - RESOLVED
-- Root cause: Fixnum#+ was still defined, calling __get_raw without checking representation
-- Method dispatch went to Fixnum#+ instead of Integer#+
-- Removed Fixnum#+ to let dispatch fall through to Integer#+
+**Bugs Fixed:**
+- ✅ Spurious overflow messages (Fixnum#+ issue) - RESOLVED
+  - Root cause: Fixnum#+ calling __get_raw without representation check
+  - Fix: Removed Fixnum#+ to use Integer#+ instead
+- ✅ sarl/sall register clobbering - RESOLVED
+  - Root cause: %ecx clobbered when evaluating second argument
+  - Fix: Push/pop shift amount around second arg evaluation
+  - Also fixed compile_sall with same pattern
 
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
@@ -125,6 +128,9 @@ The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 - 8d2948e - Add Integer infrastructure for heap integer support
 - 864bce1 - Update docs: document infrastructure and known issues
 - 69de528 - Fix: Remove Fixnum#+ to use Integer#+ instead
+- 328b128 - Update docs: document Fixnum#+ bug fix
+- f58c151 - Revert __add_with_overflow to simple implementation
+- b61dd31 - Fix register clobbering bug in compile_sarl and compile_sall
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
