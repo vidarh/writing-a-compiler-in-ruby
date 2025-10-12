@@ -84,15 +84,15 @@ class Fixnum < Integer
      )
   end
 
-  def + other
-    # Call helper that will eventually handle overflow
-    %s(
-      (let (a b)
-        (assign a (sar self))
-        (assign b (callm other __get_raw))
-        (return (__add_with_overflow a b)))
-    )
-  end
+  # Removed - now handled by Integer#+
+  # def + other
+  #   %s(
+  #     (let (a b)
+  #       (assign a (sar self))
+  #       (assign b (callm other __get_raw))
+  #       (return (__add_with_overflow a b)))
+  #   )
+  # end
 
   def - other
     # Mask result to keep it in 31-bit signed range (30 bits + sign)
