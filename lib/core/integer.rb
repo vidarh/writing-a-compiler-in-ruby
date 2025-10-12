@@ -32,22 +32,20 @@ class Integer < Numeric
 
   # Addition - handles both tagged fixnums and heap integers
   def + other
-    # Check if self is a heap integer
-    if __is_heap_integer?
-      # Heap integer arithmetic
-      # TODO: Implement heap integer + other
-      # For now, this path won't be reached since __is_heap_integer? always returns false
-      STDERR.puts "ERROR: Heap integer arithmetic not yet implemented"
-      nil
-    else
-      # Tagged fixnum - use existing arithmetic with overflow detection
-      %s(
+    # Check bit 0 of self: if 1, it's a tagged fixnum; if 0, it's a heap object
+    # Do this check entirely in s-expression to avoid bitand issues in Ruby code
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Tagged fixnum - use existing arithmetic with overflow detection
         (let (a b)
           (assign a (sar self))
           (assign b (callm other __get_raw))
           (return (__add_with_overflow a b)))
-      )
-    end
+        # Heap integer - not yet implemented
+        (do
+          (dprintf 2 "ERROR: Heap integer arithmetic not yet implemented\n")
+          (return 0)))
+    )
   end
 
   def numerator
