@@ -209,44 +209,68 @@ Implement true multi-limb arithmetic so bignums can represent numbers > 32-bit.
 - The entire point of bignums is to handle numbers larger than fit in 32 bits
 - Current implementation is just scaffolding that pretends to work but doesn't
 
-**Step 1: Proper limb storage**
-- [ ] Fix `__init_overflow` to split 32-bit values into 30-bit limbs
-- [ ] Each limb stores 30 bits (unsigned magnitude)
-- [ ] limb[0] = bits 0-29, limb[1] = bits 30-59, etc.
-- [ ] Sign stored separately in @sign
+**CRITICAL INSIGHT: __get_raw Cannot Work for Multi-Limb**
+- `__get_raw` and `__heap_get_raw` can NEVER work for multi-limb values
+- Multi-limb values inherently cannot fit in a single return register
+- All operations must work directly on limb arrays, not extracted values
+- This means operators like %, /, <, != must be rewritten to handle limb arrays
 
-**Step 2: Multi-limb addition**
-- [ ] Implement `__add_multi_limb(other_integer)` for heap + heap
-- [ ] Add limb-by-limb with carry propagation
-- [ ] Handle different limb counts
-- [ ] Return result as new heap integer with proper limb count
+**Strategy: Copy Fixnum#to_s Algorithm**
+The Fixnum#to_s algorithm is the simplest approach:
+```ruby
+# Algorithm from Fixnum#to_s:
+while n != 0
+  r = n % radix
+  out << digits[r]
+  break if n < radix
+  n = n / radix
+end
+```
 
-**Step 3: Multi-limb subtraction**
-- [ ] Implement `__sub_multi_limb(other_integer)` for heap - heap
-- [ ] Subtract limb-by-limb with borrow propagation
-- [ ] Handle sign changes when result is negative
+For this to work on heap integers, we need:
+1. `!=` operator (comparison with zero)
+2. `<` operator (comparison)
+3. `%` operator (modulo by small integer)
+4. `/` operator (division by small integer)
+5. All must work on limb arrays WITHOUT using __get_raw
 
-**Step 4: Multi-limb comparison**
-- [ ] Implement `__cmp_multi_limb(other_integer)` returning -1, 0, or 1
-- [ ] Compare signs first
-- [ ] Compare limb counts for same sign
-- [ ] Compare limbs from most significant to least
-- [ ] Replace all __get_raw comparisons with this
+**Step 1: Multi-limb comparison operators** ✅ DONE
+- ✅ Implemented `Integer#!=` (simple negation of ==)
+- ✅ Implemented `Integer#__cmp(other)` - central comparison method
+  - Dispatches to __cmp_fixnum_fixnum, __cmp_fixnum_heap, __cmp_heap_fixnum, __cmp_heap_heap
+  - Compares signs first
+  - Compares limb counts for same sign
+  - Compares limbs from most significant to least
+- ✅ Updated all comparison operators (<, >, <=, >=) to use __cmp
 
-**Step 5: Multi-limb to_s**
-- [ ] Implement proper `to_s` that works on limb array
-- [ ] Cannot use __get_raw (only works for 32-bit)
-- [ ] Need repeated division by radix across limbs
+**Step 2: Multi-limb division by small integer (for to_s)** ⏳ IN PROGRESS
+- ⏳ Implementing `__divmod_by_fixnum(radix)` - divides integer by small fixnum
+  - Returns [quotient_fixnum, remainder_fixnum]
+  - Currently implemented for single-limb heap integers
+  - Uses s-expression code to handle both fixnum and heap cases
+  - **BLOCKER**: Array creation in s-expressions causing crashes
+  - Need to debug array allocation pattern for returning results
+- ⏳ Implemented `__to_s_multi(radix)` based on Fixnum#to_s algorithm
+  - Uses __divmod_by_fixnum for digit extraction
+  - Handles radix 2-36
+  - **BLOCKED** by __divmod_by_fixnum array return issue
+- [ ] Update `Integer#/` to use __divmod_by_fixnum for heap / fixnum case
+- [ ] Update `Integer#%` to use __divmod_by_fixnum for heap % fixnum case
 
-**Step 6: Update operators**
-- [ ] Update Integer#+ to use multi-limb addition
-- [ ] Update Integer#- to use multi-limb subtraction
-- [ ] Update Integer#==, >, <, etc. to use multi-limb comparison
-- [ ] Update Integer#inspect to use multi-limb to_s
+**Step 3: Multi-limb to_s**
+- [ ] Copy Fixnum#to_s algorithm structure
+- [ ] Replace operations with multi-limb equivalents
+- [ ] Use `__divmod_by_fixnum(radix)` for digit extraction
+- [ ] Build string one digit at a time
+
+**Step 4: Update operators to dispatch properly**
+- [ ] Integer#/ should detect heap / fixnum and use __divmod_by_fixnum
+- [ ] Integer#% should detect heap % fixnum and use __divmod_by_fixnum
+- [ ] Keep __get_raw-based implementations as fallback for single-limb only
 
 **Future (Phase 7-8):**
-- [ ] Multi-limb multiplication
-- [ ] Multi-limb division
+- [ ] Multi-limb multiplication (heap * heap)
+- [ ] Multi-limb division (heap / heap)
 
 ### Phase 9: Automatic Demotion
 Optimize by converting small heap integers back to fixnums.

@@ -170,6 +170,140 @@ class Integer < Numeric
     @limbs
   end
 
+  # Compare two integers (heap or fixnum)
+  # Returns: -1 if self < other, 0 if equal, 1 if self > other
+  # Works on limb arrays for heap integers
+  def __cmp(other)
+    # Use s-expression to check representations and dispatch
+    %s(
+      (let (self_is_fixnum other_is_fixnum)
+        (assign self_is_fixnum (bitand self 1))
+        (assign other_is_fixnum (bitand other 1))
+
+        # If both are fixnums (bit 0 = 1), use simple comparison
+        (if (and self_is_fixnum other_is_fixnum)
+          (return (callm self __cmp_fixnum_fixnum other)))
+
+        # If self is fixnum but other is heap
+        (if self_is_fixnum
+          (return (callm self __cmp_fixnum_heap other)))
+
+        # If other is fixnum but self is heap
+        (if other_is_fixnum
+          (return (callm self __cmp_heap_fixnum other)))
+
+        # Both are heap integers
+        (return (callm self __cmp_heap_heap other))
+      )
+    )
+  end
+
+  # Compare two fixnums
+  def __cmp_fixnum_fixnum(other)
+    %s(
+      (let (a b)
+        (assign a (sar self))
+        (assign b (sar other))
+        (if (lt a b) (return (__int -1)))
+        (if (gt a b) (return (__int 1)))
+        (return (__int 0))
+      )
+    )
+  end
+
+  # Compare fixnum (self) with heap integer (other)
+  def __cmp_fixnum_heap(other)
+    # Use s-expression for the entire comparison to avoid assignment issues
+    %s(
+      (let (self_raw other_sign other_raw)
+        (assign self_raw (sar self))
+        (assign other_sign (sar (callm other __get_sign)))
+
+        # Compare signs: negative < positive
+        (if (and (lt self_raw 0) (gt other_sign 0))
+          (return (__int -1)))
+        (if (and (gt self_raw 0) (lt other_sign 0))
+          (return (__int 1)))
+
+        # Same sign - compare magnitudes
+        (assign other_raw (callm other __get_raw))
+        (if (lt self_raw other_raw)
+          (return (__int -1)))
+        (if (gt self_raw other_raw)
+          (return (__int 1)))
+        (return (__int 0))
+      )
+    )
+  end
+
+  # Compare heap integer (self) with fixnum (other)
+  def __cmp_heap_fixnum(other)
+    # Use s-expression for the entire comparison
+    %s(
+      (let (other_raw self_sign self_raw)
+        (assign other_raw (sar other))
+        (assign self_sign (sar (index self 2)))  # @sign is at offset 2
+
+        # Compare signs: negative < positive
+        (if (and (lt self_sign 0) (gt other_raw 0))
+          (return (__int -1)))
+        (if (and (gt self_sign 0) (lt other_raw 0))
+          (return (__int 1)))
+
+        # Same sign - compare magnitudes
+        (assign self_raw (callm self __get_raw))
+        (if (lt self_raw other_raw)
+          (return (__int -1)))
+        (if (gt self_raw other_raw)
+          (return (__int 1)))
+        (return (__int 0))
+      )
+    )
+  end
+
+  # Compare two heap integers
+  def __cmp_heap_heap(other)
+    self_sign = @sign.__get_raw
+    other_sign = other.__get_sign.__get_raw
+
+    # Compare signs
+    return -1 if self_sign < 0 && other_sign > 0
+    return 1 if self_sign > 0 && other_sign < 0
+
+    # Same sign - compare magnitudes (limb by limb)
+    self_limbs = @limbs
+    other_limbs = other.__get_limbs
+    self_len = self_limbs.length
+    other_len = other_limbs.length
+
+    # More limbs = larger magnitude
+    if self_len < other_len
+      return self_sign > 0 ? -1 : 1
+    end
+    if self_len > other_len
+      return self_sign > 0 ? 1 : -1
+    end
+
+    # Same number of limbs - compare from most significant to least
+    i = self_len - 1
+    while i >= 0
+      self_limb = self_limbs[i].__get_raw
+      other_limb = other_limbs[i].__get_raw
+
+      if self_limb < other_limb
+        return self_sign > 0 ? -1 : 1
+      end
+      if self_limb > other_limb
+        return self_sign > 0 ? 1 : -1
+      end
+
+      i = i - 1
+    end
+
+    # All limbs equal
+    0
+  end
+
   # Multi-limb addition: add two heap integers
   # This is the core bignum addition algorithm with carry propagation
   def __add_multi_limb(other)
@@ -237,17 +371,150 @@ class Integer < Numeric
   end
 
 
-  # Inspect - return string representation
-  def inspect
-    # For heap integers, return placeholder marker
-    # TODO: Implement proper multi-limb to_s for accurate display
+  # Divide limb array by small integer (radix), return quotient limbs and remainder
+  # Used for base conversion in to_s
+  # Returns [quotient_limbs_array, remainder_value]
+  # SIMPLIFIED VERSION: Only handles single-limb heap integers for now
+  def __divmod_limbs(limbs, radix)
+    # OLD METHOD - kept for compatibility but not used
+    # For now, only handle single-limb case
+    # Multi-limb division is complex and needs careful implementation
+    if limbs.length != 1
+      # Multi-limb not yet supported - return placeholder
+      return [[0], 0]
+    end
+
+    limb_val = limbs[0].__get_raw
+    quotient_val = limb_val / radix
+    remainder = limb_val % radix
+
+    [[quotient_val], remainder]
+  end
+
+  # Divide integer (self) by small fixnum radix
+  # Returns [quotient, remainder] where both are fixnums
+  # For use in to_s algorithm
+  def __divmod_by_fixnum(radix)
+    # Check if self is fixnum
+    if %s((eq (bitand self 1) 1))
+      # self is fixnum - simple division
+      %s(
+        (let (self_raw radix_raw q r arr)
+          (assign self_raw (sar self))
+          (assign radix_raw (sar radix))
+          (assign q (div self_raw radix_raw))
+          (assign r (mod self_raw radix_raw))
+          # Allocate and create array manually
+          (assign arr (callm Array new))
+          (callm arr push (__int q))
+          (callm arr push (__int r))
+          (return arr))
+      )
+    else
+      # self is heap integer
+      %s(
+        (let (limb sign_raw radix_raw q r arr)
+          # For single-limb heap integers, extract value and divide
+          (assign limb (sar (index (index self 1) 0)))  # @limbs[0] untagged
+          (assign sign_raw (sar (index self 2)))         # @sign untagged
+          (assign radix_raw (sar radix))
+          (assign q (div limb radix_raw))
+          (assign r (mod limb radix_raw))
+
+          # Apply sign
+          (if (lt sign_raw 0) (do
+            (assign q (sub 0 q))
+            (assign r (sub 0 r))))
+
+          # Allocate and create array manually
+          (assign arr (callm Array new))
+          (callm arr push (__int q))
+          (callm arr push (__int r))
+          (return arr))
+      )
+    end
+  end
+
+  # Convert integer to string with radix support
+  # Based on Fixnum#to_s algorithm but works on heap integers
+  # Uses __divmod_by_fixnum to avoid __get_raw (which doesn't work for multi-limb)
+  def __to_s_multi(radix)
+    # Validate radix
+    radix_raw = radix.__get_raw
+    if radix_raw < 2 || radix_raw > 36
+      STDERR.puts("ERROR: Invalid radix - must be between 2 and 36")
+      return "0"
+    end
+
+    # Check if self is fixnum - if so, this will fall through to Fixnum#to_s
     %s(
       (if (eq (bitand self 1) 1)
-        # Tagged fixnum - will use Fixnum#inspect
-        (return 0)
-        # Heap integer - return marker
-        (return (__get_string "<heap-integer>")))
+        # Fixnum - return 0 to fall through to Fixnum#to_s
+        (return 0))
     )
+
+    # Heap integer - use limb-based algorithm
+    out = ""
+    n = self
+    sign_raw = @sign.__get_raw
+    neg = sign_raw < 0
+
+    # Make positive for digit extraction
+    if neg
+      # For heap integer, we work with magnitude (limbs are always positive)
+      # Just track the sign separately
+    end
+
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+    # Extract digits using repeated division
+    while n != 0
+      result = n.__divmod_by_fixnum(radix)
+      q = result[0]  # quotient
+      r = result[1]  # remainder
+
+      # Get remainder value (it's a fixnum)
+      r_raw = r.__get_raw
+      # Handle negative remainder (make positive for digit lookup)
+      if r_raw < 0
+        r_raw = -r_raw
+      end
+
+      out = out + digits[r_raw]
+
+      # Break if quotient is less than radix
+      if q < radix
+        # Add final digit if quotient is non-zero
+        if q != 0
+          q_raw = q.__get_raw
+          if q_raw < 0
+            q_raw = -q_raw
+          end
+          out = out + digits[q_raw]
+        end
+        break
+      end
+
+      n = q
+    end
+
+    if out.empty?
+      out = "0"
+    elsif neg
+      out = out + "-"
+    end
+
+    out.reverse
+  end
+
+  # Convert to string with optional radix
+  def to_s(radix=10)
+    __to_s_multi(radix)
+  end
+
+  # Inspect - return string representation
+  def inspect
+    to_s(10)
   end
 
   # Arithmetic operators - temporary delegation to __get_raw
@@ -405,19 +672,19 @@ class Integer < Numeric
   # Comparison operators - for now, just delegate to __get_raw
   # This is a temporary workaround until proper heap integer comparisons are implemented
   def > other
-    %s(if (gt (callm self __get_raw) (callm other __get_raw)) true false)
+    __cmp(other) > 0
   end
 
   def >= other
-    %s(if (ge (callm self __get_raw) (callm other __get_raw)) true false)
+    __cmp(other) >= 0
   end
 
   def < other
-    %s(if (lt (callm self __get_raw) (callm other __get_raw)) true false)
+    __cmp(other) < 0
   end
 
   def <= other
-    %s(if (le (callm self __get_raw) (callm other __get_raw)) true false)
+    __cmp(other) <= 0
   end
 
   # Equality comparison - handles both tagged fixnums and heap integers
@@ -430,6 +697,11 @@ class Integer < Numeric
 
     # Compare raw values using __get_raw for both sides
     %s(if (eq (callm self __get_raw) (callm other __get_raw)) true false)
+  end
+
+  # Not-equal comparison
+  def != other
+    !(self == other)
   end
 
   def numerator
