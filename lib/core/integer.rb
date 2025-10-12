@@ -87,11 +87,65 @@ class Integer < Numeric
   # Add heap integer to another value
   # Called when self is a heap-allocated integer
   def __add_heap(other)
-    # TODO: Implement proper heap integer arithmetic
-    # For now, just return a placeholder to test the dispatch mechanism
-    %s(dprintf 2 "__add_heap called\n")
-    # Return 0 for now
-    0
+    %s(dprintf 2 "__add_heap called (self=heap, other=0x%lx)\n" other)
+
+    # For now, simple implementation: extract our limb value, add to other
+    # This is incomplete but allows basic testing
+    if @limbs && @limbs.length > 0
+      my_value_tagged = @limbs[0]
+
+      # Check if other is tagged fixnum or heap integer
+      %s(
+        (if (eq (bitand other 1) 1)
+          # other is tagged fixnum - extract its value
+          (let (my_val other_val result)
+            # Extract raw value from our tagged limb
+            (assign my_val (sar my_value_tagged))
+            # Extract raw value from other tagged integer
+            (assign other_val (sar other))
+            # Add them
+            (assign result (add my_val other_val))
+            # Return as tagged fixnum (TODO: check for overflow)
+            (return (__int result)))
+          # other is also heap integer - not yet implemented
+          (do
+            (dprintf 2 "ERROR: heap + heap not yet implemented\n")
+            (return 0)))
+      )
+    else
+      0
+    end
+  end
+
+  # Convert heap integer to string
+  # For now, just show the stored limb value (incorrect for multi-limb)
+  def to_s(radix=10)
+    # Check if heap integer
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Tagged fixnum - delegate to Fixnum#to_s
+        (return (callm self __fixnum_to_s radix))
+        # Heap integer - use our implementation
+        (return (callm self __heap_to_s radix)))
+    )
+  end
+
+  def __heap_to_s(radix=10)
+    # For now, just show limb[0] if it exists
+    # TODO: Properly convert multi-limb representation
+    if @limbs && @limbs.length > 0
+      limb = @limbs[0]
+      sign_str = @sign < 0 ? "-" : ""
+      "#{sign_str}#{limb}(heap)"
+    else
+      "0(heap)"
+    end
+  end
+
+  # Helper to call Fixnum#to_s for tagged fixnums
+  def __fixnum_to_s(radix=10)
+    # This will be called on a tagged fixnum, so Fixnum#to_s will work
+    Fixnum.instance_method(:to_s).bind(self).call(radix)
   end
 
   def numerator
