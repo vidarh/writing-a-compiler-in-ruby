@@ -2,20 +2,22 @@
 
 ## Current Status
 
-**Latest commit:** `d357e52` - Add __is_heap_integer? stub method to Integer
+**Latest commit:** `3d43c41` - Add Integer#initialize for heap-allocated integers
 
 ### What Works
-- Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
+- Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:67)
+- `__make_heap_integer(value, sign)` stub function (lib/core/base.rb:58)
 - Detects when addition result doesn't fit in 30-bit signed integer
 - Currently prints "OVERFLOW" and returns wrapped value
 - Integer class documented with dual representation architecture
-- `__is_heap_integer?` method stub added (always returns false for now)
+- `Integer#initialize` sets up @limbs and @sign for heap integers
+- `__is_heap_integer?` method stub (tag bit check needs work)
 - selftest-c: ✅ PASSING
 
 ### Progress
 - ✅ Phase 1: Integer bignum storage structure (documentation)
 - ✅ Phase 2: Detection helpers (stub implementation)
-- ⏳ Phase 3: Allocation and creation (NEXT)
+- ⏳ Phase 3: Allocation and creation (IN PROGRESS)
 
 ### Current Representation
 
@@ -73,17 +75,19 @@ Replace overflow detection with actual bignum allocation.
 - ✅ Extracted `__make_heap_integer(value, sign)` stub (lib/core/base.rb:58)
 - ✅ Updated `__add_with_overflow` to call `__make_heap_integer` on overflow
 - ✅ Added sign detection logic
+- ✅ Created `Integer#initialize` to set up @limbs/@sign (lib/core/integer.rb:21)
 
 **TODO:**
 - [ ] Implement actual object allocation in `__make_heap_integer`
-  - Allocate Integer object with space for instance variables
-  - Set up @limbs array
-  - Set up @sign field
-- [ ] Store limb values properly
+  - Use Integer.new or similar to allocate Integer object
+  - Call initialize to set up @limbs and @sign
+- [ ] Store limb values properly in @limbs array
 - [ ] Test with simple overflow case
+- [ ] Fix `__is_heap_integer?` to properly check tag bit
 
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
+- 3d43c41 - Add Integer#initialize for heap-allocated integers
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
