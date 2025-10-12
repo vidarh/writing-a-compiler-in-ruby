@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Latest commit:** `e5bb93e` - Add Integer#== and implement fixnum + heap integer
+**Latest commit:** `5025610` - Add predicates and utility methods to Integer
 
 ### What Works
 - ✅ **Heap integer arithmetic working!**
@@ -44,8 +44,9 @@
 - ✅ Phase 3.5: Integer#+ infrastructure (DONE)
 - ✅ Phase 3.6: Overflow detection (DONE)
 - ✅ Phase 3: Allocation and creation (DONE)
-- ✅ Phase 4: Basic Arithmetic (DONE - heap + fixnum working!)
-- ⏳ Phase 5: Conversions and Comparisons (NEXT - to_i, ==, <, etc.)
+- ✅ Phase 4: Basic Arithmetic (DONE)
+- ✅ Phase 5: Conversions and Comparisons (DONE - basic operator set complete!)
+- ⏳ Phase 6: Automatic Demotion (NEXT - optimize by demoting small heap integers)
 
 ### Current Representation
 
@@ -171,28 +172,30 @@ Implement arithmetic operations on heap integers.
 - [ ] Proper multi-limb arithmetic
 - [ ] Optimize operations to avoid unnecessary extractions
 
-### Phase 5: Conversions and Comparisons (PARTIAL)
+### Phase 5: Conversions and Comparisons ✅ COMPLETE (basic)
 Make heap integers interoperate properly.
 
 **Completed:**
 - ✅ Integer#__get_raw extracts from heap integers (lib/core/integer.rb:45)
-- ✅ Integer#>, >=, <, <= comparison operators (lib/core/integer.rb:206-219)
-- ✅ Integer#== equality comparison (lib/core/integer.rb:231)
-- ✅ Integer#% modulo operator (works via Fixnum with __get_raw)
-- ✅ Integer#* multiplication with overflow check (works via Fixnum)
-- ✅ Integer#/ division (works via Fixnum with __get_raw)
+- ✅ **Comparison operators**: ==, >, >=, <, <=, <=>
+- ✅ **Arithmetic operators**: +, -, *, /, % (all with overflow detection where needed)
+- ✅ **Unary operators**: -@, +@
+- ✅ **Bitwise operators**: &, |, ^, ~, <<, >>
+- ✅ **Predicates**: zero?, even?, odd?
+- ✅ **Utility methods**: to_i, abs, succ, next, pred
 - ✅ Integer#inspect for proper display (lib/core/integer.rb:169)
 
 **Limitations:**
-- Comparisons/operators delegate to __get_raw (extract to fixnum range)
-- Won't work correctly for true multi-limb bignums beyond fixnum range
-- Temporary solution to enable selftest-c compilation
+- All operators delegate to __get_raw (extract to fixnum range first)
+- Won't work correctly for true multi-limb bignums beyond 32-bit range
+- Sufficient for self-hosting but not for general bignum arithmetic
 
-**TODO:**
-- [ ] Implement proper Integer#to_s for heap integers
+**Future enhancements (not critical for self-hosting):**
+- [ ] Implement proper Integer#to_s for heap integers (currently extracts to fixnum)
 - [ ] Implement proper multi-limb comparisons
 - [ ] Add coercion support
-- [ ] Implement remaining operators (**, etc.)
+- [ ] Implement exponentiation operator (**)
+- [ ] Support for truly large multi-limb bignums
 
 ### Phase 6: Automatic Demotion
 Optimize by converting small heap integers back to fixnums.
