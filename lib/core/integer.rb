@@ -32,10 +32,30 @@ class Integer < Numeric
 
   # Initialize heap integer from overflow value
   # Called from __add_with_overflow when allocation is needed
+  # Splits the raw value into 30-bit limbs (unsigned magnitude)
   def __init_overflow(raw_value, sign)
-    # For now, store the full value in a single limb
-    # TODO: Properly split into 30-bit limbs
-    @limbs = [raw_value]
+    # Get absolute value to split into limbs
+    abs_val = raw_value
+    if abs_val < 0
+      abs_val = -abs_val
+    end
+
+    # Split into 30-bit limbs
+    # Each limb holds bits [i*30 .. (i+1)*30-1]
+    limbs = []
+    if abs_val == 0
+      limbs = [0]
+    else
+      # Extract 30-bit chunks
+      limb_mask = (1 << 30) - 1  # 0x3FFFFFFF = 30 bits of 1s
+      while abs_val > 0
+        limb_val = abs_val & limb_mask
+        limbs << limb_val
+        abs_val = abs_val >> 30
+      end
+    end
+
+    @limbs = limbs
     @sign = sign
   end
 
@@ -53,18 +73,33 @@ class Integer < Numeric
   end
 
   def __heap_get_raw
-    # For single-limb heap integers, extract the value
-    # Always use s-expression to ensure proper raw value handling
+    # Reconstruct value from limbs (limited to 32-bit result)
+    # WARNING: This only works correctly for values that fit in 32 bits!
+    # Multi-limb values > 32-bit will be truncated/incorrect
     %s(
       (if (and @limbs (gt (callm @limbs length) 0))
-        (let (limb_val sign_val raw_limb raw_sign result)
-          (assign limb_val (index @limbs 0))
+        (let (limb_count sign_val raw_sign result limb0 raw_limb0 limb1 raw_limb1)
+          (assign limb_count (callm @limbs length))
           (assign sign_val @sign)
-          (assign raw_limb (sar limb_val))
           (assign raw_sign (sar sign_val))
+
+          # Get first limb (bits 0-29)
+          (assign limb0 (index @limbs 0))
+          (assign raw_limb0 (sar limb0))
+          (assign result raw_limb0)
+
+          # If there's a second limb, add bits 30-59
+          (if (gt limb_count 1)
+            (do
+              (assign limb1 (index @limbs 1))
+              (assign raw_limb1 (sar limb1))
+              # Shift limb1 left by 30 bits and add to result
+              (assign raw_limb1 (sall 30 raw_limb1))
+              (assign result (add result raw_limb1))))
+
+          # Apply sign
           (if (lt raw_sign 0)
-            (assign result (sub 0 raw_limb))
-            (assign result raw_limb))
+            (assign result (sub 0 result)))
           (return result))
         (return 0))
     )
