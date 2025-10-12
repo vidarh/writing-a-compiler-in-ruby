@@ -2,21 +2,27 @@
 
 ## Current Status
 
-**Latest commit:** `355a193` - Revert to safe overflow handling (investigation ongoing)
+**Latest commit:** `dc2e2e9` - Add heap integer arithmetic dispatch in Integer#+
 
 ### What Works
 - Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
 - Detects when addition result doesn't fit in 30-bit signed integer
 - Currently prints "OVERFLOW" and returns wrapped value
+- **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:34)
+- **Tag bit checking** via bitand in s-expression context
+- Integer#+ dispatches based on representation:
+  - Tagged fixnum → uses __add_with_overflow
+  - Heap integer → calls __add_heap (stub)
 - Integer class documented with dual representation architecture
 - `Integer#initialize` sets up @limbs and @sign for heap integers
-- `__is_heap_integer?` method stub (tag bit check needs work)
+- `Integer#__set_heap_data` helper for initialization
 - selftest-c: ✅ PASSING
 
 ### Progress
 - ✅ Phase 1: Integer bignum storage structure (documentation)
 - ✅ Phase 2: Detection helpers (stub implementation)
-- ⏳ Phase 3: Allocation and creation (IN PROGRESS)
+- ✅ Phase 3.5: Integer#+ infrastructure (DONE)
+- ⏳ Phase 3: Allocation and creation (READY TO IMPLEMENT)
 
 ### Current Representation
 
@@ -67,38 +73,32 @@ Add methods to detect whether an Integer is tagged or heap-allocated.
 **Commits:**
 - d357e52 - Add __is_heap_integer? stub method to Integer
 
-### Phase 3: Allocation and Creation (BLOCKED - needs Phase 4 first)
+### Phase 3: Allocation and Creation (READY TO IMPLEMENT)
 Replace overflow detection with actual bignum allocation.
 
 **Completed:**
 - ✅ Created `Integer#initialize` to set up @limbs/@sign (lib/core/integer.rb:21)
 - ✅ Created `Integer#__set_heap_data(limbs, sign)` helper (lib/core/integer.rb:28)
 - ✅ Verified `(callm Integer new)` allocates successfully
-- ✅ Identified blocker: need arithmetic operations before allocation
+- ✅ Identified blocker requirement: Integer#+ infrastructure
+- ✅ Implemented Integer#+ with representation dispatch (Phase 3.5)
+- ✅ Tag bit checking works in s-expression context
 
-**Blocker Identified:**
-Cannot complete Phase 3 until Phase 4 is partially implemented.
+**Blocker Resolved:**
+The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 
-**Why:**
-- `(callm Integer new)` allocation works fine
-- But returning heap Integer from `__add_with_overflow` crashes
-- Crash occurs because:
-  - Returned heap integers are used in arithmetic operations
-  - Only Fixnum#+ exists, not Integer#+
-  - Need Integer#+ that checks representation and dispatches
-  - Need at a minimum: Integer#+ for heap integer + fixnum case
-
-**Revised Plan:**
-1. Implement Integer#+ skeleton that checks __is_heap_integer?
-2. Implement heap integer + fixnum case
-3. Then complete Phase 3 allocation
-4. Then expand Phase 4 for other operations
+**Next Steps:**
+1. Implement simple heap integer creation from overflow value
+2. Store value in @limbs array (initially single limb)
+3. Set @sign based on result sign
+4. Return heap integer from __add_with_overflow
+5. Test that it gets properly dispatched to __add_heap
 
 **Investigation Notes:**
-- bitand self 1 causes segfault in selftest-c (compiler bug to fix separately)
-- mod self 2 causes FPE (floating point exception)
-- For now, __is_heap_integer? returns false (no heap integers exist yet)
-- Proc allocation pattern works: allocate, call setter, return object
+- bitand in nested s-expression context causes segfault (register allocation bug)
+- bitand works fine when used directly in single s-expression
+- Solution: do tag checks entirely within s-expressions, not via Ruby methods
+- Proc allocation pattern: allocate, call setter method, return object
 
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
@@ -106,6 +106,10 @@ Cannot complete Phase 3 until Phase 4 is partially implemented.
 - bcd8f55 - Fix __is_heap_integer? for selftest-c compatibility
 - 10a7ece - Simplify __make_heap_integer to return wrapped fixnum
 - 355a193 - Revert to safe overflow handling (investigation ongoing)
+- 7ec168b - Document Phase 3 blocker: need Integer#+ before allocation
+- b70ab14 - Migrate Fixnum#+ to Integer#+ with representation dispatch
+- 5c01a8c - Move representation check to s-expression in Integer#+
+- dc2e2e9 - Add heap integer arithmetic dispatch in Integer#+
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
