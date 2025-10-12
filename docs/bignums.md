@@ -67,28 +67,38 @@ Add methods to detect whether an Integer is tagged or heap-allocated.
 **Commits:**
 - d357e52 - Add __is_heap_integer? stub method to Integer
 
-### Phase 3: Allocation and Creation (IN PROGRESS)
+### Phase 3: Allocation and Creation (BLOCKED - needs Phase 4 first)
 Replace overflow detection with actual bignum allocation.
 
 **Completed:**
-- ✅ Extracted `__make_heap_integer(value, sign)` stub (lib/core/base.rb:58)
-- ✅ Updated `__add_with_overflow` to call `__make_heap_integer` on overflow
-- ✅ Added sign detection logic
 - ✅ Created `Integer#initialize` to set up @limbs/@sign (lib/core/integer.rb:21)
+- ✅ Created `Integer#__set_heap_data(limbs, sign)` helper (lib/core/integer.rb:28)
+- ✅ Verified `(callm Integer new)` allocates successfully
+- ✅ Identified blocker: need arithmetic operations before allocation
 
-**TODO:**
-- [ ] Implement actual object allocation in `__make_heap_integer`
-  - Use Integer.new or similar to allocate Integer object
-  - Call initialize to set up @limbs and @sign
-- [ ] Store limb values properly in @limbs array
-- [ ] Test with simple overflow case
-- [ ] Fix `__is_heap_integer?` to properly check tag bit
+**Blocker Identified:**
+Cannot complete Phase 3 until Phase 4 is partially implemented.
 
-**Issues Found:**
-- bitand in %s() expressions causes segfault during self-compilation
-- (callm Integer new) allocates successfully but causes segfault when used
-- May need to set @sign/@limbs before returning object
-- Need to investigate proper object usage pattern from s-expressions
+**Why:**
+- `(callm Integer new)` allocation works fine
+- But returning heap Integer from `__add_with_overflow` crashes
+- Crash occurs because:
+  - Returned heap integers are used in arithmetic operations
+  - Only Fixnum#+ exists, not Integer#+
+  - Need Integer#+ that checks representation and dispatches
+  - Need at a minimum: Integer#+ for heap integer + fixnum case
+
+**Revised Plan:**
+1. Implement Integer#+ skeleton that checks __is_heap_integer?
+2. Implement heap integer + fixnum case
+3. Then complete Phase 3 allocation
+4. Then expand Phase 4 for other operations
+
+**Investigation Notes:**
+- bitand self 1 causes segfault in selftest-c (compiler bug to fix separately)
+- mod self 2 causes FPE (floating point exception)
+- For now, __is_heap_integer? returns false (no heap integers exist yet)
+- Proc allocation pattern works: allocate, call setter, return object
 
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub

@@ -23,6 +23,13 @@ class Integer < Numeric
     @sign = 1
   end
 
+  # Helper to set instance variables from s-expression context
+  # Used when allocating heap integers from low-level code
+  def __set_heap_data(limbs, sign)
+    @limbs = limbs
+    @sign = sign
+  end
+
   def numerator
     self
   end
