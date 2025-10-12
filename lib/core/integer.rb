@@ -92,6 +92,36 @@ class Integer < Numeric
     )
   end
 
+  # Subtraction - handles both tagged fixnums and heap integers
+  def - other
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Tagged fixnum path
+        (do
+          # Check if other is also a tagged fixnum
+          (if (eq (bitand other 1) 1)
+            # Both tagged fixnums - subtraction with overflow detection
+            (let (a b result)
+              (assign a (sar self))
+              (assign b (sar other))
+              (assign result (sub a b))
+              # Use __add_with_overflow to handle overflow
+              (return (__add_with_overflow result 0)))
+            # self is fixnum, other is heap - delegate to __get_raw for now
+            (let (a b result)
+              (assign a (sar self))
+              (assign b (callm other __get_raw))
+              (assign result (sub a b))
+              (return (__add_with_overflow result 0)))))
+        # Heap integer - delegate to __get_raw for now
+        (let (a b result)
+          (assign a (callm self __get_raw))
+          (assign b (callm other __get_raw))
+          (assign result (sub a b))
+          (return (__add_with_overflow result 0))))
+    )
+  end
+
   # Add tagged fixnum to heap integer
   # Called when self is tagged fixnum and other is heap integer
   def __add_fixnum_to_heap(heap_int)
@@ -121,12 +151,13 @@ class Integer < Numeric
             (assign other_val (sar other))
             # Add them
             (assign result (add my_val other_val))
-            # Return as tagged fixnum (TODO: check for overflow)
-            (return (__int result)))
-          # other is also heap integer - not yet implemented
-          (do
-            (dprintf 2 "ERROR: heap + heap not yet implemented\n")
-            (return 0)))
+            # Return with overflow check
+            (return (__add_with_overflow result 0)))
+          # other is also heap integer - extract both raw values and add
+          (let (my_val other_val)
+            (assign my_val (callm self __get_raw))
+            (assign other_val (callm other __get_raw))
+            (return (__add_with_overflow my_val other_val))))
       )
     else
       0
