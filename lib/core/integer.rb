@@ -73,9 +73,12 @@ class Integer < Numeric
   # Check if this integer is a heap-allocated bignum (vs tagged fixnum)
   # Tagged fixnums have low bit = 1 (odd addresses)
   # Heap objects have low bit = 0 (even addresses)
-  # FIXME: This needs to check the tag bit, but doing so causes issues
-  # For now, return false since we haven't created heap integers yet
+  # NOTE: This implementation may have issues during self-compilation
+  # For now, always return false until we actually create heap integers
   def __is_heap_integer?
+    # FIXME: bitand check causes segfault in selftest-c
+    # %s(if (eq (bitand self 1) 0) true false)
+    # Temporary: always return false
     false
   end
 
