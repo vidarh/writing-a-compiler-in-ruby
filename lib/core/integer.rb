@@ -30,6 +30,26 @@ class Integer < Numeric
     @sign = sign
   end
 
+  # Addition - handles both tagged fixnums and heap integers
+  def + other
+    # Check if self is a heap integer
+    if __is_heap_integer?
+      # Heap integer arithmetic
+      # TODO: Implement heap integer + other
+      # For now, this path won't be reached since __is_heap_integer? always returns false
+      STDERR.puts "ERROR: Heap integer arithmetic not yet implemented"
+      nil
+    else
+      # Tagged fixnum - use existing arithmetic with overflow detection
+      %s(
+        (let (a b)
+          (assign a (sar self))
+          (assign b (callm other __get_raw))
+          (return (__add_with_overflow a b)))
+      )
+    end
+  end
+
   def numerator
     self
   end
