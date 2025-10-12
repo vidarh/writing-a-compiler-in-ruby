@@ -15,6 +15,14 @@ class Integer < Numeric
   MAX = 268435455   # 2^28 - 1
   MIN = -268435456  # -2^28
 
+  # Initialize a heap-allocated integer
+  # This is NOT called for tagged fixnums (immediate values)
+  # Only called when Integer.new is explicitly called (for heap integers)
+  def initialize
+    @limbs = []
+    @sign = 1
+  end
+
   def numerator
     self
   end
@@ -63,12 +71,11 @@ class Integer < Numeric
   end
 
   # Check if this integer is a heap-allocated bignum (vs tagged fixnum)
-  # For now, always returns false since we haven't created heap integers yet
-  # Will be updated when heap integer allocation is implemented
+  # Tagged fixnums have low bit = 1 (odd addresses)
+  # Heap objects have low bit = 0 (even addresses)
+  # FIXME: This needs to check the tag bit, but doing so causes issues
+  # For now, return false since we haven't created heap integers yet
   def __is_heap_integer?
-    # A heap integer has @limbs set
-    # Tagged fixnums won't have instance variables
-    # FIXME: Implement proper check when heap integers exist
     false
   end
 

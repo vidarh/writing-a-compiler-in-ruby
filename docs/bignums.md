@@ -66,21 +66,24 @@ Add methods to detect whether an Integer is tagged or heap-allocated.
 **Commits:**
 - d357e52 - Add __is_heap_integer? stub method to Integer
 
-### Phase 3: Allocation and Creation
+### Phase 3: Allocation and Creation (IN PROGRESS)
 Replace overflow detection with actual bignum allocation.
 
+**Completed:**
+- ✅ Extracted `__make_heap_integer(value, sign)` stub (lib/core/base.rb:58)
+- ✅ Updated `__add_with_overflow` to call `__make_heap_integer` on overflow
+- ✅ Added sign detection logic
+
 **TODO:**
-- [ ] Implement `__alloc_heap_integer(limb_count)` in lib/core/base.rb
+- [ ] Implement actual object allocation in `__make_heap_integer`
   - Allocate Integer object with space for instance variables
   - Set up @limbs array
   - Set up @sign field
-- [ ] Implement `__fixnum_to_heap_integer(value)` helper
-  - Takes a 30-bit fixnum value
-  - Creates single-limb heap integer
-  - Handles sign appropriately
-- [ ] Update `__add_with_overflow` to call heap allocation on overflow
-  - Instead of printing "OVERFLOW", create heap integer object
-  - Store result in limbs
+- [ ] Store limb values properly
+- [ ] Test with simple overflow case
+
+**Commits:**
+- a54a64d - Refactor overflow handling: extract __make_heap_integer stub
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
