@@ -107,7 +107,7 @@ class Fixnum < Integer
 
   def == other
     if other.nil?
-      return false 
+      return false
     end
     return false if !other.is_a?(Numeric)
     %s(if (eq (sar self) (callm other __get_raw)) true false)

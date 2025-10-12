@@ -41,16 +41,32 @@ class Integer < Numeric
 
   # Get raw integer value
   # For tagged fixnums: extract by right shift
-  # For heap integers: error for now (need proper conversion)
+  # For heap integers: extract from limbs (single-limb only for now)
   def __get_raw
     %s(
       (if (eq (bitand self 1) 1)
         # Tagged fixnum - extract raw value
         (return (sar self))
-        # Heap integer - not yet implemented
-        (do
-          (dprintf 2 "ERROR: __get_raw called on heap integer\n")
-          (return 0)))
+        # Heap integer - extract from @limbs
+        (return (callm self __heap_get_raw)))
+    )
+  end
+
+  def __heap_get_raw
+    # For single-limb heap integers, extract the value
+    # Always use s-expression to ensure proper raw value handling
+    %s(
+      (if (and @limbs (gt (callm @limbs length) 0))
+        (let (limb_val sign_val raw_limb raw_sign result)
+          (assign limb_val (index @limbs 0))
+          (assign sign_val @sign)
+          (assign raw_limb (sar limb_val))
+          (assign raw_sign (sar sign_val))
+          (if (lt raw_sign 0)
+            (assign result (sub 0 raw_limb))
+            (assign result raw_limb))
+          (return result))
+        (return 0))
     )
   end
 
@@ -117,35 +133,45 @@ class Integer < Numeric
     end
   end
 
-  # Convert heap integer to string
-  # For now, just show the stored limb value (incorrect for multi-limb)
-  def to_s(radix=10)
-    # Check if heap integer
+
+  # Arithmetic operators - temporary delegation to __get_raw
+  # TODO: Implement proper heap integer arithmetic
+  def % other
     %s(
-      (if (eq (bitand self 1) 1)
-        # Tagged fixnum - delegate to Fixnum#to_s
-        (return (callm self __fixnum_to_s radix))
-        # Heap integer - use our implementation
-        (return (callm self __heap_to_s radix)))
+      (let (a b result)
+        (assign a (callm self __get_raw))
+        (assign b (callm other __get_raw))
+        (assign result (mod a b))
+        (return (__int result)))
     )
   end
 
-  def __heap_to_s(radix=10)
-    # For now, just show limb[0] if it exists
-    # TODO: Properly convert multi-limb representation
-    if @limbs && @limbs.length > 0
-      limb = @limbs[0]
-      sign_str = @sign < 0 ? "-" : ""
-      "#{sign_str}#{limb}(heap)"
-    else
-      "0(heap)"
-    end
+  def * other
+    %s(
+      (let (a b result)
+        (assign a (callm self __get_raw))
+        (assign b (callm other __get_raw))
+        (assign result (mul a b))
+        (return (__add_with_overflow result 0)))
+    )
   end
 
-  # Helper to call Fixnum#to_s for tagged fixnums
-  def __fixnum_to_s(radix=10)
-    # This will be called on a tagged fixnum, so Fixnum#to_s will work
-    Fixnum.instance_method(:to_s).bind(self).call(radix)
+  # Comparison operators - for now, just delegate to __get_raw
+  # This is a temporary workaround until proper heap integer comparisons are implemented
+  def > other
+    %s(if (gt (callm self __get_raw) (callm other __get_raw)) true false)
+  end
+
+  def >= other
+    %s(if (ge (callm self __get_raw) (callm other __get_raw)) true false)
+  end
+
+  def < other
+    %s(if (lt (callm self __get_raw) (callm other __get_raw)) true false)
+  end
+
+  def <= other
+    %s(if (le (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   def numerator
