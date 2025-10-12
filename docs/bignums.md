@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Latest commit:** `3d43c41` - Add Integer#initialize for heap-allocated integers
+**Latest commit:** `bcd8f55` - Fix __is_heap_integer? for selftest-c compatibility
 
 ### What Works
 - Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:67)
@@ -85,9 +85,14 @@ Replace overflow detection with actual bignum allocation.
 - [ ] Test with simple overflow case
 - [ ] Fix `__is_heap_integer?` to properly check tag bit
 
+**Issues Found:**
+- bitand in %s() expressions causes segfault during self-compilation
+- Needs investigation - may be compiler bug with bitand
+
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
 - 3d43c41 - Add Integer#initialize for heap-allocated integers
+- bcd8f55 - Fix __is_heap_integer? for selftest-c compatibility
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
