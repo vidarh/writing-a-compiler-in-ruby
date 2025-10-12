@@ -1,8 +1,10 @@
 
 class Float
   # Stub constants - proper IEEE 754 values not implemented
-  INFINITY = 999999999999999999999999999999999999999999999999999999999999999999999999
-  MAX = 999999999999999999999999999999999999999999999999999999999999999999999999
+  # IMPORTANT: Cannot use large literals during compilation - they cause overflow
+  # Use computed values instead
+  INFINITY = 1 << 28  # Large value without literal overflow
+  MAX = (1 << 28) - 1
 
   # Reserve space for double value (8 bytes = 2 slots)
   # We use instance variables to ensure the compiler allocates space
