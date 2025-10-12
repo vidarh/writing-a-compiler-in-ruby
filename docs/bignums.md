@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Latest commit:** `8d2948e` - Add Integer infrastructure for heap integer support
+**Latest commit:** `69de528` - Fix: Remove Fixnum#+ to use Integer#+ instead
 
 ### What Works
 - Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
@@ -105,10 +105,11 @@ The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 - Solution: do tag checks entirely within s-expressions, not via Ruby methods
 - Proc allocation pattern: allocate, call setter method, return object
 
-**Known Issues:**
-- Overflow messages during selftest-c compilation suggest compiler bug
-- Compiler shouldn't be creating integers large enough to overflow
-- Need to investigate source of large integers during compilation
+**Bug Fixed:**
+- ✅ Spurious overflow messages during compilation - RESOLVED
+- Root cause: Fixnum#+ was still defined, calling __get_raw without checking representation
+- Method dispatch went to Fixnum#+ instead of Integer#+
+- Removed Fixnum#+ to let dispatch fall through to Integer#+
 
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
@@ -122,6 +123,8 @@ The blocker (need Integer#+ before allocation) has been resolved in Phase 3.5.
 - dc2e2e9 - Add heap integer arithmetic dispatch in Integer#+
 - c689865 - Update docs: Phase 3 blocker resolved, infrastructure complete
 - 8d2948e - Add Integer infrastructure for heap integer support
+- 864bce1 - Update docs: document infrastructure and known issues
+- 69de528 - Fix: Remove Fixnum#+ to use Integer#+ instead
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
