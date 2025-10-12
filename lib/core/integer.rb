@@ -209,6 +209,106 @@ class Integer < Numeric
     )
   end
 
+  def / other
+    %s(
+      (let (a b result)
+        (assign a (callm self __get_raw))
+        (assign b (callm other __get_raw))
+        (assign result (div a b))
+        (return (__int result)))
+    )
+  end
+
+  # Unary minus
+  def -@
+    %s(
+      (let (raw)
+        (assign raw (callm self __get_raw))
+        (assign raw (sub 0 raw))
+        (return (__add_with_overflow raw 0)))
+    )
+  end
+
+  # Spaceship operator for comparison (returns -1, 0, or 1)
+  def <=> other
+    %s(
+      (let (a b)
+        (assign a (callm self __get_raw))
+        (assign b (callm other __get_raw))
+        (if (lt a b)
+          (return (__int -1))
+          (if (gt a b)
+            (return (__int 1))
+            (return (__int 0)))))
+    )
+  end
+
+  # Absolute value
+  def abs
+    %s(
+      (let (raw)
+        (assign raw (callm self __get_raw))
+        (if (lt raw 0)
+          (assign raw (sub 0 raw)))
+        (return (__add_with_overflow raw 0)))
+    )
+  end
+
+  # Bitwise operators - delegate to __get_raw
+  def & other
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitand (callm self __get_raw) other_raw))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      nil
+    end
+  end
+
+  def | other
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitor (callm self __get_raw) other_raw))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      nil
+    end
+  end
+
+  def ^ other
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitxor (callm self __get_raw) other_raw))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      nil
+    end
+  end
+
+  def ~
+    -(self + 1)
+  end
+
+  def << other
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      nil
+    end
+  end
+
+  def >> other
+    if other.is_a?(Integer)
+      other_raw = other.__get_raw
+      %s(__int (sarl other_raw (callm self __get_raw)))
+    else
+      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      nil
+    end
+  end
+
   # Comparison operators - for now, just delegate to __get_raw
   # This is a temporary workaround until proper heap integer comparisons are implemented
   def > other
