@@ -41,11 +41,18 @@ class Integer < Numeric
           (assign a (sar self))
           (assign b (callm other __get_raw))
           (return (__add_with_overflow a b)))
-        # Heap integer - not yet implemented
-        (do
-          (dprintf 2 "ERROR: Heap integer arithmetic not yet implemented\n")
-          (return 0)))
+        # Heap integer - dispatch to Ruby implementation
+        (return (callm self __add_heap other)))
     )
+  end
+
+  # Add heap integer to another value
+  # Called when self is a heap-allocated integer
+  def __add_heap(other)
+    # TODO: Implement proper heap integer arithmetic
+    # For now, just return a placeholder to test the dispatch mechanism
+    STDERR.puts "Heap integer arithmetic not yet implemented"
+    nil
   end
 
   def numerator
