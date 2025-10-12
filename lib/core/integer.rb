@@ -54,6 +54,30 @@ class Integer < Numeric
 
 end
 
+# Bignum class for integers that don't fit in fixnum range
+# A bignum is represented as:
+# - @sign: 1 for positive, -1 for negative
+# - @limbs: Array of 30-bit unsigned magnitude values (least significant first)
+class Bignum < Integer
+  def initialize
+    @sign = 1
+    @limbs = []
+  end
+
+  def class
+    Bignum
+  end
+
+  # FIXME: Stub - will implement as we add functionality
+  def to_s(radix=10)
+    "Bignum(stub)"
+  end
+
+  def inspect
+    to_s
+  end
+end
+
 # Global Integer() conversion method
 def Integer(value)
   return value if value.is_a?(Integer)
