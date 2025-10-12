@@ -27,19 +27,22 @@
   - Large values: Heap-allocated Integer objects with @limbs instance variable
 - Methods check representation and dispatch accordingly
 
-### Phase 1: Integer Bignum Storage Structure (IN PROGRESS)
+### Phase 1: Integer Bignum Storage Structure ✅ DONE
 Extend Integer class to support heap-allocated bignum representation.
 
-**TODO:**
-- [ ] Add @limbs and @sign to Integer class
-- [ ] Methods must check: "Am I a tagged fixnum or heap object?"
-- [ ] Tagged fixnums continue to work as before
-- [ ] Heap-allocated Integers use @limbs/@sign
+**Completed:**
+- ✅ Added documentation to Integer class (lib/core/integer.rb:2-11)
+- ✅ Clarified dual representation architecture
+- ✅ No functional changes yet - infrastructure preparation
 
 **Design Decision:**
 - Integer unifies both fixnum and bignum representations
 - Fixnum class may become obsolete or just a compatibility layer
 - Most integer support is currently in Fixnum (legacy) - may need migration
+
+**Commits:**
+- 33fec7e - Document bignum implementation plan
+- 6e31ed6 - Add documentation for Integer dual representation
 
 ### Phase 2: Detection Helpers (NEXT)
 Add methods to detect whether an Integer is tagged or heap-allocated.

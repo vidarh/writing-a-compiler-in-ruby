@@ -62,6 +62,16 @@ class Integer < Numeric
     end
   end
 
+  # Check if this integer is a heap-allocated bignum (vs tagged fixnum)
+  # For now, always returns false since we haven't created heap integers yet
+  # Will be updated when heap integer allocation is implemented
+  def __is_heap_integer?
+    # A heap integer has @limbs set
+    # Tagged fixnums won't have instance variables
+    # FIXME: Implement proper check when heap integers exist
+    false
+  end
+
 end
 
 # Global Integer() conversion method
