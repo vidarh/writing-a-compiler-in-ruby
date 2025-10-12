@@ -2,12 +2,12 @@
 
 ## Current Status
 
-**Latest commit:** `2137ee3` - Implement basic heap integer operations
+**Latest commit:** `b69fc7d` - Fix selftest-c: Add missing Integer methods for heap integer support
 
 ### What Works
 - ✅ **Heap integer arithmetic working!**
+- ✅ **selftest-c PASSING with heap integer support!**
 - Overflow detection and allocation (lib/core/base.rb:56)
-- Integer#to_s shows heap integer values (lib/core/integer.rb:117)
 - Integer#__add_heap: heap integer + fixnum (lib/core/integer.rb:89)
 - **Test results:**
   - 536870911 + 1 = 536870912(heap) ✅
@@ -15,19 +15,21 @@
   - heap + 10 + 20 = 536870942 ✅
 - Heap integers work in expressions!
 - **Integer#+** migrated from Fixnum#+ (lib/core/integer.rb:57)
-- **Integer#__get_raw** migrated from Fixnum#__get_raw (lib/core/integer.rb:45)
+- **Integer#__get_raw** extracts values from both fixnums and heap integers (lib/core/integer.rb:45)
+- **Integer#__heap_get_raw** handles single-limb heap integer extraction (lib/core/integer.rb:55)
 - **Tag bit checking** via bitand in s-expression context
 - Integer#+ dispatches on all 4 cases:
   - fixnum + fixnum → __add_with_overflow
   - fixnum + heap → __add_fixnum_to_heap (stub)
-  - heap + fixnum → __add_heap (stub)
+  - heap + fixnum → __add_heap (working!)
   - heap + heap → __add_heap (stub)
 - Integer#__get_raw dispatches based on representation
+- **Comparison operators**: >, >=, <, <= (delegate to __get_raw)
+- **Arithmetic operators**: %, * (delegate to __get_raw, * checks overflow)
 - Integer class documented with dual representation architecture
 - `Integer#initialize` sets up @limbs and @sign for heap integers
 - `Integer#__set_heap_data` helper for initialization
 - `Integer#__init_overflow` helper for heap integer creation
-- selftest-c: ✅ PASSING
 
 ### Progress
 - ✅ Phase 1: Integer bignum storage structure (documentation)
@@ -159,15 +161,26 @@ Implement arithmetic operations on heap integers.
 - [ ] Update Integer#* (multiplication)
 - [ ] Update Integer#/ (division)
 
-### Phase 5: Conversions and Comparisons
+### Phase 5: Conversions and Comparisons (PARTIAL)
 Make heap integers interoperate properly.
 
+**Completed:**
+- ✅ Integer#__get_raw extracts from heap integers (lib/core/integer.rb:45)
+- ✅ Integer#>, >=, <, <= comparison operators (lib/core/integer.rb:148-161)
+- ✅ Integer#% modulo operator (lib/core/integer.rb:141)
+- ✅ Integer#* multiplication with overflow check (lib/core/integer.rb:149)
+
+**Limitations:**
+- Comparisons/operators delegate to __get_raw (extract to fixnum range)
+- Won't work correctly for true multi-limb bignums beyond fixnum range
+- Temporary solution to enable selftest-c compilation
+
 **TODO:**
-- [ ] Update Integer#to_s to handle heap representation
-- [ ] Update Integer#== to handle heap representation
-- [ ] Update Integer#< to handle heap representation
-- [ ] Update Integer#> to handle heap representation
+- [ ] Implement proper Integer#to_s for heap integers
+- [ ] Update Integer#== to handle heap representation properly
+- [ ] Implement proper multi-limb comparisons
 - [ ] Add coercion support
+- [ ] Implement remaining operators (-, /, **, etc.)
 
 ### Phase 6: Automatic Demotion
 Optimize by converting small heap integers back to fixnums.
