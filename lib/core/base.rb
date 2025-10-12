@@ -52,9 +52,20 @@
 
 #%s(atexit tgc_stop)
 
+# Create a heap-allocated integer with a single limb value
+# For now, this is a stub that just returns a wrapped fixnum
+# TODO: Allocate actual Integer object with @limbs and @sign
+%s(defun __make_heap_integer (value sign)
+  (do
+    (dprintf 2 "OVERFLOW\n")
+    # FIXME: Should allocate Integer object here
+    # For now, return wrapped value (incorrect but maintains current behavior)
+    (return (__int value)))
+)
+
 # Minimal bignum support - detect overflow and handle it
 %s(defun __add_with_overflow (a b)
-  (let (result high_bits)
+  (let (result high_bits sign)
     (assign result (add a b))
     # Check if result fits in 30 bits by shifting right 29
     (assign high_bits (sarl 29 result))
@@ -62,7 +73,9 @@
     (if (or (eq high_bits 0) (eq high_bits -1))
       (return (__int result))
       (do
-        (dprintf 2 "OVERFLOW\n")
-        (return (__int result))))
+        # Overflow detected - need heap integer
+        # Determine sign: negative if high bit is set
+        (assign sign (if (lt result 0) -1 1))
+        (return (__make_heap_integer result sign))))
   )
 )
