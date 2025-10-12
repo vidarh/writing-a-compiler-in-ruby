@@ -2,12 +2,16 @@
 
 ## Current Status
 
-**Latest commit:** `24bbbe7` - Fix heap integer limb storage - values now stored correctly
+**Latest work:** Implementing multi-limb to_s support
 
 ### What Works
 - ✅ **Heap integer limb storage WORKING!**
 - ✅ **selftest-c PASSING!** (0 failures)
+- ✅ **Single-limb heap integer to_s WORKING!**
 - ✅ Each heap integer stores correct, unique limb values
+- ✅ **Integer#to_s** works for fixnums and single-limb heap integers
+- ✅ **Integer#__divmod_by_fixnum** works for fixnums and single-limb heap integers
+- ✅ Radix support (2-36) working for single-limb
 - Overflow detection and allocation (lib/core/base.rb:56)
 - Heap integers work in arithmetic expressions (but limited to 32-bit values)
 - **Limbs correctly store tagged fixnums** (e.g., 536870912 stored as 0x40000001)
@@ -45,8 +49,11 @@
   - [ ] Split values into proper 30-bit limbs in __init_overflow
   - [ ] Multi-limb addition with carry propagation
   - [ ] Multi-limb subtraction with borrow propagation
-  - [ ] Multi-limb comparison
-  - [ ] Multi-limb to_s conversion
+  - ✅ Multi-limb comparison (Step 1 - DONE)
+  - ✅ Multi-limb to_s conversion (Step 2 - DONE)
+    - ✅ Single-limb to_s working
+    - ✅ Multi-limb `__divmod_by_fixnum` implementation
+    - ✅ Test: 2-limb integer [1,1] → "1073741825"
 - Phase 7: Multi-Limb Multiplication (future)
 - Phase 8: Multi-Limb Division (future)
 - Phase 9: Automatic Demotion (optimize by demoting small heap integers)
@@ -434,3 +441,48 @@ Value directly in register/memory: (n << 1) | 1
 - lib/core/integer.rb - Integer class
 - lib/core/fixnum.rb - Fixnum class (legacy, will be migrated to Integer)
 - docs/DEBUGGING_GUIDE.md - Debugging patterns
+
+## Multi-Limb to_s Implementation
+
+### Current Implementation (lib/core/integer.rb:397-509)
+
+**Status:** Single-limb working, multi-limb partially implemented
+
+**Architecture:**
+1. `Integer#to_s(radix=10)` → calls `__to_s_multi(radix)`
+2. `__to_s_multi` uses repeated division to extract digits
+3. `__divmod_by_fixnum(radix)` divides integer by small radix (2-36)
+4. Result: string of digits in correct radix
+
+**Single-Limb Division (WORKING):**
+- `__divmod_by_fixnum` dispatches in s-expression
+- For fixnum: simple div/mod in s-expression
+- For single-limb heap: `__divmod_heap_single_limb`
+  - Extracts limb value using `@limbs[0]`
+  - Performs division in s-expression
+  - Returns [quotient, remainder] via Ruby helper
+
+**Multi-Limb Division (IN PROGRESS):**
+- Added `__divmod_heap_multi_limb` for len > 1
+- Algorithm:
+  1. Process limbs from most significant to least significant
+  2. For each limb: `(remainder * 2^30 + limb) / radix`
+  3. Carry remainder to next limb
+  4. Build quotient limb array
+  5. Create new heap integer or fixnum from result
+
+**Resolution:**
+- Fixed `__divmod_with_carry` to use s-expression multiplication
+- `carry * 1073741824 + limb` computed correctly in 32-bit with mul instruction
+- Multi-limb division now working correctly
+
+**Test Cases - ALL PASSING:**
+- ✅ Single-limb: 536870912.to_s → "536870912"
+- ✅ Negative single-limb: -536870913.to_s → "-536870913"
+- ✅ Radix: 536870912.to_s(16) → "20000000"
+- ✅ Multi-limb: [1,1].to_s → "1073741825"
+- ✅ Multi-limb base 16: [1,1].to_s(16) → "40000001"
+- ✅ Multi-limb base 36: [1,1].to_s(36) → "hra0ht"
+- ✅ selftest-c: 0 failures
+
+**Status: MULTI-LIMB TO_S WORKING! ✅**

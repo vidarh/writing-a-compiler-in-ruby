@@ -395,28 +395,40 @@ class Integer < Numeric
   # Returns [quotient, remainder] where both are fixnums
   # For use in to_s algorithm
   def __divmod_by_fixnum(radix)
-    # Check if self is fixnum
-    if %s((eq (bitand self 1) 1))
-      # self is fixnum - simple division
-      %s(
-        (let (self_raw radix_raw q r arr)
+    # Dispatch entirely in s-expression
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is fixnum - simple division
+        (let (self_raw radix_raw q r)
           (assign self_raw (sar self))
           (assign radix_raw (sar radix))
           (assign q (div self_raw radix_raw))
           (assign r (mod self_raw radix_raw))
-          # Allocate and create array manually
-          (assign arr (callm Array new))
-          (callm arr push (__int q))
-          (callm arr push (__int r))
-          (return arr))
-      )
-    else
-      # self is heap integer
+          # Tag and return via Ruby helper
+          (return (callm self __make_divmod_array ((__int q) (__int r)))))
+        # self is heap integer - call Ruby helper
+        (return (callm self __divmod_heap_single_limb radix)))
+    )
+  end
+
+  # Helper to create divmod result array
+  def __make_divmod_array(q, r)
+    [q, r]
+  end
+
+  # Helper for heap integer division (single or multi-limb)
+  def __divmod_heap_single_limb(radix)
+    limbs = @limbs
+    len = limbs.length
+
+    # Single limb case - use simple division
+    if len == 1
+      limb0 = limbs[0]
       %s(
-        (let (limb sign_raw radix_raw q r arr)
+        (let (limb sign_raw radix_raw q r)
           # For single-limb heap integers, extract value and divide
-          (assign limb (sar (index (index self 1) 0)))  # @limbs[0] untagged
-          (assign sign_raw (sar (index self 2)))         # @sign untagged
+          (assign limb (sar limb0))
+          (assign sign_raw (sar @sign))
           (assign radix_raw (sar radix))
           (assign q (div limb radix_raw))
           (assign r (mod limb radix_raw))
@@ -426,13 +438,88 @@ class Integer < Numeric
             (assign q (sub 0 q))
             (assign r (sub 0 r))))
 
-          # Allocate and create array manually
-          (assign arr (callm Array new))
-          (callm arr push (__int q))
-          (callm arr push (__int r))
-          (return arr))
+          # Tag and return via Ruby helper
+          (return (callm self __make_divmod_array ((__int q) (__int r)))))
       )
     end
+
+    # Multi-limb case handled in Ruby
+    __divmod_heap_multi_limb(radix)
+  end
+
+  # Multi-limb division by small radix
+  def __divmod_heap_multi_limb(radix)
+    limbs = @limbs
+    len = limbs.length
+    radix_val = radix
+
+    # Process limbs from most significant to least significant
+    q_limbs = []
+    remainder = 0
+
+    i = len - 1
+    while i >= 0
+      limb = limbs[i]
+      # Compute: value = remainder * 1073741824 + limb, then divide by radix
+      # Use s-expression for the arithmetic
+      result = __divmod_with_carry(remainder, limb, radix_val)
+      q_limb = result[0]
+      remainder = result[1]
+
+      q_limbs << q_limb
+      i = i - 1
+    end
+
+    # Reverse to get least significant first
+    q_limbs = q_limbs.reverse
+
+    # Remove leading zeros
+    while q_limbs.length > 1 && q_limbs[q_limbs.length - 1] == 0
+      q_limbs = q_limbs[0..(q_limbs.length - 2)]
+    end
+
+    # Build quotient
+    if q_limbs.length == 1 && q_limbs[0] < 536870912
+      q = q_limbs[0]
+      if @sign < 0
+        q = 0 - q
+      end
+    else
+      q = Integer.new
+      q.__set_heap_data(q_limbs, @sign)
+    end
+
+    r = remainder
+    if @sign < 0
+      r = 0 - r
+    end
+
+    [q, r]
+  end
+
+  # Compute (carry * 2^30 + limb) / divisor
+  # All inputs are tagged fixnums, carry < 36
+  def __divmod_with_carry(carry, limb, divisor)
+    # Use s-expression for the arithmetic
+    # Since carry < 36 and limb < 2^30, we can use multiplication
+    # carry * 1073741824 fits in 36 bits (well within 64-bit range)
+    %s(
+      (let (carry_raw limb_raw divisor_raw value q r)
+        (assign carry_raw (sar carry))
+        (assign limb_raw (sar limb))
+        (assign divisor_raw (sar divisor))
+
+        # Compute carry_raw * 1073741824 + limb_raw
+        # Use multiplication for carry * 2^30
+        (assign value (mul carry_raw 1073741824))
+        (assign value (add value limb_raw))
+
+        # Divide by divisor
+        (assign q (div value divisor_raw))
+        (assign r (mod value divisor_raw))
+
+        (return (callm self __make_divmod_array ((__int q) (__int r)))))
+    )
   end
 
   # Convert integer to string with radix support
@@ -440,29 +527,17 @@ class Integer < Numeric
   # Uses __divmod_by_fixnum to avoid __get_raw (which doesn't work for multi-limb)
   def __to_s_multi(radix)
     # Validate radix
-    radix_raw = radix.__get_raw
-    if radix_raw < 2 || radix_raw > 36
+    if radix < 2 || radix > 36
       STDERR.puts("ERROR: Invalid radix - must be between 2 and 36")
       return "0"
     end
 
-    # Check if self is fixnum - if so, this will fall through to Fixnum#to_s
-    %s(
-      (if (eq (bitand self 1) 1)
-        # Fixnum - return 0 to fall through to Fixnum#to_s
-        (return 0))
-    )
-
-    # Heap integer - use limb-based algorithm
+    # Works for both fixnum and heap integers
     out = ""
     n = self
-    sign_raw = @sign.__get_raw
-    neg = sign_raw < 0
-
-    # Make positive for digit extraction
+    neg = self < 0
     if neg
-      # For heap integer, we work with magnitude (limbs are always positive)
-      # Just track the sign separately
+      n = 0 - n
     end
 
     digits = "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -473,24 +548,23 @@ class Integer < Numeric
       q = result[0]  # quotient
       r = result[1]  # remainder
 
-      # Get remainder value (it's a fixnum)
-      r_raw = r.__get_raw
-      # Handle negative remainder (make positive for digit lookup)
-      if r_raw < 0
-        r_raw = -r_raw
+      # Use remainder directly (it's a tagged fixnum)
+      r_val = r
+      if r_val < 0
+        r_val = 0 - r_val
       end
 
-      out = out + digits[r_raw]
+      out = out + digits[r_val]
 
       # Break if quotient is less than radix
       if q < radix
         # Add final digit if quotient is non-zero
         if q != 0
-          q_raw = q.__get_raw
-          if q_raw < 0
-            q_raw = -q_raw
+          q_val = q
+          if q_val < 0
+            q_val = 0 - q_val
           end
-          out = out + digits[q_raw]
+          out = out + digits[q_val]
         end
         break
       end
