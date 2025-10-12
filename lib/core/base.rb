@@ -51,3 +51,18 @@
 ))
 
 #%s(atexit tgc_stop)
+
+# Minimal bignum support - detect overflow and handle it
+%s(defun __add_with_overflow (a b)
+  (let (result high_bits)
+    (assign result (add a b))
+    # Check if result fits in 30 bits by shifting right 29
+    (assign high_bits (sarl 29 result))
+    # If high_bits is 0 or -1, result fits in fixnum
+    (if (or (eq high_bits 0) (eq high_bits -1))
+      (return (__int result))
+      (do
+        (dprintf 2 "OVERFLOW\n")
+        (return (__int result))))
+  )
+)

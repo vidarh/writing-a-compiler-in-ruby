@@ -85,8 +85,13 @@ class Fixnum < Integer
   end
 
   def + other
-    # Add without masking - allows full 32-bit result
-    %s(__int (add (sar self) (callm other __get_raw)))
+    # Call helper that will eventually handle overflow
+    %s(
+      (let (a b)
+        (assign a (sar self))
+        (assign b (callm other __get_raw))
+        (return (__add_with_overflow a b)))
+    )
   end
 
   def - other
