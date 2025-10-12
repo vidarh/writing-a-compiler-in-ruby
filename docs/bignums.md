@@ -2,11 +2,10 @@
 
 ## Current Status
 
-**Latest commit:** `bcd8f55` - Fix __is_heap_integer? for selftest-c compatibility
+**Latest commit:** `355a193` - Revert to safe overflow handling (investigation ongoing)
 
 ### What Works
-- Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:67)
-- `__make_heap_integer(value, sign)` stub function (lib/core/base.rb:58)
+- Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
 - Detects when addition result doesn't fit in 30-bit signed integer
 - Currently prints "OVERFLOW" and returns wrapped value
 - Integer class documented with dual representation architecture
@@ -87,12 +86,16 @@ Replace overflow detection with actual bignum allocation.
 
 **Issues Found:**
 - bitand in %s() expressions causes segfault during self-compilation
-- Needs investigation - may be compiler bug with bitand
+- (callm Integer new) allocates successfully but causes segfault when used
+- May need to set @sign/@limbs before returning object
+- Need to investigate proper object usage pattern from s-expressions
 
 **Commits:**
 - a54a64d - Refactor overflow handling: extract __make_heap_integer stub
 - 3d43c41 - Add Integer#initialize for heap-allocated integers
 - bcd8f55 - Fix __is_heap_integer? for selftest-c compatibility
+- 10a7ece - Simplify __make_heap_integer to return wrapped fixnum
+- 355a193 - Revert to safe overflow handling (investigation ongoing)
 
 ### Phase 4: Basic Arithmetic
 Implement arithmetic operations on heap integers.
