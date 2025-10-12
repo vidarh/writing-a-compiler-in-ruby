@@ -65,14 +65,14 @@
       (return (__int result))
       (do
         # Overflow detected - allocate heap integer
-        (dprintf 2 "OVERFLOW: allocating heap integer (result=%ld)\n" result)
         (assign obj (callm Integer new))
         # Determine sign
         (if (lt result 0)
           (assign sign (__int -1))
           (assign sign (__int 1)))
-        # Initialize with overflow value
-        (callm obj __init_overflow ((__int result) sign))
+        # Pass tagged value to __set_heap_data which will wrap it in an array
+        # Note: Array literal creation moved to __set_heap_data to keep s-expression code simple
+        (callm obj __set_heap_data ((__int result) sign))
         (return obj)))
   )
 )

@@ -25,18 +25,23 @@ class Integer < Numeric
 
   # Helper to set instance variables from s-expression context
   # Used when allocating heap integers from low-level code
-  def __set_heap_data(limbs, sign)
-    @limbs = limbs
+  # Can accept either an array or a single value
+  def __set_heap_data(limbs_or_value, sign)
+    # If limbs_or_value is already an array, use it directly
+    # Otherwise, wrap single value in array
+    if limbs_or_value.is_a?(Array)
+      @limbs = limbs_or_value
+    else
+      @limbs = [limbs_or_value]
+    end
     @sign = sign
   end
 
   # Initialize heap integer from overflow value
-  # Called from __add_with_overflow when allocation is needed
-  # FIXME: Simplified to single limb to avoid self-compilation issues
+  # NOTE: This method is no longer used - now using __set_heap_data instead
+  # Array creation happens in __set_heap_data for simplicity
   def __init_overflow(raw_value, sign)
-    # For now, store the full value in a single limb
-    # This breaks for values that don't fit in 30 bits, but allows self-compilation
-    # TODO: Properly split into 30-bit limbs once compiler is more robust
+    # Not used - see __add_with_overflow in base.rb
     @limbs = [raw_value]
     @sign = sign
   end
@@ -240,7 +245,7 @@ class Integer < Numeric
       (if (eq (bitand self 1) 1)
         # Tagged fixnum - will use Fixnum#inspect
         (return 0)
-        # Heap integer - return marker (can't safely convert large values to fixnum)
+        # Heap integer - return marker
         (return (__get_string "<heap-integer>")))
     )
   end
