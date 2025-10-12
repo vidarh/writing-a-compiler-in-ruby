@@ -1,5 +1,15 @@
 
 class Integer < Numeric
+  # Integer supports two representations:
+  # 1. Tagged fixnum: value stored as (n << 1) | 1, low bit = 1
+  #    Range: -536,870,912 to 536,870,911 (30-bit signed)
+  # 2. Heap integer: object with @limbs (Array) and @sign (1 or -1)
+  #    Used when value overflows fixnum range
+  #
+  # Methods must check representation:
+  # - Tagged fixnums use bitwise ops in %s() expressions
+  # - Heap integers use @limbs/@sign instance variables
+
   # Stub constants - proper limits not implemented
   # Using 29-bit signed integer limits (due to tagging)
   MAX = 268435455   # 2^28 - 1
@@ -52,30 +62,6 @@ class Integer < Numeric
     end
   end
 
-end
-
-# Bignum class for integers that don't fit in fixnum range
-# A bignum is represented as:
-# - @sign: 1 for positive, -1 for negative
-# - @limbs: Array of 30-bit unsigned magnitude values (least significant first)
-class Bignum < Integer
-  def initialize
-    @sign = 1
-    @limbs = []
-  end
-
-  def class
-    Bignum
-  end
-
-  # FIXME: Stub - will implement as we add functionality
-  def to_s(radix=10)
-    "Bignum(stub)"
-  end
-
-  def inspect
-    to_s
-  end
 end
 
 # Global Integer() conversion method
