@@ -2,14 +2,15 @@
 
 ## Current Status
 
-**Latest commit:** `5f336e1` - Fix Integer#inspect to avoid crash on heap integers
+**Latest commit:** `24bbbe7` - Fix heap integer limb storage - values now stored correctly
 
 ### What Works
-- ✅ **Heap integer allocation working during compilation!**
-- ✅ **selftest-c PASSING!** (Fixed by avoiding large literals)
+- ✅ **Heap integer limb storage WORKING!**
+- ✅ **selftest-c PASSING!** (0 failures)
+- ✅ Each heap integer stores correct, unique limb values
 - Overflow detection and allocation (lib/core/base.rb:56)
-- Integer#__add_heap: heap integer + fixnum (lib/core/integer.rb)
 - Heap integers work in arithmetic expressions (but limited to 32-bit values)
+- **Limbs correctly store tagged fixnums** (e.g., 536870912 stored as 0x40000001)
 - **Integer#+** migrated from Fixnum#+ with representation dispatch
 - **Integer#__get_raw** extracts values from both fixnums and heap integers
 - **Integer#__heap_get_raw** handles single-limb heap integer extraction
@@ -306,31 +307,37 @@ INFINITY = 1 << 28
   2. Then: multi-limb arithmetic operations
   3. Finally: proper limb splitting in __init_overflow
 
-**Heap Integer to_s Implementation Challenges:**
-Multiple approaches attempted, all hit bootstrap issues:
+**Heap Integer Limb Storage - Investigation and Fix:**
 
-1. **Approach 1: Extract + re-tag + Fixnum#to_s**
-   - Extract raw value from limb
-   - Re-tag with __int
-   - Call Fixnum#to_s
-   - Problem: Re-tagging 32-bit values causes overflow, creating invalid fixnums
-   - Result: Segfault in Fixnum#to_s
+**Problem Discovered:**
+Array operations in `__init_overflow` (called from s-expression context) were storing incorrect values:
+- Array literals `[value]`: Both integers got same wrong value (not value passed)
+- Array#push: Both integers got same wrong value (not value passed)
+- Index assignment to empty array: Caused segfault during selftest-c
 
-2. **Approach 2: Add __raw_int_to_s helper in base.rb**
-   - Created s-expression function using snprintf
-   - Extract raw value, convert directly without tagging
-   - Problem: Function works but limb values corrupted (same address for different integers)
-   - Suggests Ruby array literal `@limbs = [value]` not working correctly
-   - Result: Wrong values displayed, arithmetic gives wrong results
+Investigation with debug output showed:
+- `raw_value` parameter had correct value (e.g., 0x40000001)
+- But `@limbs[0]` after storage had wrong value (e.g., 0x5ee8bee0)
+- Both heap integers ended up with identical wrong limb values
 
-3. **Approach 3: Use s-expression Array.new + push**
-   - Replace `@limbs = [value]` with explicit Array creation in s-expressions
-   - Problem: Causes segfault during selftest-c compilation
-   - Result: Breaks bootstrap
+**Root Cause:**
+The issue was specific to __init_overflow being called from __add_with_overflow's s-expression context. Array operations in that call path didn't work as expected.
 
-**Root Issue:** The limb storage mechanism via Ruby array literals appears problematic. Both heap integers showed same limb address (0x5fcaaf20), suggesting arrays aren't being created/populated correctly. Needs deeper investigation of how array literals work during initialization.
+**Solution (commit 24bbbe7):**
+Modified `__add_with_overflow` to pass single value to `__set_heap_data`:
+- Pass tagged value directly from s-expression: `(callm obj __set_heap_data ((__int result) sign))`
+- Modified `__set_heap_data` to wrap single values in array using Ruby literal
+- Array creation now happens in regular Ruby method context (not s-expression call path)
+- Removed `__init_overflow` call entirely from heap integer creation path
 
-**Current Solution:** Keep Integer#inspect returning "<heap-integer>" marker. Defer to_s implementation until after getting basic arithmetic working. Can test arithmetic correctness using equality checks without needing string conversion.
+**Result:**
+- ✅ Each heap integer has unique, correct limb values
+- ✅ Limbs correctly store tagged fixnums (e.g., 0x40000001)
+- ✅ selftest-c passes (0 failures)
+- ✅ Storage mechanism verified working
+
+**to_s Implementation:**
+Deferred until after basic arithmetic is working. Integer#inspect returns "<heap-integer>" marker. Can test arithmetic using equality checks.
 
 **Key Insight:**
 The compiler CAN compile multi-limb code, but during self-compilation, large values trigger heap allocation. If those heap integer operations aren't complete, bootstrap fails. Solution: keep code simple and avoid operations that would exercise incomplete multi-limb code during compilation.
