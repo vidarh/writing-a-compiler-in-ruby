@@ -45,8 +45,12 @@
 - ✅ Phase 3: Allocation and creation (DONE - but single-limb only)
 - ✅ Phase 4: Basic Arithmetic (DONE - but single-limb only, delegates to __get_raw)
 - ✅ Phase 5: Operator scaffolding (DONE - all operators exist but use __get_raw)
-- ⏳ **Phase 6: Multi-Limb Support (IN PROGRESS)**
-  - [ ] Split values into proper 30-bit limbs in __init_overflow (Step 5 - TODO)
+- ⏳ **Phase 6: Multi-Limb Support (MOSTLY COMPLETE)**
+  - [ ] Split overflow values into proper 30-bit limbs (Step 5 - DEFERRED)
+    - Current limitation: Overflow from addition creates single-limb heap integers
+    - Values > 2^30 get truncated when tagged (e.g., 2B → -147M)
+    - Proper multi-limb splitting requires more complex bootstrap-safe implementation
+    - Can manually create multi-limb integers for testing
   - ✅ Multi-limb addition with carry propagation (Step 3 - DONE)
     - ✅ Implemented __add_magnitudes with carry propagation
     - ✅ Test: [1,1] + [2,0] → 1073741827 ✅

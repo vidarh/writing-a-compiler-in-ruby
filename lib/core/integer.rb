@@ -38,12 +38,70 @@ class Integer < Numeric
   end
 
   # Initialize heap integer from overflow value
-  # NOTE: This method is no longer used - now using __set_heap_data instead
-  # Array creation happens in __set_heap_data for simplicity
-  def __init_overflow(raw_value, sign)
-    # Not used - see __add_with_overflow in base.rb
-    @limbs = [raw_value]
+  # Takes a raw (untagged) 32-bit value and splits it into 30-bit limbs
+  # Called from __add_with_overflow in base.rb
+  def __init_from_overflow_value(raw_value, sign)
+    # raw_value is an untagged 32-bit signed integer
+    # sign is a tagged fixnum (1 or -1)
+    # We need to split raw_value into 30-bit limbs
+
+    # Get absolute value (work with magnitude only)
+    abs_val = raw_value
+    %s(
+      (let (raw_val)
+        (assign raw_val raw_value)
+        (if (lt raw_val 0)
+          (assign abs_val (sub 0 raw_val))
+          (assign abs_val raw_val)))
+    )
+
+    # Split into limbs using division by limb_base (2^30)
+    limbs = []
+
+    # Extract limbs until abs_val == 0
+    # For 32-bit values, we need at most 2 limbs
+    # Keep extracting while quotient is non-zero
+    iteration = 0
+    while __is_nonzero_raw(abs_val) != 0
+      # Get limb_base and compute limb = abs_val % limb_base, abs_val = abs_val / limb_base
+      result = __extract_limb(abs_val)
+      limb = result[0]
+      abs_val = result[1]  # This is the quotient (raw value)
+
+      limbs << limb
+      iteration = iteration + 1
+
+      # Safety: limit to 3 iterations (should only need 2 for 32-bit)
+      if iteration > 3
+        break
+      end
+    end
+
+    # If no limbs (raw_value was 0), add a zero limb
+    if limbs.length == 0
+      limbs << 0
+    end
+
+    @limbs = limbs
     @sign = sign
+  end
+
+  # Check if a raw (untagged) value is non-zero
+  # Returns 1 if non-zero, 0 if zero
+  def __is_nonzero_raw(raw_val)
+    %s((if (eq raw_val 0) (return (__int 0)) (return (__int 1))))
+  end
+
+  # Extract one limb from raw value
+  # Returns [limb, quotient] where limb = val % 2^30, quotient = val / 2^30
+  def __extract_limb(raw_val)
+    %s(
+      (let (limb_base limb quotient)
+        (assign limb_base (callm self __limb_base_raw))
+        (assign limb (mod raw_val limb_base))
+        (assign quotient (div raw_val limb_base))
+        (return (callm self __make_overflow_result ((__int limb) quotient))))
+    )
   end
 
   # Get raw integer value

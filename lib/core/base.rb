@@ -72,6 +72,7 @@
           (assign sign (__int 1)))
         # Pass tagged value to __set_heap_data which will wrap it in an array
         # Note: Array literal creation moved to __set_heap_data to keep s-expression code simple
+        # TODO: For true multi-limb support, need to split result into 30-bit limbs
         (callm obj __set_heap_data ((__int result) sign))
         (return obj)))
   )
