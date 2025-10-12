@@ -41,12 +41,18 @@
 ### Progress
 - ✅ Phase 1: Integer bignum storage structure (documentation)
 - ✅ Phase 2: Detection helpers (stub implementation)
-- ✅ Phase 3.5: Integer#+ infrastructure (DONE)
-- ✅ Phase 3.6: Overflow detection (DONE)
-- ✅ Phase 3: Allocation and creation (DONE)
-- ✅ Phase 4: Basic Arithmetic (DONE)
-- ✅ Phase 5: Conversions and Comparisons (DONE - basic operator set complete!)
-- ⏳ Phase 6: Automatic Demotion (NEXT - optimize by demoting small heap integers)
+- ✅ Phase 3: Allocation and creation (DONE - but single-limb only)
+- ✅ Phase 4: Basic Arithmetic (DONE - but single-limb only, delegates to __get_raw)
+- ✅ Phase 5: Operator scaffolding (DONE - all operators exist but use __get_raw)
+- ⏳ **Phase 6: Multi-Limb Support (CRITICAL - THE ENTIRE POINT)**
+  - [ ] Split values into proper 30-bit limbs in __init_overflow
+  - [ ] Multi-limb addition with carry propagation
+  - [ ] Multi-limb subtraction with borrow propagation
+  - [ ] Multi-limb comparison
+  - [ ] Multi-limb to_s conversion
+- Phase 7: Multi-Limb Multiplication (future)
+- Phase 8: Multi-Limb Division (future)
+- Phase 9: Automatic Demotion (optimize by demoting small heap integers)
 
 ### Current Representation
 
@@ -163,41 +169,89 @@ Implement arithmetic operations on heap integers.
 - ✅ Basic arithmetic working in expressions
 - ✅ All core arithmetic operators working
 
-**Limitations (acceptable for Phase 4):**
-- Only single-limb heap integers (values up to 32-bit)
-- Subtraction, division, and modulo use __get_raw (extract to fixnum range first)
-- No support for true multi-limb arithmetic yet
+**CRITICAL LIMITATIONS (Phase 4 is INCOMPLETE without multi-limb):**
+- ❌ **ONLY single-limb heap integers (values up to 32-bit)**
+- ❌ **All operators use __get_raw which can only handle 32-bit values**
+- ❌ **Cannot represent or operate on true bignums (numbers > 32-bit)**
+- ❌ **Heap integers are USELESS without multi-limb support**
+- Current implementation is just scaffolding - operators exist but don't work for large numbers
 
-**TODO for future:**
-- [ ] Proper multi-limb arithmetic
-- [ ] Optimize operations to avoid unnecessary extractions
+**REQUIRED for Phase 6 (Multi-Limb Support):**
+- [ ] **CRITICAL**: Split 32-bit+ values into multiple 30-bit limbs
+- [ ] **CRITICAL**: Multi-limb addition with carry propagation
+- [ ] **CRITICAL**: Multi-limb subtraction with borrow propagation
+- [ ] **CRITICAL**: Multi-limb comparison (can't use __get_raw)
+- [ ] **CRITICAL**: Multi-limb to_s (can't use __get_raw)
+- [ ] Multi-limb multiplication
+- [ ] Multi-limb division
 
-### Phase 5: Conversions and Comparisons ✅ COMPLETE (basic)
-Make heap integers interoperate properly.
+### Phase 5: Operator Scaffolding ✅ COMPLETE (scaffolding only - NOT functional for true bignums)
+Add all operator methods to Integer class (but they only work for 32-bit values).
 
 **Completed:**
-- ✅ Integer#__get_raw extracts from heap integers (lib/core/integer.rb:45)
-- ✅ **Comparison operators**: ==, >, >=, <, <=, <=>
-- ✅ **Arithmetic operators**: +, -, *, /, % (all with overflow detection where needed)
+- ✅ All operator methods exist in Integer class
+- ✅ **Comparison operators**: ==, >, >=, <, <=, <=> (delegate to __get_raw)
+- ✅ **Arithmetic operators**: +, -, *, /, % (delegate to __get_raw)
 - ✅ **Unary operators**: -@, +@
 - ✅ **Bitwise operators**: &, |, ^, ~, <<, >>
 - ✅ **Predicates**: zero?, even?, odd?
 - ✅ **Utility methods**: to_i, abs, succ, next, pred
 - ✅ Integer#inspect for proper display (lib/core/integer.rb:169)
 
-**Limitations:**
-- All operators delegate to __get_raw (extract to fixnum range first)
-- Won't work correctly for true multi-limb bignums beyond 32-bit range
-- Sufficient for self-hosting but not for general bignum arithmetic
+**CRITICAL LIMITATIONS:**
+- ❌ **All operators delegate to __get_raw which only works for 32-bit values**
+- ❌ **Cannot actually operate on true bignums (numbers > 2^31)**
+- ❌ **This is just scaffolding - operators exist but don't work for large numbers**
+- These methods will be rewritten in Phase 6 to work with multi-limb arithmetic
 
-**Future enhancements (not critical for self-hosting):**
-- [ ] Implement proper Integer#to_s for heap integers (currently extracts to fixnum)
-- [ ] Implement proper multi-limb comparisons
-- [ ] Add coercion support
-- [ ] Implement exponentiation operator (**)
-- [ ] Support for truly large multi-limb bignums
+### Phase 6: Multi-Limb Support ⏳ IN PROGRESS (CRITICAL - THE ENTIRE POINT OF BIGNUMS)
+Implement true multi-limb arithmetic so bignums can represent numbers > 32-bit.
 
-### Phase 6: Automatic Demotion
+**Why this is critical:**
+- Without multi-limb support, heap integers are completely useless
+- The entire point of bignums is to handle numbers larger than fit in 32 bits
+- Current implementation is just scaffolding that pretends to work but doesn't
+
+**Step 1: Proper limb storage**
+- [ ] Fix `__init_overflow` to split 32-bit values into 30-bit limbs
+- [ ] Each limb stores 30 bits (unsigned magnitude)
+- [ ] limb[0] = bits 0-29, limb[1] = bits 30-59, etc.
+- [ ] Sign stored separately in @sign
+
+**Step 2: Multi-limb addition**
+- [ ] Implement `__add_multi_limb(other_integer)` for heap + heap
+- [ ] Add limb-by-limb with carry propagation
+- [ ] Handle different limb counts
+- [ ] Return result as new heap integer with proper limb count
+
+**Step 3: Multi-limb subtraction**
+- [ ] Implement `__sub_multi_limb(other_integer)` for heap - heap
+- [ ] Subtract limb-by-limb with borrow propagation
+- [ ] Handle sign changes when result is negative
+
+**Step 4: Multi-limb comparison**
+- [ ] Implement `__cmp_multi_limb(other_integer)` returning -1, 0, or 1
+- [ ] Compare signs first
+- [ ] Compare limb counts for same sign
+- [ ] Compare limbs from most significant to least
+- [ ] Replace all __get_raw comparisons with this
+
+**Step 5: Multi-limb to_s**
+- [ ] Implement proper `to_s` that works on limb array
+- [ ] Cannot use __get_raw (only works for 32-bit)
+- [ ] Need repeated division by radix across limbs
+
+**Step 6: Update operators**
+- [ ] Update Integer#+ to use multi-limb addition
+- [ ] Update Integer#- to use multi-limb subtraction
+- [ ] Update Integer#==, >, <, etc. to use multi-limb comparison
+- [ ] Update Integer#inspect to use multi-limb to_s
+
+**Future (Phase 7-8):**
+- [ ] Multi-limb multiplication
+- [ ] Multi-limb division
+
+### Phase 9: Automatic Demotion
 Optimize by converting small heap integers back to fixnums.
 
 **TODO:**
