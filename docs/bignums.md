@@ -2,13 +2,20 @@
 
 ## Current Status
 
-**Latest commit:** `4772ae8` - Add minimal overflow detection to Fixnum#+
+**Latest commit:** `d357e52` - Add __is_heap_integer? stub method to Integer
 
 ### What Works
 - Overflow detection in `__add_with_overflow` helper (lib/core/base.rb:56)
 - Detects when addition result doesn't fit in 30-bit signed integer
 - Currently prints "OVERFLOW" and returns wrapped value
+- Integer class documented with dual representation architecture
+- `__is_heap_integer?` method stub added (always returns false for now)
 - selftest-c: ✅ PASSING
+
+### Progress
+- ✅ Phase 1: Integer bignum storage structure (documentation)
+- ✅ Phase 2: Detection helpers (stub implementation)
+- ⏳ Phase 3: Allocation and creation (NEXT)
 
 ### Current Representation
 
@@ -44,15 +51,20 @@ Extend Integer class to support heap-allocated bignum representation.
 - 33fec7e - Document bignum implementation plan
 - 6e31ed6 - Add documentation for Integer dual representation
 
-### Phase 2: Detection Helpers (NEXT)
+### Phase 2: Detection Helpers ✅ DONE
 Add methods to detect whether an Integer is tagged or heap-allocated.
 
-**TODO:**
-- [ ] Add `__is_heap_integer?` method to detect heap-allocated integers
-  - Check if @limbs is set (non-nil)
-  - Tagged fixnums won't have instance variables
-- [ ] Add helper to check representation at s-expression level
-  - Low-level check: test bit 0 of value
+**Completed:**
+- ✅ Added `__is_heap_integer?` method to Integer (lib/core/integer.rb:68)
+- ✅ Currently returns false (no heap integers exist yet)
+- ✅ Will be updated when heap allocation is implemented
+
+**Future (deferred to Phase 3):**
+- [ ] Update `__is_heap_integer?` to actually check @limbs
+- [ ] May need s-expression level helpers for low-level checks
+
+**Commits:**
+- d357e52 - Add __is_heap_integer? stub method to Integer
 
 ### Phase 3: Allocation and Creation
 Replace overflow detection with actual bignum allocation.
