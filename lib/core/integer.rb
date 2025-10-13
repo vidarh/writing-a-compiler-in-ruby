@@ -1208,6 +1208,55 @@ class Integer < Numeric
     )
   end
 
+  # Check if this integer is negative
+  # Works for both fixnum and heap integers
+  # Avoids broken comparison system by checking sign directly
+  def __is_negative
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Fixnum - check if raw value is negative
+        (let (raw)
+          (assign raw (sar self))
+          (if (lt raw 0)
+            (return true)
+            (return false)))
+        # Heap integer - check @sign
+        (let (sign_val sign_raw)
+          (assign sign_val @sign)
+          (assign sign_raw (sar sign_val))
+          (if (lt sign_raw 0)
+            (return true)
+            (return false))))
+    )
+  end
+
+  # Negate this integer (return -self)
+  # For heap integers, creates new integer with flipped sign
+  # For fixnums, uses regular negation
+  def __negate
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Fixnum - use regular negation
+        (let (raw result)
+          (assign raw (sar self))
+          (assign result (sub 0 raw))
+          (return (__add_with_overflow result 0)))
+        # Heap integer - flip sign
+        (return (callm self __negate_heap)))
+    )
+  end
+
+  # Helper to negate heap integer by flipping sign
+  def __negate_heap
+    limbs = @limbs
+    sign = @sign.__get_raw
+    new_sign = 0 - sign
+
+    result = Integer.new
+    result.__set_heap_data(limbs, new_sign)
+    result
+  end
+
   # Convert integer to string with radix support
   # Based on Fixnum#to_s algorithm but works on heap integers
   # Uses __divmod_by_fixnum to avoid __get_raw (which doesn't work for multi-limb)
@@ -1221,9 +1270,12 @@ class Integer < Numeric
     # Works for both fixnum and heap integers
     out = ""
     n = self
-    neg = self < 0
+
+    # Check if negative - use direct sign check for heap integers
+    # to avoid broken comparison system
+    neg = __is_negative
     if neg
-      n = 0 - n
+      n = __negate
     end
 
     digits = "0123456789abcdefghijklmnopqrstuvwxyz"
