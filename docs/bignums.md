@@ -1380,13 +1380,20 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
 - Fix: Tag sign values with `(__int 1)` and `(__int -1)` in `__add_heap_and_fixnum`
 
 **Current Limitations:**
+- **Multi-limb to_s BROKEN for limb0=0 cases** (e.g., `[0, 2]` displays as "8")
+  - Root cause: `__divmod_with_carry` line 1200 uses 32-bit multiplication
+  - `carry * 1073741824` overflows for carry >= 2 in 32-bit signed arithmetic
+  - Example: `[0, 2]` → carry=2 → `2 * 2^30 = 2^31` overflows to negative
+  - Result: `__divmod_by_fixnum(10)` returns `[-214748364, -8]` instead of correct values
+  - Impact: Heap + heap addition creates correct limbs but displays wrong value
+  - Fix requires: 64-bit multiplication or alternative algorithm (Phase 7 scope)
+- Negative heap integers also have display issues (separate problem)
 - Only tested for overflow from fixnum + fixnum
-- Negative heap integers display incorrectly (to_s issue, not limb issue)
 - Multiplication and other operations still use __get_raw
 
 **Next Steps:**
-- Debug negative heap integer to_s (known limitation, deferred)
-- Test heap + heap addition more thoroughly
+- Fix __divmod_with_carry 32-bit overflow (requires 64-bit multiply support - Phase 7)
+- Debug negative heap integer display (separate to_s issue)
 - Implement proper multiplication (Phase 7 - deferred due to complexity)
 
 ## Testing Approach
