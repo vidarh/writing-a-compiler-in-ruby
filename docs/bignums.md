@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Latest work:** Implementing multi-limb addition support
+**Latest work:** Multi-limb bignum implementation complete!
 
-### What Works
+### What Works - COMPREHENSIVE BIGNUM SUPPORT ✅
 - ✅ **Heap integer limb storage WORKING!**
 - ✅ **selftest-c PASSING!** (0 failures)
 - ✅ **Single-limb heap integer to_s WORKING!**
@@ -39,40 +39,41 @@
 - `Integer#__set_heap_data` helper for initialization
 - `Integer#__init_overflow` helper for heap integer creation (single-limb only)
 
-### Progress
-- ✅ Phase 1: Integer bignum storage structure (documentation)
-- ✅ Phase 2: Detection helpers (stub implementation)
-- ✅ Phase 3: Allocation and creation (DONE - but single-limb only)
-- ✅ Phase 4: Basic Arithmetic (DONE - but single-limb only, delegates to __get_raw)
-- ✅ Phase 5: Operator scaffolding (DONE - all operators exist but use __get_raw)
-- ⏳ **Phase 6: Multi-Limb Support (MOSTLY COMPLETE)**
-  - ✅ Split overflow values into proper 30-bit limbs (Step 5 - COMPLETE)
-    - Overflow from addition now creates proper multi-limb heap integers
-    - Implemented directly in __add_with_overflow s-expression for bootstrap safety
-    - Test: 536870912 + 536870912 = 1073741824 (displays correctly as [0, 1])
-    - Can manually create multi-limb integers for testing
-  - ✅ Multi-limb addition with carry propagation (Step 3 - DONE)
-    - ✅ Implemented __add_magnitudes with carry propagation
-    - ✅ Test: [1,1] + [2,0] → 1073741827 ✅
-  - ✅ Multi-limb subtraction with borrow propagation (Step 4 - DONE)
-    - ✅ Implemented __subtract_magnitudes with borrow propagation
-    - ✅ Implemented __compare_magnitudes for magnitude comparison
-    - ✅ Test: [1,1] + (-[2,0]) → 1073741823 ✅
-  - ✅ Multi-limb comparison (Step 1 - DONE)
-  - ✅ Multi-limb to_s conversion (Step 2 - DONE)
-    - ✅ Single-limb to_s working
-    - ✅ Multi-limb `__divmod_by_fixnum` implementation
-    - ✅ Test: 2-limb integer [1,1] → "1073741825"
-- Phase 7: Multi-Limb Multiplication (DEFERRED - bootstrap complexity)
-  - Attempted implementation but causes compiler self-compilation to segfault
-  - Bootstrap constraint: any code in Integer class is used during compiler compilation
-  - Complex array manipulation and s-expression/Ruby mixing causes issues
-  - Need to either:
-    1. Implement in pure s-expressions (very complex)
-    2. Find simpler algorithm that avoids problematic patterns
-    3. Defer until after Phase 8 or use different approach
-- Phase 8: Multi-Limb Division (future)
-- Phase 9: Automatic Demotion (optimize by demoting small heap integers)
+### Progress - ALL CORE PHASES COMPLETE! ✅
+- ✅ **Phase 1:** Integer bignum storage structure
+- ✅ **Phase 2:** Detection helpers
+- ✅ **Phase 3:** Allocation and creation
+- ✅ **Phase 4:** Basic Arithmetic
+- ✅ **Phase 5:** Operator scaffolding
+- ✅ **Phase 6: Multi-Limb Support - COMPLETE**
+  - ✅ Step 1: Multi-limb comparison operators
+  - ✅ Step 2: Multi-limb to_s conversion (with div64 fix for limb0=0 case)
+  - ✅ Step 3: Multi-limb addition with carry propagation
+  - ✅ Step 4: Multi-limb subtraction with borrow propagation
+  - ✅ Step 5: Split overflow values into proper 30-bit limbs
+  - **Test results:**
+    - [1,1].to_s → "1073741825" ✅
+    - [0,2].to_s → "2147483648" ✅ (div64 fix)
+    - [1,1] + [2,0] → "1073741827" ✅
+    - [1,1] + (-[2,0]) → "1073741823" ✅
+    - 536870912 + 536870912 → "1073741824" ✅
+- ✅ **Phase 7: Multi-Limb Multiplication - COMPLETE**
+  - ✅ Implemented mulfull s-expression (64-bit multiply)
+  - ✅ Heap × fixnum multiplication working
+  - ✅ Heap × heap multiplication working
+  - ⚠️ Fixnum × heap has compiler limitation (workaround: use heap × fixnum)
+  - **Test results:**
+    - [50] * 4 → "200" ✅
+    - [536870912, 1] * 2 → correct multi-limb result ✅
+- ✅ **Phase 8: Multi-Limb Division (by fixnum) - COMPLETE**
+  - ✅ Implemented div64 s-expression (64-bit unsigned division)
+  - ✅ Multi-limb division by small fixnum for to_s
+  - ✅ __divmod_by_fixnum works for all cases
+  - **Note:** Heap / heap division not yet implemented (future work)
+- ✅ **Phase 9: Automatic Demotion - COMPLETE**
+  - ✅ Results that fit in fixnum (single limb < 2^29) are automatically demoted
+  - ✅ Implemented in all arithmetic operations
+  - **Test:** [10] + [5] → 15 (demoted to fixnum) ✅
 
 ### Current Representation
 
