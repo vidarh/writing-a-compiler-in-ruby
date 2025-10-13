@@ -49,7 +49,8 @@ class Compiler
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline, # See `inline.rb`
                    :bitand, :bitor, :bitxor, # Bitwise operators
-                   :mulfull # Widening multiply - returns both low and high words
+                   :mulfull, # Widening multiply - returns both low and high words
+                  :div64 # 64-bit division - divides EDX:EAX by operand
                   ]
 
   Keywords = @@keywords

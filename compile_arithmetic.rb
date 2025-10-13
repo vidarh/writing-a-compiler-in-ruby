@@ -186,4 +186,50 @@ class Compiler
 
     Value.new([:subexpr])
   end
+
+  def compile_div64(scope, high_word, low_word, divisor, quot_var, rem_var)
+    # 64-bit division: (high_word:low_word) / divisor
+    # S-expr: (div64 high low divisor quot_var rem_var)
+    # Stores quotient to quot_var, remainder to rem_var
+    # Returns quotient in eax
+
+    # Evaluate and save all operands
+    compile_eval_arg(scope, high_word)
+    @e.pushl(@e.result)  # Save high word
+
+    compile_eval_arg(scope, low_word)
+    @e.pushl(@e.result)  # Save low word
+
+    compile_eval_arg(scope, divisor)
+    @e.movl(@e.result, :ecx)  # Divisor in ecx
+
+    # Set up EDX:EAX for divl (unsigned division)
+    @e.popl(:eax)  # Low word (dividend low) -> eax
+    @e.popl(:edx)  # High word (dividend high) -> edx
+
+    # Divide EDX:EAX by ECX using unsigned division
+    # Result: quotient in EAX, remainder in EDX
+    @e.divl(:ecx)
+
+    # Save results to stack
+    @e.pushl(:edx)  # remainder
+    @e.pushl(:eax)  # quotient
+
+    # Store quotient to quot_var
+    quot_type, quot_param = scope.get_arg(quot_var)
+    @e.popl(:eax)  # Get quotient from stack
+    @e.save(quot_type, :eax, quot_param)
+    @e.pushl(:eax)  # Save back for return
+
+    # Store remainder to rem_var
+    rem_type, rem_param = scope.get_arg(rem_var)
+    @e.movl("4(%esp)", :edx)  # Get remainder from stack
+    @e.save(rem_type, :edx, rem_param)
+
+    # Clean up and return quotient
+    @e.popl(:eax)  # Quotient as return value
+    @e.addl(4, :esp)  # Remove remainder from stack
+
+    Value.new([:subexpr])
+  end
 end

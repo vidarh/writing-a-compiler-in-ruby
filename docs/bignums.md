@@ -1385,15 +1385,16 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
   - Fix: Implemented `__is_negative` and `__negate` methods that check @sign directly
   - Sidesteps broken comparison system by accessing @sign in s-expression context
 
-**Current Limitations:**
-- **Multi-limb to_s BROKEN for limb0=0 cases** (e.g., `[0, 2]` displays as "8")
-  - Root cause: `__divmod_with_carry` line 1250 uses 32-bit multiplication
-  - `carry * 1073741824` overflows for carry >= 2 in 32-bit signed arithmetic
-  - Example: `[0, 2]` → carry=2 → `2 * 2^30 = 2^31` overflows to negative
-  - Result: `__divmod_by_fixnum(10)` returns `[-214748364, -8]` instead of correct values
-  - Impact: Heap + heap addition creates correct limbs but displays wrong value
-  - Fix requires: 64-bit multiplication or alternative algorithm (Phase 7 scope)
+**Bugs Fixed:**
+- **Commit [current]**: Multi-limb to_s overflow fixed using div64
+  - Root cause: `__divmod_with_carry` used 32-bit multiplication for `carry * 2^30`
+  - When carry >= 2, result overflows 32-bit signed integer
+  - Solution: Implemented `div64` s-expression for 64-bit division
+  - Added `divl` (unsigned division) instruction to emitter
+  - Compute `2^30` inline in s-expression (cannot use literal - too large for fixnum)
+  - Test: `[0, 2].to_s` now correctly displays "2147483648" ✅
 
+**Current Limitations:**
 - **Comparison operators (< > <= >=) still broken for heap integers**
   - `__cmp` dispatch system fails silently (methods never invoked)
   - Attempted multiple fixes - s-expression/Ruby mixing fundamentally broken
@@ -1401,12 +1402,12 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
   - Fix requires: Rewriting entire comparison system without s-expression dispatch complexity
 
 - Only tested for overflow from fixnum + fixnum
-- Multiplication and other operations still use __get_raw
+- Heap × fixnum multiplication has dispatcher bug (workaround: use fixnum × heap)
 
 **Next Steps:**
-- Fix __divmod_with_carry 32-bit overflow (requires 64-bit multiply support - Phase 7)
 - Fix comparison operators (requires comparison system rewrite - complex, low priority)
-- Implement proper multiplication (Phase 7 - deferred due to complexity)
+- Fix fixnum × heap dispatcher bug
+- Add comprehensive integration tests
 
 ## Testing Approach
 

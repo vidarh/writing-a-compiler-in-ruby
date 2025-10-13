@@ -1186,23 +1186,34 @@ class Integer < Numeric
   # Compute (carry * 2^30 + limb) / divisor
   # All inputs are tagged fixnums, carry < 36
   def __divmod_with_carry(carry, limb, divisor)
-    # Use s-expression for the arithmetic
-    # Since carry < 36 and limb < 2^30, we can use multiplication
-    # carry * 1073741824 fits in 36 bits (well within 64-bit range)
+    # Use s-expression with mulfull and div64 for 64-bit arithmetic
+    # carry can be >= 2, so carry * 2^30 can overflow 32-bit signed integer
+    # Use mulfull to get full 64-bit result, then div64 to divide it
     %s(
-      (let (carry_raw limb_raw divisor_raw value q r)
+      (let (carry_raw limb_raw divisor_raw limb_base k1 k2 low high sum_low q r)
         (assign carry_raw (sar carry))
         (assign limb_raw (sar limb))
         (assign divisor_raw (sar divisor))
 
-        # Compute carry_raw * 1073741824 + limb_raw
-        # Use multiplication for carry * 2^30
-        (assign value (mul carry_raw 1073741824))
-        (assign value (add value limb_raw))
+        # Compute 2^30 = 1073741824 inline (cannot use literal - too large for fixnum)
+        (assign k1 1024)
+        (assign k2 (mul k1 k1))           # 1024 * 1024 = 1048576
+        (assign limb_base (mul k2 k1))    # 1048576 * 1024 = 1073741824
 
-        # Divide by divisor
-        (assign q (div value divisor_raw))
-        (assign r (mod value divisor_raw))
+        # Compute carry_raw * limb_base using 64-bit multiply
+        # Result: [low, high] where full value = high * 2^32 + low
+        (mulfull carry_raw limb_base low high)
+
+        # Add limb_raw to low word
+        (assign sum_low (add low limb_raw))
+
+        # Check for unsigned overflow (sum_low < low means carry occurred)
+        (if (lt sum_low low)
+          (assign high (add high 1)))
+
+        # Divide 64-bit value (high:sum_low) by divisor_raw
+        # Result: quotient in q, remainder in r
+        (div64 high sum_low divisor_raw q r)
 
         (return (callm self __make_divmod_array ((__int q) (__int r)))))
     )

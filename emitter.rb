@@ -480,6 +480,9 @@ class Emitter
   def idivl *args
     emit(:idivl, *args)
   end
+  def divl *args
+    emit(:divl, *args)
+  end
   def imull *args
     emit(:imull, *args)
   end
