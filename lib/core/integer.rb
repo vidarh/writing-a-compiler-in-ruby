@@ -209,10 +209,10 @@ class Integer < Numeric
         (assign raw_val (sar fixnum_val))
         (if (lt raw_val 0)
           (do
-            (assign other_sign_val -1)
+            (assign other_sign_val (__int -1))
             (assign abs_val (sub 0 raw_val)))
           (do
-            (assign other_sign_val 1)
+            (assign other_sign_val (__int 1))
             (assign abs_val raw_val)))
         (assign other_limb (__int abs_val))
         # Call helper with extracted values
