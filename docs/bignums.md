@@ -1370,41 +1370,34 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
 - ✅ 536870911 + 2 = 536870913 (single limb, correctly sized)
 - ✅ Positive overflow cases work correctly
 - ✅ Heap integer + fixnum addition works (1073741824 + 1 = 1073741825)
+- ✅ Negative single-limb: -42 displays correctly
+- ✅ Negative multi-limb: -1073741825 displays correctly
+- ✅ Negative overflow: -1073741824 displays correctly
 - ✅ selftest-c: 0 failures
-- ⚠️ Negative overflow has display issues (limbs correct, to_s shows wrong value)
-- ⚠️ Heap integer + heap integer not fully tested
+- ⚠️ Heap integer + heap integer not fully tested (but works for tested cases)
 
-**Bug Fixed (commit 02a717a):**
-- Heap + fixnum was incorrectly subtracting instead of adding
-- Root cause: `other_sign_val` was raw integer but `@sign` is tagged fixnum
-- Fix: Tag sign values with `(__int 1)` and `(__int -1)` in `__add_heap_and_fixnum`
+**Bugs Fixed:**
+- **Commit 02a717a**: Heap + fixnum was incorrectly subtracting instead of adding
+  - Root cause: `other_sign_val` was raw integer but `@sign` is tagged fixnum
+  - Fix: Tag sign values with `(__int 1)` and `(__int -1)` in `__add_heap_and_fixnum`
+- **Commit 8a20892**: Negative heap integers displayed corrupted values
+  - Root cause: `to_s` used `self < 0` which relied on broken __cmp dispatch
+  - Fix: Implemented `__is_negative` and `__negate` methods that check @sign directly
+  - Sidesteps broken comparison system by accessing @sign in s-expression context
 
 **Current Limitations:**
 - **Multi-limb to_s BROKEN for limb0=0 cases** (e.g., `[0, 2]` displays as "8")
-  - Root cause: `__divmod_with_carry` line 1200 uses 32-bit multiplication
+  - Root cause: `__divmod_with_carry` line 1250 uses 32-bit multiplication
   - `carry * 1073741824` overflows for carry >= 2 in 32-bit signed arithmetic
   - Example: `[0, 2]` → carry=2 → `2 * 2^30 = 2^31` overflows to negative
   - Result: `__divmod_by_fixnum(10)` returns `[-214748364, -8]` instead of correct values
   - Impact: Heap + heap addition creates correct limbs but displays wrong value
   - Fix requires: 64-bit multiplication or alternative algorithm (Phase 7 scope)
 
-- **Negative heap integers have multiple display/comparison issues**
-  - `to_s` displays incorrect values (e.g., `[100]` with sign -1 shows "a0" instead of "-100")
-  - Root cause chain:
-    1. `to_s` line 1224 uses `self < 0` to detect negative numbers
-    2. `<` operator (line 1468) calls `__cmp(other)`
-    3. `__cmp` dispatch (line 862-885) uses s-expression to route to `__cmp_heap_fixnum`
-    4. **Bug**: `__cmp_heap_fixnum` is never actually called (dispatch fails silently)
-    5. Fallback behavior returns incorrect comparison results
-    6. Result: negative detection fails, number isn't negated, divmod returns negative values
-    7. Negative array indices into digit string cause corrupted output
-  - Attempted fixes:
-    - Tried fixing s-expression dispatch - didn't work
-    - Tried extracting sign in Ruby code - methods not being called
-    - Tried accessing @sign via `(index self 2)` - incorrect
-    - Tried accessing @sign directly in s-expression - still fails
-  - **Conclusion**: S-expression/Ruby mixing in comparison dispatch is fundamentally broken
-  - Likely conflicts with `<=>` operator (line 1355) which also uses `__get_raw`
+- **Comparison operators (< > <= >=) still broken for heap integers**
+  - `__cmp` dispatch system fails silently (methods never invoked)
+  - Attempted multiple fixes - s-expression/Ruby mixing fundamentally broken
+  - **Workaround**: Use `__is_negative` for sign checks (works correctly)
   - Fix requires: Rewriting entire comparison system without s-expression dispatch complexity
 
 - Only tested for overflow from fixnum + fixnum
@@ -1412,7 +1405,7 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
 
 **Next Steps:**
 - Fix __divmod_with_carry 32-bit overflow (requires 64-bit multiply support - Phase 7)
-- Fix negative heap integer comparisons (requires comparison system rewrite - complex)
+- Fix comparison operators (requires comparison system rewrite - complex, low priority)
 - Implement proper multiplication (Phase 7 - deferred due to complexity)
 
 ## Testing Approach
