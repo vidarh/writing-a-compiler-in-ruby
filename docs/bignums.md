@@ -1401,12 +1401,20 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
   - **Workaround**: Use `__is_negative` for sign checks (works correctly)
   - Fix requires: Rewriting entire comparison system without s-expression dispatch complexity
 
+- **Fixnum-as-receiver dispatcher bug (COMPILER LIMITATION)**
+  - `(callm fixnum method heap)` from s-expressions doesn't work
+  - Affects: `fixnum + heap`, `fixnum * heap`, and similar patterns
+  - Methods like `__multiply_fixnum_by_heap` are never called
+  - Root cause: Compiler issue with method calls on fixnum receivers from s-expressions
+  - **Workaround**: Use `heap + fixnum` or `heap * fixnum` instead
+  - This is NOT a bignum-specific issue - it's a general compiler limitation
+  - Fix requires: Compiler changes to handle method calls on fixnum receivers
+
 - Only tested for overflow from fixnum + fixnum
-- Heap × fixnum multiplication has dispatcher bug (workaround: use fixnum × heap)
 
 **Next Steps:**
 - Fix comparison operators (requires comparison system rewrite - complex, low priority)
-- Fix fixnum × heap dispatcher bug
+- Fix fixnum-as-receiver dispatcher (requires compiler changes - complex)
 - Add comprehensive integration tests
 
 ## Testing Approach

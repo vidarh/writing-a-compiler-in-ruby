@@ -1354,25 +1354,31 @@ class Integer < Numeric
 
   def * other
     # Dispatch based on types: fixnum vs heap integer
+    # Pattern copied from Integer#+ which works correctly
     %s(
-      (if (eq (bitand self 1) 0)
-        # self is heap integer
-        (return (callm self __multiply_heap other))
-        # self is fixnum, check other
-        (if (eq (bitand other 1) 0)
-          # other is heap
-          (return (callm self __multiply_fixnum_by_heap other))
-          # both fixnums
-          (let (a b result)
-            (assign a (sar self))
-            (assign b (sar other))
-            (assign result (mul a b))
-            (return (__add_with_overflow result 0)))))
+      (if (eq (bitand self 1) 1)
+        # Tagged fixnum path
+        (do
+          # Check if other is also a tagged fixnum
+          (if (eq (bitand other 1) 1)
+            # Both tagged fixnums - multiply with overflow detection
+            (let (a b result)
+              (assign a (sar self))
+              (assign b (sar other))
+              (assign result (mul a b))
+              (return (__add_with_overflow result 0)))
+            # self is tagged fixnum, other is heap integer - dispatch to Ruby
+            (return (callm self __multiply_fixnum_by_heap other))))
+        # Heap integer - dispatch to Ruby implementation
+        (return (callm self __multiply_heap other)))
     )
   end
 
   # Multiply fixnum by heap integer
   # Called when self is fixnum and other is heap
+  # NOTE: Currently not working when called from s-expression dispatcher
+  # This is a compiler limitation with (callm fixnum method heap)
+  # Workaround: Use heap * fixnum instead of fixnum * heap
   def __multiply_fixnum_by_heap(heap_int)
     heap_int.__multiply_heap_by_fixnum(self)
   end
