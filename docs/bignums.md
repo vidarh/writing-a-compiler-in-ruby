@@ -63,7 +63,14 @@
     - ✅ Single-limb to_s working
     - ✅ Multi-limb `__divmod_by_fixnum` implementation
     - ✅ Test: 2-limb integer [1,1] → "1073741825"
-- Phase 7: Multi-Limb Multiplication (future)
+- Phase 7: Multi-Limb Multiplication (DEFERRED - bootstrap complexity)
+  - Attempted implementation but causes compiler self-compilation to segfault
+  - Bootstrap constraint: any code in Integer class is used during compiler compilation
+  - Complex array manipulation and s-expression/Ruby mixing causes issues
+  - Need to either:
+    1. Implement in pure s-expressions (very complex)
+    2. Find simpler algorithm that avoids problematic patterns
+    3. Defer until after Phase 8 or use different approach
 - Phase 8: Multi-Limb Division (future)
 - Phase 9: Automatic Demotion (optimize by demoting small heap integers)
 
@@ -548,6 +555,68 @@ Value directly in register/memory: (n << 1) | 1
 - ✅ selftest-c: 0 failures
 
 **Status: Multi-limb addition AND subtraction WORKING! ✅**
+
+## Phase 7: Multi-Limb Multiplication (DEFERRED)
+
+### Implementation Attempt
+
+**Goal:** Implement multiplication for multi-limb heap integers using school multiplication algorithm.
+
+**Approach Attempted:**
+1. Modified `Integer#*` to dispatch based on representation (fixnum vs heap)
+2. Implemented `__multiply_heap_and_fixnum` - multiply heap integer by fixnum with carry propagation
+3. Implemented `__multiply_heap_and_heap` - full school multiplication for two heap integers
+4. Helper methods:
+   - `__multiply_magnitude_by_fixnum` - multiply limb array by raw fixnum value
+   - `__multiply_limb_by_raw` - multiply single limb with carry handling
+   - `__multiply_and_add_limbs` - school multiplication inner loop
+   - `__append_carry_to_result` - append final carry to result array
+
+**Bootstrap Issues Encountered:**
+1. **Compiler segfault during self-compilation** - The multiplication code is compiled into the compiler itself (since it's in Integer class), and when the compiler tries to self-compile, it segfaults around line 396000 of compilation.
+
+2. **Mixing s-expression and Ruby contexts** - Attempting to pass Ruby variables (like `my_limbs` array) as arguments within s-expression `callm` statements causes issues:
+   ```ruby
+   # PROBLEMATIC:
+   %s((return (callm self __multiply_magnitude_by_fixnum (my_limbs abs_val other_sign))))
+   ```
+   The array reference doesn't work correctly when called from s-expression context.
+
+3. **Complex array manipulation** - School multiplication requires:
+   - Initializing result array with zeros
+   - Nested loops over limbs
+   - Updating array elements at calculated positions
+   - This level of complexity is difficult to implement in a bootstrap-safe way
+
+4. **Array element assignment in s-expressions** - Attempted to use `(callm result_limbs []= (pos sum_val))` which the compiler doesn't handle correctly.
+
+**Why Bootstrap Failed:**
+- Integer class methods are used during the compiler's own compilation
+- Any bug or complexity in Integer#* causes the compiler to fail when compiling itself
+- The multiplication implementation was too complex to be bootstrap-safe
+- Previous successful implementations (addition, subtraction, to_s) used simpler patterns
+
+**Lessons Learned:**
+1. Bootstrap-safe code must be very simple
+2. Avoid complex s-expression/Ruby mixing patterns
+3. Array manipulation needs careful handling
+4. Test with `make selftest-c` after every change
+5. Phase 6 Step 5 (limb splitting) was deferred for similar reasons
+
+**Potential Paths Forward:**
+1. **Implement in pure s-expressions** - Very complex but might avoid context-mixing issues
+2. **Simpler algorithm** - Use repeated addition for small multipliers (inefficient but simple)
+3. **Defer until more infrastructure** - Wait for better array handling or simpler patterns
+4. **Alternative approach** - Implement outside Integer class, or use different compilation strategy
+
+**Current Status:**
+- Integer#* still uses `__get_raw` which only works for single-limb heap integers
+- Multi-limb × fixnum: NOT working (returns wrong value)
+- Multi-limb × multi-limb: NOT working (truncates to 32-bit)
+- `make selftest-c`: Passes with reverted code ✅
+
+**Test Created:**
+- `test_multilimb_mult.rb` - Tests [1,1] * 2 (currently fails: returns 6 instead of 2147483650)
 
 ## Testing Approach
 
