@@ -54,26 +54,33 @@
 
 # Minimal bignum support - detect overflow and handle it
 %s(defun __add_with_overflow (a b)
-  (let (result high_bits obj sign shift_amt val_to_shift)
+  (let (result high_bits obj sign shift_amt val_to_shift abs_val limb_base limb0 limb1 arr)
     (assign result (add a b))
-    # Check if result fits in 30 bits by shifting right 29
     (assign shift_amt 29)
     (assign val_to_shift result)
     (assign high_bits (sarl shift_amt val_to_shift))
-    # If high_bits is 0 or -1, result fits in fixnum
     (if (or (eq high_bits 0) (eq high_bits -1))
       (return (__int result))
       (do
-        # Overflow detected - allocate heap integer
         (assign obj (callm Integer new))
-        # Determine sign
         (if (lt result 0)
           (assign sign (__int -1))
           (assign sign (__int 1)))
-        # Pass tagged value to __set_heap_data which will wrap it in an array
-        # Note: Array literal creation moved to __set_heap_data to keep s-expression code simple
-        # TODO: For true multi-limb support, need to split result into 30-bit limbs
-        (callm obj __set_heap_data ((__int result) sign))
+
+        (assign abs_val result)
+        (if (lt abs_val 0)
+          (assign abs_val (sub 0 abs_val)))
+
+        (assign limb_base (callm obj __limb_base_raw))
+        (assign limb0 (mod abs_val limb_base))
+        (assign limb1 (div abs_val limb_base))
+
+        (assign arr (callm Array new))
+        (callm arr push ((__int limb0)))
+        (if (ne limb1 0)
+          (callm arr push ((__int limb1))))
+
+        (callm obj __set_heap_data (arr sign))
         (return obj)))
   )
 )

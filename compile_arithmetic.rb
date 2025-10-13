@@ -144,4 +144,46 @@ class Compiler
       @e.movl(:edx, @e.result)
     end
   end
+
+  def compile_mulfull(scope, left, right, low_var, high_var)
+    # Widening multiply: left * right
+    # S-expr: (mulfull a b low_var high_var)
+    # Stores low word to low_var, high word to high_var
+    # Returns low word in eax
+
+    # Evaluate and save left operand
+    compile_eval_arg(scope, left)
+    @e.pushl(@e.result)
+
+    # Evaluate right operand
+    compile_eval_arg(scope, right)
+    @e.movl(@e.result, :ecx)
+
+    # Pop left operand into eax
+    @e.popl(:eax)
+
+    # One-operand imull: eax * ecx -> edx:eax
+    @e.imull(:ecx)
+
+    # Save both results to stack temporarily
+    @e.pushl(:edx)  # high word
+    @e.pushl(:eax)  # low word
+
+    # Get low_var location and store
+    low_type, low_param = scope.get_arg(low_var)
+    @e.popl(:eax)  # Get low word from stack
+    @e.save(low_type, :eax, low_param)  # save(type, source, dest)
+    @e.pushl(:eax)  # Save back for return
+
+    # Get high_var location and store
+    high_type, high_param = scope.get_arg(high_var)
+    @e.movl("4(%esp)", :edx)  # Get high word from stack (at esp+4)
+    @e.save(high_type, :edx, high_param)  # save(type, source, dest)
+
+    # Clean up and return low word
+    @e.popl(:eax)  # Low word as return value
+    @e.addl(4, :esp)  # Remove high word from stack
+
+    Value.new([:subexpr])
+  end
 end

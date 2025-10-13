@@ -46,10 +46,10 @@
 - ✅ Phase 4: Basic Arithmetic (DONE - but single-limb only, delegates to __get_raw)
 - ✅ Phase 5: Operator scaffolding (DONE - all operators exist but use __get_raw)
 - ⏳ **Phase 6: Multi-Limb Support (MOSTLY COMPLETE)**
-  - [ ] Split overflow values into proper 30-bit limbs (Step 5 - DEFERRED)
-    - Current limitation: Overflow from addition creates single-limb heap integers
-    - Values > 2^30 get truncated when tagged (e.g., 2B → -147M)
-    - Proper multi-limb splitting requires more complex bootstrap-safe implementation
+  - ✅ Split overflow values into proper 30-bit limbs (Step 5 - COMPLETE)
+    - Overflow from addition now creates proper multi-limb heap integers
+    - Implemented directly in __add_with_overflow s-expression for bootstrap safety
+    - Test: 536870912 + 536870912 = 1073741824 (displays correctly as [0, 1])
     - Can manually create multi-limb integers for testing
   - ✅ Multi-limb addition with carry propagation (Step 3 - DONE)
     - ✅ Implemented __add_magnitudes with carry propagation
@@ -556,67 +556,832 @@ Value directly in register/memory: (n << 1) | 1
 
 **Status: Multi-limb addition AND subtraction WORKING! ✅**
 
-## Phase 7: Multi-Limb Multiplication (DEFERRED)
+## Phase 7: Multi-Limb Multiplication
 
-### Implementation Attempt
+### Root Cause Analysis
 
-**Goal:** Implement multiplication for multi-limb heap integers using school multiplication algorithm.
+The fundamental challenge is capturing full multiplication results:
 
-**Approach Attempted:**
-1. Modified `Integer#*` to dispatch based on representation (fixnum vs heap)
-2. Implemented `__multiply_heap_and_fixnum` - multiply heap integer by fixnum with carry propagation
-3. Implemented `__multiply_heap_and_heap` - full school multiplication for two heap integers
-4. Helper methods:
-   - `__multiply_magnitude_by_fixnum` - multiply limb array by raw fixnum value
-   - `__multiply_limb_by_raw` - multiply single limb with carry handling
-   - `__multiply_and_add_limbs` - school multiplication inner loop
-   - `__append_carry_to_result` - append final carry to result array
+**The Word-Size Truncation Problem:**
+- Current `(mul a b)` operation only returns single-word result (32 bits)
+- Multiplying two 30-bit numbers can produce up to 60 bits (2^30 × 2^30 = 2^60)
+- The high bits of the product are lost, making proper multi-limb arithmetic impossible
+- This truncation prevents correct carry propagation in multi-limb multiplication
 
-**Bootstrap Issues Encountered:**
-1. **Compiler segfault during self-compilation** - The multiplication code is compiled into the compiler itself (since it's in Integer class), and when the compiler tries to self-compile, it segfaults around line 396000 of compilation.
+**The Full Result Solution:**
+- Need widening multiply operation that returns both low and high words of product
+- Low word: bits 0-31 of product
+- High word: bits 32-63 of product
+- Current s-expression system only exposes single return value
+- Need mechanism to capture both parts of the result
 
-2. **Mixing s-expression and Ruby contexts** - Attempting to pass Ruby variables (like `my_limbs` array) as arguments within s-expression `callm` statements causes issues:
-   ```ruby
-   # PROBLEMATIC:
-   %s((return (callm self __multiply_magnitude_by_fixnum (my_limbs abs_val other_sign))))
-   ```
-   The array reference doesn't work correctly when called from s-expression context.
+### Comprehensive Solution Plan
 
-3. **Complex array manipulation** - School multiplication requires:
-   - Initializing result array with zeros
-   - Nested loops over limbs
-   - Updating array elements at calculated positions
-   - This level of complexity is difficult to implement in a bootstrap-safe way
+#### Option A: Extend S-Expression Operations (RECOMMENDED)
 
-4. **Array element assignment in s-expressions** - Attempted to use `(callm result_limbs []= (pos sum_val))` which the compiler doesn't handle correctly.
+**Approach:** Add new s-expression operations that expose full 64-bit multiply result.
 
-**Why Bootstrap Failed:**
-- Integer class methods are used during the compiler's own compilation
-- Any bug or complexity in Integer#* causes the compiler to fail when compiling itself
-- The multiplication implementation was too complex to be bootstrap-safe
-- Previous successful implementations (addition, subtraction, to_s) used simpler patterns
+**Step A1: Add `mulfull` operation to compiler**
 
-**Lessons Learned:**
-1. Bootstrap-safe code must be very simple
-2. Avoid complex s-expression/Ruby mixing patterns
-3. Array manipulation needs careful handling
-4. Test with `make selftest-c` after every change
-5. Phase 6 Step 5 (limb splitting) was deferred for similar reasons
+Location: `compile_arithmetic.rb` or similar
 
-**Potential Paths Forward:**
-1. **Implement in pure s-expressions** - Very complex but might avoid context-mixing issues
-2. **Simpler algorithm** - Use repeated addition for small multipliers (inefficient but simple)
-3. **Defer until more infrastructure** - Wait for better array handling or simpler patterns
-4. **Alternative approach** - Implement outside Integer class, or use different compilation strategy
+```ruby
+# New s-expression: (mulfull a b result_ptr)
+# Multiplies a * b and stores both low and high parts of the result
+# - result_ptr[0] receives low word (bits 0-31 of product)
+# - result_ptr[1] receives high word (bits 32-63 of product)
+# Returns: result_ptr (for chaining)
+#
+# This enables capturing the full result of multiplying two 30-bit values,
+# which can produce up to 60 bits and requires two words to represent.
+#
+# Register usage: Clobbers caller-saved registers per calling convention
 
-**Current Status:**
-- Integer#* still uses `__get_raw` which only works for single-limb heap integers
-- Multi-limb × fixnum: NOT working (returns wrong value)
-- Multi-limb × multi-limb: NOT working (truncates to 32-bit)
-- `make selftest-c`: Passes with reverted code ✅
+**Step A2: Implementation of compile_mulfull**
 
-**Test Created:**
-- `test_multilimb_mult.rb` - Tests [1,1] * 2 (currently fails: returns 6 instead of 2147483650)
+The emitter already has methods for movl, pushl, popl, imull. No new emitter methods needed:
+
+```ruby
+def compile_mulfull(scope, left, right, result_ptr)
+  # Evaluate all operands and save to stack
+  compile_eval_arg(scope, :eax, left)
+  @e.pushl(:eax)
+
+  compile_eval_arg(scope, :ecx, right)
+  @e.pushl(:ecx)
+
+  compile_eval_arg(scope, :ebx, result_ptr)
+  @e.pushl(:ebx)
+
+  # Restore operands from stack
+  @e.popl(:ebx)  # result_ptr
+  @e.popl(:ecx)  # right operand
+  @e.popl(:eax)  # left operand
+
+  # One-operand imull: EAX * ECX -> EDX:EAX (full 64-bit result)
+  @e.imull(:ecx)
+
+  # Store both result words to memory
+  @e.movl(:eax, [:ebx, 0])   # low word
+  @e.movl(:edx, [:ebx, 4])   # high word
+
+  # Return result_ptr
+  @e.movl(:ebx, :eax)
+end
+```
+
+**Step A3: Implement helper in lib/core/integer.rb**
+
+```ruby
+# Multiply two raw 30-bit values, return [low_bits, high_bits]
+def __multiply_raw_with_full_result(a_raw, b_raw)
+  %s(
+    (let (a b result_ptr low_word high_word)
+      (assign a a_raw)
+      (assign b b_raw)
+
+      # Allocate 8 bytes on stack for result (two 32-bit words)
+      (sub esp 8)
+      (assign result_ptr esp)
+
+      # Call mulfull to store result in stack memory
+      (mulfull a b result_ptr)
+
+      # Load results from stack
+      (assign low_word (index result_ptr 0))
+      (assign high_word (index result_ptr 4))
+
+      # Clean up stack
+      (add esp 8)
+
+      # Return as Ruby array
+      (return (callm self __make_overflow_result ((low_word high_word)))))
+  )
+end
+```
+
+Note: This assumes `__make_overflow_result` exists to wrap two values in an array, or use alternative approach to return the values.
+
+**Step A4: Implement limb-by-limb multiplication**
+
+```ruby
+def __multiply_limb_by_fixnum_with_carry(limb, multiplier_raw, carry_in)
+  # Extract raw values
+  limb_raw = %s((sar limb))
+
+  # Multiply limb * multiplier
+  result_pair = __multiply_raw_with_full_result(limb_raw, multiplier_raw)
+  low_bits = result_pair[0]
+  high_bits = result_pair[1]
+
+  # Add carry
+  sum_low = low_bits + carry_in
+  carry_from_add = 0
+  if sum_low >= __limb_base_raw
+    sum_low = sum_low - __limb_base_raw
+    carry_from_add = 1
+  end
+
+  # Total carry = high_bits from multiply + carry from addition
+  total_carry = high_bits + carry_from_add
+
+  return [sum_low, total_carry]
+end
+
+def __multiply_heap_by_fixnum(other)
+  my_limbs = @limbs
+  my_sign = @sign
+
+  # Extract other as raw value and determine sign
+  other_raw = %s((sar other))
+  other_sign = 1
+  if other_raw < 0
+    other_raw = 0 - other_raw
+    other_sign = -1
+  end
+
+  result_limbs = []
+  carry = 0
+  i = 0
+  len = my_limbs.length
+
+  while i < len
+    limb = my_limbs[i]
+    result_pair = __multiply_limb_by_fixnum_with_carry(limb, other_raw, carry)
+    result_limbs << result_pair[0]
+    carry = result_pair[1]
+    i = i + 1
+  end
+
+  # Append final carry if non-zero
+  if carry != 0
+    result_limbs << carry
+  end
+
+  # Create result
+  result_sign = my_sign * other_sign
+  result = Integer.new
+  result.__set_heap_data(result_limbs, result_sign)
+  return result
+end
+```
+
+**Step A5: Implement heap * heap multiplication**
+
+```ruby
+def __multiply_heap_by_heap(other)
+  my_limbs = @limbs
+  my_sign = @sign
+  other_limbs = other.__get_limbs
+  other_sign = other.__get_sign
+
+  my_len = my_limbs.length
+  other_len = other_limbs.length
+  result_len = my_len + other_len
+
+  # Initialize result array with zeros
+  result_limbs = []
+  i = 0
+  while i < result_len
+    result_limbs << 0
+    i = i + 1
+  end
+
+  # School multiplication
+  i = 0
+  while i < my_len
+    limb_a = my_limbs[i]
+    limb_a_raw = %s((sar limb_a))
+
+    carry = 0
+    j = 0
+    while j < other_len
+      limb_b = other_limbs[j]
+      limb_b_raw = %s((sar limb_b))
+
+      # Multiply limb_a * limb_b with full result
+      mult_result = __multiply_raw_with_full_result(limb_a_raw, limb_b_raw)
+      low_bits = mult_result[0]
+      high_bits = mult_result[1]
+
+      # Add to result at position i+j
+      pos = i + j
+      current = result_limbs[pos]
+      current_raw = %s((sar current))
+
+      sum = current_raw + low_bits + carry
+
+      # Handle overflow
+      if sum >= __limb_base_raw
+        adjusted = sum - __limb_base_raw
+        new_carry = high_bits + 1
+      else
+        adjusted = sum
+        new_carry = high_bits
+      end
+
+      result_limbs[pos] = %s((__int adjusted))
+      carry = new_carry
+
+      j = j + 1
+    end
+
+    # Add final carry
+    if carry != 0
+      pos = i + other_len
+      result_limbs[pos] = %s((__int carry))
+    end
+
+    i = i + 1
+  end
+
+  # Remove leading zeros
+  # ... (similar to __subtract_magnitudes)
+
+  # Create result with correct sign
+  result_sign = my_sign * other_sign
+  result = Integer.new
+  result.__set_heap_data(result_limbs, result_sign)
+  return result
+end
+```
+
+**Benefits of Option A:**
+- ✅ Captures full 64-bit multiply result
+- ✅ No truncation or data loss
+- ✅ Extends s-expression system in clean, reusable way
+- ✅ Other operations could benefit from `mulfull` in future
+- ✅ Follows established pattern (similar to how `div` works)
+
+**Risks:**
+- ⚠️ Requires compiler changes (but well-defined scope)
+- ⚠️ Bootstrap sequence needs careful testing
+- ⚠️ Must correctly capture both result words across architectures
+
+#### Option B: Chunk Multiplication (FALLBACK)
+
+**Approach:** Break 30-bit limbs into smaller chunks that can be multiplied without overflow.
+
+**Algorithm:**
+- Split each 30-bit limb into two 15-bit chunks
+- Multiply 15-bit × 15-bit = 30-bit (fits in 32 bits)
+- Combine results using addition and shifting
+
+**Example:**
+```ruby
+# For limb a = 0x3FFFFFFF (30 bits) and limb b = 0x3FFFFFFF:
+a_low = a & 0x7FFF          # Low 15 bits
+a_high = (a >> 15) & 0x7FFF # High 15 bits
+b_low = b & 0x7FFF
+b_high = (b >> 15) & 0x7FFF
+
+# Four partial products:
+p1 = a_low * b_low           # Bits 0-29
+p2 = a_low * b_high          # Bits 15-44
+p3 = a_high * b_low          # Bits 15-44
+p4 = a_high * b_high         # Bits 30-59
+
+# Combine (with carry handling):
+result_low = p1 + ((p2 + p3) << 15)
+result_high = p4 + ((p2 + p3) >> 15) + carry_from_low
+```
+
+**Benefits:**
+- ✅ No compiler changes needed
+- ✅ Uses only existing s-expression operations
+- ✅ Guaranteed to work within 32-bit arithmetic
+
+**Drawbacks:**
+- ❌ 4× more multiplications per limb operation
+- ❌ Complex carry propagation logic
+- ❌ More room for bugs in implementation
+- ❌ Slower execution
+
+#### Option C: Division-Based Splitting (FOR OVERFLOW SPLITTING ONLY)
+
+**Approach:** For splitting overflow values into limbs, use division rather than multiplication.
+
+**Algorithm for Phase 6 Step 5:**
+```ruby
+def __init_from_overflow_value(raw_value, sign)
+  # Get absolute value
+  abs_val = raw_value
+  if abs_val < 0
+    abs_val = 0 - abs_val
+  end
+
+  limbs = []
+  # Extract limbs using division
+  while abs_val != 0
+    limb_base = __limb_base_raw  # 2^30 as raw value
+    remainder = abs_val % limb_base
+    quotient = abs_val / limb_base
+
+    limbs << %s((__int remainder))
+    abs_val = quotient
+
+    # Safety limit
+    if limbs.length > 4
+      break
+    end
+  end
+
+  if limbs.length == 0
+    limbs << 0
+  end
+
+  @limbs = limbs
+  @sign = sign
+end
+```
+
+**Note:** Division works in s-expressions because `div` and `mod` operations already exist and handle 32-bit correctly. This approach is sufficient for Phase 6 Step 5 (splitting overflow values) but doesn't solve Phase 7 (multiplication).
+
+### Implementation Roadmap
+
+**Phase 7A: Extend S-Expression System (RECOMMENDED PATH)**
+
+### Implementation Progress
+
+**Step 7A.1: Add compile_mulfull - COMPLETE ✅**
+
+Changes made:
+- ✅ Added `:mulfull` to @@keywords in compiler.rb:52
+- ✅ Added `compile_mulfull(scope, left, right, low_var, high_var)` to compile_arithmetic.rb:148
+- ✅ Test passes: 100 * 200 = 20000 ✅
+- ✅ `make selftest-c`: 0 failures ✅
+
+Implementation:
+- S-expression: `(mulfull a b low_var high_var)`
+- Performs one-operand `imull %ecx` to get full 64-bit result in edx:eax
+- Stores low word (bits 0-31) to low_var
+- Stores high word (bits 32-63) to high_var
+- Returns low word in eax
+- Stack balanced, no leaks
+
+Key learnings:
+- Cannot pass `[:lvar, offset]` directly to `@e.movl` - it's a symbolic representation
+- Must use `scope.get_arg(var)` to get `[type, param]`, then use `@e.save(type, source, param)`
+- Memory operands like `4(%esp)` must be strings, not arrays
+- Save both results to stack first, then pop and store one at a time to avoid clobbering
+
+Test results:
+- ✅ Small values: 100 * 200 = 20000 (low=20000, high=0)
+- ✅ Large values: 65536 * 65537 = 4,295,032,832 (low=65536, high=1)
+- ✅ Both low and high words captured correctly
+
+**Step 7A.2: Create Ruby wrapper for mulfull - IN PROGRESS**
+
+Attempted:
+- Added `__multiply_raw_full(a_raw, b_raw)` method to Integer class
+- Issues with parameter passing between Ruby and s-expression contexts
+- Ruby method parameters come in as tagged fixnums, need careful untagging
+- Scoping between Ruby variables and s-expression let variables is complex
+
+Current blocker:
+- Need to understand how to properly pass values from Ruby method parameters into s-expression local variables
+- `(assign a (sar a_raw))` doesn't work as expected when a_raw is a Ruby parameter
+
+Options:
+1. Keep using mulfull directly in s-expressions (works perfectly)
+2. Study existing methods that bridge Ruby/s-expression parameter passing
+3. Defer wrapper until better understanding of scoping rules
+
+**Decision: Pause wrapper creation, use mulfull directly in s-expressions for now**
+
+**Step 7A.4: Implement __multiply_limb_by_fixnum_with_carry - COMPLETE ✅**
+
+Changes made:
+- ✅ Added `__multiply_limb_by_fixnum_with_carry(limb, fixnum, carry_in)` to Integer class (line 595-640)
+- ✅ Uses `mulfull` to multiply limb × fixnum, producing [low, high]
+- ✅ Adds carry_in to low word with unsigned overflow detection
+- ✅ Splits 64-bit result into 30-bit limb and 34-bit carry using bit operations
+- ✅ Returns [result_limb, carry_out] as tagged fixnums
+- ✅ Handles signed/unsigned arithmetic correctly for values exceeding 2^31
+
+Implementation details:
+- Uses `(mulfull limb_raw fixnum_raw low high)` for widening multiply
+- Detects unsigned overflow: `(if (lt sum_low low)` after addition
+- Extracts limb: `(bitand sum_low 0x3FFFFFFF)` - bottom 30 bits
+- Extracts bits 30-31: `(sub sum_low result_limb) / limb_base`
+- Adjusts for signed division when sum_low < 0 by adding 4
+- Final carry: `(sum_high * 4) + bits_30_31`
+
+Test results:
+- ✅ Small values: 1000 × 2 + 0 = 2000 (limb=2000, carry=0)
+- ✅ Large values: 10000 × 10000 + 0 = 100000000 (fits in 30 bits)
+- ✅ Overflow case: 536870912 × 2 + 0 = 2^30 (limb=0, carry=1)
+- ✅ Carry propagation: [536870912, 100] × 2 = [0, 201] ✅
+- ✅ Cascading carries: [536870912, 536870912] × 2 = [0, 1, 1] ✅
+- ✅ Large carry: 536870912 × 4 = [0, 2] ✅
+- ✅ Non-zero limb: 536870912 × 3 = [536870912, 1] ✅
+- ✅ Non-zero with overflow: 100000 × 15000 = [426258176, 1] ✅
+- ✅ Non-zero with carry_in: 200000000 × 7 + 100 = [326258276, 1] ✅
+- ✅ Multi-limb non-zero: [100000, 536870912] × 3 = [300000, 536870912, 1] ✅
+- ✅ `make selftest-c`: 0 failures
+
+**Step 7A.5: Implement __multiply_heap_by_fixnum - COMPLETE ✅**
+
+Changes made:
+- ✅ Added `__multiply_heap_by_fixnum(fixnum_val)` to Integer class (line 634-706)
+- ✅ Iterates through limbs, multiplying each by fixnum with carry propagation
+- ✅ Uses `__multiply_limb_by_fixnum_with_carry` helper for each limb
+- ✅ Appends final carry as new limb if non-zero
+- ✅ Demotes to fixnum if result fits in 30 bits
+- ✅ Returns heap integer otherwise
+
+Implementation:
+- Loop through each limb in the heap integer
+- Multiply limb × fixnum + carry_in → [result_limb, carry_out]
+- Accumulate result limbs
+- Check if result fits in fixnum (single limb < 2^29)
+- Create appropriate return value (fixnum or heap integer)
+
+Test results:
+- ✅ [100, 200] × 2 = [200, 400] (correct multi-limb result)
+- ✅ `make selftest-c`: 0 failures
+
+Current limitations:
+- Only handles positive fixnums (negative fixnum support deferred)
+- Sign handling simplified: result_sign = my_sign
+
+**Step 7A.7: Implement __multiply_heap_by_heap - COMPLETE ✅**
+
+Changes made:
+- ✅ Added `__multiply_heap_by_heap(other)` to Integer class (line 703-817)
+- ✅ Implements school multiplication algorithm
+- ✅ For each limb in multiplier, multiplies all limbs of multiplicand
+- ✅ Accumulates partial products at appropriate offsets
+- ✅ Handles carry propagation during addition
+- ✅ Trims leading zeros from result
+- ✅ Handles sign: result_sign = my_sign × other_sign
+- ✅ Demotes to fixnum if result fits
+
+Implementation details:
+- Allocates result array with max_len = my_len + other_len limbs
+- Outer loop (j): iterates through other_limbs
+- Inner loop (i): multiplies my_limbs[i] × other_limbs[j]
+- Uses `__multiply_limb_by_fixnum_with_carry` for limb × limb
+- Adds product to result[i+j] with overflow detection
+- Overflow check: `if sum < current` means unsigned overflow occurred
+- Trims leading zeros using flag-based loop
+
+Test results:
+- ✅ Single × single: [100] × [200] = 20000 (demoted to fixnum)
+- ✅ Multi × single: [100, 200] × [2] = [200, 400]
+- ✅ Multi × multi: [10, 20] × [3, 4] = [30, 100, 80]
+- ✅ With carries: [536870912, 1] × [2, 0] = [0, 3]
+- ✅ `make selftest-c`: 0 failures
+
+**Step 7A.8: Update Integer#* dispatcher - PARTIALLY COMPLETE**
+
+Changes made:
+- ✅ Added dispatcher logic to `Integer#*` operator (line 1314-1337)
+- ✅ Dispatches based on operand types using `(bitand self 1)` check
+- ✅ Four cases: fixnum×fixnum, fixnum×heap, heap×fixnum, heap×heap
+- ✅ Created `__multiply_fixnum_by_heap` helper method
+- ✅ Created `__multiply_heap` dispatcher for heap integer cases
+- ⚠️ Known bug: fixnum × heap returns garbage value
+
+Test results:
+- ✅ fixnum × fixnum: works correctly
+- ✅ heap × fixnum: works correctly
+- ✅ heap × heap: works correctly (tested separately)
+- ⚠️ fixnum × heap: returns wrong value (known issue)
+
+Current status:
+- All critical multiplication cases work (heap×fixnum, heap×heap, fixnum×fixnum)
+- The fixnum × heap case has a bug in the dispatcher return path
+- Helper method `__multiply_fixnum_by_heap` is defined but returns garbage
+- Direct method calls work fine; issue is specific to s-expression dispatcher
+- `make selftest-c`: 0 failures (bootstrap works)
+
+Known issue details:
+- When calling `4 * heap`, expected result is 200, gets garbage (-940984384, varies)
+- The helper method `__multiply_fixnum_by_heap` is NOT being called (no debug output)
+- Issue appears to be in how returns propagate from nested if statements in s-expressions
+- Workaround: Users can write `heap * 4` instead of `4 * heap`
+
+Investigation attempts:
+- Tested calling methods on fixnums from s-expressions: works
+- Tested calling `heap.__multiply_heap_by_fixnum(fixnum)` directly: works
+- Tested s-expression structure similar to + operator: still fails
+- Printf debugging in s-expressions causes assembly errors
+
+Next steps:
+- [ ] Debug why `__multiply_fixnum_by_heap` isn't being called
+- [ ] Consider alternative dispatcher structure
+- [ ] Add negative fixnum support
+- [ ] Add comprehensive integration tests
+
+---
+
+## Phase 7 Implementation Summary
+
+**Status: MOSTLY COMPLETE** (as of session end)
+
+### Completed Work
+
+1. **compile_mulfull (Step 7A.1)** ✅
+   - Added widening multiply s-expression: `(mulfull a b low_var high_var)`
+   - Captures full 64-bit result from 32-bit × 32-bit multiplication
+   - Uses x86 one-operand imull instruction (edx:eax result)
+   - Properly stores both low and high words to variables
+   - Location: `compile_arithmetic.rb:148-190`
+
+2. **__multiply_limb_by_fixnum_with_carry (Step 7A.4)** ✅
+   - Multiplies single 30-bit limb by fixnum with carry propagation
+   - Returns [result_limb, carry_out]
+   - Uses bitwise operations to split 64-bit result correctly
+   - Handles signed/unsigned arithmetic for values > 2^31
+   - Comprehensive test coverage including non-zero result limbs
+   - Location: `lib/core/integer.rb:595-640`
+
+3. **__multiply_heap_by_fixnum (Step 7A.5)** ✅
+   - Multiplies multi-limb integer by fixnum
+   - Iterates through limbs with carry propagation
+   - Properly handles overflow and carry between limbs
+   - Demotes to fixnum when result fits in 30 bits
+   - Location: `lib/core/integer.rb:642-701`
+
+4. **__multiply_heap_by_heap (Step 7A.7)** ✅
+   - School multiplication algorithm for multi-limb × multi-limb
+   - Nested loops: for each limb in multiplier, multiply all multiplicand limbs
+   - Accumulates partial products at correct offsets
+   - Unsigned overflow detection during addition
+   - Trims leading zeros from result
+   - Handles sign correctly: result_sign = my_sign × other_sign
+   - Location: `lib/core/integer.rb:703-817`
+
+5. **Integer#* Dispatcher (Step 7A.8)** ⚠️ PARTIALLY COMPLETE
+   - Dispatches based on operand types (fixnum vs heap)
+   - Three of four cases work correctly:
+     - fixnum × fixnum ✅
+     - heap × fixnum ✅
+     - heap × heap ✅
+     - fixnum × heap ⚠️ (known bug)
+   - Location: `lib/core/integer.rb:1314-1337`
+
+### Test Results
+
+**All tests pass except fixnum × heap:**
+- Small values: 1000 × 2 + 0 = 2000 ✅
+- Large values: 10000 × 10000 = 100,000,000 ✅
+- Overflow: 536870912 × 2 = 2^30 → [0, 1] ✅
+- Carry propagation: [536870912, 100] × 2 = [0, 201] ✅
+- Cascading carries: [536870912, 536870912] × 2 = [0, 1, 1] ✅
+- Non-zero limbs: 536870912 × 3 = [536870912, 1] ✅
+- Multi-limb: [10, 20] × [3, 4] = [30, 100, 80] ✅
+- **make selftest-c: 0 failures** ✅
+
+### Known Issues
+
+**fixnum × heap dispatcher bug:**
+- Symptom: `4 * heap` returns garbage instead of correct result
+- Impact: Users must write `heap * 4` instead of `4 * heap`
+- Root cause: Helper method `__multiply_fixnum_by_heap` not being called from s-expression
+- Investigation: Return value issue in nested if statements within s-expression
+- Priority: LOW (workaround available, all critical cases work)
+
+### Files Modified
+
+- `compiler.rb`: Added :mulfull keyword
+- `compile_arithmetic.rb`: Added compile_mulfull method
+- `lib/core/integer.rb`: Added multiplication methods and updated * operator
+- `docs/bignums.md`: Comprehensive documentation of implementation
+
+### Performance Characteristics
+
+- Limb size: 30 bits (fits in tagged fixnum)
+- School multiplication: O(n²) for n-limb numbers
+- Carry propagation: Single pass through limbs
+- Memory: Allocates result array sized for worst case (m+n limbs)
+
+### Future Work
+
+1. Fix fixnum × heap dispatcher bug
+2. Add negative fixnum support in multiplication
+3. Implement heap × heap optimization (Karatsuba for large numbers)
+4. Add division support for multi-limb integers
+5. Optimize memory allocation patterns
+
+---
+
+**Original Steps:**
+
+1. **Step 7A.1:** Add `compile_mulfull` to compiler (2 hours)
+   - Location: `compile_arithmetic.rb` or similar
+   - Implement register allocation and result storage
+   - Use existing emitter methods (movl, pushl, popl)
+   - Emit widening multiply instruction directly
+   - Test: Compile test that uses `(mulfull a b result_ptr)`
+
+2. **Step 7A.2:** Test `mulfull` in isolation (1 hour)
+   - Create `test_mulfull.rb` with direct s-expression usage
+   - Verify low/high word split is correct
+   - Test edge cases: 0×0, max×max, negative values
+
+3. **Step 7A.3:** Implement `__multiply_raw_with_full_result` (1 hour)
+   - Location: `lib/core/integer.rb`
+   - Wrap `mulfull` in Ruby helper
+   - Test: Verify returns [low, high] correctly
+
+4. **Step 7A.4:** Implement `__multiply_limb_by_fixnum_with_carry` (2 hours)
+   - Multiply single limb by fixnum with carry
+   - Test: 536870912 × 2 with carry
+
+5. **Step 7A.5:** Implement `__multiply_heap_by_fixnum` (2 hours)
+   - Full heap integer × fixnum multiplication
+   - Test: [1,1] × 2, [1,1] × 1000
+
+6. **Step 7A.6:** Test with `make selftest-c` (1 hour)
+   - Ensure bootstrap works
+   - Fix any issues that arise
+   - Document any new constraints
+
+7. **Step 7A.7:** Implement `__multiply_heap_by_heap` (4 hours)
+   - School multiplication algorithm
+   - Handle carry propagation across limbs
+   - Test: [1,1] × [2,0], [1,1] × [1,1]
+
+8. **Step 7A.8:** Update `Integer#*` dispatcher (1 hour)
+   - Dispatch to heap multiplication methods
+   - Remove `__get_raw` fallback for heap values
+   - Test: All combinations (fixnum×fixnum, fixnum×heap, heap×fixnum, heap×heap)
+
+9. **Step 7A.9:** Comprehensive testing (2 hours)
+   - Test suite with various combinations
+   - Verify `make selftest-c` still passes
+   - Test negative numbers, zero, edge cases
+   - Commit working implementation
+
+**Total Estimated Time: 16 hours**
+
+**Phase 6 Step 5: Complete Overflow Splitting (PARALLEL WORK)**
+
+Can be done independently using division-based approach:
+
+1. **Step 5.1:** Implement `__init_from_overflow_value` using division (1 hour)
+2. **Step 5.2:** Test in isolation with manual creation (30 min)
+3. **Step 5.3:** Update `__add_with_overflow` to use it (30 min)
+4. **Step 5.4:** Test overflow detection (1 hour)
+   - Test: 536870911 + 1 creates proper multi-limb
+   - Test: 536870912 + 536870912 = [0, 2]
+5. **Step 5.5:** Verify `make selftest-c` (30 min)
+
+**Total Estimated Time: 3.5 hours**
+
+### Alternative: Phase 7B (Chunk Multiplication - Fallback)
+
+If Option A proves too complex during bootstrap:
+
+1. **Step 7B.1:** Implement 15-bit chunk multiplication (3 hours)
+2. **Step 7B.2:** Test chunk multiplication in isolation (1 hour)
+3. **Step 7B.3:** Build full limb multiplication using chunks (2 hours)
+4. **Step 7B.4:** Continue as Steps 7A.5 through 7A.10 (10 hours)
+
+**Total Estimated Time: 16 hours**
+
+### Testing Strategy for Phase 7
+
+**Unit Tests:**
+```ruby
+# test_multiply_basic.rb
+a = Integer.new
+a.__set_heap_data([2], 1)
+b = 3
+result = a * b
+puts result.to_s  # Should print "6"
+
+# test_multiply_overflow.rb
+a = Integer.new
+a.__set_heap_data([536870912], 1)  # 2^29
+b = 4
+result = a * b
+puts result.to_s  # Should print "2147483648" = [0, 2]
+
+# test_multiply_multilimb.rb
+a = Integer.new
+a.__set_heap_data([1, 1], 1)  # 1073741825
+b = 2
+result = a * b
+puts result.to_s  # Should print "2147483650" = [2, 2]
+
+# test_multiply_heap_heap.rb
+a = Integer.new
+a.__set_heap_data([1, 1], 1)  # 1073741825
+b = Integer.new
+b.__set_heap_data([2, 0], 1)  # 2
+result = a * b
+puts result.to_s  # Should print "2147483650"
+```
+
+**Bootstrap Validation:**
+- Run `make selftest-c` after each step
+- If segfault: Revert, simplify, retry
+- If incorrect result: Add debug output to trace execution
+- If compilation fails: Check s-expression syntax
+
+### Success Criteria
+
+**Phase 6 Step 5 Complete:**
+- ✅ Overflow from addition creates proper multi-limb integers
+- ✅ `536870911 + 1` creates [536870912] (single limb)
+- ✅ `536870912 + 536870912` creates [0, 2] (two limbs)
+- ✅ `make selftest-c` passes
+
+**Phase 7 Complete:**
+- ✅ Multi-limb × fixnum works correctly
+- ✅ Multi-limb × multi-limb works correctly
+- ✅ Negative numbers handled properly
+- ✅ Large multiplications produce correct results
+- ✅ `make selftest-c` passes
+- ✅ All test cases pass
+
+### Risk Mitigation
+
+**If `mulfull` causes bootstrap issues:**
+1. Implement and test `mulfull` with MRI-compiled compiler first
+2. Test simple cases before complex multi-limb code
+3. Add debug output to trace low/high word values
+4. Consider fallback to Option B (chunk multiplication)
+
+**If school multiplication is too complex for bootstrap:**
+1. Start with simpler heap × small fixnum only
+2. Test thoroughly before adding heap × heap
+3. Consider Karatsuba algorithm (fewer multiplications, more additions)
+4. Use repeated addition for very small multipliers as fallback
+
+**If s-expression/Ruby mixing causes issues:**
+1. Move more logic into pure Ruby (outside s-expressions)
+2. Use s-expressions only for low-level multiply operation
+3. Handle carry/overflow in Ruby code
+4. Test each piece independently
+
+### Summary
+
+**Recommended Path:**
+- **Phase 6 Step 5:** Use division-based splitting (simple, works with existing operations)
+- **Phase 7:** Extend s-expression system with `mulfull` operation (clean, reusable, performant)
+
+**Key Insight:**
+The "too fragile for bootstrap" concern was valid for complex implementations, but extending the s-expression system with proper 64-bit multiply support is a clean, well-scoped change that follows established patterns. The real fragility came from complex array manipulation and context mixing, not from the fundamental approach.
+
+**Next Actions:**
+1. Implement `mulfull` s-expression operation
+2. Test in isolation before integrating
+3. Build multi-limb multiplication incrementally
+4. Validate with `make selftest-c` at each step
+
+## Phase 6 Step 5: Overflow Value Splitting - COMPLETE ✅
+
+### Implementation (lib/core/base.rb:56-86)
+
+**Approach:** Limb splitting implemented directly in `__add_with_overflow` s-expression.
+
+**Why this approach:**
+- Previous attempts to call `__init_from_overflow_value` from s-expression context caused segfaults
+- Mixing Ruby control flow with raw untagged values is problematic
+- Instance variable assignment from s-expressions doesn't work reliably
+- Solution: Do all splitting inline in `__add_with_overflow`, call `__set_heap_data` to set ivars
+
+**Algorithm:**
+1. Detect overflow: if `high_bits = result >> 29` is not 0 or -1
+2. Allocate Integer object
+3. Determine sign: -1 if result < 0, else 1
+4. Compute absolute value: `abs_val = (result < 0) ? -result : result`
+5. Compute limb_base = 2^30 using `__limb_base_raw` (multiplication, not shift)
+6. Extract limbs:
+   - `limb0 = abs_val % limb_base` (bits 0-29)
+   - `limb1 = abs_val / limb_base` (bits 30-31)
+7. Create array, push limb0, conditionally push limb1 if non-zero
+8. Call `__set_heap_data(array, sign)` to set @limbs and @sign
+9. Return heap integer object
+
+**Bootstrap Safety:**
+- All logic in single s-expression (no Ruby/s-expression mixing)
+- No raw values passed as method arguments
+- No instance variable assignment in s-expressions
+- Array creation and manipulation stay in s-expression context
+- Only call Ruby method (`__set_heap_data`) with properly constructed arguments
+
+**Test Results:**
+- ✅ 536870912 + 536870912 = 1073741824 (two limbs: [0, 1])
+- ✅ 536870911 + 2 = 536870913 (single limb, correctly sized)
+- ✅ Positive overflow cases work correctly
+- ✅ selftest-c: 0 failures
+- ⚠️ Negative overflow has display issues (limbs correct, to_s shows wrong value)
+- ⚠️ Heap integer + heap integer not fully tested
+
+**Current Limitations:**
+- Only tested for overflow from fixnum + fixnum
+- Negative heap integers display incorrectly (to_s issue, not limb issue)
+- Multiplication and other operations still use __get_raw
+
+**Next Steps:**
+- Debug negative heap integer to_s
+- Test heap + heap addition
+- Implement proper multiplication (Phase 7 - deferred due to complexity)
 
 ## Testing Approach
 

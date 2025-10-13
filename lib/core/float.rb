@@ -27,6 +27,10 @@ class Float
     0
   end
 
+  def to_int
+    to_i
+  end
+
   def to_f
     self
   end

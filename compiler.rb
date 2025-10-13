@@ -48,7 +48,8 @@ class Compiler
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline, # See `inline.rb`
-                   :bitand, :bitor, :bitxor # Bitwise operators
+                   :bitand, :bitor, :bitxor, # Bitwise operators
+                   :mulfull # Widening multiply - returns both low and high words
                   ]
 
   Keywords = @@keywords

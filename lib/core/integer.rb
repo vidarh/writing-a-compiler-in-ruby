@@ -40,50 +40,28 @@ class Integer < Numeric
   # Initialize heap integer from overflow value
   # Takes a raw (untagged) 32-bit value and splits it into 30-bit limbs
   # Called from __add_with_overflow in base.rb
+  # SIMPLIFIED VERSION: For 32-bit values, we need at most 2 limbs
   def __init_from_overflow_value(raw_value, sign)
-    # raw_value is an untagged 32-bit signed integer
-    # sign is a tagged fixnum (1 or -1)
-    # We need to split raw_value into 30-bit limbs
-
-    # Get absolute value (work with magnitude only)
-    abs_val = raw_value
     %s(
-      (let (raw_val)
-        (assign raw_val raw_value)
-        (if (lt raw_val 0)
-          (assign abs_val (sub 0 raw_val))
-          (assign abs_val raw_val)))
+      (let (abs_val limb_base limb0 limb1 arr)
+        (assign abs_val raw_value)
+        (if (lt abs_val 0)
+          (assign abs_val (sub 0 abs_val)))
+
+        (assign limb_base (callm self __limb_base_raw))
+
+        (assign limb0 (mod abs_val limb_base))
+
+        (assign limb1 (div abs_val limb_base))
+
+        (assign arr (callm Array new))
+        (callm arr push ((__int limb0)))
+        (if (ne limb1 0)
+          (callm arr push ((__int limb1))))
+
+        (callm self __set_heap_data (arr sign))
+      )
     )
-
-    # Split into limbs using division by limb_base (2^30)
-    limbs = []
-
-    # Extract limbs until abs_val == 0
-    # For 32-bit values, we need at most 2 limbs
-    # Keep extracting while quotient is non-zero
-    iteration = 0
-    while __is_nonzero_raw(abs_val) != 0
-      # Get limb_base and compute limb = abs_val % limb_base, abs_val = abs_val / limb_base
-      result = __extract_limb(abs_val)
-      limb = result[0]
-      abs_val = result[1]  # This is the quotient (raw value)
-
-      limbs << limb
-      iteration = iteration + 1
-
-      # Safety: limit to 3 iterations (should only need 2 for 32-bit)
-      if iteration > 3
-        break
-      end
-    end
-
-    # If no limbs (raw_value was 0), add a zero limb
-    if limbs.length == 0
-      limbs << 0
-    end
-
-    @limbs = limbs
-    @sign = sign
   end
 
   # Check if a raw (untagged) value is non-zero
@@ -547,6 +525,24 @@ class Integer < Numeric
     )
   end
 
+  # Multiply two raw (untagged) values and return [low_word, high_word]
+  # Uses mulfull s-expression to capture full 64-bit result
+  # NOTE: a_raw and b_raw should be RAW (untagged) values, not tagged fixnums
+  def __multiply_raw_full(a_raw, b_raw)
+    %s(
+      (let (a b low high)
+        # Untag if needed (in case they're passed as fixnums)
+        (assign a (sar a_raw))
+        (assign b (sar b_raw))
+
+        # mulfull stores results to low and high variables
+        (mulfull a b low high)
+
+        # Return array with both values (still raw/untagged)
+        (return (callm self __make_overflow_result (low high))))
+    )
+  end
+
   # Check if sum overflowed limb boundary and adjust
   # Returns [adjusted_limb, carry] where carry is 0 or 1
   def __check_limb_overflow(sum)
@@ -574,6 +570,234 @@ class Integer < Numeric
     [limb, carry]
   end
 
+  # Multiply single limb by fixnum with carry propagation
+  # All inputs are tagged fixnums
+  # Returns [result_limb, carry_out] where both are tagged fixnums
+  # Used as building block for multi-limb multiplication
+  def __multiply_limb_by_fixnum_with_carry(limb, fixnum, carry_in)
+    %s(
+      (let (limb_raw fixnum_raw carry_raw low high sum_low sum_high
+            result_limb carry_out limb_base low_contribution sign_adjust)
+        # Untag inputs
+        (assign limb_raw (sar limb))
+        (assign fixnum_raw (sar fixnum))
+        (assign carry_raw (sar carry_in))
+
+        # Multiply: limb * fixnum -> [low, high]
+        (mulfull limb_raw fixnum_raw low high)
+
+        # Add carry to low word
+        (assign sum_low (add low carry_raw))
+
+        # Check for 32-bit overflow
+        (assign sum_high high)
+        (if (lt sum_low low)
+          (assign sum_high (add high 1))
+          (assign sum_high high))
+
+        # Extract bottom 30 bits as result_limb using bitand
+        (assign result_limb (bitand sum_low 1073741823))  # 0x3FFFFFFF
+
+        # Extract carry: (sum_high * 4) + (sum_low >> 30)
+        # For the shift, use: (sum_low - result_limb) / limb_base
+        (assign limb_base (callm self __limb_base_raw))
+        (assign low_contribution (sub sum_low result_limb))
+        (assign low_contribution (div low_contribution limb_base))
+
+        # Adjust for signed division when sum_low was negative
+        (if (lt sum_low 0)
+          (assign sign_adjust 4)
+          (assign sign_adjust 0))
+
+        (assign carry_out (add low_contribution sign_adjust))
+        (assign carry_out (add carry_out (mul sum_high 4)))
+
+        # Return array [result_limb, carry_out] (both tagged)
+        (return (callm self __make_overflow_result ((__int result_limb) (__int carry_out)))))
+    )
+  end
+
+  # Multiply heap integer by fixnum
+  # self is heap integer, fixnum_val is tagged fixnum
+  # Returns new Integer (fixnum or heap depending on result size)
+  def __multiply_heap_by_fixnum(fixnum_val)
+    my_sign = @sign
+    my_limbs = @limbs
+    limbs_len = my_limbs.length
+
+    result_limbs = []
+    carry = 0
+    i = 0
+
+    # Multiply each limb by fixnum with carry propagation
+    while __less_than(i, limbs_len) != 0
+      limb = my_limbs[i]
+
+      # Multiply limb by fixnum with carry
+      mul_result = __multiply_limb_by_fixnum_with_carry(limb, fixnum_val, carry)
+      result_limb = mul_result[0]
+      carry = mul_result[1]
+
+      result_limbs << result_limb
+      i = i + 1
+    end
+
+    # If there's a final carry, add it as a new limb
+    if carry != 0
+      result_limbs << carry
+    end
+
+    # Determine result sign: same if fixnum is positive, opposite if negative
+    # For now, assume fixnum is positive (will handle negative later)
+    result_sign = my_sign
+
+    # Check if result fits in fixnum
+    result_len = result_limbs.length
+    first_limb = result_limbs[0]
+    half_max = __half_limb_base
+
+    should_demote = 0
+    if result_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      # Convert to fixnum
+      val = first_limb
+      if result_sign < 0
+        val = 0 - val
+      end
+      return val
+    else
+      # Create heap integer
+      result = Integer.new
+      result.__set_heap_data(result_limbs, result_sign)
+      return result
+    end
+  end
+
+  # Multiply two heap integers using school multiplication algorithm
+  # self and other are both heap integers
+  # Returns new Integer (fixnum or heap)
+  def __multiply_heap_by_heap(other)
+    my_sign = @sign
+    my_limbs = @limbs
+    my_len = my_limbs.length
+
+    other_sign = other.__get_sign
+    other_limbs = other.__get_limbs
+    other_len = other_limbs.length
+
+    # Result will have at most my_len + other_len limbs
+    max_result_len = my_len + other_len
+    result_limbs = []
+    i = 0
+    while __less_than(i, max_result_len) != 0
+      result_limbs << 0
+      i = i + 1
+    end
+
+    # School multiplication: for each limb in other, multiply by all of my_limbs
+    j = 0
+    while __less_than(j, other_len) != 0
+      other_limb = other_limbs[j]
+      carry = 0
+      i = 0
+
+      # Multiply my_limbs by other_limb and add to result at offset j
+      while __less_than(i, my_len) != 0
+        my_limb = my_limbs[i]
+
+        # Multiply: my_limb × other_limb + carry
+        mul_result = __multiply_limb_by_fixnum_with_carry(my_limb, other_limb, carry)
+        product_limb = mul_result[0]
+        product_carry = mul_result[1]
+
+        # Add product_limb to result[i+j] with carry
+        result_idx = i + j
+        current = result_limbs[result_idx]
+        sum = current + product_limb
+
+        # Check for overflow when adding
+        if __less_than(sum, current) != 0
+          # Overflow occurred, propagate carry
+          product_carry = product_carry + 1
+        end
+
+        result_limbs[result_idx] = sum
+        carry = product_carry
+
+        i = i + 1
+      end
+
+      # Add final carry to result[my_len + j]
+      if carry != 0
+        result_idx = my_len + j
+        current = result_limbs[result_idx]
+        result_limbs[result_idx] = current + carry
+      end
+
+      j = j + 1
+    end
+
+    # Trim leading zeros
+    actual_len = max_result_len
+    keep_trimming = 1
+    while keep_trimming != 0
+      if actual_len > 1
+        last_limb = result_limbs[actual_len - 1]
+        if last_limb == 0
+          actual_len = actual_len - 1
+        else
+          keep_trimming = 0
+        end
+      else
+        keep_trimming = 0
+      end
+    end
+
+    # Build trimmed result
+    trimmed = []
+    i = 0
+    while __less_than(i, actual_len) != 0
+      trimmed << result_limbs[i]
+      i = i + 1
+    end
+
+    # Determine result sign
+    result_sign = my_sign
+    if other_sign < 0
+      result_sign = 0 - result_sign
+    end
+
+    # Check if result fits in fixnum
+    first_limb = trimmed[0]
+    half_max = __half_limb_base
+
+    should_demote = 0
+    if actual_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      # Convert to fixnum
+      val = first_limb
+      if result_sign < 0
+        val = 0 - val
+      end
+      return val
+    else
+      # Create heap integer
+      result = Integer.new
+      result.__set_heap_data(trimmed, result_sign)
+      return result
+    end
+  end
+
   # Check if diff is negative and add limb_base if needed
   # Returns [adjusted_limb, borrow] where borrow is 0 or 1
   def __check_limb_borrow(diff)
@@ -593,6 +817,21 @@ class Integer < Numeric
 
         # Return array [adjusted_limb, borrow]
         (return (callm self __make_overflow_result ((__int adjusted) (__int borrow_val)))))
+    )
+  end
+
+  # Heap×fixnum multiplication
+  def __multiply_heap_and_fixnum(fixnum_val)
+    # TODO: Implement proper multi-limb multiplication
+    # Current limitation: uses __get_raw which truncates to 32 bits
+    # Issue: x86 imull only captures low 32 bits of result
+    # Need different approach to capture full 60-bit result of 30-bit × 30-bit
+    %s(
+      (let (a b result)
+        (assign a (callm self __get_raw))
+        (assign b (sar fixnum_val))
+        (assign result (mul a b))
+        (return (__add_with_overflow result 0)))
     )
   end
 
@@ -1051,12 +1290,38 @@ class Integer < Numeric
   end
 
   def * other
+    # Dispatch based on types: fixnum vs heap integer
     %s(
-      (let (a b result)
-        (assign a (callm self __get_raw))
-        (assign b (callm other __get_raw))
-        (assign result (mul a b))
-        (return (__add_with_overflow result 0)))
+      (if (eq (bitand self 1) 0)
+        # self is heap integer
+        (return (callm self __multiply_heap other))
+        # self is fixnum, check other
+        (if (eq (bitand other 1) 0)
+          # other is heap
+          (return (callm self __multiply_fixnum_by_heap other))
+          # both fixnums
+          (let (a b result)
+            (assign a (sar self))
+            (assign b (sar other))
+            (assign result (mul a b))
+            (return (__add_with_overflow result 0)))))
+    )
+  end
+
+  # Multiply fixnum by heap integer
+  # Called when self is fixnum and other is heap
+  def __multiply_fixnum_by_heap(heap_int)
+    heap_int.__multiply_heap_by_fixnum(self)
+  end
+
+  # Multiply heap integer by other (fixnum or heap)
+  def __multiply_heap(other)
+    %s(
+      (if (eq (bitand other 1) 1)
+        # other is fixnum
+        (return (callm self __multiply_heap_by_fixnum other))
+        # other is heap
+        (return (callm self __multiply_heap_by_heap other)))
     )
   end
 
