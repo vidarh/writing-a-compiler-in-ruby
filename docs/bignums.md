@@ -1369,9 +1369,15 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
 - ✅ 536870912 + 536870912 = 1073741824 (two limbs: [0, 1])
 - ✅ 536870911 + 2 = 536870913 (single limb, correctly sized)
 - ✅ Positive overflow cases work correctly
+- ✅ Heap integer + fixnum addition works (1073741824 + 1 = 1073741825)
 - ✅ selftest-c: 0 failures
 - ⚠️ Negative overflow has display issues (limbs correct, to_s shows wrong value)
 - ⚠️ Heap integer + heap integer not fully tested
+
+**Bug Fixed (commit 02a717a):**
+- Heap + fixnum was incorrectly subtracting instead of adding
+- Root cause: `other_sign_val` was raw integer but `@sign` is tagged fixnum
+- Fix: Tag sign values with `(__int 1)` and `(__int -1)` in `__add_heap_and_fixnum`
 
 **Current Limitations:**
 - Only tested for overflow from fixnum + fixnum
@@ -1379,8 +1385,8 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
 - Multiplication and other operations still use __get_raw
 
 **Next Steps:**
-- Debug negative heap integer to_s
-- Test heap + heap addition
+- Debug negative heap integer to_s (known limitation, deferred)
+- Test heap + heap addition more thoroughly
 - Implement proper multiplication (Phase 7 - deferred due to complexity)
 
 ## Testing Approach
