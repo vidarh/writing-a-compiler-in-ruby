@@ -1387,13 +1387,32 @@ The "too fragile for bootstrap" concern was valid for complex implementations, b
   - Result: `__divmod_by_fixnum(10)` returns `[-214748364, -8]` instead of correct values
   - Impact: Heap + heap addition creates correct limbs but displays wrong value
   - Fix requires: 64-bit multiplication or alternative algorithm (Phase 7 scope)
-- Negative heap integers also have display issues (separate problem)
+
+- **Negative heap integers have multiple display/comparison issues**
+  - `to_s` displays incorrect values (e.g., `[100]` with sign -1 shows "a0" instead of "-100")
+  - Root cause chain:
+    1. `to_s` line 1224 uses `self < 0` to detect negative numbers
+    2. `<` operator (line 1468) calls `__cmp(other)`
+    3. `__cmp` dispatch (line 862-885) uses s-expression to route to `__cmp_heap_fixnum`
+    4. **Bug**: `__cmp_heap_fixnum` is never actually called (dispatch fails silently)
+    5. Fallback behavior returns incorrect comparison results
+    6. Result: negative detection fails, number isn't negated, divmod returns negative values
+    7. Negative array indices into digit string cause corrupted output
+  - Attempted fixes:
+    - Tried fixing s-expression dispatch - didn't work
+    - Tried extracting sign in Ruby code - methods not being called
+    - Tried accessing @sign via `(index self 2)` - incorrect
+    - Tried accessing @sign directly in s-expression - still fails
+  - **Conclusion**: S-expression/Ruby mixing in comparison dispatch is fundamentally broken
+  - Likely conflicts with `<=>` operator (line 1355) which also uses `__get_raw`
+  - Fix requires: Rewriting entire comparison system without s-expression dispatch complexity
+
 - Only tested for overflow from fixnum + fixnum
 - Multiplication and other operations still use __get_raw
 
 **Next Steps:**
 - Fix __divmod_with_carry 32-bit overflow (requires 64-bit multiply support - Phase 7)
-- Debug negative heap integer display (separate to_s issue)
+- Fix negative heap integer comparisons (requires comparison system rewrite - complex)
 - Implement proper multiplication (Phase 7 - deferred due to complexity)
 
 ## Testing Approach
