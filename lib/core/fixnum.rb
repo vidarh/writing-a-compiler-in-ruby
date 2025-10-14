@@ -32,9 +32,8 @@ class Fixnum < Integer
   # __get_raw removed - now inherited from Integer
   # Integer version handles both tagged fixnums and heap integers
 
-  def < other
-    %s(if (lt (sar self) (callm other __get_raw)) true false)
-  end
+  # < removed - now inherited from Integer
+  # Integer version uses __cmp which handles all representation combinations
 
   def > other
     %s(if (gt (sar self) (callm other __get_raw)) true false)

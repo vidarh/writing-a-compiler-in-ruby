@@ -1535,7 +1535,9 @@ class Integer < Numeric
   end
 
   def < other
-    __cmp(other) < 0
+    # Handle both tagged fixnums and heap integers
+    # Use direct comparison with __get_raw for reliability
+    %s(if (lt (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   def <= other
