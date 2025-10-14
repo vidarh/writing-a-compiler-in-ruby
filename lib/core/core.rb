@@ -61,6 +61,8 @@ require 'core/class'
 require 'core/kernel'
 require 'core/object'
 require 'core/proc'        # Blocks are unavailable before this
+require 'core/numeric'     # Must be before Integer
+require 'core/integer_base' # Minimal fixnum-only Integer (no Array dependency)
 require 'core/array_base'  # Splats are unavailable before this.
 require 'core/true'
 require 'core/false'
@@ -76,8 +78,7 @@ require 'core/hash'
 require 'core/io'
 require 'core/file'
 require 'core/dir'
-require 'core/numeric'
-require 'core/integer'
+require 'core/integer'     # Full Integer with bignum support (after Array is available)
 require 'core/fixnum'
 require 'core/symbol'
 require 'core/class_ext'

@@ -531,6 +531,4 @@ class Fixnum < Integer
   end
 end
 
-%s(defun __int (val)
-  (add (shl val) 1)
-)
+# __int moved to integer_base.rb
