@@ -1639,6 +1639,62 @@ class Integer < Numeric
     [self / other, self % other]
   end
 
+  def frozen?
+    true
+  end
+
+  def to_int
+    self
+  end
+
+  def to_f
+    self
+  end
+
+  def size
+    4
+  end
+
+  def ** other
+    1
+  end
+
+  def [] i
+    1
+  end
+
+  def allbits?(mask)
+    self & mask == mask
+  end
+
+  def anybits?(mask)
+    self & mask != 0
+  end
+
+  def nobits?(mask)
+    self & mask == 0
+  end
+
+  def bit_length
+    32
+  end
+
+  def ceil(prec=0)
+    self
+  end
+
+  def floor(prec=0)
+    self
+  end
+
+  def truncate(ndigits=0)
+    self
+  end
+
+  def magnitude
+    abs
+  end
+
 end
 
 # Global Integer() conversion method
