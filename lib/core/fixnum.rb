@@ -32,13 +32,8 @@ class Fixnum < Integer
   # __get_raw removed - now inherited from Integer
   # Integer version handles both tagged fixnums and heap integers
 
-  # <, >, <=, >=, <=> removed - now inherited from Integer
-  # Integer versions use __get_raw for both tagged fixnums and heap integers
-
-  def - other
-    %s(let (result) (assign result (sub (sar self) (callm other __get_raw)))
-      (__int (bitand result 0x7fffffff)))
-  end
+  # <, >, <=, >=, <=>, - removed - now inherited from Integer
+  # Integer versions handle both tagged fixnums and heap integers
 
   def * other
     if !other.is_a?(Integer)
