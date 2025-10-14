@@ -81,6 +81,43 @@ make selftest-c
 # Result: Segfault at ~68000 __cnt during compilation
 ```
 
+## Complete Critical Methods Investigation
+
+**Comprehensive testing by removing methods systematically identified the EXACT set of critical methods:**
+
+### Critical Fixnum Methods (Cannot be removed):
+
+1. **`class`** - Returns `Fixnum` (compiler needs this for class identity)
+2. **`%`** - Modulo operator (used during compilation)
+3. **`__get_raw`** - Extracts raw integer value from tagged fixnum
+4. **`<`, `>`, `<=`, `>=`, `<=>`** - All comparison operators
+5. **`-`** - Subtraction
+6. **`*`** - Multiplication
+7. **`/`** - Division
+
+### Non-Critical Fixnum Methods (Can be safely removed):
+
+✅ All other methods can be removed and inherited from Integer:
+- `__get_raw`, `hash`, `inspect`, `chr` (tested individually - work)
+- `to_s`, `to_i`, `zero?`, `ceil`, `floor`, `[]`
+- `!=`, `!`
+- `div`, `divmod`, `mul`
+- `**` (power)
+- `&`, `|`, `^` (bitwise AND, OR, XOR)
+- `~`, `<<`, `>>` (bitwise NOT, left shift, right shift)
+- `-@`, `+@` (unary minus/plus)
+- `abs`, `magnitude`, `ord`, `times`
+- `pred`, `succ`, `next`, `frozen?`, `even?`, `odd?`
+- `allbits?`, `anybits?`, `nobits?`, `bit_length`, `size`
+- `to_int`, `to_f`, `truncate`
+- `gcd`, `lcm`, `gcdlcm`, `ceildiv`, `digits`, `coerce`
+
+**Total:** Only 10 methods need to be in Fixnum (class + % + __get_raw + 5 comparisons + 3 arithmetic ops). All other 48+ methods can be inherited from Integer!
+
 ## Conclusion
 
-The migration is blocked by compiler code that relies on fixnums having class identity `Fixnum`. Simply changing the vtable lookup won't work until we fix the compiler's assumptions about integer class identity.
+The migration is blocked by compiler code that relies on fixnums having:
+1. Class identity `Fixnum` (via `.class` method)
+2. Specific implementations of core arithmetic and comparison operators
+
+Simply changing the vtable lookup won't work until we fix the compiler's assumptions about integer class identity and ensure all critical methods are available.
