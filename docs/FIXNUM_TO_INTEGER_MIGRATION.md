@@ -134,13 +134,41 @@ The patch from 59b807e..ba00ac8 contains:
 - `compile_arithmetic.rb` - `compile_div` register allocation fix
 - `lib/core/base.rb` - Double parentheses fix
 
+## Current Progress
+
+### Phase 1: ✅ COMPLETE (Commit 708a053)
+- ✅ Created `integer_base.rb` with minimal fixnum-only methods
+- ✅ NO Array dependency - safe for early bootstrap
+- ✅ Moved `__int` function from fixnum.rb to integer_base.rb
+- ✅ Updated `lib/core/core.rb` load order
+- ✅ `make selftest-c`: 0 failures
+
+### Phase 2: 🔄 IN PROGRESS
+- ✅ Added Integer#class (Commit 2505685)
+- ✅ Added Integer#hash (Commit 2505685)
+- ✅ Added Integer#div (Commit 537631b)
+- ✅ Added Integer#divmod (Commit 537631b)
+- ⏸️ Remaining methods to add: 23 methods from Fixnum still need migration
+
+**Methods still needed:**
+- chr, ord, mul, **, magnitude, times, frozen?, ceil, floor, truncate
+- [], allbits?, anybits?, nobits?, bit_length, size, to_int, to_f
+- gcd, lcm, gcdlcm, ceildiv, digits, coerce, !
+
+**Blocker found:** Adding chr, ord, and mul together caused segfault at runtime.
+- Need to add remaining methods one at a time
+- Test after each addition
+- Some methods may need modification for heap integer compatibility
+
 ## Next Steps
 
-1. ✅ Create this migration plan document
-2. Start Phase 1: Create integer_base.rb (minimal, NO Array dependency)
-3. Test after EACH small change
-4. Commit only when `make selftest-c` passes
-5. DO NOT change `compile_calls.rb:249` until Phase 3 investigation is complete
+1. ✅ Created migration plan document
+2. ✅ Completed Phase 1: integer_base.rb creation
+3. 🔄 Continue Phase 2: Add remaining methods from Fixnum one at a time
+4. Test after EACH method addition
+5. Commit when batch passes `make selftest-c`
+6. After Phase 2 complete: Investigate vtable issue (Phase 3)
+7. DO NOT change `compile_calls.rb:249` until Phase 3 investigation is complete
 
 ## Critical Rules
 
