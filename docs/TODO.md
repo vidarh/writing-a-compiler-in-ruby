@@ -4,13 +4,166 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 **For debugging help, see [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) for effective patterns and techniques.**
 
-## Current Integer Spec Test Status (2025-10-10) - INVESTIGATION COMPLETE
+## Current Integer Spec Test Status (2025-10-14) - COMPREHENSIVE ANALYSIS COMPLETE
 
 **Summary**: 67 spec files total
-- **PASS**: 8 specs (12%)
-- **FAIL**: 16 specs (24%) - compile and run but have assertion failures
-- **SEGFAULT**: 39 specs (58%) - compile but crash at runtime
-- **COMPILE_FAIL**: 0 specs (0%) - **ALL SPECS NOW COMPILE!**
+- **PASS**: 11 files (16%)
+- **FAIL**: 22 files (33%)
+- **SEGFAULT**: 34 files (51%) - includes digits_spec.rb (stabby lambda causes crash, not just compile hang)
+- **COMPILE_FAIL**: 0 files (0%)
+
+**Individual Test Case Counts** (from enhanced run_rubyspec):
+- **Total**: 747 individual test cases across all 67 spec files
+- **Passing**: 142 test cases (19%)
+- **Failing**: 605 test cases (81%)
+- **Skipped**: 0 test cases
+
+**Detailed Analysis**:
+- `docs/INVESTIGATION_SUMMARY_2025-10-14.md` - Executive summary and next steps
+- `docs/rubyspec_failure_analysis_2025-10-14.md` - Comprehensive root cause analysis
+- `docs/QUICK_WINS_PLAN.md` - Detailed implementation plan with effort estimates
+
+## PRIORITY QUICK WINS - Maximum Impact Per Effort (2025-10-14)
+
+### 🎯 Phase 1: Bignum Foundation (HIGHEST IMPACT - +100-120 test cases)
+
+**Issue**: The single largest cause of failures. Bignum tests use fake values and return completely wrong results.
+
+**CRITICAL PREREQUISITE**: Large Integer Literal Support (4-8 hours)
+- **Problem**: Tokenizer truncates integer literals > 2^27 (tokens.rb:193)
+- **Impact**: Cannot write bignum_value() with actual large values
+- **Fix Required (MUST be done in this order)**:
+  1. **FIRST**: Add hard validation to sexp.rb - REJECT literals > 2^29 with fatal error
+     - 🚨 **S-expressions CANNOT accept heap integers** - architectural constraint
+     - S-expressions compile to assembly with immediate values (tagged fixnums)
+     - Heap integers are pointers, not immediate values
+     - Allowing heap integers in s-expressions = memory corruption
+  2. **SECOND**: Remove truncation from tokens.rb - parse full integer literals
+  3. **THIRD**: When literal > 2^29, return heap integer allocation AST node
+  4. **FOURTH**: Compile heap integer allocation nodes
+- **Files**: sexp.rb (FIRST), tokens.rb, parser.rb, compiler.rb
+- **Risk**: HIGH - if s-expression validation not in place, will generate broken assembly
+- **Test Strategy (strict order)**:
+  1. **Phase A**: Add s-expression validation, test it rejects large values, run selftest-c
+  2. **Phase B**: Audit all s-expressions for large literals (grep -r "%s" lib/)
+  3. **Phase C**: Remove truncation, verify s-expressions still protected
+  4. **Phase D**: Add parser support for [:bignum_alloc, ...] nodes
+  5. **Phase E**: Add compiler support, test `x = 9223372036854775808`
+  6. Run make selftest-c after EVERY phase
+
+**Quick Wins**:
+1. **Fix bignum_value() helper** (1-2 hours) - REQUIRES PREREQUISITE ABOVE
+   - Location: `rubyspec_helper.rb:534`
+   - Current: Returns `100000 + plus` (fake value)
+   - Fix: Return actual heap integer object with value `0x8000_0000_0000_0000 + plus`
+   - Impact: Enables all bignum tests to use real values
+   - Affected specs: abs, even, odd, to_s, plus, multiply, left_shift, bit_and, and 30+ more
+
+2. **Fix multi-limb to_s edge cases** (2-4 hours)
+   - Location: `lib/core/integer.rb` (to_s method for heap integers)
+   - Status: Mostly working according to docs/bignums.md, but has bugs with large values
+   - Impact: Fix to_s_spec.rb (+7 test cases), improve debug output for all bignum tests
+
+3. **Fix heap integer operators** (PARTIAL - 2025-10-14)
+   - Location: `lib/core/integer.rb`
+   - **Status**: ✅ FIXED: `>`, `>=`, `<`, `<=` now work with multi-limb heap integers
+   - **Status**: ✅ WORKING: `+`, `-`, `*` (binary operators work via existing heap integer implementations)
+   - **Status**: ❌ BROKEN: Many operators still use `__get_raw`, only work for single-limb:
+     - **Comparison**: `<=>` (spaceship), `==` (equality)
+     - **Arithmetic**: `/`, `-@`, `%`, `mul`, `div`, `pred`
+     - **Bitwise**: `&`, `|`, `^`, `<<`, `>>`
+     - **Other**: `abs`, `zero?`, `inspect`, `chr`
+   - **Remaining work** (10-15 hours total):
+     - Comparison: Update `<=>` to dispatch to `__cmp_*` methods (1 hour)
+       - **Refactor**: Then reimplement `>`, `>=`, `<`, `<=`, `==` in terms of `<=>`
+       - Current: Each has duplicate dispatch logic (~30 lines each)
+       - Improved: `def > other; (self <=> other) == 1; end` (~1 line each)
+       - Saves ~135 lines, improves maintainability
+     - Arithmetic: Implement multi-limb division, modulo, etc. (4-6 hours)
+     - Bitwise: Implement limb-by-limb bitwise operations (3-4 hours)
+     - Other: Update to handle multi-limb (1-2 hours)
+   - Impact: Fix comparison_spec.rb, bit_*_spec.rb, arithmetic specs, +50-80 test cases
+
+**Expected Total Gain**: +100-120 passing test cases across 25+ spec files
+
+### 🎯 Phase 2: Type Coercion (HIGH IMPACT - +50-60 test cases)
+
+**Issue**: Operators call `__get_raw` without type checking, causing "Method missing X#__get_raw" crashes.
+
+**Quick Wins**:
+1. **Add type checking to all operators** (2-3 hours)
+   - Locations: `lib/core/integer.rb` (bitwise operators: &, |, ^, <<, >>)
+   - Pattern (from DEBUGGING_GUIDE.md:230):
+     ```ruby
+     def & other
+       if other.is_a?(Integer)
+         other_raw = other.__get_raw
+         %s(__int (bitand (callm self __get_raw) other_raw))
+       else
+         STDERR.puts("TypeError: Integer can't be coerced")
+         nil
+       end
+     end
+     ```
+   - Impact: Fix plus_spec, multiply_spec, bit_and_spec segfaults (+30-40 test cases)
+
+2. **Implement to_int coercion protocol** (3-4 hours)
+   - Pattern already in ceildiv (fixnum.rb:437-439)
+   - Apply to all operators before calling __get_raw
+   - Impact: Fix coercion test cases (+20-30 test cases)
+
+**Expected Total Gain**: +50-60 passing test cases across 15+ spec files
+
+### 🎯 Phase 3: Critical Method Gaps (MEDIUM IMPACT - +30-50 test cases)
+
+**Quick Wins**:
+1. **Fix/implement divmod** (2-3 hours)
+   - Currently: Immediate FPE crash
+   - Impact: Fix divmod_spec.rb (+10-20 test cases)
+
+2. **Audit heap integer methods for nil returns** (2-4 hours)
+   - Issue: "Method missing NilClass#__multiply_heap_by_fixnum"
+   - Find methods returning nil instead of Integer objects
+   - Impact: Fix multiply_spec.rb and similar (+10-20 test cases)
+
+3. **Fix negative shift handling** (2-3 hours)
+   - Issue: left_shift_spec shows "Expected -1 but got 0" for negative shifts
+   - Location: Integer#<< and Integer#>> methods
+   - Impact: Fix left_shift_spec edge cases (+10-15 test cases)
+
+**Expected Total Gain**: +30-50 passing test cases across 10+ spec files
+
+### 📊 Estimated Overall Impact
+
+**After Phase 1-3 (Total effort: ~25-35 hours)**:
+- Current: ~100-150 passing test cases (20-25%)
+- After fixes: ~280-380 passing test cases (50-65%)
+- **Improvement**: +180-230 passing test cases (+30-40 percentage points)
+
+**Files likely to reach 100% passing**:
+- abs_spec.rb (1/3 → 3/3)
+- even_spec.rb (4/6 → 6/6)
+- odd_spec.rb (similar to even)
+- to_s_spec.rb (8/15 → 15/15)
+- bit_and_spec.rb (7/18 → 18/18)
+- magnitude_spec.rb (likely same issues as abs)
+- And 10-15 more specs
+
+### 🔧 Implementation Strategy
+
+**Step 1: Fix bignum_value() FIRST**
+- This is the foundation - without real bignum values, can't test anything
+- Changes rubyspec_helper.rb only
+- Run make selftest-c to ensure no regressions
+
+**Step 2: Test one spec at a time**
+- Start with abs_spec.rb (simplest)
+- Fix issues iteratively
+- Verify with: `./run_rubyspec rubyspec/core/integer/abs_spec.rb`
+
+**Step 3: Move to progressively complex specs**
+- abs → even → to_s → bit_and → plus → multiply
+- Each fix builds on previous fixes
 
 **Session 2025-10-10 Additions**:
 - ✅ Added `Mock#with(*args)` stub method

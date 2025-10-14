@@ -1533,6 +1533,95 @@ test_multilimb_add.rb:    [1,1] + [2,0] → 2 (FAILS - multi-limb + not implemen
 
 ---
 
+## Bignum Comparison Investigation (2025-10-14)
+
+### Problem Confirmed
+
+Multi-limb bignum comparisons (`<`, `>`, `<=`, `>=`) are BROKEN - they use `__get_raw` which only returns the first limb, losing high-order bits.
+
+**Test case:**
+```ruby
+a = Integer.new
+a.__set_heap_data([1, 1], 1)  # 1073741825
+b = Integer.new
+b.__set_heap_data([2, 0], 1)  # 2
+
+a > b  # Returns false (WRONG - should be true)
+```
+
+### Root Cause
+
+1. **Broken `__cmp_fixnum_heap` and `__cmp_heap_fixnum`** (integer.rb lines 901, 926):
+   - Use `__get_raw` which only returns first limb for multi-limb heap integers
+   - Lose high-order bits for values > 2^30
+
+2. **Broken public comparison operators** (integer.rb lines 1618-1636):
+   - Use `__get_raw` directly instead of dispatching to `__cmp_*` methods
+   - Override integer_base.rb definitions but don't handle heap integers correctly
+
+### Bootstrap Pattern Solution
+
+**integer_base.rb** provides the architecture for handling bootstrap timing:
+- Lines 40-54: Simple fixnum-only comparison operators using s-expressions
+- Loaded during early bootstrap before Array/complex infrastructure
+- Works correctly for Hash initialization and other early operations
+
+**integer.rb** then overrides these methods:
+- Lines 1618-1636: Override comparison operators with full heap integer support
+- Should dispatch to appropriate `__cmp_*` methods based on operand types
+- Currently broken because they use `__get_raw` directly
+
+### Fix Implemented (2025-10-14)
+
+**Status**: ✅ COMPLETED - Multi-limb bignum comparisons now work correctly
+
+**Changes made**:
+
+1. **Fixed `__cmp_fixnum_heap`** (integer.rb:905-963):
+   - Now properly handles multi-limb heap integers
+   - Uses s-expressions to avoid recursion
+   - Checks limb count: multi-limb heap is always larger than fixnum
+
+2. **Fixed `__cmp_heap_fixnum`** (integer.rb:965-1022):
+   - Mirror of `__cmp_fixnum_heap` for reversed operands
+   - Handles multi-limb heap integers correctly
+
+3. **Fixed `__cmp_heap_heap`** (integer.rb:1024-1087):
+   - Uses helper methods (`__less_than`, `__greater_than`) to avoid recursion
+   - Proper limb-by-limb comparison for same-length multi-limb integers
+   - Avoids calling `<`/`>` operators (would cause infinite recursion)
+
+4. **Updated public comparison operators** (integer.rb:1687-1825):
+   - `>`, `>=`, `<`, `<=` now properly dispatch based on operand types
+   - Use `(bitand ... 1)` to detect fixnum vs heap in s-expressions
+   - Fast path for fixnum-fixnum comparisons
+   - Delegate to `__cmp_*` methods for heap integer cases
+
+5. **Added helper method** (integer.rb:506-508):
+   - `__greater_than(a, b)` - returns 1 if a > b, 0 otherwise
+   - Needed to avoid using `>` operator within comparison implementations
+
+**Key Insights**:
+- Must use helper methods like `__less_than`, `__greater_than` instead of `<`/`>` operators to avoid infinite recursion
+- These helpers expect **tagged** fixnums, not raw untagged values
+- Must use `__greater_than` instead of `>` even for simple checks like `len > 1`
+- S-expression comparisons use `(bitand self 1)` to detect fixnum (LSB=1) vs heap (LSB=0)
+
+**Testing**:
+- `make selftest` passes with 0 failures ✅
+- Bootstrap works correctly (Hash operations during early init) ✅
+- Ready for RubySpec testing once large literal support is implemented
+
+### Investigation Notes
+
+- Initial attempt (139 line change) failed due to misunderstanding bootstrap architecture
+- Hit bootstrap crash in Hash#[]= during early initialization
+- **Solution discovered**: integer_base.rb provides fixnum-only comparison operators for bootstrap
+- integer.rb overrides these with full heap integer support after Array infrastructure is ready
+- Critical bug fixed: must pass tagged fixnums to `__less_than`/`__greater_than`, not raw untagged values
+
+---
+
 ## Known Limitations and Future Work
 
 ### Compiler-Level Limitations
@@ -1554,14 +1643,30 @@ test_multilimb_add.rb:    [1,1] + [2,0] → 2 (FAILS - multi-limb + not implemen
 
 ### Arithmetic Limitations
 
-**3. Comparison operators for heap integers:**
-- **Issue:** `__cmp` dispatch system fails silently for heap integers
-- **Workaround:** Use `__is_negative` for sign checks (works correctly)
-- **Priority:** LOW (to_s works, arithmetic works, main use cases covered)
+**3. Multi-limb heap integer operator support (PARTIALLY FIXED - 2025-10-14):**
 
-**4. Division support:**
-- **Status:** heap / fixnum works (for to_s), heap / heap not implemented
-- **Priority:** MEDIUM (sufficient for current needs, but limits usefulness)
+**✅ Working operators:**
+- `+`, `-`, `*` (binary) - Have proper multi-limb implementations
+- `>`, `>=`, `<`, `<=` - FIXED (2025-10-14), dispatch to `__cmp_*` methods
+
+**❌ Broken operators** (use `__get_raw`, only work for single-limb):
+- **Comparison**: `<=>` (integer.rb:1603), `==` (integer.rb:1855)
+- **Arithmetic**: `/` (integer.rb:1577), `-@` (integer.rb:1593), `%`, `mul`, `div` (integer.rb:1943), `pred`
+- **Bitwise**: `&`, `|`, `^`, `<<`, `>>`
+- **Other**: `abs` (integer.rb:1617), `zero?`, `inspect`, `chr`
+
+**Fix needed:**
+- Comparison: Update `<=>` and `==` to dispatch to `__cmp_*` methods (1-2 hours)
+  - **Note**: Once `<=>` works, `>`, `>=`, `<`, `<=`, `==` should be reimplemented in terms of `<=>`
+  - Current implementation has duplicate dispatch logic in all 5 operators (wasteful)
+  - Standard Ruby pattern: `def > other; (self <=> other) == 1; end`
+  - Standard Ruby pattern: `def == other; (self <=> other) == 0; end` (with nil/type checks)
+  - Would save ~135 lines of code and improve maintainability
+- Arithmetic: Implement multi-limb division, modulo, etc. (4-6 hours)
+- Bitwise: Implement limb-by-limb bitwise operations (3-4 hours)
+- Other: Update to handle multi-limb (1-2 hours)
+
+**Priority:** HIGH - Blocks RubySpec comparison, arithmetic, and bitwise tests
 
 ### Future Enhancements
 

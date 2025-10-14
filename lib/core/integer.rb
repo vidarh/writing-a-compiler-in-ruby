@@ -502,6 +502,11 @@ class Integer < Numeric
     %s((if (ge a b) (return (__int 1)) (return (__int 0))))
   end
 
+  # Helper: a > b for fixnums - returns 1 if true, 0 if false
+  def __greater_than(a, b)
+    %s((if (gt a b) (return (__int 1)) (return (__int 0))))
+  end
+
   # Helper: get limb from array or 0 if out of bounds
   def __get_limb_or_zero(arr, i, len)
     # Use simple Ruby array indexing
@@ -899,24 +904,59 @@ class Integer < Numeric
 
   # Compare fixnum (self) with heap integer (other)
   def __cmp_fixnum_heap(other)
-    # Use s-expression for the entire comparison to avoid assignment issues
+    # Get raw values for comparison - avoid using < > operators (infinite recursion)
+    other_sign = other.__get_sign
+    other_limbs = other.__get_limbs
+    other_len = other_limbs.length
+
+    # Use s-expressions for all comparisons to avoid recursion
     %s(
-      (let (self_raw other_sign other_raw)
+      (let (self_raw sign_raw)
         (assign self_raw (sar self))
-        (assign other_sign (sar (callm other __get_sign)))
+        (assign sign_raw (sar other_sign))
 
         # Compare signs: negative < positive
-        (if (and (lt self_raw 0) (gt other_sign 0))
+        (if (and (lt self_raw 0) (gt sign_raw 0))
           (return (__int -1)))
-        (if (and (gt self_raw 0) (lt other_sign 0))
+        (if (and (gt self_raw 0) (lt sign_raw 0))
           (return (__int 1)))
+      )
+    )
 
-        # Same sign - compare magnitudes
-        (assign other_raw (callm other __get_raw))
-        (if (lt self_raw other_raw)
-          (return (__int -1)))
-        (if (gt self_raw other_raw)
-          (return (__int 1)))
+    # Same sign - compare magnitudes
+    # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
+    # (fixnums are max 2^29, single limb can hold up to 2^30, multi-limb is > 2^30)
+    if __greater_than(other_len, 1) != 0
+      # Use s-expression to check sign and return appropriate value
+      %s(
+        (let (sign_raw)
+          (assign sign_raw (sar other_sign))
+          (if (gt sign_raw 0)
+            (return (__int -1))
+            (return (__int 1)))
+        )
+      )
+    end
+
+    # Single limb: compare directly using s-expressions
+    other_first_limb = other_limbs[0]
+    %s(
+      (let (self_raw limb_raw sign_raw)
+        (assign self_raw (sar self))
+        (assign limb_raw (sar other_first_limb))
+        (assign sign_raw (sar other_sign))
+
+        (if (lt self_raw limb_raw)
+          (if (gt sign_raw 0)
+            (return (__int -1))
+            (return (__int 1))))
+
+        (if (gt self_raw limb_raw)
+          (if (gt sign_raw 0)
+            (return (__int 1))
+            (return (__int -1))))
+
+        # Equal
         (return (__int 0))
       )
     )
@@ -924,24 +964,58 @@ class Integer < Numeric
 
   # Compare heap integer (self) with fixnum (other)
   def __cmp_heap_fixnum(other)
-    # Use s-expression for the entire comparison
+    # Get values for comparison - avoid using < > operators (infinite recursion)
+    self_sign = @sign
+    self_limbs = @limbs
+    self_len = self_limbs.length
+
+    # Use s-expressions for all comparisons to avoid recursion
     %s(
-      (let (other_raw self_sign self_raw)
+      (let (other_raw sign_raw)
         (assign other_raw (sar other))
-        (assign self_sign (sar (index self 2)))  # @sign is at offset 2
+        (assign sign_raw (sar self_sign))
 
         # Compare signs: negative < positive
-        (if (and (lt self_sign 0) (gt other_raw 0))
+        (if (and (lt sign_raw 0) (gt other_raw 0))
           (return (__int -1)))
-        (if (and (gt self_sign 0) (lt other_raw 0))
+        (if (and (gt sign_raw 0) (lt other_raw 0))
           (return (__int 1)))
+      )
+    )
 
-        # Same sign - compare magnitudes
-        (assign self_raw (callm self __get_raw))
-        (if (lt self_raw other_raw)
-          (return (__int -1)))
-        (if (gt self_raw other_raw)
-          (return (__int 1)))
+    # Same sign - compare magnitudes
+    # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
+    if __greater_than(self_len, 1) != 0
+      # Use s-expression to check sign and return appropriate value
+      %s(
+        (let (sign_raw)
+          (assign sign_raw (sar self_sign))
+          (if (gt sign_raw 0)
+            (return (__int 1))
+            (return (__int -1)))
+        )
+      )
+    end
+
+    # Single limb: compare directly using s-expressions
+    self_first_limb = self_limbs[0]
+    %s(
+      (let (limb_raw other_raw sign_raw)
+        (assign limb_raw (sar self_first_limb))
+        (assign other_raw (sar other))
+        (assign sign_raw (sar self_sign))
+
+        (if (lt limb_raw other_raw)
+          (if (gt sign_raw 0)
+            (return (__int -1))
+            (return (__int 1))))
+
+        (if (gt limb_raw other_raw)
+          (if (gt sign_raw 0)
+            (return (__int 1))
+            (return (__int -1))))
+
+        # Equal
         (return (__int 0))
       )
     )
@@ -949,38 +1023,60 @@ class Integer < Numeric
 
   # Compare two heap integers
   def __cmp_heap_heap(other)
-    self_sign = @sign.__get_raw
-    other_sign = other.__get_sign.__get_raw
-
-    # Compare signs
-    return -1 if self_sign < 0 && other_sign > 0
-    return 1 if self_sign > 0 && other_sign < 0
-
-    # Same sign - compare magnitudes (limb by limb)
+    self_sign = @sign
+    other_sign = other.__get_sign
     self_limbs = @limbs
     other_limbs = other.__get_limbs
     self_len = self_limbs.length
     other_len = other_limbs.length
 
-    # More limbs = larger magnitude
-    if self_len < other_len
-      return self_sign > 0 ? -1 : 1
+    # Compare signs: negative < positive
+    # Use __less_than and __greater_than with TAGGED fixnum values
+    if __less_than(self_sign, 0) != 0 && __greater_than(other_sign, 0) != 0
+      return -1
     end
-    if self_len > other_len
-      return self_sign > 0 ? 1 : -1
+    if __greater_than(self_sign, 0) != 0 && __less_than(other_sign, 0) != 0
+      return 1
+    end
+
+    # Same sign - compare magnitudes
+    # More limbs = larger magnitude
+    if __less_than(self_len, other_len) != 0
+      # self has fewer limbs, so smaller magnitude
+      if __greater_than(self_sign, 0) != 0
+        return -1
+      else
+        return 1
+      end
+    end
+    if __less_than(other_len, self_len) != 0
+      # self has more limbs, so larger magnitude
+      if __greater_than(self_sign, 0) != 0
+        return 1
+      else
+        return -1
+      end
     end
 
     # Same number of limbs - compare from most significant to least
     i = self_len - 1
-    while i >= 0
-      self_limb = self_limbs[i].__get_raw
-      other_limb = other_limbs[i].__get_raw
+    while __ge_fixnum(i, 0) != 0
+      self_limb = self_limbs[i]
+      other_limb = other_limbs[i]
 
-      if self_limb < other_limb
-        return self_sign > 0 ? -1 : 1
+      if __less_than(self_limb, other_limb) != 0
+        if __greater_than(self_sign, 0) != 0
+          return -1
+        else
+          return 1
+        end
       end
-      if self_limb > other_limb
-        return self_sign > 0 ? 1 : -1
+      if __greater_than(self_limb, other_limb) != 0
+        if __greater_than(self_sign, 0) != 0
+          return 1
+        else
+          return -1
+        end
       end
 
       i = i - 1
@@ -1616,23 +1712,143 @@ class Integer < Numeric
   # Comparison operators - for now, just delegate to __get_raw
   # This is a temporary workaround until proper heap integer comparisons are implemented
   def > other
-    # Handle both tagged fixnums and heap integers
-    %s(if (gt (callm self __get_raw) (callm other __get_raw)) true false)
+    # Dispatch based on whether self and other are fixnums or heap integers
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is tagged fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path
+            (if (gt (sar self) (sar other))
+              (return true)
+              (return false))
+            # self fixnum, other heap - call __cmp_fixnum_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_fixnum_heap other))
+              (if (gt (sar cmp_result) 0)
+                (return true)
+                (return false)))))
+        # self is heap integer
+        (do
+          (if (eq (bitand other 1) 1)
+            # self heap, other fixnum - call __cmp_heap_fixnum
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_fixnum other))
+              (if (gt (sar cmp_result) 0)
+                (return true)
+                (return false)))
+            # Both heap - call __cmp_heap_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_heap other))
+              (if (gt (sar cmp_result) 0)
+                (return true)
+                (return false))))))
+    )
   end
 
   def >= other
-    # Handle both tagged fixnums and heap integers
-    %s(if (ge (callm self __get_raw) (callm other __get_raw)) true false)
+    # Dispatch based on whether self and other are fixnums or heap integers
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is tagged fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path
+            (if (ge (sar self) (sar other))
+              (return true)
+              (return false))
+            # self fixnum, other heap - call __cmp_fixnum_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_fixnum_heap other))
+              (if (ge (sar cmp_result) 0)
+                (return true)
+                (return false)))))
+        # self is heap integer
+        (do
+          (if (eq (bitand other 1) 1)
+            # self heap, other fixnum - call __cmp_heap_fixnum
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_fixnum other))
+              (if (ge (sar cmp_result) 0)
+                (return true)
+                (return false)))
+            # Both heap - call __cmp_heap_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_heap other))
+              (if (ge (sar cmp_result) 0)
+                (return true)
+                (return false))))))
+    )
   end
 
   def < other
-    # Handle both tagged fixnums and heap integers
-    %s(if (lt (callm self __get_raw) (callm other __get_raw)) true false)
+    # Dispatch based on whether self and other are fixnums or heap integers
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is tagged fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path
+            (if (lt (sar self) (sar other))
+              (return true)
+              (return false))
+            # self fixnum, other heap - call __cmp_fixnum_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_fixnum_heap other))
+              (if (lt (sar cmp_result) 0)
+                (return true)
+                (return false)))))
+        # self is heap integer
+        (do
+          (if (eq (bitand other 1) 1)
+            # self heap, other fixnum - call __cmp_heap_fixnum
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_fixnum other))
+              (if (lt (sar cmp_result) 0)
+                (return true)
+                (return false)))
+            # Both heap - call __cmp_heap_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_heap other))
+              (if (lt (sar cmp_result) 0)
+                (return true)
+                (return false))))))
+    )
   end
 
   def <= other
-    # Handle both tagged fixnums and heap integers
-    %s(if (le (callm self __get_raw) (callm other __get_raw)) true false)
+    # Dispatch based on whether self and other are fixnums or heap integers
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is tagged fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path
+            (if (le (sar self) (sar other))
+              (return true)
+              (return false))
+            # self fixnum, other heap - call __cmp_fixnum_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_fixnum_heap other))
+              (if (le (sar cmp_result) 0)
+                (return true)
+                (return false)))))
+        # self is heap integer
+        (do
+          (if (eq (bitand other 1) 1)
+            # self heap, other fixnum - call __cmp_heap_fixnum
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_fixnum other))
+              (if (le (sar cmp_result) 0)
+                (return true)
+                (return false)))
+            # Both heap - call __cmp_heap_heap
+            (let (cmp_result)
+              (assign cmp_result (callm self __cmp_heap_heap other))
+              (if (le (sar cmp_result) 0)
+                (return true)
+                (return false))))))
+    )
   end
 
   # Equality comparison - handles both tagged fixnums and heap integers
