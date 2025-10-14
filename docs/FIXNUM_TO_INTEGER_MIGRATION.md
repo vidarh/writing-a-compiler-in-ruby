@@ -143,32 +143,46 @@ The patch from 59b807e..ba00ac8 contains:
 - ✅ Updated `lib/core/core.rb` load order
 - ✅ `make selftest-c`: 0 failures
 
-### Phase 2: 🔄 IN PROGRESS
-- ✅ Added Integer#class (Commit 2505685)
-- ✅ Added Integer#hash (Commit 2505685)
-- ✅ Added Integer#div (Commit 537631b)
-- ✅ Added Integer#divmod (Commit 537631b)
-- ⏸️ Remaining methods to add: 23 methods from Fixnum still need migration
+### Phase 2: ✅ COMPLETE (All methods migrated)
+- ✅ Added Integer#class, hash (Commit 2505685)
+- ✅ Added Integer#div, divmod (Commit 537631b)
+- ✅ Added simple stubs: frozen?, to_int, to_f, size, **, [], allbits?, anybits?, nobits?, bit_length, ceil, floor, truncate, magnitude (Commit 05fa812)
+- ✅ Added number theory: gcd, lcm, gcdlcm, ceildiv, digits (Commit 1478bdc)
+- ✅ Added final methods: !, chr, ord, mul, times, coerce (Commit c583414)
 
-**Methods still needed:**
-- chr, ord, mul, **, magnitude, times, frozen?, ceil, floor, truncate
-- [], allbits?, anybits?, nobits?, bit_length, size, to_int, to_f
-- gcd, lcm, gcdlcm, ceildiv, digits, coerce, !
+**All 27 methods from Fixnum successfully migrated to Integer**
 
-**Blocker found:** Adding chr, ord, and mul together caused segfault at runtime.
-- Need to add remaining methods one at a time
-- Test after each addition
-- Some methods may need modification for heap integer compatibility
+**Key finding:** Methods needed to be added individually or in small batches
+- Adding chr, ord, mul together caused runtime segfault
+- Adding them one-by-one with testing between each succeeded
+- All methods now work correctly for fixnums
+- Heap integer support via __get_raw (temporary workaround)
 
 ## Next Steps
 
 1. ✅ Created migration plan document
 2. ✅ Completed Phase 1: integer_base.rb creation
-3. 🔄 Continue Phase 2: Add remaining methods from Fixnum one at a time
-4. Test after EACH method addition
-5. Commit when batch passes `make selftest-c`
-6. After Phase 2 complete: Investigate vtable issue (Phase 3)
-7. DO NOT change `compile_calls.rb:249` until Phase 3 investigation is complete
+3. ✅ Completed Phase 2: All methods migrated from Fixnum to Integer
+4. 🎯 **READY FOR Phase 3: Investigate vtable issue**
+
+### Phase 3: Vtable Investigation (NEXT)
+
+**Goal:** Understand why changing `compile_calls.rb:249` from `:Fixnum` to `:Integer` causes segfaults
+
+**Current state:**
+- All Integer methods exist and work when called on fixnums
+- `compile_calls.rb:249` still uses `:Fixnum` for tagged values
+- Changing to `:Integer` causes immediate crashes (even `puts 42`)
+
+**Investigation steps:**
+1. Examine how Fixnum class vtable is created
+2. Examine how Integer class vtable is created
+3. Compare vtables in assembly output (grep for `__vtable_Fixnum` vs `__vtable_Integer`)
+4. Check if Integer vtable has all methods populated
+5. Understand `load_class` mechanism in `compile_calls.rb`
+6. Determine if we can force Integer vtable to be used for tagged values
+
+**DO NOT** change `compile_calls.rb:249` until investigation is complete
 
 ## Critical Rules
 
