@@ -622,12 +622,15 @@ class Array
   #
   # Uses djb hash
   def hash
-    h = 5381
-    h = h * 33 + self.length
+    # Use s-expressions to avoid overflow detection during hash computation
+    # Hash values are allowed to overflow and wrap around in 32-bit space
+    # Pattern copied from String#hash
+    %s(assign h 5381)
+    %s(assign h (add (mul h 33) (callm self length)))
     each do |c|
-      h = h * 33 + c.hash
+      %s(assign h (add (mul h 33) (callm c hash)))
     end
-    h
+    %s(__int h)
   end
 
 

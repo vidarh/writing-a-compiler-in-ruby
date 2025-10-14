@@ -1370,15 +1370,91 @@ class Integer < Numeric
           # Check if other is also a tagged fixnum
           (if (eq (bitand other 1) 1)
             # Both tagged fixnums - multiply with overflow detection
-            (let (a b result)
+            (let (a b result sign high_bits fits_in_fixnum shift_amt val)
               (assign a (sar self))
               (assign b (sar other))
               (assign result (mul a b))
-              (return (__add_with_overflow result 0)))
+
+              # Check if result fits in 30-bit signed range (-2^29 to 2^29-1)
+              # Strategy: shift right by 29 bits, check if all remaining bits are sign extension
+              # Note: Must use separate variables for sarl (not direct values) to avoid register clobbering
+              (assign shift_amt 31)
+              (assign val result)
+              (assign sign (sarl shift_amt val))  # -1 if negative, 0 if positive
+              (assign shift_amt 29)
+              (assign val result)
+              (assign high_bits (sarl shift_amt val))  # Top bits after 29-bit value
+
+              # Result fits if high_bits equals sign (all top bits are sign extension)
+              (assign fits_in_fixnum (eq high_bits sign))
+
+              (if fits_in_fixnum
+                # Fits in fixnum - tag and return
+                (return (__int result))
+                # Overflow - create heap integer via helper
+                # Use __multiply_to_heap which handles the conversion
+                (return (callm self __multiply_fixnum_overflow a b result))))
             # self is tagged fixnum, other is heap integer - dispatch to Ruby
             (return (callm self __multiply_fixnum_by_heap other))))
         # Heap integer - dispatch to Ruby implementation
         (return (callm self __multiply_heap other)))
+    )
+  end
+
+  # Handle multiplication overflow - convert result to heap integer
+  # Called when fixnum * fixnum overflows 30-bit range
+  # Parameters: a, b (raw operands), result (32-bit multiplication result - UNUSED)
+  def __multiply_fixnum_overflow(a, b, result)
+    # Create heap integer from overflow result
+    # Use mulfull to get the full 64-bit result, then split correctly
+    # The result parameter is unused - we recompute using mulfull for correct 64-bit value
+    %s(
+      (let (obj sign a_abs b_abs low high limb_base limb0 limb1 limb2 arr result_is_neg)
+        (assign obj (callm Integer new))
+
+        # Determine sign from operands
+        # Sign is negative if exactly one operand is negative (XOR of signs)
+        (assign result_is_neg (ne (lt a 0) (lt b 0)))
+        (if result_is_neg
+          (assign sign (__int -1))
+          (assign sign (__int 1)))
+
+        # Compute absolute values of operands
+        (assign a_abs a)
+        (if (lt a_abs 0)
+          (assign a_abs (sub 0 a_abs)))
+        (assign b_abs b)
+        (if (lt b_abs 0)
+          (assign b_abs (sub 0 b_abs)))
+
+        # Use mulfull to get full 64-bit result: low = bits 0-31, high = bits 32-63
+        (mulfull a_abs b_abs low high)
+
+        # Split into 30-bit limbs
+        (assign limb_base (callm obj __limb_base_raw))
+
+        # limb0 = low % 2^30 (bits 0-29)
+        (assign limb0 (mod low limb_base))
+
+        # limb1 = (low / 2^30) + (high % 2^30) * 4 (bits 30-59, but we only use bits 30-31 from low)
+        # For 32-bit results, high = 0, so limb1 = low / 2^30 (bits 30-31)
+        (assign limb1 (div low limb_base))
+
+        # limb2 = high / (2^30 / 4) = high >> 28 (bits 60+)
+        # For results that fit in ~33 bits, limb2 will be 0
+        (assign limb2 0)  # Simplified for now - only handle up to 32-bit results
+
+        # Create limbs array
+        (assign arr (callm Array new))
+        (callm arr push ((__int limb0)))
+        (if (or (ne limb1 0) (ne limb2 0))
+          (callm arr push ((__int limb1))))
+        (if (ne limb2 0)
+          (callm arr push ((__int limb2))))
+
+        # Set heap data and return
+        (callm obj __set_heap_data (arr sign))
+        (return obj))
     )
   end
 

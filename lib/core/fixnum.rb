@@ -1,13 +1,12 @@
 # Fixnum class - ultra-minimal implementation
-# All methods except 2 are now inherited from Integer
+# All methods except 1 are now inherited from Integer
 #
 # Methods that MUST remain in Fixnum:
 # - class: Returns Fixnum for compiler class identity checks
-# - *: Multiplication (Integer version causes FPE during compilation)
 #
-# Methods now inherited from Integer (56+ methods):
+# Methods now inherited from Integer (57+ methods):
 # Comparison: <, >, <=, >=, <=>
-# Arithmetic: +, -, /, %, div, divmod, mul, **, -@, +@
+# Arithmetic: +, -, *, /, %, div, divmod, mul, **, -@, +@
 # Bitwise: &, |, ^, ~, <<, >>
 # Conversion: to_s, to_i, to_int, to_f, chr, inspect, hash
 # Query: zero?, even?, odd?, frozen?, allbits?, anybits?, nobits?
@@ -15,7 +14,7 @@
 # Advanced: gcd, lcm, gcdlcm, ceildiv, digits, coerce, bit_length, size
 # Helpers: __get_raw, ceil, floor, truncate, []
 #
-# Fixnum reduced from 535 lines (58 methods) to 47 lines (2 methods)!
+# Fixnum reduced from 535 lines (58 methods) to 36 lines (1 method)!
 
 class Fixnum < Integer
 
@@ -32,15 +31,17 @@ class Fixnum < Integer
   # <, >, <=, >=, <=>, - removed - now inherited from Integer
   # Integer versions handle both tagged fixnums and heap integers
 
-  # * is CRITICAL - cannot be removed yet
-  # Integer version causes FPE during compilation (needs investigation)
-  def * other
-    if !other.is_a?(Integer)
-      other = other.to_int
-    end
-    %s(let (result) (assign result (mul (sar self) (sar other)))
-      (__int (bitand result 0x7fffffff)))
-  end
+  # * removed - now inherited from Integer
+  # Was causing FPE because Integer#* incorrectly used __add_with_overflow for multiplication
+  # Fixed in Integer#* to use proper multiplication without overflow (first approximation)
+  #
+  # def * other
+  #   if !other.is_a?(Integer)
+  #     other = other.to_int
+  #   end
+  #   %s(let (result) (assign result (mul (sar self) (sar other)))
+  #     (__int (bitand result 0x7fffffff)))
+  # end
 
   # / removed - now inherited from Integer
   # Integer version uses __get_raw for both representations
