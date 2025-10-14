@@ -94,31 +94,26 @@ S-expressions **CANNOT** accept heap integers - this is not a limitation, it's a
 - Using heap integers in s-expressions = memory corruption/crashes
 - **Valid range in s-expressions**: -536,870,912 to 536,870,911 (-2^29 to 2^29-1)
 
-**Implementation Order** (MUST follow this sequence):
+**Implementation Order** (Simplified - No New Token Types Needed):
 
-1. **FIRST**: Add hard validation to `sexp.rb` 🚨 **MANDATORY**
-   - Enforce that integer literals in s-expressions ≤ 2^29-1
-   - Raise fatal error if exceeded
-   - Test: `%s((add 1000000000 1))` must fail with clear error
-   - Effort: 1 hour
-
-2. **SECOND**: Audit existing code
-   - `grep -r "%s" lib/ compiler*.rb | grep -E "[0-9]{9,}"`
-   - Verify no large literals currently in s-expressions
-   - Effort: 1 hour
-
-3. **THIRD**: Remove tokenizer truncation
-   - Parse full integer values
-   - Return `[:bignum_literal, string]` for values > 2^29
+1. **Remove tokenizer truncation**
+   - Parse full integer values (tokenizer runs with MRI, so can handle any size)
+   - For values > 2^29-1, return `[:call, ...]` AST node calling `Integer.new`
+   - Reuses existing compiler infrastructure - no special handling needed!
    - Effort: 2-3 hours
 
-4. **FOURTH**: Add parser/compiler support
-   - Handle `[:bignum_literal, ...]` tokens
-   - Generate heap integer allocation code
+2. **Add initialization helper**
+   - Create `Integer.__from_literal(limbs_array, sign)` helper method
+   - Tokenizer extracts limbs from MRI Bignum and generates call to this helper
+   - Example: `9223372036854775808` → `Integer.new.__set_heap_data([0, 0, 8], 1)`
+   - Effort: 1-2 hours
+
+3. **Test and validate**
    - Test: `x = 9223372036854775808; puts x > 1000`
-   - Effort: 2-3 hours
+   - Verify no regressions with `make selftest-c`
+   - Effort: 1 hour
 
-**Total Prerequisite Effort**: 4-8 hours
+**Total Prerequisite Effort**: 4-6 hours (simplified from 4-8 hours)
 
 ---
 

@@ -120,6 +120,8 @@ run_single_spec() {
             echo
         fi
 
+        # Save output to a file that can be read by the caller
+        cat /tmp/spec_output_$$ > "/tmp/spec_last_output_$$"
         rm -f /tmp/spec_output_$$
         # rm -f "$TEMP_SPEC"
 
@@ -149,12 +151,25 @@ if [ -d "$TARGET" ]; then
     SEGFAULT=0
     FAILED=0
 
+    # Individual test case counters
+    TOTAL_TESTS_PASSED=0
+    TOTAL_TESTS_FAILED=0
+    TOTAL_TESTS_SKIPPED=0
+    TOTAL_TESTS_TOTAL=0
+
     # Find all .rb files recursively, excluding shared/ directories
     while IFS= read -r -d '' SPEC_FILE; do
         TOTAL_FILES=$((TOTAL_FILES + 1))
 
         run_single_spec "$SPEC_FILE" 0
         RESULT=$?
+
+        # Read the saved output to extract test counts
+        SPEC_OUTPUT=""
+        if [ -f "/tmp/spec_last_output_$$" ]; then
+            SPEC_OUTPUT=$(cat "/tmp/spec_last_output_$$")
+            rm -f "/tmp/spec_last_output_$$"
+        fi
 
         if [ $RESULT -eq 0 ]; then
             echo -e "\e[32m[PASS] $SPEC_FILE"
@@ -169,6 +184,28 @@ if [ -d "$TARGET" ]; then
             echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE"
             FAILED_COMPILE=$((FAILED_COMPILE + 1))
         fi
+
+        # Extract individual test counts from output if available
+        # Look for pattern: "X passed, Y failed, Z skipped (N total)"
+        if echo "$SPEC_OUTPUT" | grep -q "passed.*failed.*skipped"; then
+            PASSED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* passed" | grep -o "[0-9]*" | head -1)
+            FAILED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* failed" | grep -o "[0-9]*" | head -1)
+            SKIPPED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* skipped" | grep -o "[0-9]*" | head -1)
+            TOTAL_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "([0-9]* total)" | grep -o "[0-9]*" | head -1)
+
+            if [ -n "$PASSED_COUNT" ]; then
+                TOTAL_TESTS_PASSED=$((TOTAL_TESTS_PASSED + PASSED_COUNT))
+            fi
+            if [ -n "$FAILED_COUNT" ]; then
+                TOTAL_TESTS_FAILED=$((TOTAL_TESTS_FAILED + FAILED_COUNT))
+            fi
+            if [ -n "$SKIPPED_COUNT" ]; then
+                TOTAL_TESTS_SKIPPED=$((TOTAL_TESTS_SKIPPED + SKIPPED_COUNT))
+            fi
+            if [ -n "$TOTAL_COUNT" ]; then
+                TOTAL_TESTS_TOTAL=$((TOTAL_TESTS_TOTAL + TOTAL_COUNT))
+            fi
+        fi
     done < <(find "$TARGET" -name "*_spec.rb" -type f -not -path "*/shared/*" -print0 | sort -z)
 
     echo
@@ -179,6 +216,16 @@ if [ -d "$TARGET" ]; then
     echo "  Failed: $FAILED"
     echo "  Segfault/Runtime error: $SEGFAULT"
     echo "  Failed to compile: $FAILED_COMPILE"
+    echo
+    echo "Individual Test Cases:"
+    echo "  Total tests: $TOTAL_TESTS_TOTAL"
+    echo "  Passed: $TOTAL_TESTS_PASSED"
+    echo "  Failed: $TOTAL_TESTS_FAILED"
+    echo "  Skipped: $TOTAL_TESTS_SKIPPED"
+    if [ $TOTAL_TESTS_TOTAL -gt 0 ]; then
+        PASS_PERCENT=$((TOTAL_TESTS_PASSED * 100 / TOTAL_TESTS_TOTAL))
+        echo "  Pass rate: ${PASS_PERCENT}%"
+    fi
 
 elif [ -f "$TARGET" ]; then
     # Single file mode - show full output
