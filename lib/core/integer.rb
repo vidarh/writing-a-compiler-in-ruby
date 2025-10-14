@@ -1343,12 +1343,15 @@ class Integer < Numeric
   # Arithmetic operators - temporary delegation to __get_raw
   # TODO: Implement proper heap integer arithmetic
   def % other
+    # Modulo with proper sign handling (Ruby semantics)
     %s(
-      (let (a b result)
-        (assign a (callm self __get_raw))
-        (assign b (callm other __get_raw))
-        (assign result (mod a b))
-        (return (__int result)))
+      (let (r m)
+        (assign r (callm other __get_raw))
+        (assign m (mod (callm self __get_raw) r))
+        # Adjust if signs don't match: (m >= 0) != (r >= 0)
+        (if (eq (ge m 0) (lt r 0))
+          (assign m (add m r)))
+        (return (__int m)))
     )
   end
 

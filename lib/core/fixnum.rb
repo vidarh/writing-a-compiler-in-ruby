@@ -21,13 +21,8 @@ class Fixnum < Integer
     Fixnum
   end
 
-  def % other
-    %s(assign r (callm other __get_raw))
-    %s(assign m (mod (sar self) r))
-    %s(if (eq (ge m 0) (lt r 0))
-         (assign m (add m r)))
-    %s(__int m)
-  end
+  # % removed - now inherited from Integer
+  # Integer version includes Ruby semantics for sign handling
 
   # __get_raw removed - now inherited from Integer
   # Integer version handles both tagged fixnums and heap integers
