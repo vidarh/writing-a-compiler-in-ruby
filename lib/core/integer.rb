@@ -1793,6 +1793,58 @@ class Integer < Numeric
     result
   end
 
+  # FIXME: I don't know why '!' seems to get an argument...
+  def ! *args
+    false
+  end
+
+  def chr(encoding = nil)
+    # FIXME: Encoding parameter is ignored for now
+    %s(let (buf raw_val)
+         (assign raw_val (callm self __get_raw))
+         (assign buf (__alloc_leaf 2))
+         (snprintf buf 2 "%c" raw_val)
+       (__get_string buf)
+     )
+  end
+
+  def ord
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Tagged fixnum - return self
+        (return self)
+        # Heap integer - extract raw value
+        (return (__int (callm self __get_raw))))
+    )
+  end
+
+  def mul other
+    %s(__int (mul (callm self __get_raw) (callm other __get_raw)))
+  end
+
+  def times
+    if !block_given?
+      return IntegerEnumerator.new(self)
+    end
+    i = 0
+    while i < self
+      yield i
+      i +=1
+    end
+    self
+  end
+
+  # FIXME: Stub - minimal implementation for integer coercion
+  def coerce(other)
+    if other.is_a?(Integer)
+      [other, self]
+    else
+      # FIXME: Should raise TypeError for unsupported types
+      # For now, just return [other, self] to avoid crashes
+      [other, self]
+    end
+  end
+
 end
 
 # Global Integer() conversion method
