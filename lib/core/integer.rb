@@ -1527,21 +1527,23 @@ class Integer < Numeric
   # Comparison operators - for now, just delegate to __get_raw
   # This is a temporary workaround until proper heap integer comparisons are implemented
   def > other
-    __cmp(other) > 0
+    # Handle both tagged fixnums and heap integers
+    %s(if (gt (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   def >= other
-    __cmp(other) >= 0
+    # Handle both tagged fixnums and heap integers
+    %s(if (ge (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   def < other
     # Handle both tagged fixnums and heap integers
-    # Use direct comparison with __get_raw for reliability
     %s(if (lt (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   def <= other
-    __cmp(other) <= 0
+    # Handle both tagged fixnums and heap integers
+    %s(if (le (callm self __get_raw) (callm other __get_raw)) true false)
   end
 
   # Equality comparison - handles both tagged fixnums and heap integers
