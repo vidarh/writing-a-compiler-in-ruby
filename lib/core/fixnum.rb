@@ -35,6 +35,8 @@ class Fixnum < Integer
   # <, >, <=, >=, <=>, - removed - now inherited from Integer
   # Integer versions handle both tagged fixnums and heap integers
 
+  # * is CRITICAL - cannot be removed yet
+  # Integer version causes FPE during compilation (needs investigation)
   def * other
     if !other.is_a?(Integer)
       other = other.to_int
@@ -43,12 +45,8 @@ class Fixnum < Integer
       (__int (bitand result 0x7fffffff)))
   end
 
-  def / other
-    if !other.is_a?(Integer)
-      other = other.to_int
-    end
-    %s(__int (div (sar self) (sar other)))
-  end
+  # / removed - now inherited from Integer
+  # Integer version uses __get_raw for both representations
 end
 
 # __int moved to integer_base.rb

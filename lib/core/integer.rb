@@ -1353,6 +1353,11 @@ class Integer < Numeric
   end
 
   def * other
+    # Convert non-Integer types
+    if !other.is_a?(Integer)
+      other = other.to_int
+    end
+
     # Dispatch based on types: fixnum vs heap integer
     # Pattern copied from Integer#+ which works correctly
     %s(
@@ -1395,6 +1400,11 @@ class Integer < Numeric
   end
 
   def / other
+    # Convert non-Integer types
+    if !other.is_a?(Integer)
+      other = other.to_int
+    end
+
     %s(
       (let (a b result)
         (assign a (callm self __get_raw))
