@@ -1618,6 +1618,19 @@ class Integer < Numeric
     false
   end
 
+  # Methods migrated from Fixnum for vtable compatibility
+  # These are needed when compile_calls.rb switches to load :Integer for tagged values
+
+  def class
+    Integer
+  end
+
+  def hash
+    # For fixnums, just return self (same as Fixnum#hash)
+    # FIXME: For heap integers, should compute proper hash from limbs
+    self
+  end
+
 end
 
 # Global Integer() conversion method
