@@ -29,9 +29,8 @@ class Fixnum < Integer
     %s(__int m)
   end
 
-  def __get_raw
-    %s(sar self)
-  end
+  # __get_raw removed - now inherited from Integer
+  # Integer version handles both tagged fixnums and heap integers
 
   def < other
     %s(if (lt (sar self) (callm other __get_raw)) true false)
