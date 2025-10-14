@@ -1631,6 +1631,14 @@ class Integer < Numeric
     self
   end
 
+  def div other
+    %s(__int (div (callm self __get_raw) (callm other __get_raw)))
+  end
+
+  def divmod other
+    [self / other, self % other]
+  end
+
 end
 
 # Global Integer() conversion method
