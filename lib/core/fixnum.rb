@@ -1,19 +1,21 @@
-# Fixnum class - minimal implementation with only critical methods
-# All other methods are inherited from Integer
+# Fixnum class - ultra-minimal implementation
+# All methods except 2 are now inherited from Integer
 #
-# Critical methods that MUST be defined here:
+# Methods that MUST remain in Fixnum:
 # - class: Returns Fixnum for compiler class identity checks
-# - %: Modulo operator (used during compilation)
-# - __get_raw: Extracts raw value from tagged fixnum
-# - <, >, <=, >=, <=>: Comparison operators
-# - -, *, /: Core arithmetic operators
+# - *: Multiplication (Integer version causes FPE during compilation)
 #
-# All other methods (48+) are inherited from Integer, including:
-# to_s, hash, inspect, chr, to_i, zero?, ceil, floor, [], !=, !,
-# div, divmod, mul, **, &, |, ^, ~, <<, >>, -@, +@, abs, magnitude,
-# ord, times, pred, succ, next, frozen?, even?, odd?, allbits?,
-# anybits?, nobits?, bit_length, size, to_int, to_f, truncate,
-# gcd, lcm, gcdlcm, ceildiv, digits, coerce
+# Methods now inherited from Integer (56+ methods):
+# Comparison: <, >, <=, >=, <=>
+# Arithmetic: +, -, /, %, div, divmod, mul, **, -@, +@
+# Bitwise: &, |, ^, ~, <<, >>
+# Conversion: to_s, to_i, to_int, to_f, chr, inspect, hash
+# Query: zero?, even?, odd?, frozen?, allbits?, anybits?, nobits?
+# Utility: abs, magnitude, ord, times, pred, succ, next
+# Advanced: gcd, lcm, gcdlcm, ceildiv, digits, coerce, bit_length, size
+# Helpers: __get_raw, ceil, floor, truncate, []
+#
+# Fixnum reduced from 535 lines (58 methods) to 47 lines (2 methods)!
 
 class Fixnum < Integer
 
