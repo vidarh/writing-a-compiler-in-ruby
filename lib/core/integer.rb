@@ -1695,6 +1695,104 @@ class Integer < Numeric
     abs
   end
 
+  # Euclidean algorithm for GCD
+  def gcd(other)
+    a = self
+    b = other
+
+    # Make both positive
+    if a < 0
+      a = -a
+    end
+    if b < 0
+      b = -b
+    end
+
+    # Euclidean algorithm
+    while b > 0
+      t = b
+      b = a % b
+      a = t
+    end
+    a
+  end
+
+  # LCM using GCD
+  def lcm(other)
+    return 0 if self == 0
+    return 0 if other == 0
+    a = self
+    b = other
+    if a < 0
+      a = -a
+    end
+    if b < 0
+      b = -b
+    end
+    g = gcd(other)
+    (a / g) * b
+  end
+
+  # Return both GCD and LCM
+  def gcdlcm(other)
+    [gcd(other), lcm(other)]
+  end
+
+  # Ceiling division: divide and round towards positive infinity
+  def ceildiv(other)
+    # Convert other to integer if it's not already an Integer
+    if !other.is_a?(Integer)
+      other = other.to_int
+    end
+
+    # Check for division by zero
+    if other == 0
+      STDERR.puts("ZeroDivisionError: divided by 0")
+      return nil
+    end
+
+    quotient = self / other
+    remainder = self % other
+
+    # If there's a remainder and quotient should round up
+    if remainder != 0
+      # Same sign: need to round up (away from zero)
+      same_sign = false
+      if self > 0
+        if other > 0
+          same_sign = true
+        end
+      elsif self < 0
+        if other < 0
+          same_sign = true
+        end
+      end
+
+      if same_sign
+        quotient = quotient + 1
+      end
+    end
+
+    quotient
+  end
+
+  # Return array of digits in given base (least significant first)
+  def digits(base = 10)
+    result = []
+    n = self
+
+    if n == 0
+      return [0]
+    end
+
+    while n > 0
+      result << (n % base)
+      n = n / base
+    end
+
+    result
+  end
+
 end
 
 # Global Integer() conversion method
