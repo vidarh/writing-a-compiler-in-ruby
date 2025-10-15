@@ -54,8 +54,9 @@ def it(description, &block)
   elsif $spec_failed == failures_before
     # Check if any assertions were actually executed
     if $spec_assertions == assertions_before
-      $spec_failed = $spec_failed + 1
-      puts "\e[31m  ✗ #{description} (NO ASSERTIONS)\e[0m"
+      # No assertions were made - mark as skipped
+      $spec_skipped = $spec_skipped + 1
+      puts "\e[33m  - #{description} (NO ASSERTIONS)\e[0m"
     else
       $spec_passed = $spec_passed + 1
       puts "\e[32m  ✓ #{description}\e[0m"
@@ -291,6 +292,11 @@ class RaiseErrorMatcher < Matcher
     if actual.is_a?(Proc)
       actual.call
     end
+
+    # Mark that this assertion cannot be verified
+    # Decrement the assertion count since we can't actually check this
+    $spec_assertions = $spec_assertions - 1
+
     # Always return true to skip the exception check
     true
   end
@@ -448,6 +454,29 @@ def be_kind_of(klass)
   InstanceOfMatcher.new(klass)
 end
 
+def be_close(expected, tolerance)
+  BeCloseMatcher.new(expected, tolerance)
+end
+
+class BeCloseMatcher < Matcher
+  def initialize(expected, tolerance)
+    @expected = expected
+    @tolerance = tolerance
+  end
+
+  def match?(actual)
+    diff = actual - @expected
+    if diff < 0
+      diff = -diff
+    end
+    diff <= @tolerance
+  end
+
+  def failure_message(actual)
+    "Expected #{actual} to be within #{@tolerance} of #{@expected}"
+  end
+end
+
 # Guards - stub out for now
 def ruby_version_is(*args)
   if block_given?
@@ -512,12 +541,18 @@ end
 def before(type = :each, &block)
   if type == :each
     $before_each_blocks.push(block)
+  elsif type == :all
+    # Execute before :all blocks immediately
+    block.call if block
   end
 end
 
 def after(type = :each, &block)
   if type == :each
     $after_each_blocks.push(block)
+  elsif type == :all
+    # Execute after :all blocks immediately (not ideal but simple)
+    block.call if block
   end
 end
 
@@ -583,5 +618,6 @@ def print_spec_results
   puts
   total = $spec_passed + $spec_failed + $spec_skipped
   puts "\e[32m#{$spec_passed} passed\e[0m, \e[31m#{$spec_failed} failed\e[0m, \e[33m#{$spec_skipped} skipped\e[0m (#{total} total)"
-  exit(1) if $spec_failed > 0
+  # Exit with error code if there are failures OR skipped tests
+  exit(1) if $spec_failed > 0 || $spec_skipped > 0
 end

@@ -130,6 +130,21 @@ class Integer < Numeric
 
   # Addition - handles both tagged fixnums and heap integers
   def + other
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
+    end
+
     # Check bit 0 of self: if 1, it's a tagged fixnum; if 0, it's a heap object
     # Do this check entirely in s-expression to avoid bitand issues in Ruby code
     %s(
@@ -152,6 +167,21 @@ class Integer < Numeric
 
   # Subtraction - handles both tagged fixnums and heap integers
   def - other
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
+    end
+
     %s(
       (if (eq (bitand self 1) 1)
         # Tagged fixnum path
@@ -1429,6 +1459,18 @@ class Integer < Numeric
   # Arithmetic operators - temporary delegation to __get_raw
   # TODO: Implement proper heap integer arithmetic
   def % other
+    # Type check first
+    if !other.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
+
+    # Check for modulo by zero
+    if other == 0
+      STDERR.puts("ZeroDivisionError: divided by 0")
+      return nil
+    end
+
     # Modulo with proper sign handling (Ruby semantics)
     %s(
       (let (r m)
@@ -1439,6 +1481,28 @@ class Integer < Numeric
           (assign m (add m r)))
         (return (__int m)))
     )
+  end
+
+  def remainder(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return 0
+    end
+
+    other = args[0]
+
+    # Type check first
+    if !other.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
+
+    # Remainder operation (different from modulo for negative numbers)
+    # remainder has same sign as dividend (self), modulo has same sign as divisor (other)
+    # For now, use simple implementation: self - (self / other) * other
+    quotient = self / other
+    self - (quotient * other)
   end
 
   def * other
@@ -1590,6 +1654,12 @@ class Integer < Numeric
       end
     end
 
+    # Check for division by zero
+    if other == 0
+      STDERR.puts("ZeroDivisionError: divided by 0")
+      return nil
+    end
+
     %s(
       (let (a b result)
         (assign a (callm self __get_raw))
@@ -1611,6 +1681,12 @@ class Integer < Numeric
 
   # Spaceship operator for comparison (returns -1, 0, or 1)
   def <=> other
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      # For non-Integer types, return nil (can't compare)
+      return nil
+    end
+
     %s(
       (let (a b)
         (assign a (callm self __get_raw))
@@ -1640,6 +1716,11 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       if other.respond_to?(:to_int)
         other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
       else
         # If to_int doesn't exist, raise TypeError
         STDERR.puts("TypeError: Integer can't be coerced into Integer")
@@ -1728,6 +1809,12 @@ class Integer < Numeric
   # Comparison operators - for now, just delegate to __get_raw
   # This is a temporary workaround until proper heap integer comparisons are implemented
   def > other
+    # Type check first - only compare with other Integers
+    if !other.is_a?(Integer)
+      # For non-Integer types, return false (can't compare)
+      return false
+    end
+
     # Dispatch based on whether self and other are fixnums or heap integers
     %s(
       (if (eq (bitand self 1) 1)
@@ -1763,6 +1850,11 @@ class Integer < Numeric
   end
 
   def >= other
+    # Type check first - only compare with other Integers
+    if !other.is_a?(Integer)
+      return false
+    end
+
     # Dispatch based on whether self and other are fixnums or heap integers
     %s(
       (if (eq (bitand self 1) 1)
@@ -1798,6 +1890,11 @@ class Integer < Numeric
   end
 
   def < other
+    # Type check first - only compare with other Integers
+    if !other.is_a?(Integer)
+      return false
+    end
+
     # Dispatch based on whether self and other are fixnums or heap integers
     %s(
       (if (eq (bitand self 1) 1)
@@ -1833,6 +1930,11 @@ class Integer < Numeric
   end
 
   def <= other
+    # Type check first - only compare with other Integers
+    if !other.is_a?(Integer)
+      return false
+    end
+
     # Dispatch based on whether self and other are fixnums or heap integers
     %s(
       (if (eq (bitand self 1) 1)
@@ -1869,14 +1971,32 @@ class Integer < Numeric
 
   # Equality comparison - handles both tagged fixnums and heap integers
   def == other
-    # Handle nil and non-Numeric types
+    # Handle nil and non-Integer types
     if other.nil?
       return false
     end
-    return false if !other.is_a?(Numeric)
+    return false if !other.is_a?(Integer)
 
-    # Compare raw values using __get_raw for both sides
-    %s(if (eq (callm self __get_raw) (callm other __get_raw)) true false)
+    # Compare using __cmp for proper heap integer support
+    # For now, just use simple fixnum comparison in s-expression
+    # and return false for complex cases to avoid crashes
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (if (eq (bitand other 1) 1)
+          # both fixnum - compare directly
+          (if (eq (sar self) (sar other))
+            (return true)
+            (return false))
+          # self fixnum, other heap - not equal (for now)
+          (return false))
+        # self is heap
+        (if (eq (bitand other 1) 1)
+          # self heap, other fixnum - not equal (for now)
+          (return false)
+          # both heap - compare (for now just return false to avoid crashes)
+          (return false)))
+    )
   end
 
   # Not-equal comparison
@@ -1890,6 +2010,14 @@ class Integer < Numeric
 
   def denominator
     1
+  end
+
+  def rationalize(eps = nil)
+    # Integers are already rational (self/1)
+    # Since we don't have Rational class, just return self
+    # In real Ruby this would return Rational(self, 1)
+    STDERR.puts("Warning: Rational not implemented, returning Integer")
+    self
   end
 
   def to_r
@@ -1957,10 +2085,40 @@ class Integer < Numeric
   end
 
   def div other
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
+    end
+
     %s(__int (div (callm self __get_raw) (callm other __get_raw)))
   end
 
   def divmod other
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
+    end
+
     [self / other, self % other]
   end
 
@@ -1985,6 +2143,12 @@ class Integer < Numeric
     # Note: This is a basic implementation for integer exponents
     # Ruby's ** also handles floats and negative exponents, but this
     # implementation focuses on positive integer exponents.
+
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
 
     return 1 if other == 0
     return self if other == 1
@@ -2011,19 +2175,69 @@ class Integer < Numeric
     result
   end
 
-  def [] i
-    1
+  def [](*args)
+    # Arity check - expect 1 or 2 arguments
+    if args.length < 1 || args.length > 2
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1..2)")
+      return 0
+    end
+
+    i = args[0]
+
+    # Type check first
+    if !i.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
+
+    # If single argument: returns bit at position i
+    if args.length == 1
+      # Returns the bit at position i: (self >> i) & 1
+      # For negative numbers, uses two's complement representation
+      return (self >> i) & 1
+    end
+
+    # If two arguments: [i, len] - returns len bits starting at position i
+    len = args[1]
+    if !len.is_a?(Integer)
+      STDERR.puts("TypeError: length must be an Integer")
+      return 0
+    end
+
+    # Handle negative length: ignore it and return self >> i
+    if len < 0
+      return self >> i
+    end
+
+    # Extract len bits starting at position i: (self >> i) & ((1 << len) - 1)
+    mask = (1 << len) - 1
+    (self >> i) & mask
   end
 
-  def allbits?(mask)
+  def allbits?(*args)
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return false
+    end
+    mask = args[0]
     self & mask == mask
   end
 
-  def anybits?(mask)
+  def anybits?(*args)
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return false
+    end
+    mask = args[0]
     self & mask != 0
   end
 
-  def nobits?(mask)
+  def nobits?(*args)
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return false
+    end
+    mask = args[0]
     self & mask == 0
   end
 
@@ -2086,7 +2300,21 @@ class Integer < Numeric
   end
 
   # Euclidean algorithm for GCD
-  def gcd(other)
+  def gcd(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return 0
+    end
+
+    other = args[0]
+
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
+
     a = self
     b = other
 
@@ -2108,7 +2336,21 @@ class Integer < Numeric
   end
 
   # LCM using GCD
-  def lcm(other)
+  def lcm(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return 0
+    end
+
+    other = args[0]
+
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
+
     return 0 if self == 0
     return 0 if other == 0
     a = self
@@ -2124,15 +2366,47 @@ class Integer < Numeric
   end
 
   # Return both GCD and LCM
-  def gcdlcm(other)
+  def gcdlcm(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return [0, 0]
+    end
+
+    other = args[0]
+
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      STDERR.puts("TypeError: Integer can't be coerced")
+      return nil
+    end
+
     [gcd(other), lcm(other)]
   end
 
   # Ceiling division: divide and round towards positive infinity
-  def ceildiv(other)
+  def ceildiv(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return 0
+    end
+
+    other = args[0]
+
     # Convert other to integer if it's not already an Integer
     if !other.is_a?(Integer)
-      other = other.to_int
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
     end
 
     # Check for division by zero
@@ -2167,7 +2441,31 @@ class Integer < Numeric
   end
 
   # Return array of digits in given base (least significant first)
-  def digits(base = 10)
+  def digits(*args)
+    # Arity check - expect 0 or 1 arguments
+    if args.length > 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0..1)")
+      return []
+    end
+
+    base = args.length == 1 ? args[0] : 10
+
+    # Validate base
+    if !base.is_a?(Integer)
+      STDERR.puts("TypeError: base must be an Integer")
+      return []
+    end
+
+    if base < 2
+      STDERR.puts("ArgumentError: negative radix")
+      return []
+    end
+
+    if self < 0
+      STDERR.puts("Math::DomainError: out of domain")
+      return []
+    end
+
     result = []
     n = self
 
@@ -2188,7 +2486,13 @@ class Integer < Numeric
     false
   end
 
-  def chr(encoding = nil)
+  def chr(*args)
+    # Arity check - expect 0 or 1 arguments
+    if args.length > 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0..1)")
+      return ""
+    end
+
     # FIXME: Encoding parameter is ignored for now
     %s(let (buf raw_val)
          (assign raw_val (callm self __get_raw))
@@ -2209,6 +2513,21 @@ class Integer < Numeric
   end
 
   def mul other
+    # Type check first to avoid crashes
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
+    end
+
     %s(__int (mul (callm self __get_raw) (callm other __get_raw)))
   end
 
@@ -2224,7 +2543,15 @@ class Integer < Numeric
     self
   end
 
-  def downto(limit)
+  def downto(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+
+    limit = args[0]
+
     if !block_given?
       # FIXME: Should return an Enumerator
       return nil
@@ -2237,7 +2564,15 @@ class Integer < Numeric
     self
   end
 
-  def upto(limit)
+  def upto(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+
+    limit = args[0]
+
     if !block_given?
       # FIXME: Should return an Enumerator
       return nil
@@ -2251,7 +2586,15 @@ class Integer < Numeric
   end
 
   # FIXME: Stub - minimal implementation for integer coercion
-  def coerce(other)
+  def coerce(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return [nil, nil]
+    end
+
+    other = args[0]
+
     if other.is_a?(Integer)
       [other, self]
     else

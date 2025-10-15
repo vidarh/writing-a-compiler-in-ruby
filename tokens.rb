@@ -220,6 +220,24 @@ module Tokens
           # Convert to string and let MRI parse as float
           # This works for any size number since MRI handles it
           num = "#{i}.#{f}"
+
+          # Check for scientific notation exponent: e+19, e-10, E5, etc.
+          if s.peek == ?e || s.peek == ?E
+            s.get  # consume 'e' or 'E'
+            num << "e"
+
+            # Optional sign
+            if s.peek == ?+ || s.peek == ?-
+              num << s.get
+            end
+
+            # Exponent digits
+            exp = Int.expect(s, false)
+            if exp
+              num << exp.to_s
+            end
+          end
+
           return num.to_f
         end
       end
