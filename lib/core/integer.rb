@@ -1444,7 +1444,17 @@ class Integer < Numeric
   def * other
     # Convert non-Integer types
     if !other.is_a?(Integer)
-      other = other.to_int
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
     end
 
     # Dispatch based on types: fixnum vs heap integer
@@ -1567,7 +1577,17 @@ class Integer < Numeric
   def / other
     # Convert non-Integer types
     if !other.is_a?(Integer)
-      other = other.to_int
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        # Check if to_int returned nil (failed conversion)
+        if other.nil?
+          STDERR.puts("TypeError: can't convert to Integer")
+          return nil
+        end
+      else
+        STDERR.puts("TypeError: Integer can't be coerced")
+        return nil
+      end
     end
 
     %s(
@@ -2191,6 +2211,32 @@ class Integer < Numeric
     while i < self
       yield i
       i +=1
+    end
+    self
+  end
+
+  def downto(limit)
+    if !block_given?
+      # FIXME: Should return an Enumerator
+      return nil
+    end
+    i = self
+    while i >= limit
+      yield i
+      i = i - 1
+    end
+    self
+  end
+
+  def upto(limit)
+    if !block_given?
+      # FIXME: Should return an Enumerator
+      return nil
+    end
+    i = self
+    while i <= limit
+      yield i
+      i = i + 1
     end
     self
   end

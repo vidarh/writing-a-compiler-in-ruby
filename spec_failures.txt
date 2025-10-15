@@ -14,7 +14,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/chr_spec.rb
 [31m[FAIL] rubyspec/core/integer/coerce_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/comparison_spec.rb
-[31m[FAIL] rubyspec/core/integer/complement_spec.rb
+[32m[PASS] rubyspec/core/integer/complement_spec.rb
 [31m[FAIL] rubyspec/core/integer/constants_spec.rb
 [32m[PASS] rubyspec/core/integer/denominator_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/digits_spec.rb
@@ -72,14 +72,14 @@ Running all specs in rubyspec/core/integer/...
 ================================
 Summary:
   Total spec files: 67
-  Passed: 9
-  Failed: 17
+  Passed: 10
+  Failed: 16
   Segfault/Runtime error: 41
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 699
-  Passed: 112
-  Failed: 587
+  Total tests: 688
+  Passed: 115
+  Failed: 573
   Skipped: 0
   Pass rate: 16%
