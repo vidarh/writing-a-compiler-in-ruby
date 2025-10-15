@@ -1981,7 +1981,36 @@ class Integer < Numeric
   end
 
   def bit_length
-    32
+    # Returns minimum number of bits to represent self
+    # 0.bit_length => 0
+    # 1.bit_length => 1
+    # 255.bit_length => 8
+    # -1.bit_length => 1 (two's complement: ...11111111)
+    # -256.bit_length => 9 (two's complement: ...111111111 00000000)
+
+    return 0 if self == 0
+
+    # For negative numbers, compute bit_length of absolute value
+    # and handle two's complement representation
+    if self < 0
+      # For negative n, bit_length is one more than bit_length of (n.abs - 1)
+      n = -self - 1  # This is ~self in two's complement
+      count = 0
+      while n > 0
+        count = count + 1
+        n = n >> 1
+      end
+      return count + 1
+    end
+
+    # For positive numbers, count bits
+    n = self
+    count = 0
+    while n > 0
+      count = count + 1
+      n = n >> 1
+    end
+    count
   end
 
   def ceil(prec=0)
