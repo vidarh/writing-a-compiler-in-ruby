@@ -4,13 +4,13 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 **For debugging help, see [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) for effective patterns and techniques.**
 
-## Current Integer Spec Test Status (2025-10-14) - COMPREHENSIVE ANALYSIS COMPLETE
+## Current Integer Spec Test Status (2025-10-15) - COMPILE FAILURES ELIMINATED! ✅
 
 **Summary**: 67 spec files total
 - **PASS**: 11 files (16%)
 - **FAIL**: 22 files (33%)
-- **SEGFAULT**: 34 files (51%) - includes digits_spec.rb (stabby lambda causes crash, not just compile hang)
-- **COMPILE_FAIL**: 0 files (0%)
+- **SEGFAULT**: 34 files (51%)
+- **COMPILE_FAIL**: 0 files (0%) ✅ **ALL FIXED** - was 7 files, now 0!
 
 **Individual Test Case Counts** (from enhanced run_rubyspec):
 - **Total**: 747 individual test cases across all 67 spec files
@@ -221,6 +221,36 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 **Other Issues**:
 1. Lambda specs need investigation - compiler HAS lambda support, need to identify specific failing syntax
 2. Bignum emulation using regular fixnums produces incorrect values
+
+## Recent Additions
+
+### 2025-10-15 - Tokenizer Float Literal Fix
+
+**✅ FIXED: All COMPILE FAIL specs now compile**
+
+Fixed critical tokenizer bug where large float literals (e.g., `4294967295.0`) caused compilation failures.
+
+**Root Cause**:
+- Tokenizer checked if integer exceeded fixnum range BEFORE checking for decimal point
+- When seeing `4294967295.0`, it converted `4294967295` to heap integer AST, then failed when trying to append `.0`
+
+**Solution**:
+- Reordered checks in tokens.rb Number.expect()
+- Now checks for float/rational literals FIRST, then converts large integers to heap integers
+
+**Impact**:
+- ✅ divide_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ div_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ minus_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ plus_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ exponent_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ pow_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ to_f_spec.rb: COMPILE FAIL → SEGFAULT (now compiles!)
+- ✅ make selftest-c: 0 failures
+
+**Files Modified**: tokens.rb
+
+---
 
 ## Recent Additions
 

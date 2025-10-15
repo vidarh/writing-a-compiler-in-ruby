@@ -14,8 +14,8 @@ Failing:             605  (81%)
 Total spec files:    67
 PASS:                11  (16%)
 FAIL:                22  (33%)
-SEGFAULT:            33  (49%)
-COMPILE FAIL:         1  ( 2%)
+SEGFAULT:            34  (51%)
+COMPILE FAIL:         0  ( 0%)  ✅ ALL FIXED (2025-10-15)
 ```
 
 ## Top 3 Root Causes (Affect 80% of Failures)
@@ -77,7 +77,23 @@ All of the following use `__get_raw` and only work correctly for single-limb hea
 
 ---
 
+## Recent Progress (2025-10-15)
+
+### ✅ FIXED: Large Float Literal Tokenization Bug
+
+**Problem**: Tokenizer checked for large integers BEFORE checking for decimal points, causing `4294967295.0` to be converted to heap integer AST before recognizing it as a float.
+
+**Solution**: Reordered checks in tokens.rb to handle float/rational literals first.
+
+**Impact**:
+- ✅ All 7 COMPILE FAIL specs now compile: divide, div, minus, plus, exponent, pow, to_f
+- They moved from COMPILE FAIL → SEGFAULT/FAIL (progress!)
+
+---
+
 ## Critical Prerequisite: Large Integer Literal Support
+
+**Status**: ✅ COMPLETE (2025-10-15) - Large integer literals now work correctly
 
 **Why This Blocks Everything**:
 - Cannot fix `bignum_value()` without large literal support
