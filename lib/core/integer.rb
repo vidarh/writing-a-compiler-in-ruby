@@ -1961,7 +1961,34 @@ class Integer < Numeric
   end
 
   def ** other
-    1
+    # Exponentiation: self raised to the power of other
+    # Note: This is a basic implementation for integer exponents
+    # Ruby's ** also handles floats and negative exponents, but this
+    # implementation focuses on positive integer exponents.
+
+    return 1 if other == 0
+    return self if other == 1
+
+    # Handle negative exponents (return 0 for integer division)
+    # In Ruby, integer ** negative = 0 (integer division of 1/result)
+    return 0 if other < 0
+
+    # Positive exponent: repeated multiplication
+    result = 1
+    base = self
+    exp = other
+
+    # Use binary exponentiation for efficiency
+    # Instead of multiplying n times, we can square and multiply
+    while exp > 0
+      if exp % 2 == 1
+        result = result * base
+      end
+      base = base * base
+      exp = exp / 2
+    end
+
+    result
   end
 
   def [] i
