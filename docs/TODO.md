@@ -224,14 +224,16 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 ## Recent Additions
 
-### 2025-10-15 - Major RubySpec Improvements Session
+### 2025-10-15 - Major RubySpec Improvements Session (EXTENDED)
 
 **Session Achievements**:
 1. ✅ Eliminated ALL COMPILE FAIL specs (7 → 0)
 2. ✅ Implemented Integer#** (exponentiation)
 3. ✅ Implemented Integer#bit_length
-4. ✅ Fixed bignum_value() to use real large integers
-5. ✅ 2 more specs now FULLY PASSING (odd_spec, even_spec)
+4. ✅ Implemented Integer#downto and Integer#upto
+5. ✅ Fixed bignum_value() to use real large integers
+6. ✅ 2 more specs now FULLY PASSING (odd_spec, even_spec)
+7. ✅ Fixed * and / operators to handle nil from to_int
 
 **Detailed Changes**:
 
@@ -253,12 +255,31 @@ This document tracks known bugs, missing features, and architectural issues. Ite
    - **CRITICAL PREREQUISITE COMPLETE** - enables proper bignum testing
    - Impact: uminus_spec improved, abs_spec still passing, complement_spec ✅ PASSING
 
+5. **Integer#downto and #upto Implementation** (integer.rb)
+   - Iteration methods for descending/ascending ranges
+   - Basic integer iteration works (3/3 tests passing for each)
+   - Float tests crash (expected - Float not fully implemented)
+
+6. **Operator Nil Handling** (integer.rb)
+   - * and / operators now check if to_int returns nil
+   - Prevents "Method missing NilClass#__get_raw" crashes
+   - Graceful error messages instead of segfaults
+
 **Test Results**:
 - make selftest-c: ✅ 0 failures after all changes
-- PASS specs: 9 → 11 (abs, denominator, dup, magnitude, next, ord, succ, to_int, to_i, odd ✅, even ✅)
+- PASS specs: 9 → 11 (abs, denominator, dup, magnitude, next, ord, succ, to_int, to_i, odd ✅, even ✅, complement ✅)
 - COMPILE FAIL: 7 → 0 ✅
+- downto_spec: 3/3 basic tests passing ✅
+- upto_spec: 3/3 basic tests passing ✅
 
 **Files Modified**: tokens.rb, integer.rb, rubyspec_helper.rb
+
+**SEGFAULT Investigation Notes**:
+Many remaining SEGFAULTs require:
+- Mock/expectation system fixes (divide, multiply, plus, minus specs)
+- Float implementation (many specs test Float arguments)
+- Missing core methods (Object#method, etc.)
+Quick wins in SEGFAULT category mostly exhausted.
 
 ---
 
