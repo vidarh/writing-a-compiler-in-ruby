@@ -963,6 +963,7 @@ class Integer < Numeric
   def __cmp_heap_fixnum(other)
     # Use a single s-expression for the entire comparison to avoid compiler bugs
     # with transitioning between s-expressions and Ruby code
+    self_sign = @sign
     self_limbs = @limbs
     self_len = self_limbs.length
     self_first_limb = self_limbs[0]
@@ -970,7 +971,7 @@ class Integer < Numeric
     %s(
       (let (other_raw sign_raw limb_raw limbs_len)
         (assign other_raw (sar other))
-        (assign sign_raw (sar @sign))
+        (assign sign_raw (sar self_sign))
         (assign limbs_len (sar self_len))
 
         # Compare signs: negative < positive
