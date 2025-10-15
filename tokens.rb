@@ -202,7 +202,55 @@ module Tokens
       i = Int.expect(s, allow_negative)
       return nil if i.nil?
 
-      # Check if integer exceeds fixnum range (-2^29 to 2^29-1)
+      # IMPORTANT: Check for float/rational literals FIRST before converting
+      # large integers to heap integers. If we have "4294967295.0", we want
+      # to handle it as a Float, not try to convert 4294967295 to heap integer
+      # and then fail when trying to append ".0" to the AST node.
+
+      # Check for float FIRST
+      if s.peek == ?.
+        s.get  # consume '.'
+        if !(?0..?9).member?(s.peek)
+          s.unget(".")
+          # Not a float, fall through to check for large integer
+        else
+          # It's a float - parse fractional part and return Float
+          # Fractional part is never negative
+          f = Int.expect(s, false)
+          # Convert to string and let MRI parse as float
+          # This works for any size number since MRI handles it
+          num = "#{i}.#{f}"
+          return num.to_f
+        end
+      end
+
+      # Check for Rational literal: <number>r or <number>/<number>r
+      if s.peek == ?r
+        # Simple rational: 5r = Rational(5, 1)
+        s.get  # consume 'r'
+        return [:call, :Rational, [i, 1]]
+      elsif s.peek == ?/
+        # Could be rational literal: 6/5r
+        s.get  # consume '/'
+
+        # Try to parse denominator (never negative in rational literals)
+        denom = Int.expect(s, false)
+        if denom && s.peek == ?r
+          # It's a rational literal!
+          s.get  # consume 'r'
+          return [:call, :Rational, [i, denom]]
+        else
+          # Not a rational literal, unget and continue
+          if denom
+            denom_str = denom.to_s
+            s.unget(denom_str)
+          end
+          s.unget("/")
+          # Fall through to check for large integer
+        end
+      end
+
+      # Now check if integer exceeds fixnum range (-2^29 to 2^29-1)
       # If so, create a heap integer via Integer.__from_literal
       # IMPORTANT: Use fixnum arithmetic to avoid bootstrap issues
       # (literals that exceed fixnum range would trigger this very code!)
@@ -231,46 +279,8 @@ module Tokens
         return [:callm, :Integer, :__from_literal, [[:array, *limbs], sign]]
       end
 
-      # Check for Rational literal: <number>r or <number>/<number>r
-      if s.peek == ?r
-        # Simple rational: 5r = Rational(5, 1)
-        s.get  # consume 'r'
-        return [:call, :Rational, [i, 1]]
-      elsif s.peek == ?/
-        # Could be rational literal: 6/5r
-        # Save state in case we need to backtrack
-        saved_peek = s.peek
-        s.get  # consume '/'
-
-        # Try to parse denominator (never negative in rational literals)
-        denom = Int.expect(s, false)
-        if denom && s.peek == ?r
-          # It's a rational literal!
-          s.get  # consume 'r'
-          return [:call, :Rational, [i, denom]]
-        else
-          # Not a rational literal, unget and continue
-          if denom
-            denom_str = denom.to_s
-            s.unget(denom_str)
-          end
-          s.unget("/")
-          # Fall through to check for float
-        end
-      end
-
-      # Check for float
-      return i if s.peek != ?.
-      s.get
-      if !(?0..?9).member?(s.peek)
-        s.unget(".")
-        return i
-      end
-      # Fractional part is never negative
-      f = Int.expect(s, false)
-      # FIXME: Yeah, this is ugly. Do it nicer later.
-      num = "#{i}.#{f}"
-      num.to_f
+      # Regular fixnum - return as-is
+      return i
     end
   end
 end
