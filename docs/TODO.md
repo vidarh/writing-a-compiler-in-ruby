@@ -274,12 +274,20 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 **Files Modified**: tokens.rb, integer.rb, rubyspec_helper.rb
 
-**SEGFAULT Investigation Notes**:
-Many remaining SEGFAULTs require:
-- Mock/expectation system fixes (divide, multiply, plus, minus specs)
-- Float implementation (many specs test Float arguments)
-- Missing core methods (Object#method, etc.)
-Quick wins in SEGFAULT category mostly exhausted.
+**SEGFAULT Investigation Notes** (Comprehensive analysis completed):
+All 41 SEGFAULT specs systematically analyzed and categorized:
+- **Mock/Expectation System** (10+ specs): Framework fixes required
+- **Lambda/Proc Infrastructure** (15+ specs): Complex bugs in test framework
+- **Float Implementation** (10+ specs): Substantial work required
+- **Missing Methods** (5+ specs): Medium complexity
+- **Shared Example Patterns** (4+ specs): Advanced mock features
+
+**Partial Success**:
+- downto_spec: 3/3 basic integer tests ✅ (Float tests crash)
+- upto_spec: 3/3 basic integer tests ✅ (Float tests crash)
+- nobits_spec: 2/3 tests ✅ (mock test crashes)
+
+**Conclusion**: Quick wins in SEGFAULT category **EXHAUSTED**. Most crashes are in test infrastructure (mocks, lambdas), not the code being tested. See docs/SEGFAULT_INVESTIGATION_2025-10-15.md for complete analysis.
 
 ---
 

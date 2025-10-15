@@ -52,3 +52,10 @@ Running all specs in rubyspec/core/integer/...
 [34m[SEGFAULT] rubyspec/core/integer/pred_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/rationalize_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/remainder_spec.rb
+[31m[FAIL] rubyspec/core/integer/right_shift_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/round_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/size_spec.rb
+[31m[FAIL] rubyspec/core/integer/sqrt_spec.rb
+[32m[PASS] rubyspec/core/integer/succ_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/times_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/to_f_spec.rb
