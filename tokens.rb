@@ -313,7 +313,6 @@ module Tokens
       @keywords = Keywords.dup
       @first = true
       @lastop = false
-      @return_newlines = false  # Flag to control whether to return :newline tokens
     end
 
     def each
@@ -327,30 +326,9 @@ module Tokens
 
     def unget(token)
       # a bit of a hack. Breaks down if we ever unget more than one token from the tokenizer.
-      # Special case: :newline token should unget the newline character, not the string "newline"
-      if token == :newline
-        # Don't unget anything - the newline character is still in the scanner
-        return
-      end
       s = Scanner::ScannerString.new(token.to_s)
       s.position = @lastpos
       @s.unget(s)
-    end
-
-    def consume_newline
-      # Consume a newline character from the scanner
-      # Used when :newline token is ignored by parser
-      if @s.peek && @s.peek.ord == 10
-        @s.get
-      end
-    end
-
-    def enable_newline_tokens
-      @return_newlines = true
-    end
-
-    def disable_newline_tokens
-      @return_newlines = false
     end
 
     def get_quoted_exp(unget = false)
@@ -638,24 +616,24 @@ module Tokens
           @s.nolfws
         end
 
-        # Parser bug fix: Return newline token when flag is enabled and nolfws stops at a newline
-        # The shunting yard parser will use this to determine expression boundaries
-        if @return_newlines && @s.peek && @s.peek.ord == 10  # newline character
-          @lastop = true  # Next token after newline starts a new expression
-          @lastpos = @s.position
-          res = [:newline, nil, :keyword]
+        # Parser bug fix: Check if we stopped at a newline
+        # If so, treat the next token as start of a new statement
+        # This fixes: 4.ceildiv(-3) followed by -4.ceildiv(3) on next line
+        # Without this, -4 is parsed as binary subtraction instead of unary minus
+        if @s.peek && @s.peek.ord == 10  # newline character
+          prev_lastop = true  # Treat as start of new statement
         else
           prev_lastop = @lastop
-          @lastop = false
-          @lastpos = @s.position
-          res = get_raw(prev_lastop)
         end
+
+        @lastop = false
+        @lastpos = @s.position
+        res = get_raw(prev_lastop)
       end
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
       @last = res
       # FIXME: res can be nil in some contexts, causing crashes later
-      # For :newline tokens, keep @lastop = true to indicate start of new expression
-      @lastop = res && res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp) unless res && res[0] == :newline
+      @lastop = res && res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
       @curtoken = res
       return res
     end
