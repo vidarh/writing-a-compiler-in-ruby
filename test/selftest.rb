@@ -544,6 +544,9 @@ def test_parser
   end
 ')
   expect_eq(prog[1][3][0][3][0].position.lineno, 4, "Parser line number should match")
+
+  test_exp("5 +\n2", "[:do, [:+, 5, 2]]")
+  test_exp("5 \n-2", "[:do, 5, -2]")
 end
 
 def test_destructuring
@@ -709,3 +712,15 @@ test_file
 test_compiler
 puts "DONE"
 puts "Fails: "+$fails.to_s
+
+def test_newline_negative_parsing
+  # Test that negative numbers after newlines parse correctly
+  # This is the pattern that was causing crashes in ceildiv_spec
+  result1 = 4 + (-3)
+  result2 = -4 + 3
+
+  expect_eq(result1, 1, "4 + (-3) should equal 1")
+  expect_eq(result2, -1, "-4 + 3 should equal -1")
+end
+
+test_newline_negative_parsing
