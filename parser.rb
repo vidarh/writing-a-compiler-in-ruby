@@ -205,7 +205,7 @@ class Parser < ParserBase
   # subexp ::= exp nolfws*
   def parse_subexp
     pos = position
-    ret = @shunting.parse([:newline])
+    ret = @shunting.parse
     if ret.is_a?(Array)
       ret = E[pos] + ret
     end
@@ -315,7 +315,7 @@ class Parser < ParserBase
 
 
   def parse_defname
-    name = expect(Methodname) || @shunting.parse([:newline]) or expected("function name")
+    name = expect(Methodname) || @shunting.parse or expected("function name")
     if (expect("."))
       name = [name]
       ret = expect(Methodname) or expected("name following '#{name}.'")

@@ -14,12 +14,8 @@ module OpPrec
       @out = output
 
       # FIXME: Pass this in instead of storing it.
-      @raw_tokenizer = tokenizer
       @tokenizer = TokenizerAdapter.new(tokenizer,parser)
       @parser = parser
-
-      # Enable newline tokens in the tokenizer for expression boundary detection
-      tokenizer.enable_newline_tokens
 
       # Tricky hack:
       #
@@ -132,26 +128,15 @@ module OpPrec
         token = t
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator
-        # For :newline, also check we're outside parentheses (lp_on_entry is false)
         if @inhibit.include?(token) or
-          (keyword && token != :newline &&
-           (opstate != :prefix ||
-            !ostack.last ||
-            ostack.last.type != :infix ||
-            token == :end)) or
-          (token == :newline && !lp_on_entry &&
-           (opstate != :prefix ||
-            !ostack.last ||
-            ostack.last.type != :infix))
+          keyword &&
+          (opstate != :prefix ||
+           !ostack.last ||
+           ostack.last.type != :infix ||
+           token == :end)
 
           src.unget(token)
           break
-        end
-
-        # If we see a :newline but didn't stop, consume it and continue
-        if token == :newline
-          @tokenizer.consume_newline
-          next
         end
 
         if op
@@ -201,10 +186,8 @@ module OpPrec
     def parse(inhibit=[])
       out = @out.dup
       out.reset
-      tmp = self.class.new(out, @raw_tokenizer,@parser, inhibit)
+      tmp = self.class.new(out, @tokenizer,@parser, inhibit)
       res = tmp.shunt(@tokenizer)
-      # Disable newline tokens after parsing so other parser code doesn't see them
-      @raw_tokenizer.disable_newline_tokens
       res ? res.result : nil
     end
   end
