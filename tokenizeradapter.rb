@@ -44,6 +44,18 @@ class TokenizerAdapter
   def lasttoken
     @tokenizer.lasttoken
   end
+
+  def consume_newline
+    @tokenizer.consume_newline
+  end
+
+  def enable_newline_tokens
+    @tokenizer.enable_newline_tokens
+  end
+
+  def disable_newline_tokens
+    @tokenizer.disable_newline_tokens
+  end
 end
 
 
