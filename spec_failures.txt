@@ -15,9 +15,9 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/coerce_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/comparison_spec.rb
 [31m[FAIL] rubyspec/core/integer/complement_spec.rb
-[32m[PASS] rubyspec/core/integer/constants_spec.rb
+[31m[FAIL] rubyspec/core/integer/constants_spec.rb
 [32m[PASS] rubyspec/core/integer/denominator_spec.rb
-[32m[PASS] rubyspec/core/integer/digits_spec.rb
+[31m[FAIL] rubyspec/core/integer/digits_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/divide_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/divmod_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/div_spec.rb
@@ -29,7 +29,7 @@ Running all specs in rubyspec/core/integer/...
 [34m[SEGFAULT] rubyspec/core/integer/exponent_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/fdiv_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/floor_spec.rb
-[32m[PASS] rubyspec/core/integer/gcdlcm_spec.rb
+[31m[FAIL] rubyspec/core/integer/gcdlcm_spec.rb
 [31m[FAIL] rubyspec/core/integer/gcd_spec.rb
 [31m[FAIL] rubyspec/core/integer/gte_spec.rb
 [31m[FAIL] rubyspec/core/integer/gt_spec.rb
@@ -72,14 +72,14 @@ Running all specs in rubyspec/core/integer/...
 ================================
 Summary:
   Total spec files: 67
-  Passed: 5
-  Failed: 37
+  Passed: 2
+  Failed: 40
   Segfault/Runtime error: 25
   Failed to compile: 0
 
 Individual Test Cases:
   Total tests: 850
-  Passed: 108
-  Failed: 693
-  Skipped: 49
-  Pass rate: 12%
+  Passed: 94
+  Failed: 682
+  Skipped: 74
+  Pass rate: 11%

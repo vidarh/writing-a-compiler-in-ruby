@@ -616,7 +616,16 @@ module Tokens
           @s.nolfws
         end
 
-        prev_lastop = @lastop
+        # Parser bug fix: Check if we stopped at a newline
+        # If so, treat the next token as start of a new statement
+        # This fixes: 4.ceildiv(-3) followed by -4.ceildiv(3) on next line
+        # Without this, -4 is parsed as binary subtraction instead of unary minus
+        if @s.peek && @s.peek.ord == 10  # newline character
+          prev_lastop = true  # Treat as start of new statement
+        else
+          prev_lastop = @lastop
+        end
+
         @lastop = false
         @lastpos = @s.position
         res = get_raw(prev_lastop)
