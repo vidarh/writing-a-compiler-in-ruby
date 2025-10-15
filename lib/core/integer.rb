@@ -2072,6 +2072,15 @@ class Integer < Numeric
     self
   end
 
+  def round(ndigits=0)
+    # For integers, rounding returns self (already a whole number)
+    # ndigits parameter allows rounding to different decimal places
+    # but for integers, just return self
+    # Note: Ruby's round also accepts a 'half' keyword arg, but we don't
+    # support keyword arguments yet. For integers, it doesn't matter anyway.
+    self
+  end
+
   def magnitude
     abs
   end
