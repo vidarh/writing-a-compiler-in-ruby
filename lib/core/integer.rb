@@ -1616,13 +1616,19 @@ class Integer < Numeric
 
   # Bitwise operators - delegate to __get_raw
   def & other
-    if other.is_a?(Integer)
-      other_raw = other.__get_raw
-      %s(__int (bitand (callm self __get_raw) other_raw))
-    else
-      STDERR.puts("TypeError: Integer can't be coerced into Integer")
-      nil
+    # Coerce non-Integer arguments using to_int
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+      else
+        # If to_int doesn't exist, raise TypeError
+        STDERR.puts("TypeError: Integer can't be coerced into Integer")
+        return nil
+      end
     end
+
+    other_raw = other.__get_raw
+    %s(__int (bitand (callm self __get_raw) other_raw))
   end
 
   def | other
