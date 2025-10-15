@@ -37,6 +37,15 @@ class Integer < Numeric
     @sign = sign
   end
 
+  # Class method to create heap integer from literal value
+  # Called by tokenizer for integer literals that exceed fixnum range
+  # Takes limbs array and sign, returns initialized Integer object
+  def self.__from_literal(limbs, sign)
+    obj = Integer.new
+    obj.__set_heap_data(limbs, sign)
+    obj
+  end
+
   # Initialize heap integer from overflow value
   # Takes a raw (untagged) 32-bit value and splits it into 30-bit limbs
   # Called from __add_with_overflow in base.rb
@@ -904,47 +913,35 @@ class Integer < Numeric
 
   # Compare fixnum (self) with heap integer (other)
   def __cmp_fixnum_heap(other)
-    # Get raw values for comparison - avoid using < > operators (infinite recursion)
+    # Use a single s-expression for the entire comparison to avoid compiler bugs
+    # with transitioning between s-expressions and Ruby code
     other_sign = other.__get_sign
     other_limbs = other.__get_limbs
     other_len = other_limbs.length
+    other_first_limb = other_limbs[0]
 
-    # Use s-expressions for all comparisons to avoid recursion
     %s(
-      (let (self_raw sign_raw)
+      (let (self_raw sign_raw limb_raw limbs_len)
         (assign self_raw (sar self))
         (assign sign_raw (sar other_sign))
+        (assign limbs_len (sar other_len))
 
         # Compare signs: negative < positive
         (if (and (lt self_raw 0) (gt sign_raw 0))
           (return (__int -1)))
         (if (and (gt self_raw 0) (lt sign_raw 0))
           (return (__int 1)))
-      )
-    )
 
-    # Same sign - compare magnitudes
-    # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
-    # (fixnums are max 2^29, single limb can hold up to 2^30, multi-limb is > 2^30)
-    if __greater_than(other_len, 1) != 0
-      # Use s-expression to check sign and return appropriate value
-      %s(
-        (let (sign_raw)
-          (assign sign_raw (sar other_sign))
-          (if (gt sign_raw 0)
-            (return (__int -1))
-            (return (__int 1)))
-        )
-      )
-    end
+        # Same sign - compare magnitudes
+        # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
+        (if (gt limbs_len 1)
+          (do
+            (if (gt sign_raw 0)
+              (return (__int -1))
+              (return (__int 1)))))
 
-    # Single limb: compare directly using s-expressions
-    other_first_limb = other_limbs[0]
-    %s(
-      (let (self_raw limb_raw sign_raw)
-        (assign self_raw (sar self))
+        # Single limb: compare directly
         (assign limb_raw (sar other_first_limb))
-        (assign sign_raw (sar other_sign))
 
         (if (lt self_raw limb_raw)
           (if (gt sign_raw 0)
@@ -964,46 +961,34 @@ class Integer < Numeric
 
   # Compare heap integer (self) with fixnum (other)
   def __cmp_heap_fixnum(other)
-    # Get values for comparison - avoid using < > operators (infinite recursion)
-    self_sign = @sign
+    # Use a single s-expression for the entire comparison to avoid compiler bugs
+    # with transitioning between s-expressions and Ruby code
     self_limbs = @limbs
     self_len = self_limbs.length
+    self_first_limb = self_limbs[0]
 
-    # Use s-expressions for all comparisons to avoid recursion
     %s(
-      (let (other_raw sign_raw)
+      (let (other_raw sign_raw limb_raw limbs_len)
         (assign other_raw (sar other))
-        (assign sign_raw (sar self_sign))
+        (assign sign_raw (sar @sign))
+        (assign limbs_len (sar self_len))
 
         # Compare signs: negative < positive
         (if (and (lt sign_raw 0) (gt other_raw 0))
           (return (__int -1)))
         (if (and (gt sign_raw 0) (lt other_raw 0))
           (return (__int 1)))
-      )
-    )
 
-    # Same sign - compare magnitudes
-    # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
-    if __greater_than(self_len, 1) != 0
-      # Use s-expression to check sign and return appropriate value
-      %s(
-        (let (sign_raw)
-          (assign sign_raw (sar self_sign))
-          (if (gt sign_raw 0)
-            (return (__int 1))
-            (return (__int -1)))
-        )
-      )
-    end
+        # Same sign - compare magnitudes
+        # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
+        (if (gt limbs_len 1)
+          (do
+            (if (gt sign_raw 0)
+              (return (__int 1))
+              (return (__int -1)))))
 
-    # Single limb: compare directly using s-expressions
-    self_first_limb = self_limbs[0]
-    %s(
-      (let (limb_raw other_raw sign_raw)
+        # Single limb: compare directly
         (assign limb_raw (sar self_first_limb))
-        (assign other_raw (sar other))
-        (assign sign_raw (sar self_sign))
 
         (if (lt limb_raw other_raw)
           (if (gt sign_raw 0)

@@ -149,10 +149,6 @@ module Tokens
         i += 2
       end
 
-      # 29-bit limit (accounting for 1-bit tagging)
-      # Stop parsing if number gets too big to prevent overflow
-      max_safe = 134217728  # 2^27 - Stop before we overflow
-
       while i < len
         s = tmp[i]
         i = i + 1
@@ -189,8 +185,6 @@ module Tokens
           end
 
           if digit_value
-            # Stop if next digit would cause overflow
-            break if num > max_safe
             num = num * radix + digit_value
           end
         end
@@ -207,6 +201,30 @@ module Tokens
     def self.expect(s, allow_negative = true)
       i = Int.expect(s, allow_negative)
       return nil if i.nil?
+
+      # Check if integer exceeds fixnum range (-2^29 to 2^29-1)
+      # If so, create a heap integer via Integer.__from_literal
+      max_fixnum = 536_870_911   # 2^29 - 1
+      min_fixnum = -536_870_912  # -2^29
+
+      if i > max_fixnum || i < min_fixnum
+        # Extract sign and magnitude
+        sign = i < 0 ? -1 : 1
+        magnitude = i.abs
+
+        # Split into 30-bit limbs (least significant first)
+        limb_base = 1_073_741_824  # 2^30
+        limbs = []
+        while magnitude > 0
+          limbs << (magnitude % limb_base)
+          magnitude = magnitude / limb_base
+        end
+        limbs << 0 if limbs.empty?
+
+        # Generate AST: Integer.__from_literal([limbs...], sign)
+        # This is a class method call on Integer
+        return [:callm, :Integer, :__from_literal, [[:array, *limbs], sign]]
+      end
 
       # Check for Rational literal: <number>r or <number>/<number>r
       if s.peek == ?r
