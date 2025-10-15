@@ -41,3 +41,9 @@ Running all specs in rubyspec/core/integer/...
 [32m[PASS] rubyspec/core/integer/magnitude_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/minus_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/modulo_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/multiply_spec.rb
+[32m[PASS] rubyspec/core/integer/next_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/nobits_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/numerator_spec.rb
+[31m[FAIL] rubyspec/core/integer/odd_spec.rb
+[32m[PASS] rubyspec/core/integer/ord_spec.rb
