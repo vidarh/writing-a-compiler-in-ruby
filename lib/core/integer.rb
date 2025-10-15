@@ -919,6 +919,8 @@ class Integer < Numeric
     other_limbs = other.__get_limbs
     other_len = other_limbs.length
     other_first_limb = other_limbs[0]
+    # Limbs can be heap integers (for values >= 536870912), so use __get_raw
+    other_first_limb_raw = other_first_limb.__get_raw
 
     %s(
       (let (self_raw sign_raw limb_raw limbs_len)
@@ -941,7 +943,7 @@ class Integer < Numeric
               (return (__int 1)))))
 
         # Single limb: compare directly
-        (assign limb_raw (sar other_first_limb))
+        (assign limb_raw other_first_limb_raw)
 
         (if (lt self_raw limb_raw)
           (if (gt sign_raw 0)
@@ -967,6 +969,8 @@ class Integer < Numeric
     self_limbs = @limbs
     self_len = self_limbs.length
     self_first_limb = self_limbs[0]
+    # Limbs can be heap integers (for values >= 536870912), so use __get_raw
+    self_first_limb_raw = self_first_limb.__get_raw
 
     %s(
       (let (other_raw sign_raw limb_raw limbs_len)
@@ -989,7 +993,7 @@ class Integer < Numeric
               (return (__int -1)))))
 
         # Single limb: compare directly
-        (assign limb_raw (sar self_first_limb))
+        (assign limb_raw self_first_limb_raw)
 
         (if (lt limb_raw other_raw)
           (if (gt sign_raw 0)
