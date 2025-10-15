@@ -528,9 +528,9 @@ end
 # 2) The 32-bit implementation doesn't support actual bignums
 # These values allow tests to run but don't actually test bignum behavior
 def bignum_value(plus = 0)
-  # Real value should be: 0x8000_0000_0000_0000 + plus
-  # Using a safe 32-bit value instead
-  100000 + plus
+  # Returns 2^64 + plus (a value that requires multiple limbs)
+  # Now that we have large integer literal support, we can use the real value
+  18446744073709551616 + plus
 end
 
 def infinity_value
