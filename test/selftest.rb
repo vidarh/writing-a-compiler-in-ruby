@@ -558,14 +558,14 @@ def test_parser
 
   # Test that scanner is at EOF after parsing
   s = mock_scanner("5\n")
-  p = Parser.new(s, norequire: true)
+  p = Parser.new(s, {:norequire => true})
   p.parse(false)
   expect_eq(s.peek.inspect, "nil", "Scanner should be at EOF after parsing '5\\n'")
 
   # Test parsing a file ending with nested ends (like scanner.rb)
   code = "class Foo\n  def bar\n  end\nend\n"
   s = mock_scanner(code)
-  p = Parser.new(s, norequire: true)
+  p = Parser.new(s, {:norequire => true})
   p.parse(false)
   expect_eq(s.peek.inspect, "nil", "Scanner should be at EOF after parsing class with nested ends")
 
@@ -577,7 +577,7 @@ def test_parser
   # This reproduces the scanner.rb parsing failure
   minimal_code = "class Scanner\n  def peek\n  end\n  LF=\"\\n\"\n  def get\n  end\nend\n"
   s = mock_scanner(minimal_code)
-  p = Parser.new(s, norequire: true)
+  p = Parser.new(s, {:norequire => true})
   p.parse(false)
   expect_eq(s.peek.inspect, "nil", "Minimal EOF bug reproducer should parse to EOF")
 end

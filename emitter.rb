@@ -544,7 +544,12 @@ class Emitter
       str.each_byte do |b|
         if b < 32 || b == 92
           buf << @csi
-          buf << b.to_s(8)
+          # Zero-pad octal to 3 digits to avoid ambiguity with following digits
+          # E.g., \n (10) followed by '2' must be \0122, not \122 (which is 'R')
+          octal = b.to_s(8)
+          octal = "0" + octal if octal.length == 2
+          octal = "00" + octal if octal.length == 1
+          buf << octal
         elsif b == 34
           buf << '\"'
         else
