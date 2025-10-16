@@ -326,7 +326,10 @@ module Tokens
 
     def unget(token)
       # a bit of a hack. Breaks down if we ever unget more than one token from the tokenizer.
-      s = Scanner::ScannerString.new(token.to_s)
+      # token is an array [text, operator, type], so use token[0] not token.to_s
+      token_text = token.is_a?(Array) ? token[0].to_s : token.to_s
+      s = Scanner::ScannerString.new(token_text)
+      # Always attach position - this ensures consistent behavior
       s.position = @lastpos
       @s.unget(s)
     end
@@ -616,16 +619,13 @@ module Tokens
           @s.nolfws
         end
 
-        # Parser bug fix: Check if we stopped at a newline
-        # If so, treat the next token as start of a new statement
+        # Parser bug fix: Track newlines for @lastop to fix negative number parsing
         # This fixes: 4.ceildiv(-3) followed by -4.ceildiv(3) on next line
         # Without this, -4 is parsed as binary subtraction instead of unary minus
-        if @s.peek && @s.peek.ord == 10  # newline character
-          prev_lastop = true  # Treat as start of new statement
-        else
-          prev_lastop = @lastop
-        end
+        # Store boolean directly to avoid local variable issues in self-hosted compiler
+        @__at_newline = @s.peek ? (@s.peek.ord == 10) : false
 
+        prev_lastop = @lastop
         @lastop = false
         @lastpos = @s.position
         res = get_raw(prev_lastop)
@@ -633,7 +633,12 @@ module Tokens
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
       @last = res
       # FIXME: res can be nil in some contexts, causing crashes later
-      @lastop = res && res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
+      # If nolfws stopped at a newline, set @lastop = true so next token starts new expression
+      if @__at_newline
+        @lastop = true
+      else
+        @lastop = res && res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
+      end
       @curtoken = res
       return res
     end

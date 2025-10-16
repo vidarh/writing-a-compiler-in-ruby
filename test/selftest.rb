@@ -545,8 +545,41 @@ def test_parser
 ')
   expect_eq(prog[1][3][0][3][0].position.lineno, 4, "Parser line number should match")
 
+  # Newlines
   test_exp("5 +\n2", "[:do, [:+, 5, 2]]")
   test_exp("5 \n-2", "[:do, 5, -2]")
+
+  # Additional newline tests
+  test_exp("a = 5\nb = -2", "[:do, [:assign, :a, 5], [:assign, :b, -2]]")
+  test_exp("1\n2\n3", "[:do, 1, 2, 3]")
+
+  # Test that a file ending with a statement followed by newline parses correctly
+  test_exp("class Foo\nend\n", "[:do, [:class, :Foo, :Object, []]]")
+
+  # Test that scanner is at EOF after parsing
+  s = mock_scanner("5\n")
+  p = Parser.new(s, norequire: true)
+  p.parse(false)
+  expect_eq(s.peek.inspect, "nil", "Scanner should be at EOF after parsing '5\\n'")
+
+  # Test parsing a file ending with nested ends (like scanner.rb)
+  code = "class Foo\n  def bar\n  end\nend\n"
+  s = mock_scanner(code)
+  p = Parser.new(s, norequire: true)
+  p.parse(false)
+  expect_eq(s.peek.inspect, "nil", "Scanner should be at EOF after parsing class with nested ends")
+
+  # Parser bug fix test - this was the failing case from ceildiv_spec
+  test_exp("4.ceildiv(-3)\n-4.ceildiv(3)", "[:do, [:callm, 4, :ceildiv, [-3]], [:callm, -4, :ceildiv, [3]]]")
+
+  # Test minimal reproducer for EOF parsing bug (7 lines)
+  # Bug: parser reports "Expected EOF" at line 8 when file only has 7 lines
+  # This reproduces the scanner.rb parsing failure
+  minimal_code = "class Scanner\n  def peek\n  end\n  LF=\"\\n\"\n  def get\n  end\nend\n"
+  s = mock_scanner(minimal_code)
+  p = Parser.new(s, norequire: true)
+  p.parse(false)
+  expect_eq(s.peek.inspect, "nil", "Minimal EOF bug reproducer should parse to EOF")
 end
 
 def test_destructuring
@@ -686,6 +719,22 @@ def test_file
   expect_eq(File.basename("/app/examples/case.rb"), "case.rb", "Basic basename")
 end
 
+def test_newline_negative_parsing
+  # Test that negative numbers after newlines parse correctly
+  # This is the pattern that was causing crashes in ceildiv_spec
+  result1 = 4 + (-3)
+  result2 = -4 + 3
+
+
+  expect_eq(result1, 1, "4 + (-3) should equal 1")
+  expect_eq(result2, -1, "-4 + 3 should equal -1")
+
+  # Test that expressions separated by newlines parse correctly
+  a = 5
+  b = -2
+  expect_eq(a, 5, "First expression should be 5")
+  expect_eq(b, -2, "Second expression should be -2")
+end
 test_fixnum
 test_symbol
 test_array
@@ -705,22 +754,13 @@ test_tokenizer
 test_methodname_tokenizer
 test_shunting
 test_parser
+test_newline_negative_parsing
 test_destructuring
 test_depth_first
 test_string
 test_file
 test_compiler
+
 puts "DONE"
 puts "Fails: "+$fails.to_s
 
-def test_newline_negative_parsing
-  # Test that negative numbers after newlines parse correctly
-  # This is the pattern that was causing crashes in ceildiv_spec
-  result1 = 4 + (-3)
-  result2 = -4 + 3
-
-  expect_eq(result1, 1, "4 + (-3) should equal 1")
-  expect_eq(result2, -1, "-4 + 3 should equal -1")
-end
-
-test_newline_negative_parsing
