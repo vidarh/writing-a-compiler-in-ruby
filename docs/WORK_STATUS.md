@@ -1,9 +1,9 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-17 (session 5 - heap/fixnum division fix - COMPLETE)
-**Current Test Results**: 67 specs | PASS: 6 (9%) | FAIL: 39 (58%) | SEGFAULT: 22 (33%) ⬇️
+**Last Updated**: 2025-10-17 (session 6 - floor division fix - PARTIAL)
+**Current Test Results**: 67 specs | PASS: 6 (9%) | FAIL: 39 (58%) | SEGFAULT: 22 (33%)
 **Individual Tests**: 853 total | Passed: 112 (13%) | Failed: 667 | Skipped: 74
-**Latest Changes**: Fixed heap/fixnum division crash by simplifying s-expression mixing
+**Latest Changes**: Fixed fixnum floor division; discovered heap negation bug
 
 ---
 
@@ -160,14 +160,43 @@
     - ✅ Combined with optimization, provides fast and correct heap/heap division
     - 📝 Next: Fix the failing tests to improve pass rate
 
+- ⚠️  **Fixed fixnum floor division; discovered heap negation bug** (2025-10-17, session 6) - **PARTIAL**
+  - File: `lib/core/integer.rb:1703-1728, 1386-1393`
+  - **Problem 1**: Division used C-style truncating division instead of Ruby floor division
+  - **Problem 2**: Heap negation produces incorrect values
+  - **Changes**:
+    - **Fixnum/fixnum division** (lines 1703-1728): ✅ FIXED
+      - Added floor division adjustment when signs differ and remainder ≠ 0
+      - Algorithm: Compute truncating division, then subtract 1 if needed
+      - Test results: 7/-3=-3 ✅, (-7)/3=-3 ✅, (-2)/3=-1 ✅, 2/(-3)=-1 ✅
+    - **Heap negation** (lines 1386-1393): ❌ STILL BROKEN
+      - Simplified from s-expressions to pure Ruby (6 lines)
+      - BUT still produces incorrect values: 0 - 536870912 = wrong result
+  - **Verification**:
+    - selftest: PASSED (0 failures) ✅
+    - Fixnum floor division: All tests pass ✅
+    - Heap negation: Broken (known issue) ❌
+  - **Impact**:
+    - ✅ Improved Ruby compatibility for fixnum division
+    - ✅ Division tests with fixnums now pass floor division semantics
+    - ❌ Heap negation bug blocks: negative heap integers, fixnum - heap, some division tests
+  - **Discovered Bug**: Heap negation is fundamentally broken
+    - Affects all operations involving negative heap integers
+    - CRITICAL to fix before proceeding with heap division improvements
+
 #### Next Steps (Priority Order):
-1. **Fix division floor semantics and edge cases** (2-3h)
-   - Handle negative number edge cases correctly
+1. **Fix heap negation bug** (2-4h) - **CRITICAL - BLOCKING**
+   - Investigate why `__negate_heap` produces incorrect values
+   - Affects: fixnum - heap, negative heap integers, heap division with negatives
+   - Blocks: Many division edge cases, arithmetic with negative bignums
+   - Impact: Required for correctness
+
+2. **Apply floor division to heap paths** (1-2h)
+   - Once negation fixed, add floor adjustment to heap division
    - Fix `__divide_fixnum_by_heap` logic
-   - Ensure Ruby-compatible floor division behavior
    - Impact: +5-10 test cases
 
-2. **Fix bitwise operators** (3-5h)
+3. **Fix bitwise operators** (3-5h)
    - `&`, `|`, `^`, `<<`, `>>`
    - Implement limb-by-limb operations
    - Impact: ~20-30 test cases
