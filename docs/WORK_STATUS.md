@@ -1,9 +1,9 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-17 (session 11 - SEGFAULT fixes: 22 → 15)
-**Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 39 (58%) | SEGFAULT: 15 (22%)
-**Individual Tests**: 841 total | Passed: ~120 (14%) | Failed: ~650 | Skipped: 74
-**Latest Changes**: Fixed 7 SEGFAULTs (divmod, to_f, downto, upto, remainder, modulo + partial others)
+**Last Updated**: 2025-10-17 (session 11 complete - SEGFAULT fixes: 22 → 16)
+**Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 38 (57%) | SEGFAULT: 16 (24%)
+**Individual Tests**: 937 total | Passed: 127 (14%) | Failed: 710 (76%) | Skipped: 100 (11%)
+**Latest Changes**: Fixed 6 SEGFAULTs (divmod, to_f, downto, upto, remainder, modulo)
 
 ---
 
@@ -363,9 +363,9 @@
     - Added stub methods to classes as needed (Float#nan?, Enumerator#each)
     - No API violations - only added methods to existing stub classes
   - **Impact**:
-    - **22 SEGFAULT → 17 SEGFAULT** (5 specs fixed total in session 11)
-    - FAIL count increased 33 → 37 (expected - specs now run)
-    - Progress: 31% SEGFAULTs → 25% SEGFAULTs
+    - **22 SEGFAULT → 18 SEGFAULT** (4 specs fixed: divmod, to_f, downto, upto)
+    - FAIL count increased 33 → 36 (expected - specs now run)
+    - Progress: 33% SEGFAULTs → 27% SEGFAULTs
   - **Remaining SEGFAULT Patterns**:
     - Parser bugs: times_spec ("Method missing Object#break")
     - Immediate segfaults: size_spec, floor_spec, ceil_spec, round_spec, exponent_spec
@@ -396,32 +396,31 @@
     - 2 specs converted: SEGFAULT → FAIL ✅
     - Committed: 3 commits ✅
   - **Impact**:
-    - **17 SEGFAULT → 15 SEGFAULT** (remainder + modulo fixed)
-    - **37 FAIL → 39 FAIL** (specs now run)
-    - Total session 11: **22 SEGFAULT → 15 SEGFAULT** (7 specs fixed!)
-    - Progress: 33% SEGFAULT (22/67) → 22% SEGFAULT (15/67)
+    - **18 SEGFAULT → 16 SEGFAULT** (remainder + modulo fixed)
+    - **36 FAIL → 38 FAIL** (specs now run)
+    - Total session 11: **22 SEGFAULT → 16 SEGFAULT** (6 specs fixed!)
+    - Progress: 33% SEGFAULT (22/67) → 24% SEGFAULT (16/67)
+    - Individual tests: 937 total, 127 passed (14%), 710 failed, 100 skipped
 
 #### Next Steps (Priority Order):
-1. **FIX SEGFAULTING SPECS** (ONLY PRIORITY)
-   - **Goal**: Fix the 22-23 segfaulting specs so they run without crashing
-   - **Success Metric**: SEGFAULT → PASS or SEGFAULT → FAIL (either is acceptable progress)
+1. **FIX REMAINING 16 SEGFAULTING SPECS** (ONLY PRIORITY)
+   - **Goal**: Convert remaining SEGFAULT specs to FAIL or PASS
+   - **Remaining SEGFAULT Specs (16 total)**:
+     - **Parser bugs** (skip): times_spec, plus_spec
+     - **Immediate crashes**: ceil_spec, comparison_spec, element_reference_spec, exponent_spec, fdiv_spec, floor_spec, minus_spec, pow_spec, round_spec, size_spec, try_convert_spec
+     - **Division issues**: divide_spec, div_spec
+     - **Type issues**: to_r_spec
    - **Approach**:
-     - Identify what causes each spec to crash
-     - Add missing methods, fix parser bugs, or add error handling
-     - Test each fix individually
+     - Return objects of correct type (Float.new, Rational.new, Enumerator.new), not nil
+     - Add stub methods as needed to prevent method_missing crashes
+     - Handle nil returns from operations (return 0 or appropriate value)
    - **Rules**:
-     - ❌ Do NOT edit spec files
-     - ❌ Do NOT work on FAIL specs (only SEGFAULT)
-     - ✅ Focus exclusively on converting SEGFAULT to any other status
-     - ✅ Document all workarounds
-   - **Current SEGFAULT List (23 specs)**:
-     - ceil_spec, comparison_spec, divide_spec, divmod_spec, div_spec
-     - downto_spec, element_reference_spec, exponent_spec, fdiv_spec, floor_spec
-     - minus_spec, modulo_spec, plus_spec, pow_spec, remainder_spec
-     - round_spec, size_spec, times_spec, to_f_spec, to_r_spec
-     - try_convert_spec, uminus_spec, upto_spec
+     - ❌ Do NOT change core class public APIs (NilClass, Object, etc.)
+     - ✅ Can add private helpers prefixed with `__`
+     - ✅ Can add methods to stub classes (Float, Rational, Enumerator)
+     - ✅ Use is_a?() for type checks, not .class.name
 
-**EXCLUSIVE FOCUS**: Fix segfaulting specs. Nothing else matters until SEGFAULT count is reduced.
+**SESSION 11 COMPLETE**: 22 SEGFAULT → 16 SEGFAULT (6 specs fixed, -9 percentage points)
 
 ---
 
