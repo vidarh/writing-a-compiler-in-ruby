@@ -223,13 +223,9 @@ class Integer < Numeric
   # Add tagged fixnum to heap integer
   # Called when self is tagged fixnum and other is heap integer
   def __add_fixnum_to_heap(heap_int)
-    # Extract values and use __add_with_overflow
-    %s(
-      (let (my_val other_val)
-        (assign my_val (sar self))
-        (assign other_val (callm heap_int __get_raw))
-        (return (__add_with_overflow my_val other_val)))
-    )
+    # Swap operands and use heap addition
+    # heap_int + self is the same as self + heap_int
+    heap_int.__add_heap_and_fixnum(self)
   end
 
   # Add heap integer to another value
@@ -1385,10 +1381,20 @@ class Integer < Numeric
 
   # Helper to negate heap integer by flipping sign
   def __negate_heap
-    # Create new integer with same limbs but flipped sign
+    # Get limbs and current sign
+    limbs = @limbs
+    current_sign = @sign
+
+    # Flip sign: positive (1) becomes negative (-1), negative (-1) becomes positive (1)
+    # Direct comparison to avoid arithmetic operators
+    if current_sign == 1
+      new_sign = -1
+    else
+      new_sign = 1
+    end
+
     result = Integer.new
-    new_sign = 0 - @sign  # Flip the sign
-    result.__set_heap_data(@limbs, new_sign)
+    result.__set_heap_data(limbs, new_sign)
     result
   end
 
