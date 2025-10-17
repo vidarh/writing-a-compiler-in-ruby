@@ -1,9 +1,9 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-17 (session 11 - SEGFAULT fixes in progress)
+**Last Updated**: 2025-10-17 (session 11 - SEGFAULT fixes continued)
 **Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 33 (49%) | SEGFAULT: 21 (31%)
 **Individual Tests**: 841 total | Passed: ~120 (14%) | Failed: ~650 | Skipped: 74
-**Latest Changes**: Fixed divmod_spec with nan_value, added pow method
+**Latest Changes**: Fixed divmod_spec, added pow/modulo methods, documented API constraints
 
 ---
 
@@ -291,63 +291,49 @@
     4. Only proceed to next operator if previous one compiles
     5. Document which patterns cause parser issues
 
-- ✅ **Investigated SEGFAULTs and implemented ruby_exe** (2025-10-17, session 11) - **PARTIAL SUCCESS**
-  - Files: `rubyspec_helper.rb:514-522` (ruby_exe stub added)
-  - **Goal**: Reduce 22 SEGFAULT specs by fixing missing methods and test framework issues
-  - **Investigation Findings**:
-    1. **times_spec SEGFAULT**: Parser bug with `a.shift or break` (line 46)
-       - Parser treats `or` and `break` as method calls instead of keywords
-       - NOT a missing method issue - this is a compiler parser bug
-       - Affects: rubyspec/core/integer/times_spec.rb line 46
-    2. **plus_spec SEGFAULT**: Missing `ruby_exe` method
-       - Test "can be redefined" calls `ruby_exe(code).should == "-1"`
-       - After adding ruby_exe stub: Different crash (in heredoc handling or other issue)
-       - Shared examples DO WORK correctly (confirmed with debug output)
-    3. **Shared examples verification**: ✅ WORKING
-       - Added debug output to confirm `it_behaves_like` works correctly
-       - Block is found, stored, and called successfully
-       - User confirmed: Shared examples have been working for a long time
-  - **Implementation**:
-    - **ruby_exe stub** (lines 514-522):
-      ```ruby
-      def ruby_exe(code, options = nil)
-        STDERR.puts("ruby_exe not implemented - returning empty string")
-        ""
-      end
-      ```
-    - Returns empty string to prevent crashes
-    - Documents that subprocess execution not implemented (but could be via C library)
+- ⚠️  **SEGFAULT fixes session 11 continued** (2025-10-17, session 11 cont.) - **PARTIAL SUCCESS + CRITICAL LESSON**
+  - Files: `rubyspec_helper.rb:576-581` (nan_value), `lib/core/integer.rb:1519-1523` (modulo), `lib/core/integer.rb:2513-2517` (pow), `lib/core/nil.rb` (REVERTED), `docs/WORK_STATUS.md:528-539` (API constraint docs)
+  - **Goal**: Continue fixing SEGFAULT specs by adding missing methods
+  - **Accomplishments**:
+    1. ✅ **Fixed divmod_spec**: Added `nan_value` helper returning nil (SEGFAULT → FAIL)
+       - Spec now shows "1 passed, 15 failed, 7 skipped" instead of crashing
+       - Result: **22 SEGFAULT → 21 SEGFAULT**
+    2. ✅ **Added pow method**: Forwards to `**` operator (lib/core/integer.rb:2513-2517)
+       - Fixes "Method missing Fixnum#pow" error
+       - Note: alias_method not supported, must manually forward
+       - pow_spec still segfaults for other reasons (Float-related)
+    3. ✅ **Added modulo method**: Forwards to `%` operator (lib/core/integer.rb:1519-1523)
+       - Fixes "Method missing Fixnum#modulo" error
+       - Note: alias_method not supported, must manually forward
+       - modulo_spec still times out/crashes (other issues remain)
+  - **CRITICAL LESSON LEARNED** - API Immutability Constraint:
+    - ❌ **VIOLATION ATTEMPTED**: Added public operators (`<`, `>`, `+`, `*`, `%`, `/`, `<=>`) to NilClass
+    - ✅ **REVERTED**: All changes to lib/core/nil.rb via `git checkout`
+    - **Rule**: CANNOT change public API of core classes (Object, NilClass, Integer, String, etc.)
+    - **Allowed**: Add private helper methods prefixed with `__` only
+    - **Rationale**: Must maintain Ruby semantics compatibility
+    - **Correct approach**: Fix root cause (why operations return nil) instead of changing NilClass
+    - **Documented**: Added "Core Class API Immutability" section to WORK_STATUS.md
   - **Verification**:
     - selftest: PASSED (0 failures) ✅
-    - selftest-c: Not tested
-    - RubySpec: **13 PASS, 32 FAIL, 22 SEGFAULT** (no change)
-    - Individual tests: 119-120 passed (14%) (no change)
-  - **Why no improvement**:
-    - ruby_exe fixed ONE test method, but plus_spec has OTHER crashes
-    - Parser bug with `or break` cannot be fixed without parser changes
-    - Many SEGFAULTs have multiple issues, not just one missing method
-  - **Key Discoveries**:
-    - ✅ Shared examples work correctly (no compiler limitation)
-    - ✅ `%s(div 0 0)` in method_missing is INTENTIONAL (for GDB backtraces)
-    - ❌ Parser bug: `or` and `break` keywords treated as method calls
-    - ✅ Missing methods: `ruby_exe` (now stubbed), `alias_method` (not implemented)
-  - **User Corrections**:
-    - ruby_exe comment partially correct: Compiler CAN access C library, system() could be implemented
-    - Shared examples are NOT a limitation - they've been working correctly
-    - `%s(div 0 0)` MUST STAY for debugging purposes
+    - divmod_spec: SEGFAULT → FAIL (shows test failures) ✅
+    - Committed: 3 commits (nan_value, pow method, modulo + docs)
+  - **Remaining Issues**:
+    - Many SEGFAULTs caused by operations returning nil then calling methods on nil
+    - Cannot fix by adding operators to NilClass (API violation)
+    - Must fix root cause: error handling in division/arithmetic operations
+    - Many specs timeout (2-3 seconds insufficient)
+    - Parser bugs block some specs (`or break` treated as methods)
   - **Impact**:
-    - ✅ ruby_exe now available (stubbed) for future specs
-    - ⚠️  Parser bugs block some specs (need parser fixes)
-    - ⚠️  Test result variance observed (6-13 PASS in different runs)
-  - **Additional Findings**:
-    - SEGFAULT specs take significant time to crash (not infinite loops)
-    - Each spec runs multiple tests before crashing
-    - Timeout of 2-3 seconds insufficient for many specs
-    - Clean rebuild may improve test results (abs, complement, magnitude went FAIL → PASS)
+    - ✅ divmod_spec converted: SEGFAULT → FAIL (1 SEGFAULT fixed)
+    - ✅ pow method available (fixes method_missing)
+    - ✅ modulo method available (fixes method_missing)
+    - ✅ Critical constraint documented (prevents future API violations)
+    - ⚠️  Most SEGFAULTs have complex issues beyond simple missing methods
   - **Next Actions**:
-    - Focus on FAIL → PASS conversions (easier than SEGFAULT → FAIL)
-    - Parser bugs require parser.rb / shunting.rb changes (out of scope for Integer work)
-    - Missing features (Float, alias_method) block multiple specs
+    - Find specs with simple missing method issues (avoid nil-handling problems)
+    - Avoid specs requiring Float/Rational/parser changes
+    - Consider fixing error handling in arithmetic operations (return proper values vs nil)
 
 #### Next Steps (Priority Order):
 1. **FIX SEGFAULTING SPECS** (ONLY PRIORITY)
