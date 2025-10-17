@@ -525,6 +525,19 @@ make selftest-c                                    # Check for regressions
 
 ## Compiler Limitations (Current State)
 
+### Core Class API Immutability
+- **Status**: CRITICAL CONSTRAINT
+- **Rule**: CANNOT change the public API of core classes (Object, NilClass, Integer, String, etc.)
+- **Allowed**: Add private helper methods prefixed with `__` (e.g., `__modulo_via_division`, `__negate_heap`)
+- **NOT Allowed**: Add public methods, operators, or change method signatures on core classes
+- **Rationale**: Maintains compatibility with Ruby semantics and prevents unexpected behavior
+- **Example Violation (2025-10-17, session 11)**:
+  - ❌ WRONG: Added `<`, `>`, `+`, `*` operators to NilClass to prevent crashes
+  - ✅ REVERTED: All changes to lib/core/nil.rb
+  - **Why wrong**: NilClass should not respond to arithmetic/comparison operators (TypeError in MRI Ruby)
+  - **Correct approach**: Fix the root cause (operations returning nil) instead of changing NilClass API
+- **Impact of Violation**: Changes Ruby behavior, makes code incompatible with standard Ruby, hides bugs
+
 ### Exception Handling
 - **Status**: NOT IMPLEMENTED
 - **Impact**: Cannot use `raise`, `begin/rescue/ensure`, or exception classes

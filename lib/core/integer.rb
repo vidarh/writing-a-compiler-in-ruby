@@ -1516,6 +1516,12 @@ class Integer < Numeric
     self - product
   end
 
+  # modulo method - forwards to % operator
+  # Note: alias_method not supported by compiler, so we manually forward
+  def modulo(other)
+    self % other
+  end
+
   def remainder(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
