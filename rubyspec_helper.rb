@@ -573,6 +573,13 @@ def infinity_value
   Float::INFINITY
 end
 
+def nan_value
+  # Return Float::NAN
+  # WORKAROUND: Float not fully implemented, return nil as placeholder
+  # Tests using NAN will fail but won't crash with method_missing
+  nil
+end
+
 def fixnum_max
   # Real value should be: 0x7FFF_FFFF_FFFF_FFFF
   # Using 32-bit fixnum max (accounting for 1-bit tagging)
