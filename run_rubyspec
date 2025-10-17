@@ -77,11 +77,17 @@ run_single_spec() {
                 # Include shared file content, filtering out require_relative lines,
                 # converting keyword args to hash syntax,
                 # replacing @method with $spec_shared_method, and adding parentheses (bug workaround)
+                # Also strip literal arguments from methods with blocks (same as main spec processing)
                 cat "$SHARED_PATH" | \
                     grep -v "require_relative" | \
                     sed "s/, *shared: *true *do/, {:shared => true} do/" | \
                     sed "s/@method/\$spec_shared_method/g" | \
-                    sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' \
+                    sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
+                    sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
+                    sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
+                    sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
+                    sed 's/platform_is[^d]*do/platform_is do/g' | \
+                    sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
                     >> "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
@@ -93,16 +99,20 @@ run_single_spec() {
     # Bug: calling func without parens when func has default param + &block causes segfault
     # WORKAROUND: Rewrite instance variables to global variables since instance_eval is not implemented
     # This allows 'before :each' blocks to work by using globals instead of instance vars
-    # WORKAROUND: Strip hash arguments from platform_is/platform_is_not (2025-10-17 session 12)
-    # Bug: Hash literals with symbol syntax (c_long_size: 32) passed to methods with blocks
-    # cause runtime crashes - hash gets compiled but treated as function pointer (crash at 0x41)
-    # TODO: Remove this hack when compiler properly handles hash literals + blocks
+    # WORKAROUND: Strip hash/range arguments from platform_is/platform_is_not/ruby_bug (2025-10-17 session 12)
+    # Bug: Hash literals with symbol syntax (c_long_size: 32) and range literals (""..."3.4")
+    # passed to methods with blocks cause runtime crashes - literals get compiled but treated
+    # as function pointers (crash at 0x41 or other invalid addresses)
+    # TODO: Remove this hack when compiler properly handles literals + blocks
     cat "$SPEC_FILE" | grep -v "require_relative" | \
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
         sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
         sed 's/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g' | \
         sed 's/platform_is[^d]*do/platform_is do/g' | \
-        sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
+        sed 's/platform_is_not[^d]*do/platform_is_not do/g' | \
+        sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
+        sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
+        sed 's/not_supported_on[^d]*do/not_supported_on do/g' \
         >> "$TEMP_SPEC"
     echo "end" >> "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
@@ -294,11 +304,17 @@ elif [ -f "$TARGET" ]; then
                 # Include shared file content, filtering out require_relative lines,
                 # converting keyword args to hash syntax,
                 # replacing @method with $spec_shared_method, and adding parentheses (bug workaround)
+                # Also strip literal arguments from methods with blocks (same as main spec processing)
                 cat "$SHARED_PATH" | \
                     grep -v "require_relative" | \
                     sed "s/, *shared: *true *do/, {:shared => true} do/" | \
                     sed "s/@method/\$spec_shared_method/g" | \
-                    sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' \
+                    sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
+                    sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
+                    sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
+                    sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
+                    sed 's/platform_is[^d]*do/platform_is do/g' | \
+                    sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
                     >> "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
@@ -310,16 +326,20 @@ elif [ -f "$TARGET" ]; then
     # Bug: calling func without parens when func has default param + &block causes segfault
     # WORKAROUND: Rewrite instance variables to global variables since instance_eval is not implemented
     # This allows 'before :each' blocks to work by using globals instead of instance vars
-    # WORKAROUND: Strip hash arguments from platform_is/platform_is_not (2025-10-17 session 12)
-    # Bug: Hash literals with symbol syntax (c_long_size: 32) passed to methods with blocks
-    # cause runtime crashes - hash gets compiled but treated as function pointer (crash at 0x41)
-    # TODO: Remove this hack when compiler properly handles hash literals + blocks
+    # WORKAROUND: Strip hash/range arguments from platform_is/platform_is_not/ruby_bug (2025-10-17 session 12)
+    # Bug: Hash literals with symbol syntax (c_long_size: 32) and range literals (""..."3.4")
+    # passed to methods with blocks cause runtime crashes - literals get compiled but treated
+    # as function pointers (crash at 0x41 or other invalid addresses)
+    # TODO: Remove this hack when compiler properly handles literals + blocks
     cat "$SPEC_FILE" | grep -v "require_relative" | \
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
         sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
         sed 's/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g' | \
         sed 's/platform_is[^d]*do/platform_is do/g' | \
-        sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
+        sed 's/platform_is_not[^d]*do/platform_is_not do/g' | \
+        sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
+        sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
+        sed 's/not_supported_on[^d]*do/not_supported_on do/g' \
         >> "$TEMP_SPEC"
     echo "end" >> "$TEMP_SPEC"
     echo "" >> "$TEMP_SPEC"
