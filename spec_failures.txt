@@ -44,7 +44,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/multiply_spec.rb
 [31m[FAIL] rubyspec/core/integer/next_spec.rb
 [31m[FAIL] rubyspec/core/integer/nobits_spec.rb
-[31m[FAIL] rubyspec/core/integer/numerator_spec.rb
+[32m[PASS] rubyspec/core/integer/numerator_spec.rb
 [31m[FAIL] rubyspec/core/integer/odd_spec.rb
 [31m[FAIL] rubyspec/core/integer/ord_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/plus_spec.rb
@@ -59,8 +59,8 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/succ_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/times_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/to_f_spec.rb
-[31m[FAIL] rubyspec/core/integer/to_int_spec.rb
-[31m[FAIL] rubyspec/core/integer/to_i_spec.rb
+[32m[PASS] rubyspec/core/integer/to_int_spec.rb
+[32m[PASS] rubyspec/core/integer/to_i_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/to_r_spec.rb
 [31m[FAIL] rubyspec/core/integer/to_s_spec.rb
 [31m[FAIL] rubyspec/core/integer/truncate_spec.rb
@@ -72,14 +72,14 @@ Running all specs in rubyspec/core/integer/...
 ================================
 Summary:
   Total spec files: 67
-  Passed: 2
-  Failed: 43
+  Passed: 5
+  Failed: 40
   Segfault/Runtime error: 22
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 875
-  Passed: 97
-  Failed: 704
+  Total tests: 860
+  Passed: 109
+  Failed: 677
   Skipped: 74
-  Pass rate: 11%
+  Pass rate: 12%

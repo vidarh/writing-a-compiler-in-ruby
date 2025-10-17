@@ -18,18 +18,21 @@
   - Changed from `__get_raw` to proper dispatch
   - Verified: Test passes, selftest-c passes
 
-#### Next Steps (Priority Order):
-1. **Refactor comparison operators** (1-2h)
-   - Replace `>`, `>=`, `<`, `<=`, `==` with simple `<=>` calls
-   - Saves ~135 lines of duplicate code
-   - Files: `lib/core/integer.rb:1811-2000`
+- ✅ **Refactored comparison operators** (2025-10-17)
+  - Files: `lib/core/integer.rb:1823-1917` (previously 1825-2016)
+  - Replaced `>`, `>=`, `<`, `<=`, `==` to use `<=>` operator
+  - **Code reduction**: ~187 lines → ~94 lines (saved ~93 lines, close to estimated 135)
+  - Verified: selftest passes (0 failures), selftest-c passes (0 failures)
+  - RubySpec: No change (875 tests, 97 passed, 11% - as expected)
+  - Note: `==` kept s-expression dispatch to avoid circular dependency
 
-2. **Fix arithmetic operators** (4-6h)
+#### Next Steps (Priority Order):
+1. **Fix arithmetic operators** (4-6h)
    - `abs`, `-@`, `/`, `%` - all use `__get_raw`
    - Use existing `__negate` helper
    - Impact: ~30-40 test cases
 
-3. **Fix bitwise operators** (3-5h)
+2. **Fix bitwise operators** (3-5h)
    - `&`, `|`, `^`, `<<`, `>>`
    - Implement limb-by-limb operations
    - Impact: ~20-30 test cases

@@ -1820,8 +1820,8 @@ class Integer < Numeric
     self - 1
   end
 
-  # Comparison operators - for now, just delegate to __get_raw
-  # This is a temporary workaround until proper heap integer comparisons are implemented
+  # Comparison operators - refactored to use <=> operator
+  # This simplifies the code and ensures consistent multi-limb heap integer support
   def > other
     # Type check first - only compare with other Integers
     if !other.is_a?(Integer)
@@ -1829,38 +1829,8 @@ class Integer < Numeric
       return false
     end
 
-    # Dispatch based on whether self and other are fixnums or heap integers
-    %s(
-      (if (eq (bitand self 1) 1)
-        # self is tagged fixnum
-        (do
-          (if (eq (bitand other 1) 1)
-            # Both fixnums - fast path
-            (if (gt (sar self) (sar other))
-              (return true)
-              (return false))
-            # self fixnum, other heap - call __cmp_fixnum_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_fixnum_heap other))
-              (if (gt (sar cmp_result) 0)
-                (return true)
-                (return false)))))
-        # self is heap integer
-        (do
-          (if (eq (bitand other 1) 1)
-            # self heap, other fixnum - call __cmp_heap_fixnum
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_fixnum other))
-              (if (gt (sar cmp_result) 0)
-                (return true)
-                (return false)))
-            # Both heap - call __cmp_heap_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_heap other))
-              (if (gt (sar cmp_result) 0)
-                (return true)
-                (return false))))))
-    )
+    cmp = self <=> other
+    cmp == 1
   end
 
   def >= other
@@ -1869,38 +1839,14 @@ class Integer < Numeric
       return false
     end
 
-    # Dispatch based on whether self and other are fixnums or heap integers
-    %s(
-      (if (eq (bitand self 1) 1)
-        # self is tagged fixnum
-        (do
-          (if (eq (bitand other 1) 1)
-            # Both fixnums - fast path
-            (if (ge (sar self) (sar other))
-              (return true)
-              (return false))
-            # self fixnum, other heap - call __cmp_fixnum_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_fixnum_heap other))
-              (if (ge (sar cmp_result) 0)
-                (return true)
-                (return false)))))
-        # self is heap integer
-        (do
-          (if (eq (bitand other 1) 1)
-            # self heap, other fixnum - call __cmp_heap_fixnum
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_fixnum other))
-              (if (ge (sar cmp_result) 0)
-                (return true)
-                (return false)))
-            # Both heap - call __cmp_heap_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_heap other))
-              (if (ge (sar cmp_result) 0)
-                (return true)
-                (return false))))))
-    )
+    cmp = self <=> other
+    if cmp == 1
+      return true
+    end
+    if cmp == 0
+      return true
+    end
+    false
   end
 
   def < other
@@ -1909,38 +1855,8 @@ class Integer < Numeric
       return false
     end
 
-    # Dispatch based on whether self and other are fixnums or heap integers
-    %s(
-      (if (eq (bitand self 1) 1)
-        # self is tagged fixnum
-        (do
-          (if (eq (bitand other 1) 1)
-            # Both fixnums - fast path
-            (if (lt (sar self) (sar other))
-              (return true)
-              (return false))
-            # self fixnum, other heap - call __cmp_fixnum_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_fixnum_heap other))
-              (if (lt (sar cmp_result) 0)
-                (return true)
-                (return false)))))
-        # self is heap integer
-        (do
-          (if (eq (bitand other 1) 1)
-            # self heap, other fixnum - call __cmp_heap_fixnum
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_fixnum other))
-              (if (lt (sar cmp_result) 0)
-                (return true)
-                (return false)))
-            # Both heap - call __cmp_heap_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_heap other))
-              (if (lt (sar cmp_result) 0)
-                (return true)
-                (return false))))))
-    )
+    cmp = self <=> other
+    cmp == -1
   end
 
   def <= other
@@ -1949,41 +1865,18 @@ class Integer < Numeric
       return false
     end
 
-    # Dispatch based on whether self and other are fixnums or heap integers
-    %s(
-      (if (eq (bitand self 1) 1)
-        # self is tagged fixnum
-        (do
-          (if (eq (bitand other 1) 1)
-            # Both fixnums - fast path
-            (if (le (sar self) (sar other))
-              (return true)
-              (return false))
-            # self fixnum, other heap - call __cmp_fixnum_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_fixnum_heap other))
-              (if (le (sar cmp_result) 0)
-                (return true)
-                (return false)))))
-        # self is heap integer
-        (do
-          (if (eq (bitand other 1) 1)
-            # self heap, other fixnum - call __cmp_heap_fixnum
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_fixnum other))
-              (if (le (sar cmp_result) 0)
-                (return true)
-                (return false)))
-            # Both heap - call __cmp_heap_heap
-            (let (cmp_result)
-              (assign cmp_result (callm self __cmp_heap_heap other))
-              (if (le (sar cmp_result) 0)
-                (return true)
-                (return false))))))
-    )
+    cmp = self <=> other
+    if cmp == -1
+      return true
+    end
+    if cmp == 0
+      return true
+    end
+    false
   end
 
   # Equality comparison - handles both tagged fixnums and heap integers
+  # Uses direct s-expression comparison to avoid circular dependency with <=>
   def == other
     # Handle nil and non-Integer types
     if other.nil?
@@ -1991,9 +1884,7 @@ class Integer < Numeric
     end
     return false if !other.is_a?(Integer)
 
-    # Compare using __cmp for proper heap integer support
-    # For now, just use simple fixnum comparison in s-expression
-    # and return false for complex cases to avoid crashes
+    # Use s-expression for direct comparison to avoid recursion
     %s(
       (if (eq (bitand self 1) 1)
         # self is fixnum
@@ -2002,14 +1893,26 @@ class Integer < Numeric
           (if (eq (sar self) (sar other))
             (return true)
             (return false))
-          # self fixnum, other heap - not equal (for now)
-          (return false))
+          # self fixnum, other heap - use <=> for proper comparison
+          (let (cmp_result)
+            (assign cmp_result (callm self __cmp_fixnum_heap other))
+            (if (eq (sar cmp_result) 0)
+              (return true)
+              (return false))))
         # self is heap
         (if (eq (bitand other 1) 1)
-          # self heap, other fixnum - not equal (for now)
-          (return false)
-          # both heap - compare (for now just return false to avoid crashes)
-          (return false)))
+          # self heap, other fixnum - use <=> for proper comparison
+          (let (cmp_result)
+            (assign cmp_result (callm self __cmp_heap_fixnum other))
+            (if (eq (sar cmp_result) 0)
+              (return true)
+              (return false)))
+          # both heap - use <=> for proper comparison
+          (let (cmp_result)
+            (assign cmp_result (callm self __cmp_heap_heap other))
+            (if (eq (sar cmp_result) 0)
+              (return true)
+              (return false)))))
     )
   end
 
