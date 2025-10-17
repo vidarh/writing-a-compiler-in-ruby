@@ -46,6 +46,37 @@ class Integer < Numeric
     obj
   end
 
+  # Try to convert an object to an Integer
+  # Returns the integer if obj is already an Integer
+  # Returns the result of calling obj.to_int if obj responds to to_int
+  # Returns nil otherwise
+  def self.try_convert(obj)
+    # If it's already an Integer, return it
+    if obj.is_a?(Integer)
+      return obj
+    end
+
+    # If it responds to to_int, call it
+    if obj.respond_to?(:to_int)
+      result = obj.to_int
+      # If to_int returns nil, return nil
+      if result == nil
+        return nil
+      end
+      # If to_int returns an Integer, return it
+      if result.is_a?(Integer)
+        return result
+      end
+      # Otherwise, raise TypeError
+      # WORKAROUND: Exceptions not supported, print error and return nil
+      STDERR.puts("TypeError: can't convert to Integer")
+      return nil
+    end
+
+    # Doesn't respond to to_int, return nil
+    nil
+  end
+
   # Initialize heap integer from overflow value
   # Takes a raw (untagged) 32-bit value and splits it into 30-bit limbs
   # Called from __add_with_overflow in base.rb
