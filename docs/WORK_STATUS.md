@@ -471,6 +471,10 @@
     - These show functionality works, just need framework workarounds
     - Consider alternative test approach for specs using it_behaves_like
     - May need to skip specs with complex shared examples until test framework improves
+  - **Note**: block_given? and yield ARE implemented and work correctly in methods
+    - Top-level blocks don't work (known limitation documented in DEBUGGING_GUIDE.md)
+    - But all specs use method scopes (describe/it) so this doesn't affect tests
+    - Guards like platform_is correctly use block_given?/yield
 
 - ✅ **Fixed all arithmetic operators for type safety** (2025-10-17, session 11 extension)
   - Files: `lib/core/integer.rb` (+, -, *, /, %, remainder)
