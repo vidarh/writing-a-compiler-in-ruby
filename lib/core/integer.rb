@@ -1385,18 +1385,11 @@ class Integer < Numeric
 
   # Helper to negate heap integer by flipping sign
   def __negate_heap
-    # Use s-expression to avoid calling - operator
-    # (which would cause infinite recursion via __subtract_heap -> __negate)
-    %s(
-      (let (limbs sign_val raw_sign new_sign result)
-        (assign limbs @limbs)
-        (assign sign_val @sign)
-        (assign raw_sign (sar sign_val))
-        (assign new_sign (sub 0 raw_sign))
-        (assign result (callm Integer new))
-        (callm result __set_heap_data (limbs (__int new_sign)))
-        (return result))
-    )
+    # Create new integer with same limbs but flipped sign
+    result = Integer.new
+    new_sign = 0 - @sign  # Flip the sign
+    result.__set_heap_data(@limbs, new_sign)
+    result
   end
 
   # Convert integer to string with radix support
@@ -1700,11 +1693,30 @@ class Integer < Numeric
         # self is fixnum
         (do
           (if (eq (bitand other 1) 1)
-            # Both fixnums - fast path
-            (let (a b result)
+            # Both fixnums - fast path with floor division semantics
+            (let (a b q r result)
               (assign a (sar self))
               (assign b (sar other))
-              (assign result (div a b))
+              # Compute truncating division
+              (assign q (div a b))
+              # For floor division, adjust when signs differ and remainder != 0
+              # Check if signs differ: (a < 0) XOR (b < 0)
+              # If so and remainder != 0, subtract 1 from quotient
+              (assign r (mod a b))
+              # Adjust for floor division
+              (if (ne r 0)
+                (do
+                  # Signs differ if (a < 0 && b > 0) || (a > 0 && b < 0)
+                  (if (lt a 0)
+                    # a is negative
+                    (if (gt b 0)
+                      # a negative, b positive - adjust
+                      (assign q (sub q 1)))
+                    # a is positive
+                    (if (lt b 0)
+                      # a positive, b negative - adjust
+                      (assign q (sub q 1))))))
+              (assign result q)
               (return (__int result)))
             # self fixnum, other heap - dispatch to Ruby helper
             (return (callm self __divide_fixnum_by_heap other))))
