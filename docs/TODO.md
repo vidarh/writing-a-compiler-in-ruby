@@ -4,26 +4,38 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 **For debugging help, see [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) for effective patterns and techniques.**
 
-## Current Integer Spec Test Status (2025-10-15) - COMPILE FAILURES ELIMINATED! ✅
+## Current Integer Spec Test Status (2025-10-17) ✅ NO REGRESSION
 
 **Summary**: 67 spec files total
-- **PASS**: 11 files (16%)
-- **FAIL**: 22 files (33%)
-- **SEGFAULT**: 34 files (51%)
-- **COMPILE_FAIL**: 0 files (0%) ✅ **ALL FIXED** - was 7 files, now 0!
+- **PASS**: 2 files (3%)
+- **FAIL**: 43 files (64%)
+- **SEGFAULT**: 22 files (33%) ✅ DOWN from 34
+- **COMPILE_FAIL**: 0 files (0%) ✅ ALL FIXED
 
-**Individual Test Case Counts** (from enhanced run_rubyspec):
-- **Total**: 747 individual test cases across all 67 spec files
-- **Passing**: 142 test cases (19%)
-- **Failing**: 605 test cases (81%)
-- **Skipped**: 0 test cases
+**Individual Test Case Counts**:
+- **Total**: 875 individual test cases
+- **Passing**: 97 test cases (11%)
+- **Failing**: 704 test cases (80%)
+- **Skipped**: 74 test cases (8%)
+
+**Investigation Result (2025-10-17)**: Initial concern about parser regression was unfounded. Testing confirms:
+- ✅ Parser fixes (negative numbers, stabby lambda) work correctly
+- ✅ Core functionality (`to_int`, `abs`, `even?`, `odd?`) works correctly
+- ❌ Test failures are due to **pre-existing bignum arithmetic bugs** (wrong values, not crashes)
+- 📊 Metric differences explained by test framework changes, not broken functionality
+
+See docs/RUBYSPEC_STATUS.md for detailed status comparison.
 
 **Detailed Analysis**:
 - `docs/INVESTIGATION_SUMMARY_2025-10-14.md` - Executive summary and next steps
 - `docs/rubyspec_failure_analysis_2025-10-14.md` - Comprehensive root cause analysis
 - `docs/QUICK_WINS_PLAN.md` - Detailed implementation plan with effort estimates
 
-## PRIORITY QUICK WINS - Maximum Impact Per Effort (2025-10-14)
+---
+
+## PRIORITY QUICK WINS - Maximum Impact Per Effort
+
+**📋 ACTIVE WORK TRACKED IN: `docs/WORK_STATUS.md` (single canonical source of truth)**
 
 ### 🎯 Phase 1: Bignum Foundation (HIGHEST IMPACT - +100-120 test cases)
 

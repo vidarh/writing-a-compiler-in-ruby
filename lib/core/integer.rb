@@ -1687,15 +1687,29 @@ class Integer < Numeric
       return nil
     end
 
+    # Dispatch based on representation (fixnum vs heap integer)
+    # Uses proper __cmp_* methods that handle multi-limb heap integers correctly
     %s(
-      (let (a b)
-        (assign a (callm self __get_raw))
-        (assign b (callm other __get_raw))
-        (if (lt a b)
-          (return (__int -1))
-          (if (gt a b)
-            (return (__int 1))
-            (return (__int 0)))))
+      (if (eq (bitand self 1) 1)
+        # self is tagged fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path
+            (let (a b)
+              (assign a (sar self))
+              (assign b (sar other))
+              (if (lt a b) (return (__int -1)))
+              (if (gt a b) (return (__int 1)))
+              (return (__int 0)))
+            # self fixnum, other heap - dispatch to proper comparison
+            (return (callm self __cmp_fixnum_heap other))))
+        # self is heap integer
+        (do
+          (if (eq (bitand other 1) 1)
+            # self heap, other fixnum - dispatch to proper comparison
+            (return (callm self __cmp_heap_fixnum other))
+            # both heap - dispatch to proper comparison
+            (return (callm self __cmp_heap_heap other)))))
     )
   end
 
