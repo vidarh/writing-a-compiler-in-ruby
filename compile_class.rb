@@ -73,6 +73,7 @@ class Compiler
 
     ob      = mk_class(expr)
     classob = mk_class(expr)
+    p class_scope
     ret = compile_eval_arg(scope, [:assign, ob,
                                    mk_new_class_object(class_scope.klass_size, ob, class_scope.klass_size, classob)
                                   ])
