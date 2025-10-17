@@ -78,8 +78,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 860
+  Total tests: 856
   Passed: 109
-  Failed: 677
+  Failed: 673
   Skipped: 74
   Pass rate: 12%

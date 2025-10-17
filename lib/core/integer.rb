@@ -1456,8 +1456,8 @@ class Integer < Numeric
     to_s(10)
   end
 
-  # Arithmetic operators - temporary delegation to __get_raw
-  # TODO: Implement proper heap integer arithmetic
+  # Modulo operator with proper sign handling (Ruby semantics)
+  # Dispatches based on representation (fixnum vs heap)
   def % other
     # Type check first
     if !other.is_a?(Integer)
@@ -1471,15 +1471,42 @@ class Integer < Numeric
       return nil
     end
 
-    # Modulo with proper sign handling (Ruby semantics)
+    # Dispatch based on representation (fixnum vs heap)
     %s(
-      (let (r m)
-        (assign r (callm other __get_raw))
-        (assign m (mod (callm self __get_raw) r))
-        # Adjust if signs don't match: (m >= 0) != (r >= 0)
-        (if (eq (ge m 0) (lt r 0))
-          (assign m (add m r)))
-        (return (__int m)))
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path with proper sign handling
+            (let (a b r m)
+              (assign a (sar self))
+              (assign b (sar other))
+              (assign m (mod a b))
+              # Adjust if signs don't match: (m >= 0) != (b >= 0)
+              (if (eq (ge m 0) (lt b 0))
+                (assign m (add m b)))
+              (return (__int m)))
+            # self fixnum, other heap - use __get_raw for now
+            # FIXME: For multi-limb heap integers, this truncates
+            (let (a b r m)
+              (assign a (sar self))
+              (assign b (callm other __get_raw))
+              (assign m (mod a b))
+              # Adjust if signs don't match
+              (if (eq (ge m 0) (lt b 0))
+                (assign m (add m b)))
+              (return (__int m)))))
+        # self is heap - use __get_raw for now
+        # FIXME: For multi-limb heap integers, this truncates
+        # Need to implement proper multi-limb division algorithm
+        (let (a b r m)
+          (assign a (callm self __get_raw))
+          (assign b (callm other __get_raw))
+          (assign m (mod a b))
+          # Adjust if signs don't match
+          (if (eq (ge m 0) (lt b 0))
+            (assign m (add m b)))
+          (return (__int m))))
     )
   end
 
@@ -1660,23 +1687,40 @@ class Integer < Numeric
       return nil
     end
 
+    # Dispatch based on representation (fixnum vs heap)
     %s(
-      (let (a b result)
-        (assign a (callm self __get_raw))
-        (assign b (callm other __get_raw))
-        (assign result (div a b))
-        (return (__int result)))
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (do
+          (if (eq (bitand other 1) 1)
+            # Both fixnums - fast path
+            (let (a b result)
+              (assign a (sar self))
+              (assign b (sar other))
+              (assign result (div a b))
+              (return (__int result)))
+            # self fixnum, other heap - use __get_raw for now
+            # FIXME: For multi-limb heap integers, this truncates
+            (let (a b result)
+              (assign a (sar self))
+              (assign b (callm other __get_raw))
+              (assign result (div a b))
+              (return (__int result)))))
+        # self is heap - use __get_raw for now
+        # FIXME: For multi-limb heap integers, this truncates
+        # Need to implement proper multi-limb division algorithm
+        (let (a b result)
+          (assign a (callm self __get_raw))
+          (assign b (callm other __get_raw))
+          (assign result (div a b))
+          (return (__int result))))
     )
   end
 
   # Unary minus
+  # Uses __negate helper which handles both fixnum and heap integers
   def -@
-    %s(
-      (let (raw)
-        (assign raw (callm self __get_raw))
-        (assign raw (sub 0 raw))
-        (return (__add_with_overflow raw 0)))
-    )
+    __negate
   end
 
   # Spaceship operator for comparison (returns -1, 0, or 1)
@@ -1714,14 +1758,30 @@ class Integer < Numeric
   end
 
   # Absolute value
+  # Handles both tagged fixnums and heap integers
   def abs
     %s(
-      (let (raw)
-        (assign raw (callm self __get_raw))
-        (if (lt raw 0)
-          (assign raw (sub 0 raw)))
-        (return (__add_with_overflow raw 0)))
+      (if (eq (bitand self 1) 1)
+        # Fixnum path - use simple negation if negative
+        (let (raw)
+          (assign raw (sar self))
+          (if (lt raw 0)
+            (assign raw (sub 0 raw)))
+          (return (__add_with_overflow raw 0)))
+        # Heap integer - check sign and use __negate if needed
+        (return (callm self __abs_heap)))
     )
+  end
+
+  # Helper for abs on heap integers
+  def __abs_heap
+    # For heap integers, check @sign and negate if negative
+    sign = @sign
+    if __less_than(sign, 0) != 0
+      __negate
+    else
+      self
+    end
   end
 
   # Bitwise operators - delegate to __get_raw

@@ -1,8 +1,9 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-17
+**Last Updated**: 2025-10-17 (afternoon session)
 **Current Test Results**: 67 specs | PASS: 2 (3%) | FAIL: 43 (64%) | SEGFAULT: 22 (33%)
 **Individual Tests**: 875 total | Passed: 97 (11%) | Failed: 704 | Skipped: 74
+**Latest Changes**: Improved arithmetic operators (abs, -@, /, %) structure; selftest-c passes
 
 ---
 
@@ -26,11 +27,33 @@
   - RubySpec: No change (875 tests, 97 passed, 11% - as expected)
   - Note: `==` kept s-expression dispatch to avoid circular dependency
 
+- ✅ **Improved arithmetic operators** (2025-10-17)
+  - **`abs` operator** (lines 1716-1741)
+    - Added proper dispatch based on representation (fixnum vs heap)
+    - Heap integers now use `__negate` helper via new `__abs_heap` method
+    - Structure now correct for multi-limb support
+  - **`-@` (unary minus)** (lines 1672-1676)
+    - Simplified to directly call `__negate` helper
+    - Now properly handles both fixnum and heap integers
+    - Removed redundant code
+  - **`/` (division)** (lines 1641-1691)
+    - Added proper dispatch structure (fixnum/fixnum fast path)
+    - Documented that heap cases still use `__get_raw` (truncates multi-limb)
+    - FIXME: Need full multi-limb division algorithm
+  - **`%` (modulo)** (lines 1459-1511)
+    - Added proper dispatch structure with sign handling
+    - Documented that heap cases still use `__get_raw` (truncates multi-limb)
+    - FIXME: Need full multi-limb division algorithm
+  - **Verification**:
+    - selftest: PASSED (0 failures)
+    - selftest-c: PASSED (0 failures)
+    - RubySpec: 97 passed (11%) - no change yet (expected, needs full multi-limb division)
+
 #### Next Steps (Priority Order):
-1. **Fix arithmetic operators** (4-6h)
-   - `abs`, `-@`, `/`, `%` - all use `__get_raw`
-   - Use existing `__negate` helper
-   - Impact: ~30-40 test cases
+1. **Implement multi-limb division** (6-8h) - **BLOCKING further progress**
+   - Currently `/` and `%` truncate multi-limb heap integers
+   - Need proper long division algorithm for heap integers
+   - Impact: ~30-40 test cases once implemented
 
 2. **Fix bitwise operators** (3-5h)
    - `&`, `|`, `^`, `<<`, `>>`
