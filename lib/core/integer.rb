@@ -1385,13 +1385,18 @@ class Integer < Numeric
 
   # Helper to negate heap integer by flipping sign
   def __negate_heap
-    limbs = @limbs
-    sign = @sign.__get_raw
-    new_sign = 0 - sign
-
-    result = Integer.new
-    result.__set_heap_data(limbs, new_sign)
-    result
+    # Use s-expression to avoid calling - operator
+    # (which would cause infinite recursion via __subtract_heap -> __negate)
+    %s(
+      (let (limbs sign_val raw_sign new_sign result)
+        (assign limbs @limbs)
+        (assign sign_val @sign)
+        (assign raw_sign (sar sign_val))
+        (assign new_sign (sub 0 raw_sign))
+        (assign result (callm Integer new))
+        (callm result __set_heap_data (limbs (__int new_sign)))
+        (return result))
+    )
   end
 
   # Convert integer to string with radix support
