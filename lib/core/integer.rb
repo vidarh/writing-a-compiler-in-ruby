@@ -1473,6 +1473,7 @@ class Integer < Numeric
 
   # Modulo operator with proper sign handling (Ruby semantics)
   # Dispatches based on representation (fixnum vs heap)
+  # Modulo is computed as: a % b = a - (a / b) * b
   def % other
     # Type check first
     if !other.is_a?(Integer)
@@ -1501,28 +1502,19 @@ class Integer < Numeric
               (if (eq (ge m 0) (lt b 0))
                 (assign m (add m b)))
               (return (__int m)))
-            # self fixnum, other heap - use __get_raw for now
-            # FIXME: For multi-limb heap integers, this truncates
-            (let (a b r m)
-              (assign a (sar self))
-              (assign b (callm other __get_raw))
-              (assign m (mod a b))
-              # Adjust if signs don't match
-              (if (eq (ge m 0) (lt b 0))
-                (assign m (add m b)))
-              (return (__int m)))))
-        # self is heap - use __get_raw for now
-        # FIXME: For multi-limb heap integers, this truncates
-        # Need to implement proper multi-limb division algorithm
-        (let (a b r m)
-          (assign a (callm self __get_raw))
-          (assign b (callm other __get_raw))
-          (assign m (mod a b))
-          # Adjust if signs don't match
-          (if (eq (ge m 0) (lt b 0))
-            (assign m (add m b)))
-          (return (__int m))))
+            # self fixnum, other heap - use division-based modulo
+            (return (callm self __modulo_via_division other))))
+        # self is heap - use division-based modulo
+        (return (callm self __modulo_via_division other)))
     )
+  end
+
+  # Compute modulo using division: a % b = a - (a / b) * b
+  # This ensures consistency with division and handles multi-limb correctly
+  def __modulo_via_division(other)
+    quotient = self / other
+    product = quotient * other
+    self - product
   end
 
   def remainder(*args)
@@ -1714,22 +1706,314 @@ class Integer < Numeric
               (assign b (sar other))
               (assign result (div a b))
               (return (__int result)))
-            # self fixnum, other heap - use __get_raw for now
-            # FIXME: For multi-limb heap integers, this truncates
-            (let (a b result)
-              (assign a (sar self))
-              (assign b (callm other __get_raw))
-              (assign result (div a b))
-              (return (__int result)))))
-        # self is heap - use __get_raw for now
-        # FIXME: For multi-limb heap integers, this truncates
-        # Need to implement proper multi-limb division algorithm
-        (let (a b result)
-          (assign a (callm self __get_raw))
-          (assign b (callm other __get_raw))
-          (assign result (div a b))
-          (return (__int result))))
+            # self fixnum, other heap - dispatch to Ruby helper
+            (return (callm self __divide_fixnum_by_heap other))))
+        # self is heap - dispatch to Ruby helper
+        (return (callm self __divide_heap other)))
     )
+  end
+
+  # Divide fixnum by heap integer
+  # Since fixnum < 2^29 and heap integer >= 2^29, result is usually 0
+  # except for negative numbers which need sign handling
+  def __divide_fixnum_by_heap(heap_int)
+    # Get signs
+    self_sign = __is_negative ? -1 : 1
+    other_sign = heap_int.__get_sign
+
+    # If same sign and |self| < |other|, quotient = 0
+    # If different sign and |self| < |other|, quotient = -1 (floor division)
+    # For simplicity, since fixnum magnitude is always < heap magnitude:
+    if self_sign == other_sign
+      return 0
+    else
+      return -1  # Ruby floor division
+    end
+  end
+
+  # Divide heap integer by other (fixnum or heap)
+  def __divide_heap(other)
+    %s(
+      (if (eq (bitand other 1) 1)
+        # other is fixnum - dispatch to Ruby helper
+        (return (callm self __divide_heap_by_fixnum other))
+        # other is heap - dispatch to Ruby helper
+        (return (callm self __divide_heap_by_heap other)))
+    )
+  end
+
+  # Divide heap integer by fixnum
+  # Uses a simple approach: pass tagged fixnum directly to helper
+  def __divide_heap_by_fixnum(fixnum_val)
+    # Get absolute value and sign of divisor
+    if fixnum_val < 0
+      divisor = 0 - fixnum_val
+      divisor_sign = -1
+    else
+      divisor = fixnum_val
+      divisor_sign = 1
+    end
+
+    # Call the magnitude division helper with all tagged fixnums
+    __divide_magnitude_by_fixnum(@limbs, divisor, @sign, divisor_sign)
+  end
+
+  # Divide magnitude (limbs array) by fixnum value
+  # Returns quotient as Integer (handles sign)
+  def __divide_magnitude_by_fixnum(limbs, divisor, dividend_sign, divisor_sign)
+    # Use long division from most significant limb to least
+    # Similar to __divmod_heap_multi_limb but for general division
+    len = limbs.length
+
+    q_limbs = []
+    remainder = 0
+
+    i = len - 1
+    while __ge_fixnum(i, 0) != 0
+      limb = limbs[i]
+      # Compute: value = remainder * 2^30 + limb, then divide by divisor
+      result = __divmod_with_carry(remainder, limb, divisor)
+      q_limb = result[0]
+      remainder = result[1]
+
+      q_limbs << q_limb
+      i = i - 1
+    end
+
+    # Reverse to get least significant first
+    q_limbs = q_limbs.reverse
+
+    # Remove leading zeros
+    while q_limbs.length > 1 && q_limbs[q_limbs.length - 1] == 0
+      q_limbs = q_limbs[0..(q_limbs.length - 2)]
+    end
+
+    # Determine result sign
+    result_sign = dividend_sign
+    if divisor_sign < 0
+      result_sign = 0 - result_sign
+    end
+
+    # Build quotient - check if it fits in fixnum
+    if q_limbs.length == 1
+      q_val = q_limbs[0]
+      half_max = __half_limb_base
+      if __less_than(q_val, half_max) != 0
+        # Fits in fixnum
+        if result_sign < 0
+          q_val = 0 - q_val
+        end
+        return q_val
+      end
+    end
+
+    # Create heap integer
+    q = Integer.new
+    q.__set_heap_data(q_limbs, result_sign)
+    q
+  end
+
+  # Divide two heap integers using long division algorithm
+  def __divide_heap_by_heap(other)
+    my_limbs = @limbs
+    my_sign = @sign
+    other_limbs = other.__get_limbs
+    other_sign = other.__get_sign
+
+    # Compare magnitudes first
+    cmp = __compare_magnitudes(my_limbs, other_limbs)
+
+    # If dividend < divisor, quotient = 0 (for positive) or -1 (for negative, floor division)
+    if cmp < 0
+      # Check signs for floor division
+      if my_sign == other_sign
+        return 0
+      else
+        return -1
+      end
+    end
+
+    # If equal magnitudes, quotient = 1 or -1
+    if cmp == 0
+      if my_sign == other_sign
+        return 1
+      else
+        return -1
+      end
+    end
+
+    # dividend > divisor - need to do long division
+    # Use simple repeated subtraction with optimization
+    quotient = __divide_magnitudes(my_limbs, other_limbs)
+
+    # Apply sign
+    result_sign = my_sign
+    if other_sign < 0
+      result_sign = 0 - result_sign
+    end
+
+    if result_sign < 0
+      quotient = 0 - quotient
+    end
+
+    quotient
+  end
+
+  # Divide two magnitude arrays using binary long division (shift-and-subtract)
+  # Returns quotient as Integer
+  # Complexity: O(log(quotient) * n^2) where n = number of limbs
+  # Much faster than O(quotient) repeated subtraction
+  def __divide_magnitudes(dividend_limbs, divisor_limbs)
+    # Special case: divisor is 1
+    div_len = divisor_limbs.length
+    if div_len == 1 && divisor_limbs[0] == 1
+      result = Integer.new
+      result.__set_heap_data(dividend_limbs, 1)
+      return result
+    end
+
+    # Binary long division with doubling:
+    # Instead of subtracting divisor one at a time, we find the largest
+    # power of 2 such that divisor * 2^k <= remainder, then subtract
+    # divisor * 2^k and add 2^k to quotient.
+
+    quotient = 0
+    remainder_limbs = dividend_limbs.dup
+
+    # While remainder >= divisor
+    while __compare_magnitudes(remainder_limbs, divisor_limbs) >= 0
+      # Find largest k such that divisor * 2^k <= remainder
+      # We do this by doubling divisor until it would exceed remainder
+
+      # Start with divisor * 2^0 = divisor
+      shifted_divisor = divisor_limbs.dup
+      power_of_two = 1  # This represents 2^k
+
+      # Keep doubling as long as the next doubling wouldn't exceed remainder
+      loop_again = 1
+      while loop_again == 1
+        # Try to double shifted_divisor
+        next_shifted = __shift_limbs_left_one_bit(shifted_divisor)
+
+        # Check if next_shifted <= remainder
+        if __compare_magnitudes(next_shifted, remainder_limbs) <= 0
+          # Can double again
+          shifted_divisor = next_shifted
+          power_of_two = power_of_two + power_of_two  # Double power_of_two
+        else
+          # Cannot double further - we've found our k
+          loop_again = 0
+        end
+      end
+
+      # Now: shifted_divisor = divisor * 2^k where k is maximal
+      # Subtract shifted_divisor from remainder
+      remainder_limbs = __subtract_magnitudes_raw(remainder_limbs, shifted_divisor)
+
+      # Add 2^k to quotient
+      quotient = quotient + power_of_two
+    end
+
+    quotient
+  end
+
+  # Left shift limbs array by one bit (multiply by 2)
+  # Used in binary long division algorithm
+  # Returns new limbs array
+  def __shift_limbs_left_one_bit(limbs)
+    len = limbs.length
+    result = []
+    carry = 0
+    i = 0
+
+    # Limb base is 2^30 = 1073741824
+    # Half base is 2^29 = 536870912
+    half_base = __half_limb_base
+
+    while __less_than(i, len) != 0
+      limb = limbs[i]
+
+      # Shift left by 1: multiply by 2
+      shifted = limb + limb
+      new_limb = shifted + carry
+
+      # Check if we overflowed
+      # new_limb >= 2^30 means we need to wrap and carry
+      # We can check this by comparing with half_base * 2
+      # But simpler: if new_limb >= half_base + half_base
+      twice_half = half_base + half_base
+      if __ge_fixnum(new_limb, twice_half) != 0
+        # Overflow - wrap around
+        new_limb = new_limb - twice_half
+        carry = 1
+      else
+        carry = 0
+      end
+
+      result << new_limb
+      i = i + 1
+    end
+
+    # If there's a final carry, add a new limb
+    if carry == 1
+      result << 1
+    end
+
+    result
+  end
+
+  # Subtract limbs_b from limbs_a, return just the limbs array (no sign, no Integer object)
+  # Assumes limbs_a >= limbs_b
+  def __subtract_magnitudes_raw(limbs_a, limbs_b)
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+    max_len = __max_fixnum(len_a, len_b)
+
+    result_limbs = []
+    borrow = 0
+    i = 0
+
+    while __less_than(i, max_len) != 0
+      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
+      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
+
+      # Subtract: limb_a - limb_b - borrow
+      diff = __subtract_with_borrow(limb_a, limb_b, borrow)
+
+      # Check if we need to borrow and add limb_base if negative
+      borrow_result = __check_limb_borrow(diff)
+      adjusted_limb = borrow_result[0]
+      new_borrow = borrow_result[1]
+
+      result_limbs << adjusted_limb
+      borrow = new_borrow
+
+      i = i + 1
+    end
+
+    # Remove leading zeros
+    result_len = result_limbs.length
+    while result_len > 1
+      last_limb = result_limbs[result_len - 1]
+      if last_limb == 0
+        result_len = result_len - 1
+      else
+        break
+      end
+    end
+
+    # Trim array if needed
+    if result_len != result_limbs.length
+      trimmed = []
+      j = 0
+      while __less_than(j, result_len) != 0
+        trimmed << result_limbs[j]
+        j = j + 1
+      end
+      result_limbs = trimmed
+    end
+
+    result_limbs
   end
 
   # Unary minus

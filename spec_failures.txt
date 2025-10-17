@@ -1,4 +1,4 @@
-Running all specs in rubyspec/core/integer...
+Running all specs in rubyspec/core/integer/...
 ================================
 
 [31m[FAIL] rubyspec/core/integer/abs_spec.rb
@@ -78,8 +78,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 855
-  Passed: 111
-  Failed: 670
+  Total tests: 853
+  Passed: 112
+  Failed: 667
   Skipped: 74
-  Pass rate: 12%
+  Pass rate: 13%
