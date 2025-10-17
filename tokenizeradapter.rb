@@ -44,6 +44,10 @@ class TokenizerAdapter
   def lasttoken
     @tokenizer.lasttoken
   end
+
+  def newline_before_current
+    @tokenizer.newline_before_current
+  end
 end
 
 

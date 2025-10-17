@@ -9,7 +9,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/bit_or_spec.rb
 [31m[FAIL] rubyspec/core/integer/bit_xor_spec.rb
 [31m[FAIL] rubyspec/core/integer/case_compare_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/ceildiv_spec.rb
+[31m[FAIL] rubyspec/core/integer/ceildiv_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/ceil_spec.rb
 [31m[FAIL] rubyspec/core/integer/chr_spec.rb
 [31m[FAIL] rubyspec/core/integer/coerce_spec.rb
@@ -49,7 +49,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/ord_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/plus_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/pow_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/pred_spec.rb
+[31m[FAIL] rubyspec/core/integer/pred_spec.rb
 [31m[FAIL] rubyspec/core/integer/rationalize_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/remainder_spec.rb
 [31m[FAIL] rubyspec/core/integer/right_shift_spec.rb
@@ -63,7 +63,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/to_i_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/to_r_spec.rb
 [31m[FAIL] rubyspec/core/integer/to_s_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/truncate_spec.rb
+[31m[FAIL] rubyspec/core/integer/truncate_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/try_convert_spec.rb
 [31m[FAIL] rubyspec/core/integer/uminus_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/upto_spec.rb
@@ -73,13 +73,13 @@ Running all specs in rubyspec/core/integer/...
 Summary:
   Total spec files: 67
   Passed: 2
-  Failed: 40
-  Segfault/Runtime error: 25
+  Failed: 43
+  Segfault/Runtime error: 22
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 850
-  Passed: 94
-  Failed: 682
+  Total tests: 875
+  Passed: 97
+  Failed: 704
   Skipped: 74
   Pass rate: 11%

@@ -7,7 +7,7 @@ module Tokens
   Keywords = Set[
     :begin, :break, :case, :class, :def, :do, :else, :end, :if, :include,
     :module, :require, :require_relative, :rescue, :then, :unless, :when, :elsif,
-    :protected, :next
+    :protected, :next, :lambda
   ]
 
   # Methods can end with one of these.
@@ -306,6 +306,7 @@ end
 module Tokens
   class Tokenizer
     attr_accessor :keywords
+    attr_reader :newline_before_current
 
     def initialize(scanner,parser)
       @s = scanner
@@ -313,10 +314,13 @@ module Tokens
       @keywords = Keywords.dup
       @first = true
       @lastop = false
+      @newline_before_current = false
     end
 
     def each
       @first = true
+      # Reset @lastop to allow consuming leading whitespace/newlines in new parse
+      @lastop = true
       while t = get and t[0]
         # FIXME: Fails without parentheses
         yield(*t)
@@ -613,9 +617,12 @@ module Tokens
       else
         # FIXME: This rule should likely cover more
         # cases; may want additional flags
-        if @lastop && @last[0] != :return
+        if @lastop && @last && @last[0] != :return
+          # Track if we're about to skip a newline with ws
+          @newline_before_current = (@s.peek && @s.peek.ord == 10)
           @s.ws
         else
+          @newline_before_current = false
           @s.nolfws
         end
 
@@ -631,12 +638,18 @@ module Tokens
         res = get_raw(prev_lastop)
       end
       # The is_a? weeds out hashes, which we assume don't contain :rp operators
+      # Save old @last to check what token preceded the newline
+      old_last = @last
       @last = res
       # FIXME: res can be nil in some contexts, causing crashes later
-      # If nolfws stopped at a newline, set @lastop = true so next token starts new expression
-      if @__at_newline
+      # Parser bug fix: Only set @lastop = true after newline if previous token was an operator
+      # Stabby lambda method calls (-> { x }.a) should NOT skip newlines
+      # But operators like ) should skip newlines to allow: 4.ceildiv(-3) \n -4.ceildiv(3)
+      if @__at_newline && old_last && old_last[1] && old_last[1].is_a?(Oper)
+        # Previous token was an operator, so newline can be skipped
         @lastop = true
       else
+        # Normal logic: only set @lastop for non-rp operators
         @lastop = res && res[1] && (!res[1].is_a?(Oper) || res[1].type != :rp)
       end
       @curtoken = res

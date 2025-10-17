@@ -406,14 +406,17 @@ All 41 SEGFAULT specs systematically analyzed and categorized:
 ### 🐛 Known Bugs
 
 #### Parser Bugs
-- **Negative Number Parsing Bug** (HIGH PRIORITY - see docs/parser_negative_number_bug.md)
-  - Parser treats `-4.method` as binary subtraction in certain contexts
-  - Occurs when negative-arg expression is followed by negative-receiver expression
-  - Example: `4.ceildiv(-3)` followed by `-4.ceildiv(3)` parses as subtraction
-  - Workaround: Use `(-4).ceildiv(3)` with parentheses
-  - Affects: ceildiv_spec and potentially other specs with consecutive negative numbers
-- `tokens.rb:383` - nil error triggered by `context` keyword usage
-- `tokens.rb:320` - affects some specs (gcd_spec, lcm_spec, pow_spec)
+- ✅ **FIXED (2025-10-17)**: Stabby Lambda Parser Bug (see docs/STABBY_LAMBDA_PARSER_BUG.md)
+  - **Issue**: Expressions after stabby lambda method calls incorrectly parsed as block arguments
+  - **Example**: `-> { x }.a\nlambda { y }` parsed second lambda as block arg to `.a`
+  - **Root cause**: Newline handling in tokenizer + block argument parsing in shunting yard
+  - **Fix**: Multi-layer fix across tokens.rb, parser.rb, shunting.rb, tokenizeradapter.rb
+  - **Affected**: 25 RubySpec tests (transitioned from FAIL to SEGFAULT after commit a2c2301)
+  - **Status**: Parser now correctly distinguishes method call endings from operator contexts
+- ✅ **FIXED (2025-10-16)**: Negative Number Parsing Bug
+  - **Issue**: `-4.method` parsed as binary subtraction after expressions with negative args
+  - **Fix**: Added `@__at_newline` tracking and `@lastop = true` after newlines
+  - **Note**: This fix initially introduced the stabby lambda bug (now also fixed)
 
 ## Critical Missing Language Features
 
@@ -436,11 +439,12 @@ All 41 SEGFAULT specs systematically analyzed and categorized:
 - **Rationale**: Conflicts with ahead-of-time compilation model
 
 ### Lambda Syntax (->)
-- **Priority: High**
-- Stabby lambda `-> { }` not supported
-- Blocks ~30+ modern Ruby specs
-- Parser treats `->` as minus + greater-than
-- **Note**: Lambda usage in specs is mostly for exception testing - may be workable via rubyspec_helper workarounds
+- **Status**: ✅ PARTIALLY SUPPORTED (2025-10-17)
+- Stabby lambda `-> { }` works in method bodies
+- **Known limitation**: Top-level lambdas not supported (documented in DEBUGGING_GUIDE.md:28)
+- Parser correctly handles `->` as lambda operator (not minus + greater-than)
+- **Recent fix**: Stabby lambda method calls after newlines now parse correctly
+- Usage in specs: Mostly for exception testing, works when wrapped in methods
 
 ### HEREDOC Syntax (HIGH PRIORITY)
 **Status**: NOT IMPLEMENTED - breaks multiple specs (plus_spec, to_f_spec, etc.)
