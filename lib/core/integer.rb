@@ -166,6 +166,7 @@ class Integer < Numeric
   end
 
   # Subtraction - handles both tagged fixnums and heap integers
+  # Uses a - b = a + (-b) to leverage existing addition infrastructure
   def - other
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
@@ -186,28 +187,37 @@ class Integer < Numeric
       (if (eq (bitand self 1) 1)
         # Tagged fixnum path
         (do
-          # Check if other is also a tagged fixnum
           (if (eq (bitand other 1) 1)
-            # Both tagged fixnums - subtraction with overflow detection
+            # Both tagged fixnums - simple subtraction with overflow detection
             (let (a b result)
               (assign a (sar self))
               (assign b (sar other))
               (assign result (sub a b))
-              # Use __add_with_overflow to handle overflow
               (return (__add_with_overflow result 0)))
-            # self is fixnum, other is heap - delegate to __get_raw for now
-            (let (a b result)
-              (assign a (sar self))
-              (assign b (callm other __get_raw))
-              (assign result (sub a b))
-              (return (__add_with_overflow result 0)))))
-        # Heap integer - delegate to __get_raw for now
-        (let (a b result)
-          (assign a (callm self __get_raw))
-          (assign b (callm other __get_raw))
-          (assign result (sub a b))
-          (return (__add_with_overflow result 0))))
+            # self is fixnum, other is heap - use subtraction via addition
+            # Convert self to heap and use heap subtraction
+            (return (callm self __subtract_fixnum_from_heap other))))
+        # self is heap - dispatch to heap subtraction
+        (return (callm self __subtract_heap other)))
     )
+  end
+
+  # Subtract heap integer from fixnum
+  # Called when self is fixnum and other is heap
+  def __subtract_fixnum_from_heap(heap_int)
+    # self - heap_int = self + (-heap_int)
+    # Negate heap_int and add
+    negated = heap_int.__negate
+    self + negated
+  end
+
+  # Subtract from heap integer
+  # Called when self is heap
+  def __subtract_heap(other)
+    # self - other = self + (-other)
+    # Negate other and add
+    negated = other.__negate
+    self + negated
   end
 
   # Add tagged fixnum to heap integer
