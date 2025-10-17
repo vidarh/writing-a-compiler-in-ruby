@@ -24,6 +24,22 @@ class FalseClass
   def & other
     false
   end
+
+  def | other
+    other.__true?
+  end
+
+  def ^ other
+    other.__true?
+  end
+
+  def << other
+    0
+  end
+
+  def >> other
+    0
+  end
 end
 
 # FIXME: MRI does not allow creating an object of FalseClass

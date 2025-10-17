@@ -202,4 +202,11 @@ class Object
   def const_defined?(name)
     true
   end
+
+  # FIXME: eval cannot be implemented in AOT compiler
+  # Specs using eval will skip/fail but won't crash
+  def eval(code, *args)
+    STDERR.puts("eval not supported in AOT compiler")
+    nil
+  end
 end
