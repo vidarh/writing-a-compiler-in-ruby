@@ -2510,6 +2510,12 @@ class Integer < Numeric
     result
   end
 
+  # pow method - forwards to ** operator
+  # Note: alias_method not supported by compiler, so we manually forward
+  def pow(other)
+    self ** other
+  end
+
   def [](*args)
     # Arity check - expect 1 or 2 arguments
     if args.length < 1 || args.length > 2
