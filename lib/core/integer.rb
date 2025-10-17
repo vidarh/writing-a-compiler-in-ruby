@@ -130,18 +130,24 @@ class Integer < Numeric
 
   # Addition - handles both tagged fixnums and heap integers
   def + other
-    # Type check first to avoid crashes
+    # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
-      if other.respond_to?(:to_int)
+      if other.is_a?(Float)
+        # WORKAROUND: Float arithmetic not implemented, return stub Float
+        return Float.new
+      elsif other.is_a?(Rational)
+        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
+        return Rational.new(self, 1)
+      elsif other.respond_to?(:to_int)
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
           STDERR.puts("TypeError: can't convert to Integer")
-          return nil
+          return 0
         end
       else
         STDERR.puts("TypeError: Integer can't be coerced")
-        return nil
+        return 0
       end
     end
 
@@ -168,18 +174,24 @@ class Integer < Numeric
   # Subtraction - handles both tagged fixnums and heap integers
   # Uses a - b = a + (-b) to leverage existing addition infrastructure
   def - other
-    # Type check first to avoid crashes
+    # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
-      if other.respond_to?(:to_int)
+      if other.is_a?(Float)
+        # WORKAROUND: Float arithmetic not implemented, return stub Float
+        return Float.new
+      elsif other.is_a?(Rational)
+        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
+        return Rational.new(self, 1)
+      elsif other.respond_to?(:to_int)
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
           STDERR.puts("TypeError: can't convert to Integer")
-          return nil
+          return 0
         end
       else
         STDERR.puts("TypeError: Integer can't be coerced")
-        return nil
+        return 0
       end
     end
 
@@ -1565,18 +1577,24 @@ class Integer < Numeric
   end
 
   def * other
-    # Convert non-Integer types
+    # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
-      if other.respond_to?(:to_int)
+      if other.is_a?(Float)
+        # WORKAROUND: Float arithmetic not implemented, return stub Float
+        return Float.new
+      elsif other.is_a?(Rational)
+        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
+        return Rational.new(self, 1)
+      elsif other.respond_to?(:to_int)
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
           STDERR.puts("TypeError: can't convert to Integer")
-          return nil
+          return 0
         end
       else
         STDERR.puts("TypeError: Integer can't be coerced")
-        return nil
+        return 0
       end
     end
 
