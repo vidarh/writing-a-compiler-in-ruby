@@ -56,6 +56,10 @@ class Float
     self
   end
 
+  def ** other
+    self
+  end
+
   def == other
     false
   end
@@ -74,6 +78,19 @@ class Float
 
   def >= other
     false
+  end
+
+  # Predicate methods
+  def nan?
+    false
+  end
+
+  def infinite?
+    nil
+  end
+
+  def finite?
+    true
   end
 
   # FIXME: Stub for internal coercion - needed by comparison operators

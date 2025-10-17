@@ -1737,6 +1737,12 @@ class Integer < Numeric
     )
   end
 
+  # Float division - returns a Float
+  # WORKAROUND: Float arithmetic not implemented, return stub Float object
+  def fdiv(other)
+    Float.new
+  end
+
   # Divide fixnum by heap integer
   # Since fixnum < 2^29 and heap integer >= 2^29, result is usually 0
   # except for negative numbers which need sign handling
@@ -2900,8 +2906,8 @@ class Integer < Numeric
     limit = args[0]
 
     if !block_given?
-      # FIXME: Should return an Enumerator
-      return nil
+      # WORKAROUND: Full Enumerator not implemented, return stub
+      return Enumerator.new
     end
     i = self
     while i >= limit
@@ -2921,8 +2927,8 @@ class Integer < Numeric
     limit = args[0]
 
     if !block_given?
-      # FIXME: Should return an Enumerator
-      return nil
+      # WORKAROUND: Full Enumerator not implemented, return stub
+      return Enumerator.new
     end
     i = self
     while i <= limit

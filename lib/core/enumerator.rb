@@ -9,6 +9,13 @@ class Enumerator
   def size
     nil
   end
+
+  def each
+    if !block_given?
+      return self
+    end
+    self
+  end
 end
 
 class ArrayEnumerator < Enumerator

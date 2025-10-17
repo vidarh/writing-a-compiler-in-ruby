@@ -318,22 +318,27 @@
     - selftest: PASSED (0 failures) ✅
     - divmod_spec: SEGFAULT → FAIL (shows test failures) ✅
     - Committed: 3 commits (nan_value, pow method, modulo + docs)
-  - **Remaining Issues**:
-    - Many SEGFAULTs caused by operations returning nil then calling methods on nil
-    - Cannot fix by adding operators to NilClass (API violation)
-    - Must fix root cause: error handling in division/arithmetic operations
-    - Many specs timeout (2-3 seconds insufficient)
-    - Parser bugs block some specs (`or break` treated as methods)
+  - **Key Learnings**:
+    - **Nil-handling approach**: When stubbed methods return nil, FIX by returning object of correct type
+      - Example: If method should return Float, create minimal Float stub class
+      - Then stub out missing methods on Float (as long as they conform to expected API)
+      - NEVER add operators to NilClass (API violation)
+    - **Float/Rational dependencies**: Should NOT crash - stub out enough to prevent crashes
+      - Don't need full implementation, just enough to prevent method_missing crashes
+      - Return proper type objects, add stub methods as needed
+    - **Timeouts**: NO SPECS ARE TIMING OUT - was using too short timeouts (2-3s)
+      - Use 10-30 seconds for spec runs to avoid false timeout errors
+      - Specs that appear to hang are actually running but take time
+    - **Parser bugs**: Some specs blocked (`or break` treated as methods) - skip these
   - **Impact**:
     - ✅ divmod_spec converted: SEGFAULT → FAIL (1 SEGFAULT fixed)
     - ✅ pow method available (fixes method_missing)
     - ✅ modulo method available (fixes method_missing)
     - ✅ Critical constraint documented (prevents future API violations)
-    - ⚠️  Most SEGFAULTs have complex issues beyond simple missing methods
   - **Next Actions**:
-    - Find specs with simple missing method issues (avoid nil-handling problems)
-    - Avoid specs requiring Float/Rational/parser changes
-    - Consider fixing error handling in arithmetic operations (return proper values vs nil)
+    - Fix nil-returning methods by creating minimal stub classes (Float, Rational)
+    - Add stub methods to those classes to prevent crashes
+    - Use proper timeouts (10-30s) when testing specs
 
 #### Next Steps (Priority Order):
 1. **FIX SEGFAULTING SPECS** (ONLY PRIORITY)
