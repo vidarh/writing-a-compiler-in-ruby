@@ -1,3 +1,4 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/integer/
 Running all specs in rubyspec/core/integer/...
 ================================
 
@@ -54,7 +55,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/remainder_spec.rb
 [31m[FAIL] rubyspec/core/integer/right_shift_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/round_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/size_spec.rb
+[31m[FAIL] rubyspec/core/integer/size_spec.rb
 [31m[FAIL] rubyspec/core/integer/sqrt_spec.rb
 [32m[PASS] rubyspec/core/integer/succ_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/times_spec.rb
@@ -73,13 +74,13 @@ Running all specs in rubyspec/core/integer/...
 Summary:
   Total spec files: 67
   Passed: 13
-  Failed: 38
-  Segfault/Runtime error: 16
+  Failed: 39
+  Segfault/Runtime error: 15
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 937
-  Passed: 128
-  Failed: 709
+  Total tests: 950
+  Passed: 129
+  Failed: 721
   Skipped: 100
   Pass rate: 13%

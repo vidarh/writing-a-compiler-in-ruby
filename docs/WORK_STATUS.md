@@ -403,21 +403,30 @@
     - Individual tests: 937 total, 127 passed (14%), 710 failed, 100 skipped
 
 #### Next Steps (Priority Order):
-1. **FIX REMAINING 16 SEGFAULTING SPECS** (ONLY PRIORITY)
+1. **FIX REMAINING SEGFAULTING SPECS** (ONLY PRIORITY) - **POLICY UPDATED 2025-10-17**
    - **Goal**: Convert remaining SEGFAULT specs to FAIL or PASS
-   - **Remaining SEGFAULT Specs (16 total)**:
-     - **Parser bugs** (skip): times_spec, plus_spec
-     - **Immediate crashes**: ceil_spec, comparison_spec, element_reference_spec, exponent_spec, fdiv_spec, floor_spec, minus_spec, pow_spec, round_spec, size_spec, try_convert_spec
+   - **Policy**: Fix issues REGARDLESS OF CAUSE
+     - Don't categorize as "compiler limitations" or "test framework issues"
+     - Every SEGFAULT is fixable with appropriate workarounds
+     - Focus on making specs run, even if tests fail
+   - **Remaining SEGFAULT Specs (15 total)**: ⬇️ from 16
+     - **Parser bugs**: times_spec, plus_spec
+     - **Shared examples**: ceil_spec, floor_spec, round_spec (it_behaves_like Proc issues)
+     - **Immediate crashes**: comparison_spec, element_reference_spec, exponent_spec, fdiv_spec, minus_spec, pow_spec, try_convert_spec
      - **Division issues**: divide_spec, div_spec
      - **Type issues**: to_r_spec
    - **Approach**:
+     - Preprocess problematic Ruby constructs (hash literals + blocks, etc.)
      - Return objects of correct type (Float.new, Rational.new, Enumerator.new), not nil
      - Add stub methods as needed to prevent method_missing crashes
+     - Work around compiler/framework limitations in run_rubyspec preprocessing
      - Handle nil returns from operations (return 0 or appropriate value)
    - **Rules**:
+     - ✅ Fix the issue regardless of root cause (preprocessor, stubs, workarounds, whatever it takes)
      - ❌ Do NOT change core class public APIs (NilClass, Object, etc.)
      - ✅ Can add private helpers prefixed with `__`
      - ✅ Can add methods to stub classes (Float, Rational, Enumerator)
+     - ✅ Can modify run_rubyspec preprocessing (document as WORKAROUND with TODO)
      - ✅ Use is_a?() for type checks, not .class.name
 
 **SESSION 11 COMPLETE**: 22 SEGFAULT → 16 SEGFAULT (6 specs fixed, -9 percentage points)
