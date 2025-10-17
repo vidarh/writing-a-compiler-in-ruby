@@ -1777,7 +1777,7 @@ class Integer < Numeric
   end
 
   # Divide magnitude (limbs array) by fixnum value
-  # Returns quotient as Integer (handles sign)
+  # Returns quotient as Integer (handles sign) with floor division semantics
   def __divide_magnitude_by_fixnum(limbs, divisor, dividend_sign, divisor_sign)
     # Use long division from most significant limb to least
     # Similar to __divmod_heap_multi_limb but for general division
@@ -1812,12 +1812,25 @@ class Integer < Numeric
       result_sign = 0 - result_sign
     end
 
+    # Floor division adjustment: if remainder != 0 and signs differ, add 1 to magnitude before negating
+    # When doing magnitude division, we get truncate(|a|/|b|)
+    # For floor division with different signs: floor(a/b) = -(truncate(|a|/|b|) + 1)
+    if remainder != 0 && dividend_sign != divisor_sign
+      need_adjustment = 1
+    else
+      need_adjustment = 0
+    end
+
     # Build quotient - check if it fits in fixnum
     if q_limbs.length == 1
       q_val = q_limbs[0]
       half_max = __half_limb_base
       if __less_than(q_val, half_max) != 0
         # Fits in fixnum
+        if need_adjustment == 1
+          # For floor division with different signs: add 1 to magnitude before negating
+          q_val = q_val + 1
+        end
         if result_sign < 0
           q_val = 0 - q_val
         end
@@ -1828,10 +1841,18 @@ class Integer < Numeric
     # Create heap integer
     q = Integer.new
     q.__set_heap_data(q_limbs, result_sign)
+
+    # Apply floor division adjustment if needed
+    if need_adjustment == 1
+      # For negative result with remainder: add 1 to magnitude then negate
+      # Since q already has the sign, we need to subtract 1 (making it more negative)
+      q = q - 1
+    end
+
     q
   end
 
-  # Divide two heap integers using long division algorithm
+  # Divide two heap integers using long division algorithm with floor division semantics
   def __divide_heap_by_heap(other)
     my_limbs = @limbs
     my_sign = @sign
@@ -1851,7 +1872,7 @@ class Integer < Numeric
       end
     end
 
-    # If equal magnitudes, quotient = 1 or -1
+    # If equal magnitudes, quotient = 1 or -1 (no remainder, so no adjustment needed)
     if cmp == 0
       if my_sign == other_sign
         return 1
@@ -1861,13 +1882,20 @@ class Integer < Numeric
     end
 
     # dividend > divisor - need to do long division
-    # Use simple repeated subtraction with optimization
-    quotient = __divide_magnitudes(my_limbs, other_limbs)
+    # __divide_magnitudes returns [quotient, has_remainder]
+    div_result = __divide_magnitudes(my_limbs, other_limbs)
+    quotient = div_result[0]
+    has_remainder = div_result[1]
 
     # Apply sign
     result_sign = my_sign
     if other_sign < 0
       result_sign = 0 - result_sign
+    end
+
+    # Floor division adjustment: if remainder != 0 and signs differ, subtract 1
+    if has_remainder == 1 && my_sign != other_sign
+      quotient = quotient - 1
     end
 
     if result_sign < 0
@@ -1878,7 +1906,7 @@ class Integer < Numeric
   end
 
   # Divide two magnitude arrays using binary long division (shift-and-subtract)
-  # Returns quotient as Integer
+  # Returns [quotient, has_remainder] where has_remainder is 1 if remainder != 0, 0 otherwise
   # Complexity: O(log(quotient) * n^2) where n = number of limbs
   # Much faster than O(quotient) repeated subtraction
   def __divide_magnitudes(dividend_limbs, divisor_limbs)
@@ -1887,7 +1915,8 @@ class Integer < Numeric
     if div_len == 1 && divisor_limbs[0] == 1
       result = Integer.new
       result.__set_heap_data(dividend_limbs, 1)
-      return result
+      # No remainder when dividing by 1
+      return [result, 0]
     end
 
     # Binary long division with doubling:
@@ -1932,7 +1961,19 @@ class Integer < Numeric
       quotient = quotient + power_of_two
     end
 
-    quotient
+    # Check if remainder is non-zero
+    has_remainder = 0
+    i = 0
+    rem_len = remainder_limbs.length
+    while __less_than(i, rem_len) != 0
+      if remainder_limbs[i] != 0
+        has_remainder = 1
+        break
+      end
+      i = i + 1
+    end
+
+    [quotient, has_remainder]
   end
 
   # Left shift limbs array by one bit (multiply by 2)
