@@ -54,15 +54,16 @@ The apparent regression (11 → 2 PASS files) is **NOT due to parser bugs breaki
 **See `docs/WORK_STATUS.md` for complete current status, priorities, and next steps.**
 
 **Quick Summary (Session 14, 2025-10-18)**:
-- ✅ Investigated all 12 remaining SEGFAULTs with actual testing
-- ⚠️ **CRITICAL FINDING**: Eigenclass runtime bug
-  - Eigenclasses with methods compile successfully (session 13 fix works for compilation)
-  - Runtime crash when calling methods defined in eigenclass
-  - Crashes at fixnum address (0x11), suggesting method lookup returns wrong value
-  - Blocks divide_spec, div_spec (and likely more)
-- ❌ **Parser limitation**: times_spec (`or break` syntax not supported)
-- 📋 **Next action**: Debug eigenclass runtime method dispatch issue
-- 📋 Queued: Proc storage bug (round_spec), ArgumentError handling
+- ✅ Investigated all 12 remaining SEGFAULTs with actual testing (not assumptions)
+- ⚠️ **Key findings**:
+  - divide_spec/div_spec: Crash at 0x00000011 - **root cause NOT YET DETERMINED** (needs minimal test case)
+  - times_spec: Parser bug - `or break` syntax causes parser to treat `break` as method name
+  - plus_spec: Missing `ruby_exe` test framework method (subprocess execution)
+  - round_spec: Proc storage bug in shared examples (memory corruption)
+  - 4 specs: FPE crashes from ArgumentError testing (exception behavior)
+- 📋 **All issues are fixable** with appropriate parser/compiler/framework fixes
+- 📋 **Next action**: Investigate divide_spec crash (create minimal test to isolate root cause)
+- 📋 Queued: Parser fixes (`or break`), ruby_exe implementation, Proc storage fix, FPE handling
 
 ---
 
