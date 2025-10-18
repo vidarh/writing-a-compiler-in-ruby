@@ -59,9 +59,10 @@ The apparent regression (11 → 2 PASS files) is **NOT due to parser bugs breaki
   - Methods defined inside `class << obj` blocks fail to compile
   - Error: `compile_class.rb:41: undefined method 'offset' for nil`
   - Blocks divide_spec, div_spec (and likely more)
-- ❌ **Parser limitations identified**: times_spec (`or break` syntax), plus_spec
+- ❌ **Parser limitation**: times_spec (`or break` syntax not supported)
+- ⚠️ **Implementable**: plus_spec (needs ruby_exe test framework method)
 - 📋 **Next action**: Fix eigenclass method compilation bug (compile_defm vtable offset issue)
-- 📋 Queued: Proc storage bug (round_spec), ArgumentError handling
+- 📋 Queued: ruby_exe implementation (plus_spec), Proc storage bug (round_spec), ArgumentError handling
 
 ---
 

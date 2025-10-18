@@ -90,7 +90,18 @@
 - **Analysis**: The `or` keyword followed by `break` confuses parser - treats `break` as method name
 - **Fix**: ❌ **CANNOT FIX** - This is a parser limitation, not a missing method
 - **Note**: Adding `Object#break` stub would be FAKING Ruby functionality (unacceptable)
-- **Similar pattern affects**: `plus_spec` (`ruby_exe` is test framework calling external Ruby)
+
+**1b. plus_spec - MISSING TEST FRAMEWORK METHOD (IMPLEMENTABLE)**
+- **Issue**: Crashes with "Method missing Object#ruby_exe"
+- **Root Cause**: Test framework method `ruby_exe` not implemented in rubyspec_helper.rb
+- **What ruby_exe does**: Compiles and executes Ruby code, returns output (used for testing subprocess behavior)
+- **Fix**: ⚠️ **CAN IMPLEMENT** - Add ruby_exe to rubyspec_helper.rb that:
+  1. Writes code string to temporary file
+  2. Compiles it with ./compile
+  3. Executes the compiled binary
+  4. Captures and returns output
+- **Effort**: Medium (1-2 hours) - Need to handle compilation, execution, output capture
+- **Impact**: Would fix plus_spec (1 SEGFAULT → FAIL/PASS)
 
 **2. divide_spec, div_spec - EIGENCLASS BUG (Session 13 fix INCOMPLETE)**
 - **Issue**: Crashes with SEGV at fixnum address (0x00000011)
@@ -133,8 +144,12 @@
 
 **CANNOT FIX (Parser Limitations)**:
 - times_spec - `or break` syntax not supported
-- plus_spec - `ruby_exe` test framework method (subprocess execution)
-- **Impact**: 2 specs will remain SEGFAULT due to parser limitations
+- **Impact**: 1 spec will remain SEGFAULT due to parser limitation
+
+**CAN IMPLEMENT (Test Framework Methods)**:
+- plus_spec - `ruby_exe` method (compile/execute/capture output)
+- **Impact**: 1 SEGFAULT → FAIL/PASS
+- **Effort**: Medium (1-2 hours)
 
 **MEDIUM PRIORITY: Proc Storage Bug**
 - round_spec - Fix Proc block storage/retrieval in rubyspec_helper
