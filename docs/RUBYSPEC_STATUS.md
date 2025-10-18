@@ -55,14 +55,14 @@ The apparent regression (11 → 2 PASS files) is **NOT due to parser bugs breaki
 
 **Quick Summary (Session 14, 2025-10-18)**:
 - ✅ Investigated all 12 remaining SEGFAULTs with actual testing
-- ⚠️ **CRITICAL FINDING**: Eigenclass fix (session 13) is INCOMPLETE
-  - Methods defined inside `class << obj` blocks fail to compile
-  - Error: `compile_class.rb:41: undefined method 'offset' for nil`
+- ⚠️ **CRITICAL FINDING**: Eigenclass runtime bug
+  - Eigenclasses with methods compile successfully (session 13 fix works for compilation)
+  - Runtime crash when calling methods defined in eigenclass
+  - Crashes at fixnum address (0x11), suggesting method lookup returns wrong value
   - Blocks divide_spec, div_spec (and likely more)
 - ❌ **Parser limitation**: times_spec (`or break` syntax not supported)
-- ⚠️ **Implementable**: plus_spec (needs ruby_exe test framework method)
-- 📋 **Next action**: Fix eigenclass method compilation bug (compile_defm vtable offset issue)
-- 📋 Queued: ruby_exe implementation (plus_spec), Proc storage bug (round_spec), ArgumentError handling
+- 📋 **Next action**: Debug eigenclass runtime method dispatch issue
+- 📋 Queued: Proc storage bug (round_spec), ArgumentError handling
 
 ---
 

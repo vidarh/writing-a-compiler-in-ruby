@@ -103,15 +103,22 @@
 - **Effort**: Medium (1-2 hours) - Need to handle compilation, execution, output capture
 - **Impact**: Would fix plus_spec (1 SEGFAULT → FAIL/PASS)
 
-**2. divide_spec, div_spec - EIGENCLASS BUG (Session 13 fix INCOMPLETE)**
-- **Issue**: Crashes with SEGV at fixnum address (0x00000011)
-- **Root Cause**: Eigenclass method definition fails during compilation
-- **Test Code**: `class << obj; private def coerce(n); [n, 3]; end; end`
-- **Error**: `compile_class.rb:41: undefined method 'offset' for nil:NilClass`
-- **Analysis**: Session 13 eigenclass fix does NOT handle method definitions inside eigenclasses in block/method scopes
-- **Fix**: ⚠️ **NEEDS FIXING** - Must fix compile_defm vtable offset lookup for eigenclass methods
-- **Impact**: This blocks tests that use singleton classes with methods (common Ruby pattern)
-- **Created test**: `test_eigenclass_in_it_block.rb` - FAILS TO COMPILE
+**2. divide_spec, div_spec - EIGENCLASS RUNTIME BUG**
+- **Issue**: Crashes with SEGV at fixnum address (0x00000011) when calling eigenclass methods
+- **Test Code**: `class << obj; private def coerce(n); [n, 3]; end; end; (6 / obj)`
+- **Compilation**: ✅ COMPILES SUCCESSFULLY (session 13 fix works for compilation)
+- **Runtime Crash**: ❌ Crashes when trying to call private method defined in eigenclass
+- **Analysis**:
+  - Eigenclass creation works (session 13 fix)
+  - Method definition compiles successfully
+  - Runtime crash when `6 / obj` tries to call obj.coerce(6)
+  - Crashes at fixnum address (0x11 = fixnum 8), suggesting method lookup returns wrong value
+- **Possible causes**:
+  1. Private method visibility not working correctly on eigenclasses
+  2. Method lookup on eigenclass instances returns fixnum instead of method object
+  3. Vtable entry for eigenclass method points to wrong location
+- **Fix**: ⚠️ **NEEDS INVESTIGATION** - Runtime method lookup/call issue on eigenclass instances
+- **Impact**: Blocks tests that call methods defined in singleton classes
 
 **3. round_spec - PROC STORAGE BUG (Deep framework issue)**
 - **Issue**: Crashes at 0x1f3 in Proc#call
@@ -130,17 +137,19 @@
 
 #### Corrected Priority Order
 
-**HIGHEST PRIORITY: Fix Eigenclass Method Compilation Bug**
-- **Why**: Blocks 2+ specs, affects real Ruby code patterns
-- **Issue**: Session 13 eigenclass fix incomplete - methods in eigenclasses don't compile
-- **File**: `compile_class.rb:41` in `compile_defm`
-- **Error**: Vtable offset lookup returns nil for eigenclass methods
+**HIGHEST PRIORITY: Fix Eigenclass Runtime Bug**
+- **Why**: Blocks 2+ specs, affects real Ruby code patterns (private methods in eigenclasses)
+- **Issue**: Runtime crash when calling methods defined in eigenclass
+- **Compilation**: ✅ Works (session 13 fix successful)
+- **Runtime**: ❌ Crashes at fixnum address when calling eigenclass methods
+- **Crash**: SEGV at 0x00000011 (fixnum 8), suggesting method lookup returns wrong value
 - **Fix Strategy**:
-  1. Investigate why vtable offset is nil for eigenclass methods
-  2. Fix vtable entry registration for methods defined in eigenclass scope
-  3. Test with `test_eigenclass_in_it_block.rb`
+  1. Investigate why method call returns fixnum instead of method object
+  2. Check if issue is with private method visibility on eigenclasses
+  3. Verify vtable entry for eigenclass method points to correct code
+  4. Debug with GDB to see what happens during method lookup/call
 - **Expected Impact**: Fix divide_spec, div_spec (2 SEGFAULTs → FAIL/PASS)
-- **Effort**: Medium (2-4 hours, debugging compiler internals)
+- **Effort**: Medium-High (3-6 hours, debugging runtime method dispatch)
 
 **CANNOT FIX (Parser Limitations)**:
 - times_spec - `or break` syntax not supported
