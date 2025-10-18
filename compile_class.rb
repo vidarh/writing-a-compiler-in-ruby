@@ -7,6 +7,8 @@ class Compiler
     scope = scope.class_scope
 
     if name.is_a?(Array)
+      # For singleton method definitions like "def obj.method_name"
+      # Call compile_eigenclass with the object expression
       compile_eigenclass(scope, name[0], [[:defm, name[1], args, body]])
       return Value.new([:subexpr])
     end
@@ -68,28 +70,79 @@ class Compiler
   def compile_eigenclass(scope, expr, exps)
     @e.comment("=== Eigenclass start")
 
-    # Find the enclosing ClassScope for klass_size
-    class_scope = find_class_scope(scope)
+    # Try to find a static ClassScope for this eigenclass
+    # For "class << expr" blocks, transform creates [:eigen, expr] ClassScope
+    # For "def obj.method" syntax, there's no static ClassScope
+    eigenclass_ast = [:eigen, expr]
+    eigenclass_name = clean_method_name(eigenclass_ast.to_s).to_sym
+    eigenclass_scope = @classes[eigenclass_name]
 
-    ob      = mk_class(expr)
-    classob = mk_class(expr)
-    p class_scope
-    ret = compile_eval_arg(scope, [:assign, ob,
-                                   mk_new_class_object(class_scope.klass_size, ob, class_scope.klass_size, classob)
-                                  ])
-    @e.save_result(ret)
+    # Detect if expr is a local variable (not :self or a constant)
+    # Local variables in functions need dynamic eigenclass handling
+    # because the same source location can execute with different runtime values
+    is_local_var = expr.is_a?(Symbol) && expr != :self && expr.to_s[0] >= 'a' && expr.to_s[0] <= 'z'
 
-    let(scope,:self) do |lscope|
-      @e.save_to_local_var(:eax, 1)
-      # FIXME: Compiler @bug. Probably findvars again;
-      # see-also Compiler#let
-      scope
-      # FIXME: This uses lexical scoping, which will be wrong in some contexts.
-      compile_exp(lscope, [:sexp, [:assign, [:index, :self ,2], "<#{class_scope.local_name.to_s} eigenclass>"]])
+    if eigenclass_scope && !is_local_var
+      # STATIC EIGENCLASS: We have a ClassScope from transform phase
+      # Use it to compile methods with proper vtable entries
 
-      compile_ary_do(lscope, exps)
-      @e.load_local_var(1)
+      # Get the runtime class object of expr
+      ob = mk_class(expr)  # expr.class
+      classob = mk_class(expr)  # expr.class (used as eigenclass's class)
+
+      # Create eigenclass object with the eigenclass_scope's vtable size
+      # The superclass is expr.class at runtime
+      ret = compile_eval_arg(scope, [:assign, ob,
+                                     mk_new_class_object(eigenclass_scope.klass_size, ob, eigenclass_scope.klass_size, classob)
+                                    ])
+      @e.save_result(ret)
+
+      # Compile the eigenclass body using the eigenclass's own ClassScope
+      # This registers all methods in the static vtable
+      # We use eigenclass_scope as the parent so that compile_defm finds the right vtable
+      let(eigenclass_scope,:self) do |lscope|
+        @e.save_to_local_var(:eax, 1)
+        # FIXME: Compiler @bug. Probably findvars again;
+        # see-also Compiler#let
+        eigenclass_scope
+        # FIXME: This uses lexical scoping, which will be wrong in some contexts.
+        compile_exp(lscope, [:sexp, [:assign, [:index, :self ,2], eigenclass_scope.name.to_s]])
+
+        # Compile methods in lscope so :self refers to the runtime eigenclass
+        # compile_defm will call lscope.class_scope to get eigenclass_scope
+        exps.each do |e|
+          compile_do(lscope, e)
+        end
+
+        @e.load_local_var(1)
+      end
+    else
+      # DYNAMIC EIGENCLASS: No static ClassScope (e.g., "def obj.method")
+      # Fall back to the original behavior: use enclosing class scope
+
+      # Find the enclosing ClassScope for klass_size
+      class_scope = find_class_scope(scope)
+
+      ob      = mk_class(expr)
+      classob = mk_class(expr)
+      ret = compile_eval_arg(scope, [:assign, ob,
+                                     mk_new_class_object(class_scope.klass_size, ob, class_scope.klass_size, classob)
+                                    ])
+      @e.save_result(ret)
+
+      let(scope,:self) do |lscope|
+        @e.save_to_local_var(:eax, 1)
+        # FIXME: Compiler @bug. Probably findvars again;
+        # see-also Compiler#let
+        scope
+        # FIXME: This uses lexical scoping, which will be wrong in some contexts.
+        compile_exp(lscope, [:sexp, [:assign, [:index, :self ,2], "<#{class_scope.local_name.to_s} eigenclass>"]])
+
+        compile_ary_do(lscope, exps)
+        @e.load_local_var(1)
+      end
     end
+
     @e.comment("=== Eigenclass end")
 
     return Value.new([:subexpr], :object)
@@ -104,7 +157,9 @@ class Compiler
     cscope = scope.find_constant(name)
 
     if name.is_a?(Array)
-      return compile_eigenclass(scope, name[-1], *exps)
+      # For eigenclass blocks like "class << expr"
+      # name is [:eigen, expr], so extract expr and pass to compile_eigenclass
+      return compile_eigenclass(scope, name[1], *exps)
     end
 
     @e.comment("=== class #{cscope.name} ===")
