@@ -1,8 +1,9 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-18 (session 14 - SEGFAULT fixes in progress)
+**Last Updated**: 2025-10-19 (session 14 complete - selftest-c regression fixed)
 **Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 42 (63%) | SEGFAULT: 12 (18%)
 **Individual Tests**: 989 total | Passed: 143 (14%) | Failed: 743 (75%) | Skipped: 103 (10%)
+**Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
 **For historical details about fixes in sessions 1-12**, see git history for this file.
 
