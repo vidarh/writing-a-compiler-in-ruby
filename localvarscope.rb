@@ -29,4 +29,11 @@ class LocalVarScope < Scope
     return @next.get_arg(a) if @next
     return [:addr, a] # Shouldn't get here normally
   end
+
+  # Delegate to next scope to find ClassScope/ModuleScope
+  # LocalVarScope is not a class scope, so traverse to find one
+  def class_scope
+    return @next.class_scope if @next
+    return self
+  end
 end

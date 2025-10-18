@@ -24,7 +24,38 @@
 
 ---
 
-### 📋 Session 14: SEGFAULT Investigation (2025-10-18) - **IN PROGRESS**
+### ✅ Session 14: Fix selftest-c Regression from Eigenclass Changes (2025-10-19) - **COMPLETE**
+
+**Files Modified**:
+- `localvarscope.rb:35-38` - Added `class_scope` delegation method
+- `funcscope.rb:40-45` - Added `class_scope` delegation method
+- `sexpscope.rb:42-47` - Added `class_scope` delegation method
+- `controlscope.rb:20-25` - Added `class_scope` delegation method
+- `compile_class.rb:40-46` - Fixed ternary operator bug
+
+**Problem**:
+selftest-c was failing with "Method missing FalseClass#get_arg" after eigenclass changes.
+
+**Root Causes Found**:
+1. **Missing scope delegation**: LocalVarScope, FuncScope, SexpScope, and ControlScope didn't override `class_scope`, so calling `scope.class_scope` on them returned `self` instead of traversing to find the actual ClassScope/ModuleScope.
+
+2. **Ternary operator compiler bug**: In self-compiled code, ternary operators like `x ? a : b` return `false` instead of `b` when `x` is false. Discovered in `compile_class.rb:40`: `vtable_scope = in_eigenclass ? orig_scope : scope` was returning `false` instead of `scope`.
+
+**Fixes Applied**:
+1. Added `class_scope` method to all non-class scope types to delegate to `@next.class_scope`
+2. Replaced ternary operator with if/else in `compile_class.rb` as workaround for compiler bug
+3. Documented ternary operator bug in `docs/TERNARY_OPERATOR_BUG.md`
+
+**Testing**:
+- Created test cases proving the scope delegation issue
+- ✅ selftest passes (0 failures)
+- ✅ selftest-c passes (0 failures) - **REGRESSION FIXED**
+
+**Status**: selftest-c regression is fixed. Ternary operator bug needs separate investigation.
+
+---
+
+### 📋 Session 15: SEGFAULT Investigation (2025-10-18) - **IN PROGRESS**
 
 **Status**: Investigated remaining 12 SEGFAULT specs with actual testing
 

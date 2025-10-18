@@ -37,7 +37,13 @@ class Compiler
 
     # For eigenclass methods, use the eigenclass object (:self from LocalVarScope)
     # For regular methods, use the class object (:self from ClassScope)
-    vtable_scope = in_eigenclass ? orig_scope : scope
+    # FIXME: Compiler bug - ternary operator returns false instead of else branch
+    # vtable_scope = in_eigenclass ? orig_scope : scope
+    if in_eigenclass
+      vtable_scope = orig_scope
+    else
+      vtable_scope = scope
+    end
     compile_eval_arg(vtable_scope,[:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
 
 

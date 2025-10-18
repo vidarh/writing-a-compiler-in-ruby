@@ -37,4 +37,12 @@ class SexpScope < Scope
     end
     arg
   end
+
+  # Delegate to next scope to find ClassScope/ModuleScope
+  def class_scope
+    if @next
+      return @next.class_scope
+    end
+    return self
+  end
 end
