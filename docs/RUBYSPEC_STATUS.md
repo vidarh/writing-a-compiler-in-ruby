@@ -1,21 +1,21 @@
-# RubySpec Test Status - 2025-10-17
+# RubySpec Test Status - 2025-10-18
 
 ## Current Status
 
 ### Test Coverage (Individual Test Cases)
 ```
-Total test cases:    875
-Passing:              97  (11%)
-Failing:             704  (80%)
-Skipped:              74  ( 8%)
+Total test cases:    989
+Passing:             143  (14%)
+Failing:             743  (75%)
+Skipped:             103  (10%)
 ```
 
 ### File-Level Summary
 ```
 Total spec files:    67
-PASS:                 2  ( 3%)
-FAIL:                43  (64%)
-SEGFAULT:            22  (33%)  ✅ DOWN from 34 (51%)
+PASS:                13  (19%)
+FAIL:                42  (63%)
+SEGFAULT:            12  (18%)  ✅ DOWN from 22 (33% on 2025-10-17)
 COMPILE FAIL:         0  ( 0%)  ✅ ALL FIXED (2025-10-15)
 ```
 
@@ -26,10 +26,11 @@ COMPILE FAIL:         0  ( 0%)  ✅ ALL FIXED (2025-10-15)
 - FAIL: 22 files
 - SEGFAULT: 34 files
 
-**Current (2025-10-17):**
-- PASS: 2 files, 97 test cases (11%)
-- FAIL: 43 files
-- SEGFAULT: 22 files ✅ (improved)
+**Current (2025-10-18):**
+- PASS: 13 files, 143 test cases (14%)
+- FAIL: 42 files
+- SEGFAULT: 12 files ✅ (improved by 22 specs = 65% reduction)
+- Progress: Fixed eigenclass issues (session 13), minus_spec converted to FAIL
 
 **Change Explanation:**
 The apparent regression (11 → 2 PASS files) is **NOT due to parser bugs breaking functionality**. Investigation reveals:
@@ -52,10 +53,15 @@ The apparent regression (11 → 2 PASS files) is **NOT due to parser bugs breaki
 
 **See `docs/WORK_STATUS.md` for complete current status, priorities, and next steps.**
 
-**Quick Summary**:
-- ✅ Fixed `<=>` operator for multi-limb heap integers (2025-10-17)
-- ⏳ In progress: Bignum operator fixes (expected +100-150 test cases)
-- 📋 Queued: SEGFAULT investigation, type coercion fixes
+**Quick Summary (Session 14, 2025-10-18)**:
+- ✅ Investigated all 12 remaining SEGFAULTs with actual testing
+- ⚠️ **CRITICAL FINDING**: Eigenclass fix (session 13) is INCOMPLETE
+  - Methods defined inside `class << obj` blocks fail to compile
+  - Error: `compile_class.rb:41: undefined method 'offset' for nil`
+  - Blocks divide_spec, div_spec (and likely more)
+- ❌ **Parser limitations identified**: times_spec (`or break` syntax), plus_spec
+- 📋 **Next action**: Fix eigenclass method compilation bug (compile_defm vtable offset issue)
+- 📋 Queued: Proc storage bug (round_spec), ArgumentError handling
 
 ---
 
