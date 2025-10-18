@@ -84,89 +84,97 @@
 
 **INVESTIGATION RESULTS**:
 
-**1. times_spec - PARSER LIMITATION (UNFIXABLE)**
+**1. times_spec - PARSER BUG**
 - **Issue**: Crashes with "Method missing Object#break"
-- **Root Cause**: Parser cannot handle `or break` syntax (line 46: `a.shift or break`)
+- **Root Cause**: Parser bug with `or break` syntax (line 46: `a.shift or break`)
 - **Analysis**: The `or` keyword followed by `break` confuses parser - treats `break` as method name
-- **Fix**: ❌ **CANNOT FIX** - This is a parser limitation, not a missing method
-- **Note**: Adding `Object#break` stub would be FAKING Ruby functionality (unacceptable)
+- **Fix Required**: Fix parser to correctly handle `or break` / `or next` / `or return` syntax
+- **File**: Likely `parser.rb` or `shunting.rb`
+- **Impact**: Blocks times_spec and potentially other specs using this pattern
 
-**1b. plus_spec - MISSING TEST FRAMEWORK METHOD (IMPLEMENTABLE)**
+**2. plus_spec - MISSING TEST FRAMEWORK METHOD**
 - **Issue**: Crashes with "Method missing Object#ruby_exe"
 - **Root Cause**: Test framework method `ruby_exe` not implemented in rubyspec_helper.rb
 - **What ruby_exe does**: Compiles and executes Ruby code, returns output (used for testing subprocess behavior)
-- **Fix**: ⚠️ **CAN IMPLEMENT** - Add ruby_exe to rubyspec_helper.rb that:
-  1. Writes code string to temporary file
-  2. Compiles it with ./compile
-  3. Executes the compiled binary
-  4. Captures and returns output
-- **Effort**: Medium (1-2 hours) - Need to handle compilation, execution, output capture
-- **Impact**: Would fix plus_spec (1 SEGFAULT → FAIL/PASS)
+- **Fix Required**: Add ruby_exe to rubyspec_helper.rb:
+  1. Write code string to temporary file
+  2. Compile it with ./compile
+  3. Execute the compiled binary
+  4. Capture and return output
+- **Effort**: Medium (1-2 hours) - Needs compilation, execution, output capture
+- **Impact**: Fixes plus_spec (1 SEGFAULT → FAIL/PASS)
 
-**2. divide_spec, div_spec - EIGENCLASS RUNTIME BUG**
-- **Issue**: Crashes with SEGV at fixnum address (0x00000011) when calling eigenclass methods
-- **Test Code**: `class << obj; private def coerce(n); [n, 3]; end; end; (6 / obj)`
-- **Compilation**: ✅ COMPILES SUCCESSFULLY (session 13 fix works for compilation)
-- **Runtime Crash**: ❌ Crashes when trying to call private method defined in eigenclass
-- **Analysis**:
-  - Eigenclass creation works (session 13 fix)
-  - Method definition compiles successfully
-  - Runtime crash when `6 / obj` tries to call obj.coerce(6)
-  - Crashes at fixnum address (0x11 = fixnum 8), suggesting method lookup returns wrong value
-- **Possible causes**:
-  1. Private method visibility not working correctly on eigenclasses
-  2. Method lookup on eigenclass instances returns fixnum instead of method object
-  3. Vtable entry for eigenclass method points to wrong location
-- **Fix**: ⚠️ **NEEDS INVESTIGATION** - Runtime method lookup/call issue on eigenclass instances
-- **Impact**: Blocks tests that call methods defined in singleton classes
+**3. divide_spec, div_spec - RUNTIME CRASH**
+- **Issue**: Crashes with SEGV at fixnum address (0x00000011)
+- **Location**: Crashes in `__method_Integer___div` at rubyspec_temp_divide_spec.rb:7
+- **Test Code**: Contains `class << obj; private def coerce(n); [n, 3]; end; end`
+- **Analysis**: ⚠️ **INCOMPLETE**
+  - Crash happens at line 7 during integer division
+  - Test contains eigenclass with private method definition
+  - **NOT YET DETERMINED**: Whether crash is eigenclass-related or division-related
+  - **NEEDS**: Actual testing to isolate root cause
+- **Fix Required**: Investigate crash - create minimal test case to isolate issue
+- **Impact**: Blocks divide_spec, div_spec (2 specs)
 
-**3. round_spec - PROC STORAGE BUG (Deep framework issue)**
+**4. round_spec - PROC STORAGE BUG**
 - **Issue**: Crashes at 0x1f3 in Proc#call
 - **Root Cause**: Shared example mechanism stores/retrieves Proc blocks from hash incorrectly
 - **Analysis**: Memory corruption in Proc handling when used with it_behaves_like
-- **Fix**: ⚠️ Requires fixing Proc storage mechanism (high effort)
+- **Fix Required**: Fix Proc storage mechanism in rubyspec_helper.rb
+- **Effort**: High (3-6 hours) - deep debugging of Proc storage/retrieval
+- **Impact**: Fixes round_spec (1 SEGFAULT → FAIL/PASS)
 
-**4. ArgumentError Testing Specs** (comparison, exponent, fdiv, pow)
+**5. ArgumentError Testing Specs** (comparison, exponent, fdiv, pow)
 - **Issue**: FPE crashes when testing error handling
 - **Root Cause**: Specs pass wrong arg counts, __eqarg triggers FPE
-- **Analysis**: These test error cases (exceptions), which we don't support
-- **Fix**: Could add FPE handling, but specs will still fail (testing exception behavior)
+- **Analysis**: These test error cases (exception behavior)
+- **Fix Required**: Add FPE signal handling to rubyspec_helper.rb to catch and report errors gracefully
+- **Effort**: Medium (2-3 hours)
+- **Impact**: Fixes 4 specs (SEGFAULTs → FAIL with proper error messages)
 
-**5. Other specs** (try_convert, element_reference, to_r)
+**6. Other specs** (try_convert, element_reference, to_r)
 - **Status**: Need individual investigation
+- **Impact**: 3 specs remaining
 
-#### Corrected Priority Order
+#### Priority Order
 
-**HIGHEST PRIORITY: Fix Eigenclass Runtime Bug**
-- **Why**: Blocks 2+ specs, affects real Ruby code patterns (private methods in eigenclasses)
-- **Issue**: Runtime crash when calling methods defined in eigenclass
-- **Compilation**: ✅ Works (session 13 fix successful)
-- **Runtime**: ❌ Crashes at fixnum address when calling eigenclass methods
-- **Crash**: SEGV at 0x00000011 (fixnum 8), suggesting method lookup returns wrong value
-- **Fix Strategy**:
-  1. Investigate why method call returns fixnum instead of method object
-  2. Check if issue is with private method visibility on eigenclasses
-  3. Verify vtable entry for eigenclass method points to correct code
-  4. Debug with GDB to see what happens during method lookup/call
-- **Expected Impact**: Fix divide_spec, div_spec (2 SEGFAULTs → FAIL/PASS)
-- **Effort**: Medium-High (3-6 hours, debugging runtime method dispatch)
+**Priority 1: Investigate divide_spec/div_spec crashes**
+- **Why**: Blocks 2 specs, need to determine actual root cause
+- **Status**: Crash location identified, but root cause NOT YET DETERMINED
+- **Crash**: SEGV at 0x00000011 in `__method_Integer___div`
+- **Action Required**: Create minimal test case to isolate whether issue is:
+  - Eigenclass-related (methods in `class << obj`)
+  - Division-related (integer division operation)
+  - Coercion-related (private coerce method)
+- **Effort**: Low-Medium (1-2 hours investigation)
+- **Expected Impact**: 2 SEGFAULTs → FAIL/PASS once root cause identified and fixed
 
-**CANNOT FIX (Parser Limitations)**:
-- times_spec - `or break` syntax not supported
-- **Impact**: 1 spec will remain SEGFAULT due to parser limitation
+**Priority 2: Fix parser bug (times_spec)**
+- **Issue**: Parser treats `break` as method name after `or` keyword
+- **File**: `parser.rb` or `shunting.rb`
+- **Fix Required**: Update parser to handle `or break` / `or next` / `or return` correctly
+- **Effort**: Medium (2-4 hours parser debugging)
+- **Impact**: Fixes times_spec (1 SEGFAULT → FAIL/PASS)
 
-**CAN IMPLEMENT (Test Framework Methods)**:
-- plus_spec - `ruby_exe` method (compile/execute/capture output)
-- **Impact**: 1 SEGFAULT → FAIL/PASS
+**Priority 3: Implement ruby_exe (plus_spec)**
+- **Fix Required**: Add subprocess execution to rubyspec_helper.rb
 - **Effort**: Medium (1-2 hours)
+- **Impact**: Fixes plus_spec (1 SEGFAULT → FAIL/PASS)
 
-**MEDIUM PRIORITY: Proc Storage Bug**
-- round_spec - Fix Proc block storage/retrieval in rubyspec_helper
-- Effort: High, deep framework bug
+**Priority 4: Fix Proc storage bug (round_spec)**
+- **Fix Required**: Fix Proc storage/retrieval mechanism
+- **Effort**: High (3-6 hours)
+- **Impact**: Fixes round_spec (1 SEGFAULT → FAIL/PASS)
 
-**LOWER PRIORITY: ArgumentError Testing**
-- 4 specs testing exception behavior we don't support
-- Converting to FAIL would show tests failing anyway
+**Priority 5: Add FPE signal handling**
+- **Fix Required**: Catch FPE in rubyspec_helper.rb
+- **Effort**: Medium (2-3 hours)
+- **Impact**: Fixes comparison_spec, exponent_spec, fdiv_spec, pow_spec (4 SEGFAULTs → FAIL)
+
+**Priority 6: Investigate remaining specs**
+- try_convert_spec, element_reference_spec, to_r_spec
+- **Effort**: Low-Medium per spec
+- **Impact**: Up to 3 additional SEGFAULTs fixed
 
 ---
 
