@@ -26,6 +26,7 @@ This guide documents effective debugging patterns discovered while working on th
 | "Unable to resolve X statically" | Missing class/constant | Check if class is defined, may need stub |
 | Parse error | Parser doesn't support syntax | Check parser.rb, may need new operator/keyword support |
 | Lambda at top-level crashes or doesn't compile | **KNOWN LIMITATION: Top-level lambdas not supported** | **IMPORTANT**: Lambdas work FINE in methods but CRASH at top-level; use method wrapper for testing |
+| Test fails at top level but works in spec | **KNOWN LIMITATION: Top-level scope issues** | **CRITICAL**: Many language features (eigenclasses, etc.) work in methods but fail at top-level; ALWAYS test inside methods, NOT at top-level |
 
 ## Debugging Compilation Failures
 
@@ -257,6 +258,41 @@ end
 - Use `is_a?(Integer)` to verify type before calling `__get_raw`
 - Call `__get_raw` in Ruby code (not in s-expression) to get proper method dispatch
 - For error signaling without exceptions, print to STDERR and return `nil` (not `1/0` which crashes)
+
+### Pattern: ArgumentError Workaround (No Exceptions)
+
+**Problem:** FPE crashes in RubySpecs that test wrong argument counts.
+
+**Background:** The compiler uses FPE (Floating Point Exception) via `1/0` as intentional error signaling in place of exceptions. This is by design, not a bug. However, RubySpecs that test `ArgumentError` handling will crash with FPE.
+
+**Workaround:** Use `*args` pattern to validate argument count and return safe values.
+
+```ruby
+# Wrong: Fixed argument count, FPE on wrong count
+def method_name(arg1, arg2)
+  # ... implementation
+end
+
+# Right: Validate argument count, return safe value on error
+def method_name(*args)
+  if args.length != 2
+    STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 2)")
+    return nil  # or appropriate safe value (0, false, self, etc.)
+  end
+  arg1, arg2 = args
+  # ... normal implementation
+end
+```
+
+**When to use:**
+- Methods that crash with FPE in RubySpecs testing ArgumentError
+- Typically `<=>`, `**`, `fdiv`, and comparison methods with wrong arg counts
+
+**Important notes:**
+- This is a **temporary workaround** until exceptions are implemented
+- Document with comment: `# WORKAROUND: No exceptions - validate args manually`
+- Choose appropriate safe return value based on method contract
+- FPE signaling (`1/0`) is still used elsewhere and is intentional
 
 ## Debugging Parser Issues
 
@@ -611,6 +647,7 @@ When encountering an issue, check these in order:
 - [ ] Are globals initialized before use? (Check file order)
 - [ ] Is the transformation correct? (Use `--parsetree`)
 - [ ] Are error signals using `nil` not `1/0`? (Avoid FPE crashes in specs)
+- [ ] Do methods need ArgumentError handling? (Use `*args` pattern to validate arg count)
 
 ## Resources
 

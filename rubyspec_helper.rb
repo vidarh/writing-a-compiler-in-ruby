@@ -624,6 +624,18 @@ def mock_int(value)
   value
 end
 
+# STUB: ruby_exe - used by rubyspecs to test subprocess execution
+# Full implementation would compile and execute Ruby code as a subprocess
+# For now, just skip tests that use this functionality
+def ruby_exe(code, options = nil)
+  # Mark this as skipped since we can't execute subprocesses yet
+  # NOTE: This is a stub to prevent SEGFAULTs. Full implementation will
+  # compile code to a temporary binary and execute it, capturing output.
+  # See WORK_STATUS.md Priority 6 for future implementation.
+  $spec_skipped = $spec_skipped + 1
+  ""  # Return empty string to avoid nil errors
+end
+
 # Call this at end of spec file manually
 def print_spec_results
   puts

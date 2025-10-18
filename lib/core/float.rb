@@ -35,6 +35,12 @@ class Float
     self
   end
 
+  def floor
+    # FIXME: Stub - proper floor not implemented
+    # Returns integer floor of float value
+    to_i
+  end
+
   def class
     Float
   end

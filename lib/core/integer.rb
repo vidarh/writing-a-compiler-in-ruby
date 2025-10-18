@@ -2522,7 +2522,9 @@ class Integer < Numeric
       end
     end
 
-    %s(__int (div (callm self __get_raw) (callm other __get_raw)))
+    # div is floor division (same as / for integers)
+    # Call / directly which handles fixnum vs heap dispatch
+    self / other
   end
 
   def divmod other
