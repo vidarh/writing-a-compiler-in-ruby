@@ -209,4 +209,9 @@ class Object
     STDERR.puts("eval not supported in AOT compiler")
     nil
   end
+
+  # Stub for test framework - returns nil
+  def index(obj)
+    nil
+  end
 end

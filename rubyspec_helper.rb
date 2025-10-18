@@ -117,7 +117,11 @@ class Mock
   end
 
   # FIXME: Need to track/enforce - should actually raise the error
+  # Since we can't raise exceptions, return nil to avoid crashes
   def and_raise(error)
+    if @current_method
+      @expectations[@current_method] = nil
+    end
     self
   end
 
