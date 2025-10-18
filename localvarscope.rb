@@ -2,9 +2,12 @@
 # Local scope.
 # Is used when local variables are defined via <tt>:let</tt> expression.
 class LocalVarScope < Scope
-  def initialize(locals, next_scope)
+  attr_accessor :eigenclass_scope
+
+  def initialize(locals, next_scope, eigenclass_scope = false)
     @next = next_scope
     @locals = locals
+    @eigenclass_scope = eigenclass_scope
   end
 
   def method

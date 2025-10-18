@@ -784,7 +784,7 @@ class Compiler
   def alloc_vtable_offsets(exp)
     exp.depth_first(:defm) do |defun|
       @vtableoffsets.alloc_offset(defun[1])
-      :skip
+      # Don't skip - we need to find nested :defm nodes (e.g., methods defined in eigenclasses inside methods)
     end
 
     @vtableoffsets.vtable.each do |name, off|
