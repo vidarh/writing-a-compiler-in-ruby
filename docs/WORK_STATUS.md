@@ -1,8 +1,10 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-19 (session 20 in progress - SEGFAULT investigation)
-**Current Test Results**: 67 specs | PASS: 14 (21%) | FAIL: 49 (73%) | SEGFAULT: 5 REAL (7%) ✅ (10 reported, but 5 are misclassified)
-**Individual Tests**: 1043 total | Passed: 149 (14%) | Failed: 780 (75%) | Skipped: 114 (11%)
+**Last Updated**: 2025-10-19 (session 20 - unary operator precedence bug identified)
+**Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 REAL (7%) ✅
+  - Runner reports 10 SEGFAULTs, but 5 are misclassified (exit code != 0)
+  - 3 of 5 real crashes caused by same bug: unary `+` precedence
+**Individual Tests**: 1136 total | Passed: 169 (15%) | Failed: 838 (74%) | Skipped: 129 (11%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
 **For historical details about fixes in sessions 1-12**, see git history for this file.
@@ -11,9 +13,9 @@
 
 ## Current Active Work
 
-### 🔍 Session 20: SEGFAULT Investigation - Misclassification & Assembly Bug (2025-10-19) - **IN PROGRESS**
+### 🔍 Session 20: SEGFAULT Investigation - Unary Operator Precedence Bug (2025-10-19) - **IN PROGRESS**
 
-**Status**: Investigating actual crashes vs. test runner misclassification
+**Status**: ✅ ROOT CAUSE IDENTIFIED - Parser operator precedence bug with leading unary `+`
 
 **No Files Modified Yet**: Investigation phase
 
@@ -29,32 +31,62 @@ The test runner reports 10 SEGFAULTs, but 5 are false positives (non-zero exit c
 
 **2. Real Crashes (5 specs)**:
 1. **comparison_spec**: FPE (ArgumentError testing) - cannot fix without breaking selftest
-2. **times_spec**: Parser bug (`or break` syntax)
-3. **round_spec**: SIGSEGV at 0x000001f3 (fixnum 249)
-4. **exponent_spec**: SIGSEGV at 0x00000003 (fixnum 1)
-5. **pow_spec**: SIGSEGV at 0x00000003 (fixnum 1)
+2. **times_spec**: Parser bug (`or break` syntax) - documented in session 18
+3. **round_spec**: SIGSEGV at 0x000001f3 (fixnum 249) - ✅ **PARSER BUG IDENTIFIED**
+4. **exponent_spec**: SIGSEGV at 0x00000003 (fixnum 1) - ✅ **SAME BUG**
+5. **pow_spec**: SIGSEGV at 0x00000003 (fixnum 1) - ✅ **SAME BUG**
 
-**3. Root Cause Analysis - round_spec**:
-- Crashes at address 0x1f3 = 499 decimal = fixnum 249
-- Backtrace: `__lambda_L222` → `Proc#call`
-- Lambda contains: `249.round(-2).should eql(200)` (line 41 of spec)
-- **CRITICAL FINDING**: Assembly shows code calling through the RETURN VALUE of `.should`
-  - `should` returns `true` or `false`, not a callable
-  - But assembly has vtable dispatch AFTER the `should` call
-  - This suggests a **compiler bug in method chain code generation**
+**3. ROOT CAUSE IDENTIFIED: Unary `+` Operator Precedence Bug** 🎯
 
-**4. Test Results**:
-- ✅ Blocks stored in Hash work correctly (inside methods)
-- ✅ Shared example mechanism (`it_behaves_like`) works correctly
-- ✅ Simple specs using shared examples work fine
-- ✅ `249.round(-2)` works (wrong result but doesn't crash)
-- ❌ Full round_spec crashes with assembly showing incorrect call chain
+**Minimal Reproduction:**
+```ruby
++249.round(-2).should eql(+200)
+```
 
-**Next Steps**:
-1. Examine method chain compilation for `.should eql()` pattern
-2. Check if issue is specific to chained matchers
-3. Create minimal test case with exact pattern from round_spec
-4. Fix compiler bug or identify workaround
+**The Bug:**
+Parser treats leading unary `+` as having **LOWER precedence than method calls**, applying it to the entire expression instead of just the number.
+
+**Current Behavior (WRONG):**
+```
+(call
+  (callm (callm (callm 249 round ...) should) +@ ())  ← unary + applied to result of .should!
+  (call eql ...))
+```
+
+This parses as: `(249.round(-2).should)+` instead of `(+249).round(-2).should`
+
+**Expected Behavior (CORRECT):**
+```
+(call
+  (callm (callm (callm 249 +@ ()) round ...) should)  ← unary + applied to 249
+  (call eql ...))
+```
+
+This should parse as: `(+249).round(-2).should`
+
+**Why It Crashes:**
+1. Parser applies `+@` (unary plus) to result of `.should` (which returns `true`/`false`)
+2. Compiler generates: `249.round(-2).should.+@`
+3. `TrueClass`/`FalseClass` doesn't have `+@` method
+4. Method missing tries to call through fixnum value instead of function pointer
+5. Crash at address 0x1f3 (= fixnum 249)
+
+**Affected Code:**
+- round_spec.rb line 41: `+249.round(-2).should eql(+200)`
+- exponent_spec.rb: Similar pattern with `+1`
+- pow_spec.rb: Similar pattern with `+1`
+
+**Fix Location:**
+**Primary:** `tokens.rb` - Check operator priorities for unary `+` and `-`
+- Unary operators should bind tighter than method calls (`.`)
+- Currently they appear to have lower precedence than method dispatch
+- Need to ensure unary ops are parsed BEFORE method chains, not after
+
+**Secondary locations to check if tokens.rb doesn't resolve it:**
+- `shunting.rb` - Shunting yard algorithm for expression parsing
+- `parser.rb` - How unary operators at expression start are handled
+
+**Impact:** Fixing this will resolve 3 of the 5 remaining SEGFAULTs
 
 ---
 
