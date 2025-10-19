@@ -19,7 +19,7 @@
 
 **Files Modified**:
 - `rubyspec_helper.rb:494-522` - Added `ComplainMatcher` class and `complain()` method
-- `shunting.rb:162-166` - Fixed parser bug by removing premature reduce() call
+- `shunting.rb:162-167` - Fixed parser bug with surgical reduce() call
 
 #### ROOT CAUSE: Parser Bug - Method Chains Without Parentheses
 
@@ -89,33 +89,34 @@ if possible_func
   ostack << @opcall2
 end
 
-# AFTER (correct):
+# AFTER (correct - surgical reduce with priority limit):
 if possible_func
-  # Don't reduce before pushing @opcall2 - let nested calls bind tighter
+  # Reduce operators with priority > @opcall2 (9), but not @opcall2 itself
   # This makes "foo bar baz" parse as "foo(bar(baz))" not "foo(bar, baz)"
+  # while also properly handling single arguments like "x.y 42"
+  reduce(ostack, @opcall2)
   ostack << @opcall2
 end
 ```
 
 **Why It Works**:
-- When parsing `result.should eql 3`, we push two `@opcall2` operators
-- By NOT calling `reduce()` before the second push, both operators stay on stack
-- The inner one (`eql 3`) reduces first, then the outer one (`should ...`)
-- This gives us right-to-left association: `should(eql(3))` ✅
+- `@opcall2` has priority 9 (low priority for parenthesis-free calls)
+- `reduce(ostack, @opcall2)` reduces operators with priority > 9
+- This allows nested calls to chain properly: `result.should eql 3` → `result.should(eql(3))`
+- But also allows single arguments to be flattened: `x.y 42` → `x.y(42)` not `x.y([42])`
 
 **Testing**:
-- ❌ **REGRESSION**: selftest now has 3 failures (was 0 before fix)
-- ❌ **CRITICAL ISSUE**: Parser now wraps single arguments in arrays
-  - `x.y 42` → `[:callm, :x, :y, [42]]` (should be `[:callm, :x, :y, 42]`)
-  - Caused by removing `reduce()` call - arguments not being flattened correctly
+- ✅ selftest passes (0 failures)
+- ✅ selftest-c passes (0 failures)
+- ✅ Test case `test_parser_fix.rb` confirms correct parsing
 - ✅ exponent_spec runs to completion (SEGFAULT → FAIL)
-- ✅ Parse tree for multi-arg verified: `(callm result should ((call eql ((sexp 7)))))`
-
-**THIS FIX IS INCOMPLETE** - creates regression in argument handling!
+- ✅ pow_spec runs to completion (SEGFAULT → FAIL)
+- ✅ round_spec runs much further before hitting keyword arg issue
 
 **Impact**:
-- Fixes ALL 5 SEGFAULT specs that use `.should eql` pattern
-- This is THE blocker for rubyspecs - standard RSpec/MSpec syntax now works!
+- Fixes parser to correctly handle parenthesis-free method chains
+- Standard RSpec/MSpec syntax now works: `.should eql 3` parses correctly
+- Also maintains correct single-argument parsing: `x.y 42` works
 
 ---
 
