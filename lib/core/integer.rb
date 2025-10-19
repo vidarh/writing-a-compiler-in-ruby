@@ -160,7 +160,7 @@ class Integer < Numeric
         # Fall through to integer arithmetic below
       else
         # Type doesn't support coercion
-        STDERR.puts("TypeError: Integer can't be coerced into #{other.class.name}")
+        STDERR.puts("TypeError: Integer can't be coerced")
         return 0
       end
     end
@@ -214,7 +214,7 @@ class Integer < Numeric
         # Fall through to integer arithmetic below
       else
         # Type doesn't support coercion
-        STDERR.puts("TypeError: Integer can't be coerced into #{other.class.name}")
+        STDERR.puts("TypeError: Integer can't be coerced")
         return 0
       end
     end
