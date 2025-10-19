@@ -92,27 +92,35 @@ class Compiler
     # Find the enclosing ClassScope for klass_size
     class_scope = find_class_scope(scope)
 
-    # Create the eigenclass
-    # The eigenclass's superclass is obj.class
-    # The eigenclass's class is Class
-    # We need to create it and then assign it to obj[0]
+    # BUG FIX (per WORK_STATUS.md):
+    # The old code evaluated `expr` twice, causing corruption.
+    # Solution: Evaluate expr ONCE, save obj, create eigenclass, assign to obj[0].
 
-    # Step 1: Create the eigenclass (result will be in %eax)
-    superclass = mk_class(expr)  # obj[0]
-    eigenclass_creation = mk_new_class_object(class_scope.klass_size, superclass, class_scope.klass_size, :Class)
-    ret = compile_eval_arg(scope, eigenclass_creation)
-    @e.save_result(ret)
-
-    # Step 2: Store eigenclass to a temporary register so we don't lose it
-    @e.pushl(:eax)
-
-    # Step 3: Assign the eigenclass (from stack) to obj[0]
-    @e.popl(:ecx)  # eigenclass now in %ecx
-    obj_val = compile_eval_arg(scope, expr)  # load obj into %eax
+    # Step 1: Evaluate expr (the object) once and save it on stack
+    obj_val = compile_eval_arg(scope, expr)
     @e.save_result(obj_val)
+    @e.pushl(:eax)  # Save obj pointer on stack (TOS = obj)
+
+    # Step 2: Get obj's class (obj[0]) to use as eigenclass superclass
+    @e.movl("(%eax)", :edx)  # Load obj[0] (obj's current class) into %edx
+
+    # Step 3: Create the eigenclass
+    # Call __new_class_object(size, superclass, ssize, classob)
+    # Per WORK_STATUS.md: classob must be 0 (not Class constant)
+    @e.pushl("$0")  # classob = 0 (will default to Class in the constructor)
+    @e.pushl("$#{class_scope.klass_size}")  # ssize
+    @e.pushl(:edx)  # superclass = obj[0] (obj's current class)
+    @e.pushl("$#{class_scope.klass_size}")  # size
+    @e.call("__new_class_object")
+    @e.addl("$16", :esp)  # Clean up 4 arguments
+    # Result: eigenclass now in %eax
+
+    # Step 4: Assign the eigenclass to obj[0]
+    @e.movl(:eax, :ecx)  # Save eigenclass in %ecx
+    @e.popl(:eax)  # Pop obj pointer from stack into %eax
     @e.movl(:ecx, "(%eax)")  # obj[0] = eigenclass
 
-    # Step 4: Move eigenclass back to %eax for the let block
+    # Step 5: Move eigenclass back to %eax for the body evaluation
     @e.movl(:ecx, :eax)
 
     # Use a modified version of the `let` helper that supports eigenclass_scope marker
