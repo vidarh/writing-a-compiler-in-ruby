@@ -2,14 +2,168 @@
 
 This document archives bugs and issues that have been resolved. Items are kept here for historical reference and to document solutions for similar future problems.
 
-## Critical Bugs (Fixed)
+For detailed investigation notes, see git history of individual investigation files (now removed from docs/).
+
+---
+
+## Recent Fixes (2025-10)
+
+### Session 21: Parenthesis-Free Method Chain Parser Bug (2025-10-19)
+**Problem**: `result.should eql 3` parsed as `result.should(eql, 3)` instead of `result.should(eql(3))`
+
+**Root Cause**: `reduce(ostack)` in shunting.rb called without priority limit, reducing ALL operators
+
+**Fix**: Changed to `reduce(ostack, @opcall2)` - only reduces operators with priority > 9
+
+**Location**: `shunting.rb:162-167`
+
+**Impact**: Standard RSpec/MSpec syntax now works correctly in all rubyspecs
+
+**Commit**: b6ab819
+
+### Session 20: Unary Operator Precedence Bug (2025-10-19)
+**Problem**: Unary `+` and `-` operators had lower precedence than method calls, causing `+249.round()` to parse as `(249.round())+` instead of `(+249).round()`
+
+**Fix**: Changed unary +/- precedence from 20 to 99 in `operators.rb`
+
+**Location**: `operators.rb:120,124`
+
+**Impact**: Fixed 5 SEGFAULTs (plus_spec, element_reference_spec, fdiv_spec, to_r_spec, try_convert_spec)
+
+**Investigation**: See git history for WORK_STATUS.md session 20 details
+
+### Session 19: Heredoc Parser Bug (2025-10-19)
+**Problem**: Parser consumed newline after heredoc terminator, causing next statement to chain as method call
+
+**Fix**: Removed trailing newline consumption in `tokens.rb:505`
+
+**Location**: `tokens.rb:505-507`
+
+**Impact**: Fixed parsing of specs using heredocs
+
+### Session 17: Stabby Lambda Precedence Bug (2025-10-17)
+**Problem**: Stabby lambda `-> { }` with lower precedence than method calls caused method chains to apply to lambda result instead of lambda object
+
+**Fix**: Raised stabby lambda precedence from 2 to 10
+
+**Location**: `operators.rb:106`
+
+**Investigation**: See git log for STABBY_LAMBDA_PARSER_BUG.md (removed)
+
+**Commit**: a2c2301
+
+### Session 12-14: Eigenclass Implementation (2025-10-18)
+**Problem**: Eigenclass methods (`class << self; def foo; end; end`) didn't work
+
+**Fix**: Multiple changes to compiler.rb, compile_class.rb, scope classes for proper eigenclass support
+
+**Testing**: selftest-c passes
+
+**Investigation**: See git history for session 13-14 in WORK_STATUS.md
+
+### Sessions 1-12: Bignum/Heap Integer Support (2025-10-17)
+**Problem**: Multi-limb heap integers not properly supported, causing arithmetic failures and segfaults
+
+**Fixes**:
+- Implemented multi-limb comparison operators
+- Fixed `<=>`, subtraction, division, modulo
+- Added type safety to arithmetic operators
+- Fixed heap integer negation bug
+
+**Impact**: SEGFAULTs reduced from 34 to 12
+
+**Investigation**: See git history for bignums.md and early WORK_STATUS.md sessions
+
+---
+
+## Parser Issues (Fixed)
+
+### Negative Number Parser Bug (2025-10-10)
+**Problem**: Negative numbers in certain contexts not parsed correctly
+
+**Fix**: Parser improvements in transformation phase
+
+**Investigation**: See git log for parser_negative_number_bug.md (removed)
+
+### Block Parameter Bug
+**Investigation**: See git log for BLOCK_PARAMETER_BUG.md (removed)
+
+### Break Statement Issues
+**Investigation**: See git log for BREAK_ISSUE.md (removed)
+
+---
+
+## Bitwise Operator Issues (Fixed)
+
+### Bitwise Operator Coercion (2025-10-09)
+**Problem**: Bitwise operators crashed when called with non-Integer arguments
+
+**Fix**: Added type checking and coercion protocol to bitwise operators
+
+**Investigation**: See git log for:
+- BIT_AND_SPEC_INVESTIGATION.md (removed)
+- bitwise_operator_coercion_bug.md (removed)
+- BITWISE_OPERATOR_COERCION.md (removed)
+
+### Right Shift Segfault Regression (2025-10-16)
+**Problem**: Right shift operator caused segfaults after certain changes
+
+**Investigation**: See git log for RIGHT_SHIFT_SEGFAULT_REGRESSION.md (removed)
+
+---
+
+## Hash and Memory Issues (Fixed)
+
+### Hash Corruption in selftest-c (2025-10-14)
+**Problem**: Hash corruption when running selftest-c
+
+**Investigation**: See git log for BUG_HASH_CORRUPTION_SELFTEST_C.md (removed)
+
+### Ternary Operator Bug (2025-10-19)
+**Problem**: Ternary operators return `false` instead of else-branch value in self-compiled code
+
+**Status**: Documented workaround (use if/else instead), bug remains unfixed
+
+**Location**: docs/TERNARY_OPERATOR_BUG.md (kept - unfixed known issue)
+
+---
+
+## RubySpec Investigation Results (Fixed Issues)
+
+### Fixnum to Integer Migration (2025-10-14)
+**Investigation**: See git log for:
+- FIXNUM_TO_INTEGER_MIGRATION.md (removed)
+- FIXNUM_CLASS_METHOD_INVESTIGATION.md (removed)
+- FIXNUM_METHOD_MIGRATION_PLAN.md (removed)
+
+### Spec Analysis and Sessions (2025-10-08 to 2025-10-14)
+**Investigation**: See git log for:
+- SPEC_ANALYSIS.md (removed)
+- SPEC_FINDINGS.md (removed)
+- SPEC_SESSION_*.md files (removed)
+- session_summary_*.md files (removed)
+- segfault_analysis_*.md files (removed)
+- SEGFAULT_ANALYSIS.md (removed)
+- SEGFAULT_INVESTIGATION_*.md files (removed)
+- rubyspec_failure_analysis_*.md files (removed)
+- INVESTIGATION_SUMMARY_*.md files (removed)
+- README_RUBYSPEC_INVESTIGATION.md (removed)
+
+### Regression Analysis (2025-10-16)
+**Investigation**: See git log for REGRESSION_ANALYSIS.md (removed)
+
+---
+
+## Critical Bugs (Fixed - Pre-2025-10)
 
 ### `make hello` Crash Regression
 **Fixed with workaround** - likely related to variable lifting bug below.
 
 The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f9fa582fef. This was a critical regression that worked previously but started failing. The issue was resolved with a workaround during the variable lifting bug fix.
 
-## Variable and Scope Issues (Fixed)
+---
+
+## Variable and Scope Issues (Fixed - Pre-2025-10)
 
 ### Variable Lifting Bug
 **Location**: `shunting.rb:129`, `compile_calls.rb:18`
@@ -19,12 +173,16 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 
 **Testing**: All 4 tests in `spec/variable_lifting.rb` pass. All 83 RSpec tests pass. selftest and selftest-c both pass.
 
-**Investigation notes**: See `docs/VARIABLE_LIFTING_DEBUG.md`. Root cause was unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
+**Investigation**: See git log for VARIABLE_LIFTING_DEBUG.md (removed)
+
+**Root cause**: Unwrapped AST nodes being iterated as arrays. Fixed by conditional wrapping: `receiver = n[1].is_a?(Array) ? [n[1]] : n[1]`
 
 ### Nested Block Variable Capture Bug
 **Problem**: Outer block parameters not correctly captured in nested blocks
 
-**Fix**: See `docs/NESTED_BLOCK_FIX_INVESTIGATION.md` and `docs/NESTED_BLOCK_CAPTURE_DEBUG.md` for complete details.
+**Investigation**: See git log for:
+- NESTED_BLOCK_FIX_INVESTIGATION.md (removed)
+- NESTED_BLOCK_CAPTURE_DEBUG.md (removed)
 
 **Key commits**:
 - 654fc39: Initial fix with current_params tracking
@@ -39,7 +197,9 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 
 **Testing**: Test in `spec/ivar.rb` confirms this works correctly.
 
-## Parser Issues (Fixed)
+---
+
+## Parser Issues (Fixed - Pre-2025-10)
 
 ### String Parsing and Character Literals
 **Location**: `test/selftest.rb:90`
@@ -57,7 +217,9 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 
 **Testing**: Test in `spec/negative_numbers_simple.rb` confirms fix.
 
-## Runtime Issues (Fixed)
+---
+
+## Runtime Issues (Fixed - Pre-2025-10)
 
 ### Global Variables
 **Location**: `test/selftest.rb:23`
@@ -67,7 +229,9 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 
 **Testing**: Test in `spec/global_vars.rb` confirms fix.
 
-## Code Generation Bugs (Fixed)
+---
+
+## Code Generation Bugs (Fixed - Pre-2025-10)
 
 ### Yield Inside Block Segfault
 **Location**: `compile_calls.rb:23`
@@ -89,7 +253,9 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 
 **Testing**: Test in `spec/lambda_chained_call.rb` confirms fix.
 
-## Standard Library Features (Fixed)
+---
+
+## Standard Library Features (Fixed - Pre-2025-10)
 
 ### Array#map and Array#select
 **Location**: `lib/core/array.rb`
@@ -101,7 +267,9 @@ The `make hello` target crashed in commits after 9e28ed53b95b3c8b6fd938705fef39f
 
 **Commit**: 3a16997
 
-## Compiler Workarounds Removed
+---
+
+## Compiler Workarounds Removed (Pre-2025-10)
 
 ### Symbol Comparison in emitter.rb
 **Location**: `emitter.rb:153` (save_result method)
