@@ -134,6 +134,45 @@ Changed unary +/- operator precedence in `operators.rb`:
 - ✅ Created test_unary_precedence.rb - all tests pass
 - ✅ Verified correct parsing of `-2.pow(5,12)` and similar expressions
 
+#### Session 20 Continuation: Investigating Remaining Crashes
+
+**Additional Files Modified**:
+- `rubyspec_helper.rb:614-624` - Added `min_long` and `max_long` helper methods
+- `lib/core/integer.rb:2715-2729` - Updated `Integer#round` to accept *args
+
+**Fixes Applied**:
+
+1. **Added min_long/max_long helpers**
+   - round_spec was crashing with "Method missing Object#min_long"
+   - Added `min_long` returning -2^31 (-2147483648) for 32-bit signed long
+   - Added `max_long` returning 2^31-1 (2147483647)
+   - round_spec now passes min_long test, progresses further
+
+2. **Updated Integer#round signature**
+   - Changed from `round(ndigits=0)` to `round(*args)`
+   - Prevents FPE crashes when called with 2 arguments (keyword args without keyword support)
+   - For integers, round always returns self anyway
+
+**Issues Identified**:
+
+1. **Keyword Argument Parsing Bug (round_spec)**
+   - Parser treats `half: :up` as ternary operator `(ternalt half (sexp __S_up))`
+   - Should be parsed as hash literal `{half: :up}`
+   - `:` in keyword args confused with `:` in ternary operator `? :`
+   - This is a deep parser bug requiring significant work to fix
+   - round_spec still crashes on this issue
+
+2. **Immediate Crashes (exponent_spec, pow_spec)**
+   - Both specs compile successfully but crash immediately with no output
+   - Suspect: Class definition `class CoerceError < StandardError` at top of spec
+   - May be related to exception class inheritance or initialization
+   - Requires further investigation with GDB
+
+**Current Status**:
+- 5 SEGFAULTs remain (unchanged)
+- Made progress on round_spec but blocked by parser bug
+- exponent_spec and pow_spec require deeper debugging
+
 ---
 
 ### ✅ Session 13: Eigenclass Implementation (2025-10-18) - **COMPLETE**
