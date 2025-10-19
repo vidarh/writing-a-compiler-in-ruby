@@ -159,7 +159,10 @@ module OpPrec
           end
         else
           if possible_func
-            reduce(ostack)
+            # Fix for parser bug with parenthesis-free method chains like "result.should eql 3"
+            # Don't reduce before pushing @opcall2 - let nested calls bind tighter
+            # This makes "foo bar baz" parse as "foo(bar(baz))" not "foo(bar, baz)"
+            # reduce(ostack)  # REMOVED - was causing nested calls to reduce together
             ostack << @opcall2
           end
           @out.value(token)
