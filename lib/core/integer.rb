@@ -136,6 +136,11 @@ class Integer < Numeric
   def + other
     # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
+      # SAFETY: Check if other is nil to prevent crashes
+      if other == nil
+        STDERR.puts("TypeError: nil can't be coerced into Integer")
+        return 0
+      end
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
@@ -190,6 +195,11 @@ class Integer < Numeric
   def - other
     # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
+      # SAFETY: Check if other is nil to prevent crashes
+      if other == nil
+        STDERR.puts("TypeError: nil can't be coerced into Integer")
+        return 0
+      end
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
