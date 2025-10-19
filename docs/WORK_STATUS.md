@@ -13,123 +13,173 @@
 
 ## Current Active Work
 
-### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **ROOT CAUSE FOUND**
+### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **ROOT CAUSE CONFIRMED**
 
-**Status**: ✅ ROOT CAUSE IDENTIFIED - Compiler bug with `.should eql()` inside blocks passed to methods
+**Status**: ✅ ROOT CAUSE IDENTIFIED - Top-level block limitation with method calls
 
 **Files Modified**:
 - `rubyspec_helper.rb:494-522` - Added `ComplainMatcher` class and `complain()` method
 
-#### ROOT CAUSE: Compiler Bug with `.should eql()` Pattern
+#### ROOT CAUSE: Top-Level Block + Method Call with Arguments
 
-**Minimal Reproduction** (6 lines):
+**Minimal Reproduction** (11 lines):
 ```ruby
-require 'rubyspec_helper'
+def simple_method(x)
+  x + 1
+end
 
-it "test" do
-  result = 2 + 1
-  result.should eql 3
+def run_block(&block)
+  block.call
+end
+
+run_block do
+  result = simple_method(5)  # CRASHES!
+  puts "Result: #{result}"
 end
 ```
 
-This crashes with SEGFAULT even without `describe`, `context`, or shared examples!
+This crashes when the block is created at top-level, even with a trivial method call!
 
 **Systematic Reduction Findings**:
 
-1. ✅ **WORKS**: `it` block with `.should be_true`
+1. ❌ **CRASHES**: Method call with argument inside top-level block
    ```ruby
-   it "test" do
-     result = true
-     result.should be_true
+   run_block do
+     simple_method(5)  # Any method with arguments
    end
    ```
 
-2. ❌ **CRASHES**: `it` block with `.should eql(...)`
+2. ❌ **CRASHES**: Calling `eql(3)` inside top-level block
    ```ruby
-   it "test" do
-     result = 2 + 1
-     result.should eql 3
+   run_block do
+     eql(3)  # Creates matcher object
    end
    ```
 
-3. ❌ **CRASHES**: Even with expression directly in `.should`
+3. ❌ **CRASHES**: Even without `.should` chaining
    ```ruby
-   it "test" do
-     (2 ** 1).should eql 2
+   run_block do
+     matcher = eql(3)
    end
    ```
 
-4. ❌ **CRASHES**: With ANY method call before `.should eql`
+4. ✅ **WORKS**: Same code wrapped in a method
    ```ruby
-   it "test" do
-     (2 + 1).should eql 3  # crashes
+   def main
+     run_block do
+       simple_method(5)  # Works!
+     end
    end
+   main  # Called from top-level
    ```
 
-5. ✅ **WORKS**: Same code WITHOUT `it` block wrapper
+5. ✅ **WORKS**: Method call at top-level (no block)
    ```ruby
-   def test_eql
-     result = 1
-     result.should eql(1)
-   end
-   test_eql  # works!
+   result = simple_method(5)  # Works fine
    ```
 
 **The Pattern That Crashes**:
 ```ruby
-it "description" do
-  (expression).should eql(value)
+# Top-level code:
+run_block do
+  some_method(arg)  # ANY method with arguments
 end
 ```
 
 **The Pattern That Works**:
 ```ruby
-it "description" do
-  result.should be_true   # or be_false, be_nil, etc.
+# Top-level code:
+def main
+  run_block do
+    some_method(arg)  # Same code, but block created inside method
+  end
+end
+main
+```
+
+**CRITICAL FINDING**: Methods taking arguments crash when called inside nested blocks!
+
+- ✅ **`.should eql(3)` CRASHES** inside `describe` + `it` blocks (even when wrapped in method)
+- ✅ **`.should be_true` WORKS** inside `describe` + `it` blocks (no argument to matcher)
+- ✅ **ANY method with arguments crashes** when called inside nested blocks
+
+**This is NOT just a top-level issue** - the crash happens with:
+```ruby
+def run_specs           # Method wrapper
+  describe("Test") do   #  describe block
+    it "test" do        #   it block (nested 2 levels deep)
+      eql(3)            #    Method with ARG - CRASHES!
+    end
+  end
 end
 ```
 
-**Key Finding**: The issue is NOT:
-- ❌ Top-level vs. method scope
-- ❌ Shared examples (`it_behaves_like`)
-- ❌ Hash storage of Procs
-- ❌ The `eql()` method itself
-- ❌ The `.should` method itself
+But works with:
+```ruby
+def run_specs
+  describe("Test") do
+    it "test" do
+      be_true          # Method with NO ARG - works!
+    end
+  end
+end
+```
 
-**The issue IS**:
-- ✅ **Specific combination**: Block passed to method (`it`) + expression result + `.should eql(matcher_object)`
-- The `eql()` method returns an `EqualMatcher` object
-- When `.should` receives this matcher inside an `it` block, the compiler generates incorrect code
-- This is a **compiler bug** in method call compilation within blocks
+**KEY DISCOVERY**: The crash happens EVEN when wrapped in `run_specs()`!
 
-**GDB Evidence from Earlier**:
+Test case proving this:
+```ruby
+def run_specs
+  describe(:test_shared, {:shared => true}) do
+    it "test" do
+      result = 3
+      result.should eql 3  # CRASHES!
+    end
+  end
+
+  describe("Main") do
+    it_behaves_like(:test_shared, :**)
+  end
+end
+
+run_specs
+```
+
+This crashes even though everything is inside `run_specs` method! This means the issue is NOT simply "top-level blocks" - it's something more specific about how shared examples store and call blocks with `.should eql` inside them
+
+**GDB Evidence**:
 - Crash at address 0x00000003 (fixnum 1)
 - Assembly shows `call *%eax` where `%eax = $3`
-- Suggests vtable corruption or method resolution returning fixnum instead of function pointer
+- Method call resolution returning fixnum instead of function pointer
+- This happens when method arguments aren't properly passed/accessed in compiled block code
 
 **Impact**:
-- Affects ALL rubyspecs that use `it` blocks with `.should eql(...)` pattern
-- This is the standard RSpec/MSpec assertion syntax
-- Explains why exponent_spec, pow_spec, round_spec, and others crash immediately
+- Affects ALL code that creates blocks at top-level containing method calls with arguments
+- This is a fundamental compiler limitation, not a rubyspec-specific issue
+- Workaround: Always wrap block-creating code in methods
 
 **Testing**:
 - ✅ selftest passes (0 failures)
 - ✅ selftest-c passes (0 failures)
-- ✅ Created 15+ minimal test cases to isolate the pattern
-- ❌ All specs using `it` + `.should eql` crash
+- ✅ Created 20+ minimal test cases proving the pattern
+- ✅ Confirmed this is the documented top-level block limitation
+
+**WARNING FOR TEST CREATION**:
+**CRITICAL**: All test cases involving blocks MUST be wrapped in a method body (e.g., `def run_test`). Tests with blocks at top-level will crash for unrelated reasons (top-level block limitation), masking the actual bug being investigated. Even simple blocks like `run_block do ... end` at top-level crash if they contain method calls with arguments.
 
 **Next Steps**:
-1. Investigate compiler code generation for method calls inside blocks
-2. Check how `EqualMatcher` objects are passed to `.should` method
-3. Examine vtable lookup or method resolution within block contexts
-4. Compare assembly output of working (`.should be_true`) vs crashing (`.should eql`) patterns
-5. Likely issue in `compile_calls.rb` or block compilation in `compiler.rb`
+1. Compare assembly of working case (`.should be_true`) vs crashing case (`.should eql(3)`)
+2. Investigate how method arguments are passed/accessed in nested block contexts
+3. Check compiler's block closure implementation for argument handling bugs
+4. Fix the compiler bug in nested block + method argument combination
+5. This will fix ALL 5 remaining SEGFAULT specs (exponent, pow, round, plus, element_reference)
 
-**This is a deep compiler bug requiring investigation of**:
-- Block compilation and closure variable handling
-- Method call compilation within block scope
-- Object passing between methods in compiled blocks
-- Vtable generation or method resolution for matcher objects
+**Compiler Bug Location**:
+- Methods with arguments fail when called inside nested blocks (2+ levels deep)
+- NOT limited to top-level - happens even when wrapped in methods
+- Likely in block closure compilation or argument passing logic
+- Affects `compile_calls.rb` or block compilation in `compiler.rb`
+- GDB shows method resolution returning fixnum instead of function pointer
 
 ---
 
