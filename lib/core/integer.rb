@@ -2712,12 +2712,19 @@ class Integer < Numeric
     self
   end
 
-  def round(ndigits=0)
-    # For integers, rounding returns self (already a whole number)
-    # ndigits parameter allows rounding to different decimal places
-    # but for integers, just return self
-    # Note: Ruby's round also accepts a 'half' keyword arg, but we don't
-    # support keyword arguments yet. For integers, it doesn't matter anyway.
+  def round(*args)
+    # WORKAROUND: No keyword argument support - accept variable args
+    # round() -> self
+    # round(ndigits) -> self (for integers, always whole number)
+    # round(ndigits, half: mode) -> self (hash passed as 2nd arg without keyword support)
+
+    if args.length > 2
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0..2)")
+      return nil
+    end
+
+    # For integers, rounding always returns self since they're already whole numbers
+    # The ndigits and half parameters don't change the result for integers
     self
   end
 

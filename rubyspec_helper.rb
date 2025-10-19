@@ -98,6 +98,16 @@ class Mock
     self
   end
 
+  # FIXME: Stub - should validate at least this many calls
+  def at_least(count)
+    self
+  end
+
+  # FIXME: Stub - should validate at most this many calls
+  def at_most(count)
+    self
+  end
+
   # FIXME: Stub - used with exactly to specify times
   def times
     self
@@ -599,6 +609,18 @@ end
 def c_long_size
   # Size of C long in bytes (32-bit = 4 bytes)
   4
+end
+
+def min_long
+  # Minimum value for a C long (32-bit signed)
+  # -2^31 = -2147483648
+  -2147483648
+end
+
+def max_long
+  # Maximum value for a C long (32-bit signed)
+  # 2^31 - 1 = 2147483647
+  2147483647
 end
 
 # Helper to create mock object that responds to to_int
