@@ -186,8 +186,20 @@ This crashes even though everything is inside `run_specs` method! This means the
 - GDB shows method resolution returning fixnum (0x3) instead of function pointer
 
 **Parse Tree Evidence**:
-Working case: `(callm result should be_true)` - no args
-Crashing case: `(callm result should eql ((sexp 7)))` - has arg
+Working case:  `(callm result should be_true)` - `be_true` is identifier, no call
+Crashing case: `(callm result should ((call eql ((sexp 7)))))` - `eql(3)` is actual call
+
+At top-level (no blocks):
+- `result.should be_true` → `(callm result should be_true)` - works fine
+- `result.should eql(3)` → `(callm result should ((call eql ((sexp 7)))))` - works fine
+
+Inside nested blocks (describe + it):
+- `result.should be_true` → same parse tree - ✅ WORKS
+- `result.should eql(3)` → same parse tree - ❌ CRASHES
+
+The bug: `(call eql ((sexp 7)))` compiles correctly at top-level but generates
+invalid code when inside nested blocks. The `call` expression with arguments
+fails in nested lambda context.
 
 Both have identical nested structure with `__lambda_L3` and `__lambda_L4`,
 proper `__env__` allocation, `stackframe` assignment, etc. Parser is working correctly.
