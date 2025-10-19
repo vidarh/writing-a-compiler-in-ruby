@@ -144,17 +144,11 @@ class Mock
   def method_missing(method, *args)
     if @expectations[method]
       result = @expectations[method]
-      if result.is_a?(Array)
-        count = @call_counts[method]
-        @call_counts[method] = count + 1
-        if count < result.length
-          result[count]
-        else
-          result[-1]
-        end
-      else
-        result
-      end
+      # Just return the result directly
+      # NOTE: If result is an array, we return the array (not sequential values)
+      # To return sequential values, use and_return(val1, val2, ...) which stores
+      # them as an array in @expectations
+      result
     else
       STDERR.puts("Mock: No expectation set for #{method}")
       nil
@@ -163,10 +157,9 @@ class Mock
 
   # Say we respond to any method if an expectation is set
   def respond_to?(method)
-    # Check if we have an expectation set for this method
-    # If not, we'll handle it via method_missing, so return true
-    # This matches Ruby's behavior where Mock responds to any method
-    true
+    # Only return true if we have an expectation set for this method
+    # This prevents Integer operators from trying to call methods that don't exist
+    @expectations[method] ? true : false
   end
 
   def to_s

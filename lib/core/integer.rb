@@ -142,15 +142,25 @@ class Integer < Numeric
       elsif other.is_a?(Rational)
         # WORKAROUND: Rational arithmetic not implemented, return stub Rational
         return Rational.new(self, 1)
+      elsif other.respond_to?(:coerce)
+        # Ruby coerce protocol: other.coerce(self) returns [a, b] where a + b is the result
+        coerced = other.coerce(self)
+        if coerced && coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] + coerced[1]
+        end
+        STDERR.puts("TypeError: coerce must return [x, y]")
+        return 0
       elsif other.respond_to?(:to_int)
+        # Try to_int conversion
         other = other.to_int
-        # Check if to_int returned nil (failed conversion)
         if other.nil?
           STDERR.puts("TypeError: can't convert to Integer")
           return 0
         end
+        # Fall through to integer arithmetic below
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
+        # Type doesn't support coercion
+        STDERR.puts("TypeError: Integer can't be coerced into #{other.class.name}")
         return 0
       end
     end
@@ -186,15 +196,25 @@ class Integer < Numeric
       elsif other.is_a?(Rational)
         # WORKAROUND: Rational arithmetic not implemented, return stub Rational
         return Rational.new(self, 1)
+      elsif other.respond_to?(:coerce)
+        # Ruby coerce protocol: other.coerce(self) returns [a, b] where a - b is the result
+        coerced = other.coerce(self)
+        if coerced && coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] - coerced[1]
+        end
+        STDERR.puts("TypeError: coerce must return [x, y]")
+        return 0
       elsif other.respond_to?(:to_int)
+        # Try to_int conversion
         other = other.to_int
-        # Check if to_int returned nil (failed conversion)
         if other.nil?
           STDERR.puts("TypeError: can't convert to Integer")
           return 0
         end
+        # Fall through to integer arithmetic below
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
+        # Type doesn't support coercion
+        STDERR.puts("TypeError: Integer can't be coerced into #{other.class.name}")
         return 0
       end
     end

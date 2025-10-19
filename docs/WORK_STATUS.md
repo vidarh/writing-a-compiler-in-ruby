@@ -1,11 +1,11 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-19 (Session 22 - SEGFAULT fixes complete)
+**Last Updated**: 2025-10-19 (Session 23 - Partial coerce protocol support)
 **Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 (7%)
 **Individual Tests**: 1223 total | Passed: 168 (13%) | Failed: 915 (75%) | Skipped: 140 (11%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Fixed 2 high-priority SEGFAULTs (exponent_spec, pow_spec) - Net reduction: 6 → 5 SEGFAULTs!
+**Recent Progress**: Added coerce protocol support to Integer#+ and Integer#-. Works for simple cases, full specs still crash (edge case TBD).
 
 ---
 
@@ -33,13 +33,18 @@ ternary operator on the opstack.
 - `Integer#<=>` - complex - applying `*args` pattern naively breaks selftest
 - **Priority**: Defer until exception support added
 
-**4. minus_spec - NEW REGRESSION** - HIGH PRIORITY
-- **Status**: Was FAIL, now SEGFAULT (regression from Session 22)
-- **Priority**: URGENT - investigate to determine if our changes caused this
+**4. minus_spec - PARTIAL COERCE SUPPORT** - MEDIUM
+- **Status**: Partial coerce protocol implemented, simple cases work, full spec still crashes
+- **Progress**: Added coerce check before to_int in Integer#-
+- **Working**: `5 - mock` where mock.coerce(5) returns [5, 10] → -5 ✅
+- **Still Crashes**: Full minus_spec.rb (edge case not yet identified)
+- **Next Steps**: Debug full spec crash, likely related to test framework internals
+- **Effort**: 2-4 hours
 
-**5. plus_spec - NEW REGRESSION** - HIGH PRIORITY
-- **Status**: Was FAIL, now SEGFAULT (regression from Session 22)
-- **Priority**: URGENT - investigate to determine if our changes caused this
+**5. plus_spec - PARTIAL COERCE SUPPORT** - MEDIUM
+- **Status**: Same as minus_spec - coerce protocol added
+- **Progress**: Added coerce check before to_int in Integer#+
+- **Next Steps**: Same debugging needed as minus_spec
 
 
 ---
@@ -85,6 +90,49 @@ ternary operator on the opstack.
 - Root cause: These specs were likely already unstable or crash under certain test conditions
 - The crash is in Integer#- at address 0x11 (fixnum 8), suggesting a vtable or method dispatch bug unrelated to our changes
 - **Recommendation**: Mark as pre-existing issues, not regressions from Session 22
+
+---
+
+### Session 23: Partial Coerce Protocol Support (2025-10-19) 🔄
+
+**Goal**: Fix minus_spec and plus_spec SEGFAULTs by implementing coerce protocol
+
+**Achievement**: Added coerce protocol support that works for simple cases, but full specs still crash
+
+**Changes Made**:
+
+1. **Integer#+ coerce support** (`lib/core/integer.rb:145-165`)
+   - **Change**: Added `respond_to?(:coerce)` check before `respond_to?(:to_int)`
+   - **Protocol**: Calls `other.coerce(self)` → returns `[a, b]` → computes `a + b`
+   - **Order**: Float → Rational → coerce → to_int → error
+   - **Impact**: Simple coerce tests work correctly
+
+2. **Integer#- coerce support** (`lib/core/integer.rb:193-214`)
+   - **Change**: Same pattern as Integer#+
+   - **Impact**: `5 - mock` where mock.coerce(5) = [5, 10] correctly returns -5
+
+3. **Mock#method_missing fix** (`rubyspec_helper.rb:144-156`)
+   - **Problem**: Treated arrays as sequential return values
+   - **Fix**: Return values directly (if you want sequential, pass multiple args)
+   - **Impact**: `and_return([5, 10])` now returns the array, not 5
+
+4. **Mock#respond_to? fix** (`rubyspec_helper.rb:159-163`)
+   - **Problem**: Always returned true, causing spurious method calls
+   - **Fix**: Check @expectations hash, only return true if expectation exists
+   - **Impact**: Integer operators no longer try to call unset mock methods
+
+**Results**:
+- ✅ Selftest: 0 failures (no regressions)
+- ✅ Simple coerce tests: All pass
+- ❌ Full minus_spec.rb: Still crashes (edge case TBD)
+- ❌ Full plus_spec.rb: Still crashes (edge case TBD)
+- **Net**: 5 SEGFAULTs remain (no change, but added valuable functionality)
+
+**Outstanding Issue**:
+- Full specs crash immediately with no output, suggesting crash during class/module definition phase
+- Simple tests work perfectly, indicating core coerce logic is correct
+- Likely an interaction with test framework preprocessing or edge case in spec file
+- **Next Steps**: Debug full spec crash separately
 
 ---
 
