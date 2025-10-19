@@ -174,12 +174,23 @@ This crashes even though everything is inside `run_specs` method! This means the
 4. Fix the compiler bug in nested block + method argument combination
 5. This will fix ALL 5 remaining SEGFAULT specs (exponent, pow, round, plus, element_reference)
 
-**Compiler Bug Location**:
+**Compiler Bug Location** (CONFIRMED via parse tree analysis):
+- ✅ **Parser is CORRECT** - parse trees for working and crashing cases are structurally identical
+- ✅ **Bug is in COMPILER** - happens during code generation from correct parse tree
 - Methods with arguments fail when called inside nested blocks (2+ levels deep)
+- Parse tree shows: `(callm result should eql ((sexp 7)))` - correctly parsed
+- Compilation of this generates invalid assembly where argument access returns fixnum
 - NOT limited to top-level - happens even when wrapped in methods
-- Likely in block closure compilation or argument passing logic
-- Affects `compile_calls.rb` or block compilation in `compiler.rb`
-- GDB shows method resolution returning fixnum instead of function pointer
+- Bug in how compiler handles arguments in nested lambda/closure contexts
+- Affects `compile_calls.rb` (method call compilation) or `compiler.rb` (block/closure compilation)
+- GDB shows method resolution returning fixnum (0x3) instead of function pointer
+
+**Parse Tree Evidence**:
+Working case: `(callm result should be_true)` - no args
+Crashing case: `(callm result should eql ((sexp 7)))` - has arg
+
+Both have identical nested structure with `__lambda_L3` and `__lambda_L4`,
+proper `__env__` allocation, `stackframe` assignment, etc. Parser is working correctly.
 
 ---
 
