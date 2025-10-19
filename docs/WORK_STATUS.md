@@ -13,196 +13,83 @@
 
 ## Current Active Work
 
-### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **ROOT CAUSE CONFIRMED**
+### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **PARSER BUG FOUND**
 
-**Status**: ✅ ROOT CAUSE IDENTIFIED - Top-level block limitation with method calls
+**Status**: ✅ ROOT CAUSE IDENTIFIED - Parser bug with parenthesis-free method chains
 
 **Files Modified**:
 - `rubyspec_helper.rb:494-522` - Added `ComplainMatcher` class and `complain()` method
 
-#### ROOT CAUSE: Top-Level Block + Method Call with Arguments
+#### ROOT CAUSE: Parser Bug - Method Chains Without Parentheses
 
-**Minimal Reproduction** (11 lines):
+**Minimal Reproduction**:
 ```ruby
-def simple_method(x)
-  x + 1
-end
-
-def run_block(&block)
-  block.call
-end
-
-run_block do
-  result = simple_method(5)  # CRASHES!
-  puts "Result: #{result}"
-end
+result = 3
+result.should eql 3  # CRASHES - parsed as result.should(eql, 3)
 ```
 
-This crashes when the block is created at top-level, even with a trivial method call!
+vs.
 
-**Systematic Reduction Findings**:
-
-1. ❌ **CRASHES**: Method call with argument inside top-level block
-   ```ruby
-   run_block do
-     simple_method(5)  # Any method with arguments
-   end
-   ```
-
-2. ❌ **CRASHES**: Calling `eql(3)` inside top-level block
-   ```ruby
-   run_block do
-     eql(3)  # Creates matcher object
-   end
-   ```
-
-3. ❌ **CRASHES**: Even without `.should` chaining
-   ```ruby
-   run_block do
-     matcher = eql(3)
-   end
-   ```
-
-4. ✅ **WORKS**: Same code wrapped in a method
-   ```ruby
-   def main
-     run_block do
-       simple_method(5)  # Works!
-     end
-   end
-   main  # Called from top-level
-   ```
-
-5. ✅ **WORKS**: Method call at top-level (no block)
-   ```ruby
-   result = simple_method(5)  # Works fine
-   ```
-
-**The Pattern That Crashes**:
 ```ruby
-# Top-level code:
-run_block do
-  some_method(arg)  # ANY method with arguments
-end
+result = 3
+result.should(eql(3))  # WORKS - explicit parentheses force correct parse
 ```
 
-**The Pattern That Works**:
-```ruby
-# Top-level code:
-def main
-  run_block do
-    some_method(arg)  # Same code, but block created inside method
-  end
-end
-main
+**The Bug**:
+
+The parser incorrectly handles Ruby's parenthesis-free method call syntax when methods are chained.
+
+**Incorrect Parse** (what the parser does):
+```
+result.should eql 3
+→ (callm result should eql ((sexp 7)))
+→ result.should(eql, 3)  ← TWO arguments: `eql` and `3`
 ```
 
-**CRITICAL FINDING**: Methods taking arguments crash when called inside nested blocks!
-
-- ✅ **`.should eql(3)` CRASHES** inside `describe` + `it` blocks (even when wrapped in method)
-- ✅ **`.should be_true` WORKS** inside `describe` + `it` blocks (no argument to matcher)
-- ✅ **ANY method with arguments crashes** when called inside nested blocks
-
-**This is NOT just a top-level issue** - the crash happens with:
-```ruby
-def run_specs           # Method wrapper
-  describe("Test") do   #  describe block
-    it "test" do        #   it block (nested 2 levels deep)
-      eql(3)            #    Method with ARG - CRASHES!
-    end
-  end
-end
+**Correct Parse** (what it should be):
+```
+result.should eql 3
+→ (callm result should ((call eql ((sexp 7)))))
+→ result.should(eql(3))  ← ONE argument: the result of `eql(3)`
 ```
 
-But works with:
+**Proof**:
+Adding explicit parentheses forces correct parsing and fixes the crash:
 ```ruby
-def run_specs
-  describe("Test") do
-    it "test" do
-      be_true          # Method with NO ARG - works!
-    end
-  end
-end
+result.should(eql(3))  # WORKS!
+→ (callm result should ((call eql ((sexp 7)))))
 ```
 
-**KEY DISCOVERY**: The crash happens EVEN when wrapped in `run_specs()`!
+**Why This Causes Crashes**:
+When the parser produces `result.should(eql, 3)`, the compiler tries to:
+1. Look up method `eql` (finds it as a method name, not calling it)
+2. Pass identifier `eql` as first argument to `should`
+3. Pass fixnum `3` as second argument to `should`
 
-Test case proving this:
-```ruby
-def run_specs
-  describe(:test_shared, {:shared => true}) do
-    it "test" do
-      result = 3
-      result.should eql 3  # CRASHES!
-    end
-  end
-
-  describe("Main") do
-    it_behaves_like(:test_shared, :**)
-  end
-end
-
-run_specs
-```
-
-This crashes even though everything is inside `run_specs` method! This means the issue is NOT simply "top-level blocks" - it's something more specific about how shared examples store and call blocks with `.should eql` inside them
-
-**GDB Evidence**:
-- Crash at address 0x00000003 (fixnum 1)
-- Assembly shows `call *%eax` where `%eax = $3`
-- Method call resolution returning fixnum instead of function pointer
-- This happens when method arguments aren't properly passed/accessed in compiled block code
+But `Object#should` expects a MATCHER OBJECT (result of calling `eql(3)`), not two separate arguments. The identifier `eql` gets treated as a fixnum value (0x3 in assembly), and when the compiled code tries to call methods on it, it crashes.
 
 **Impact**:
-- Affects ALL code that creates blocks at top-level containing method calls with arguments
-- This is a fundamental compiler limitation, not a rubyspec-specific issue
-- Workaround: Always wrap block-creating code in methods
+- Affects ALL rubyspecs using `.should eql(...)` pattern (5+ specs crash)
+- This is standard RSpec/MSpec syntax that relies on parenthesis-free calls
+- Workaround: Use explicit parentheses → `.should(eql(3))`
 
 **Testing**:
 - ✅ selftest passes (0 failures)
 - ✅ selftest-c passes (0 failures)
-- ✅ Created 20+ minimal test cases proving the pattern
-- ✅ Confirmed this is the documented top-level block limitation
-
-**WARNING FOR TEST CREATION**:
-**CRITICAL**: All test cases involving blocks MUST be wrapped in a method body (e.g., `def run_test`). Tests with blocks at top-level will crash for unrelated reasons (top-level block limitation), masking the actual bug being investigated. Even simple blocks like `run_block do ... end` at top-level crash if they contain method calls with arguments.
+- ✅ Confirmed with explicit parentheses → test passes
+- ✅ Confirmed parse tree difference with/without parentheses
 
 **Next Steps**:
-1. Compare assembly of working case (`.should be_true`) vs crashing case (`.should eql(3)`)
-2. Investigate how method arguments are passed/accessed in nested block contexts
-3. Check compiler's block closure implementation for argument handling bugs
-4. Fix the compiler bug in nested block + method argument combination
-5. This will fix ALL 5 remaining SEGFAULT specs (exponent, pow, round, plus, element_reference)
+1. Fix parser to correctly handle `method1 method2 arg` as `method1(method2(arg))`
+2. This is in `parser.rb` or `shunting.rb` - method call argument parsing
+3. Need to recognize that when a method name follows another in call chain, it should be parsed as nested call
+4. This will fix ALL 5 remaining SEGFAULT specs (exponent, pow, round, plus, element_reference)
 
-**Compiler Bug Location** (CONFIRMED via parse tree analysis):
-- ✅ **Parser is CORRECT** - parse trees for working and crashing cases are structurally identical
-- ✅ **Bug is in COMPILER** - happens during code generation from correct parse tree
-- Methods with arguments fail when called inside nested blocks (2+ levels deep)
-- Parse tree shows: `(callm result should eql ((sexp 7)))` - correctly parsed
-- Compilation of this generates invalid assembly where argument access returns fixnum
-- NOT limited to top-level - happens even when wrapped in methods
-- Bug in how compiler handles arguments in nested lambda/closure contexts
-- Affects `compile_calls.rb` (method call compilation) or `compiler.rb` (block/closure compilation)
-- GDB shows method resolution returning fixnum (0x3) instead of function pointer
-
-**Parse Tree Evidence**:
-Working case:  `(callm result should be_true)` - `be_true` is identifier, no call
-Crashing case: `(callm result should ((call eql ((sexp 7)))))` - `eql(3)` is actual call
-
-At top-level (no blocks):
-- `result.should be_true` → `(callm result should be_true)` - works fine
-- `result.should eql(3)` → `(callm result should ((call eql ((sexp 7)))))` - works fine
-
-Inside nested blocks (describe + it):
-- `result.should be_true` → same parse tree - ✅ WORKS
-- `result.should eql(3)` → same parse tree - ❌ CRASHES
-
-The bug: `(call eql ((sexp 7)))` compiles correctly at top-level but generates
-invalid code when inside nested blocks. The `call` expression with arguments
-fails in nested lambda context.
-
-Both have identical nested structure with `__lambda_L3` and `__lambda_L4`,
-proper `__env__` allocation, `stackframe` assignment, etc. Parser is working correctly.
+**Parser Bug Location**:
+- File: Likely `parser.rb` or `shunting.rb` (expression/call parsing)
+- Issue: When parsing `result.should eql 3`, parser treats `eql` and `3` as separate arguments
+- Should recognize `eql 3` as a single nested method call `eql(3)`
+- The parser needs to understand Ruby's precedence rules for parenthesis-free calls
 
 ---
 
