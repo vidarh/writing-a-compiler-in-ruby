@@ -117,11 +117,11 @@ Operators = {
 
   "+"         => {
     :infix_or_postfix  => Oper.new( 10, :+,      :infix, 2, 2, :left),
-    :prefix => Oper.new( 20, :+,      :prefix)
+    :prefix => Oper.new( 99, :+,      :prefix)
   },
   "-"         => {
     :infix_or_postfix  => Oper.new( 10, :-,      :infix, 2, 2, :left),
-    :prefix => Oper.new( 20, :-,      :prefix)
+    :prefix => Oper.new( 99, :-,      :prefix)
   },
   "%"         => {
     :infix_or_postfix => Oper.new( 20, :"%",      :infix),
