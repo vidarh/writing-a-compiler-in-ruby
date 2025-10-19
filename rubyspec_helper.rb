@@ -479,7 +479,17 @@ class BeCloseMatcher < Matcher
   end
 
   def match?(actual)
+    # Handle nil values from operations that don't support certain types
+    if actual == nil
+      return false
+    end
+
     diff = actual - @expected
+    # Handle nil from subtraction (e.g., if @expected is unsupported type)
+    if diff == nil
+      return false
+    end
+
     if diff < 0
       diff = -diff
     end

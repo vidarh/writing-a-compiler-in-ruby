@@ -2278,6 +2278,12 @@ class Integer < Numeric
     %s(if (eq (callm self __get_raw) 0) true false)
   end
 
+  # Check if the integer is infinite (always returns nil for integers)
+  # Returns nil for finite values, 1 for +infinity, -1 for -infinity
+  def infinite?
+    nil
+  end
+
   def even?
     self % 2 == 0
   end
@@ -2597,8 +2603,22 @@ class Integer < Numeric
 
   # pow method - forwards to ** operator
   # Note: alias_method not supported by compiler, so we manually forward
-  def pow(other)
-    self ** other
+  # Using *args pattern to avoid FPE on wrong argument count (specs test this)
+  def pow(*args)
+    # WORKAROUND: No exceptions - validate args manually
+    if args.length < 1 || args.length > 2
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1..2)")
+      return nil
+    end
+
+    # Ruby's Integer#pow can take a second modulo parameter: pow(exp, mod)
+    # For now, just support the single-argument form
+    if args.length == 2
+      STDERR.puts("Integer#pow with modulo not yet implemented")
+      return nil
+    end
+
+    self ** args[0]
   end
 
   def [](*args)
