@@ -1,6 +1,6 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-19 (session 20 - unary operator precedence bug FIXED)
+**Last Updated**: 2025-10-19 (session 21 - investigation + complain matcher stub)
 **Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 (7%) ✅
 **Individual Tests**: 1136 total | Passed: 169 (15%) | Failed: 838 (74%) | Skipped: 129 (11%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
@@ -12,6 +12,50 @@
 ---
 
 ## Current Active Work
+
+### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **IN PROGRESS**
+
+**Status**: Investigation complete, added `complain()` matcher stub, issue root cause not yet found
+
+**Files Modified**:
+- `rubyspec_helper.rb:494-522` - Added `ComplainMatcher` class and `complain()` method
+
+#### Investigation Summary
+
+Extensive investigation into why exponent_spec and pow_spec crash immediately on execution:
+
+**What Works (Verified with Test Cases)**:
+1. ✅ Blocks/Procs/Lambdas work fine when created inside methods
+2. ✅ Hash storage of Procs works correctly
+3. ✅ The shared example pattern (`it_behaves_like`) works fine in isolation
+4. ✅ Lambda storage in Hash works: `h[:key] = -> { puts "Hi" }; h[:key].call` ✅
+5. ✅ Block storage in Hash works: `h[:key] = block; h[:key].call` ✅
+6. ✅ Exception class definition works: `class MyError < StandardError; end` ✅
+
+**What Doesn't Work**:
+1. ❌ Calling methods with blocks at top-level crashes: `store_block { }` (SEGFAULT)
+2. ❌ Creating Proc.new at top-level crashes (known limitation per DEBUGGING_GUIDE.md)
+3. ❌ exponent_spec and pow_spec still crash despite all components working in isolation
+
+**Findings**:
+- exponent_spec compiles successfully but crashes immediately with SIGSEGV
+- All code is properly wrapped in `run_specs()` method (not at top-level)
+- Added `complain()` matcher stub (for `.should complain(pattern)` syntax used in specs)
+- Root cause still unknown - something specific to these specs triggers crash
+- Minimal test cases demonstrate all individual components work correctly
+
+**Testing**:
+- ✅ selftest passes (0 failures)
+- ✅ selftest-c passes (0 failures)
+- ❌ exponent_spec still crashes (SEGFAULT)
+- ❌ pow_spec not tested (likely same issue)
+
+**Next Steps**:
+- Need deeper GDB investigation to trace exact crash location in exponent_spec
+- Consider binary search reduction of exponent_spec to isolate triggering code
+- May be related to specific combination of language features not seen in isolation
+
+---
 
 ### ✅ Session 20: Unary Operator Precedence Bug - FIXED (2025-10-19) - **COMPLETE**
 
