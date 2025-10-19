@@ -1,21 +1,21 @@
-# RubySpec Test Status - 2025-10-18
+# RubySpec Test Status - 2025-10-19
 
 ## Current Status
 
 ### Test Coverage (Individual Test Cases)
 ```
-Total test cases:    989
-Passing:             143  (14%)
-Failing:             743  (75%)
-Skipped:             103  (10%)
+Total test cases:   1043
+Passing:             149  (14%)
+Failing:             780  (75%)
+Skipped:             114  (11%)
 ```
 
 ### File-Level Summary
 ```
 Total spec files:    67
 PASS:                13  (19%)
-FAIL:                42  (63%)
-SEGFAULT:            12  (18%)  ✅ DOWN from 22 (33% on 2025-10-17)
+FAIL:                44  (66%)
+SEGFAULT:            10  (15%)  ✅ DOWN from 12 (18% on 2025-10-18)
 COMPILE FAIL:         0  ( 0%)  ✅ ALL FIXED (2025-10-15)
 ```
 
@@ -26,11 +26,11 @@ COMPILE FAIL:         0  ( 0%)  ✅ ALL FIXED (2025-10-15)
 - FAIL: 22 files
 - SEGFAULT: 34 files
 
-**Current (2025-10-18):**
-- PASS: 13 files, 143 test cases (14%)
-- FAIL: 42 files
-- SEGFAULT: 12 files ✅ (improved by 22 specs = 65% reduction)
-- Progress: Fixed eigenclass issues (session 13), minus_spec converted to FAIL
+**Current (2025-10-19):**
+- PASS: 13 files, 149 test cases (14%)
+- FAIL: 44 files
+- SEGFAULT: 10 files ✅ (improved by 24 specs = 71% reduction)
+- Progress: Fixed eigenclass issues (session 13-14), divide_spec/div_spec now run to completion (session 15)
 
 **Change Explanation:**
 The apparent regression (11 → 2 PASS files) is **NOT due to parser bugs breaking functionality**. Investigation reveals:

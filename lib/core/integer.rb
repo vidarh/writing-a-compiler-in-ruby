@@ -47,35 +47,8 @@ class Integer < Numeric
   end
 
   # Try to convert an object to an Integer
-  # Returns the integer if obj is already an Integer
-  # Returns the result of calling obj.to_int if obj responds to to_int
-  # Returns nil otherwise
-  def self.try_convert(obj)
-    # If it's already an Integer, return it
-    if obj.is_a?(Integer)
-      return obj
-    end
-
-    # If it responds to to_int, call it
-    if obj.respond_to?(:to_int)
-      result = obj.to_int
-      # If to_int returns nil, return nil
-      if result == nil
-        return nil
-      end
-      # If to_int returns an Integer, return it
-      if result.is_a?(Integer)
-        return result
-      end
-      # Otherwise, raise TypeError
-      # WORKAROUND: Exceptions not supported, print error and return nil
-      STDERR.puts("TypeError: can't convert to Integer")
-      return nil
-    end
-
-    # Doesn't respond to to_int, return nil
-    nil
-  end
+  # NOTE: try_convert is defined later (line ~2491) - this is just a placeholder comment
+  # to maintain line numbers during development. The actual implementation is below.
 
   # Initialize heap integer from overflow value
   # Takes a raw (untagged) 32-bit value and splits it into 30-bit limbs
@@ -1814,7 +1787,12 @@ class Integer < Numeric
 
   # Float division - returns a Float
   # WORKAROUND: Float arithmetic not implemented, return stub Float object
-  def fdiv(other)
+  def fdiv *args
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
     Float.new
   end
 
@@ -2442,7 +2420,12 @@ class Integer < Numeric
     self
   end
 
-  def to_r
+  def to_r *args
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 0
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0)")
+      return nil
+    end
     Rational.new(self,1)
   end
 
@@ -2472,7 +2455,13 @@ class Integer < Numeric
   end
 
   # FIXME: Stub - should try to convert to Integer
-  def self.try_convert(obj)
+  def self.try_convert(*args)
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+    obj = args[0]
     return obj if obj.is_a?(Integer)
     if obj.respond_to?(:to_int)
       obj.to_int
@@ -2562,11 +2551,18 @@ class Integer < Numeric
     4
   end
 
-  def ** other
+  def ** *args
     # Exponentiation: self raised to the power of other
     # Note: This is a basic implementation for integer exponents
     # Ruby's ** also handles floats and negative exponents, but this
     # implementation focuses on positive integer exponents.
+
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+    other = args[0]
 
     # Type check first to avoid crashes
     if !other.is_a?(Integer)

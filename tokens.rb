@@ -502,7 +502,8 @@ module Tokens
 
                 # Check if this line is the closing marker
                 if line.strip == marker
-                  @s.get if @s.peek == ?\n  # consume trailing newline
+                  # DON'T consume trailing newline - leave it for normal statement boundary handling
+                  # This ensures heredocs are treated identically to quoted strings
                   break
                 end
 

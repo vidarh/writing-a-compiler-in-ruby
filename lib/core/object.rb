@@ -211,7 +211,12 @@ class Object
   end
 
   # Stub for test framework - returns nil
-  def index(obj)
+  # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+  def index(*args)
+    if args.length != 1
+      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
     nil
   end
 end
