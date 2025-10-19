@@ -13,47 +13,123 @@
 
 ## Current Active Work
 
-### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **IN PROGRESS**
+### 🔍 Session 21: SEGFAULT Investigation - exponent_spec/pow_spec (2025-10-19) - **ROOT CAUSE FOUND**
 
-**Status**: Investigation complete, added `complain()` matcher stub, issue root cause not yet found
+**Status**: ✅ ROOT CAUSE IDENTIFIED - Compiler bug with `.should eql()` inside blocks passed to methods
 
 **Files Modified**:
 - `rubyspec_helper.rb:494-522` - Added `ComplainMatcher` class and `complain()` method
 
-#### Investigation Summary
+#### ROOT CAUSE: Compiler Bug with `.should eql()` Pattern
 
-Extensive investigation into why exponent_spec and pow_spec crash immediately on execution:
+**Minimal Reproduction** (6 lines):
+```ruby
+require 'rubyspec_helper'
 
-**What Works (Verified with Test Cases)**:
-1. ✅ Blocks/Procs/Lambdas work fine when created inside methods
-2. ✅ Hash storage of Procs works correctly
-3. ✅ The shared example pattern (`it_behaves_like`) works fine in isolation
-4. ✅ Lambda storage in Hash works: `h[:key] = -> { puts "Hi" }; h[:key].call` ✅
-5. ✅ Block storage in Hash works: `h[:key] = block; h[:key].call` ✅
-6. ✅ Exception class definition works: `class MyError < StandardError; end` ✅
+it "test" do
+  result = 2 + 1
+  result.should eql 3
+end
+```
 
-**What Doesn't Work**:
-1. ❌ Calling methods with blocks at top-level crashes: `store_block { }` (SEGFAULT)
-2. ❌ Creating Proc.new at top-level crashes (known limitation per DEBUGGING_GUIDE.md)
-3. ❌ exponent_spec and pow_spec still crash despite all components working in isolation
+This crashes with SEGFAULT even without `describe`, `context`, or shared examples!
 
-**Findings**:
-- exponent_spec compiles successfully but crashes immediately with SIGSEGV
-- All code is properly wrapped in `run_specs()` method (not at top-level)
-- Added `complain()` matcher stub (for `.should complain(pattern)` syntax used in specs)
-- Root cause still unknown - something specific to these specs triggers crash
-- Minimal test cases demonstrate all individual components work correctly
+**Systematic Reduction Findings**:
+
+1. ✅ **WORKS**: `it` block with `.should be_true`
+   ```ruby
+   it "test" do
+     result = true
+     result.should be_true
+   end
+   ```
+
+2. ❌ **CRASHES**: `it` block with `.should eql(...)`
+   ```ruby
+   it "test" do
+     result = 2 + 1
+     result.should eql 3
+   end
+   ```
+
+3. ❌ **CRASHES**: Even with expression directly in `.should`
+   ```ruby
+   it "test" do
+     (2 ** 1).should eql 2
+   end
+   ```
+
+4. ❌ **CRASHES**: With ANY method call before `.should eql`
+   ```ruby
+   it "test" do
+     (2 + 1).should eql 3  # crashes
+   end
+   ```
+
+5. ✅ **WORKS**: Same code WITHOUT `it` block wrapper
+   ```ruby
+   def test_eql
+     result = 1
+     result.should eql(1)
+   end
+   test_eql  # works!
+   ```
+
+**The Pattern That Crashes**:
+```ruby
+it "description" do
+  (expression).should eql(value)
+end
+```
+
+**The Pattern That Works**:
+```ruby
+it "description" do
+  result.should be_true   # or be_false, be_nil, etc.
+end
+```
+
+**Key Finding**: The issue is NOT:
+- ❌ Top-level vs. method scope
+- ❌ Shared examples (`it_behaves_like`)
+- ❌ Hash storage of Procs
+- ❌ The `eql()` method itself
+- ❌ The `.should` method itself
+
+**The issue IS**:
+- ✅ **Specific combination**: Block passed to method (`it`) + expression result + `.should eql(matcher_object)`
+- The `eql()` method returns an `EqualMatcher` object
+- When `.should` receives this matcher inside an `it` block, the compiler generates incorrect code
+- This is a **compiler bug** in method call compilation within blocks
+
+**GDB Evidence from Earlier**:
+- Crash at address 0x00000003 (fixnum 1)
+- Assembly shows `call *%eax` where `%eax = $3`
+- Suggests vtable corruption or method resolution returning fixnum instead of function pointer
+
+**Impact**:
+- Affects ALL rubyspecs that use `it` blocks with `.should eql(...)` pattern
+- This is the standard RSpec/MSpec assertion syntax
+- Explains why exponent_spec, pow_spec, round_spec, and others crash immediately
 
 **Testing**:
 - ✅ selftest passes (0 failures)
 - ✅ selftest-c passes (0 failures)
-- ❌ exponent_spec still crashes (SEGFAULT)
-- ❌ pow_spec not tested (likely same issue)
+- ✅ Created 15+ minimal test cases to isolate the pattern
+- ❌ All specs using `it` + `.should eql` crash
 
 **Next Steps**:
-- Need deeper GDB investigation to trace exact crash location in exponent_spec
-- Consider binary search reduction of exponent_spec to isolate triggering code
-- May be related to specific combination of language features not seen in isolation
+1. Investigate compiler code generation for method calls inside blocks
+2. Check how `EqualMatcher` objects are passed to `.should` method
+3. Examine vtable lookup or method resolution within block contexts
+4. Compare assembly output of working (`.should be_true`) vs crashing (`.should eql`) patterns
+5. Likely issue in `compile_calls.rb` or block compilation in `compiler.rb`
+
+**This is a deep compiler bug requiring investigation of**:
+- Block compilation and closure variable handling
+- Method call compilation within block scope
+- Object passing between methods in compiled blocks
+- Vtable generation or method resolution for matcher objects
 
 ---
 

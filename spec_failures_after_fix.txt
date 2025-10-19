@@ -1,3 +1,4 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/integer/
 Running all specs in rubyspec/core/integer/...
 ================================
 

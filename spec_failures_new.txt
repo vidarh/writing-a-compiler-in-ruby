@@ -1,3 +1,4 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/integer/
 Running all specs in rubyspec/core/integer/...
 ================================
 
@@ -23,11 +24,11 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/div_spec.rb
 [31m[FAIL] rubyspec/core/integer/downto_spec.rb
 [32m[PASS] rubyspec/core/integer/dup_spec.rb
-[31m[FAIL] rubyspec/core/integer/element_reference_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/element_reference_spec.rb
 [31m[FAIL] rubyspec/core/integer/equal_value_spec.rb
 [32m[PASS] rubyspec/core/integer/even_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/exponent_spec.rb
-[31m[FAIL] rubyspec/core/integer/fdiv_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/fdiv_spec.rb
 [31m[FAIL] rubyspec/core/integer/floor_spec.rb
 [31m[FAIL] rubyspec/core/integer/gcdlcm_spec.rb
 [31m[FAIL] rubyspec/core/integer/gcd_spec.rb
@@ -47,7 +48,7 @@ Running all specs in rubyspec/core/integer/...
 [32m[PASS] rubyspec/core/integer/numerator_spec.rb
 [32m[PASS] rubyspec/core/integer/odd_spec.rb
 [31m[FAIL] rubyspec/core/integer/ord_spec.rb
-[31m[FAIL] rubyspec/core/integer/plus_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/plus_spec.rb
 [34m[SEGFAULT] rubyspec/core/integer/pow_spec.rb
 [32m[PASS] rubyspec/core/integer/pred_spec.rb
 [31m[FAIL] rubyspec/core/integer/rationalize_spec.rb
@@ -61,10 +62,10 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/to_f_spec.rb
 [32m[PASS] rubyspec/core/integer/to_int_spec.rb
 [32m[PASS] rubyspec/core/integer/to_i_spec.rb
-[31m[FAIL] rubyspec/core/integer/to_r_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/to_r_spec.rb
 [31m[FAIL] rubyspec/core/integer/to_s_spec.rb
 [31m[FAIL] rubyspec/core/integer/truncate_spec.rb
-[31m[FAIL] rubyspec/core/integer/try_convert_spec.rb
+[34m[SEGFAULT] rubyspec/core/integer/try_convert_spec.rb
 [31m[FAIL] rubyspec/core/integer/uminus_spec.rb
 [31m[FAIL] rubyspec/core/integer/upto_spec.rb
 [31m[FAIL] rubyspec/core/integer/zero_spec.rb
@@ -73,13 +74,13 @@ Running all specs in rubyspec/core/integer/...
 Summary:
   Total spec files: 67
   Passed: 13
-  Failed: 49
-  Segfault/Runtime error: 5
+  Failed: 44
+  Segfault/Runtime error: 10
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 1136
-  Passed: 169
-  Failed: 838
-  Skipped: 129
+  Total tests: 1043
+  Passed: 149
+  Failed: 780
+  Skipped: 114
   Pass rate: 14%
