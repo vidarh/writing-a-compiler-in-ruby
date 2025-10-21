@@ -1,15 +1,17 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-19 (Session 23 - Partial coerce protocol support)
+**Last Updated**: 2025-10-21 (Session 27 - Nested let() fix complete)
 **Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 (7%)
 **Individual Tests**: 1223 total | Passed: 168 (13%) | Failed: 915 (75%) | Skipped: 140 (11%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Added coerce protocol support to Integer#+ and Integer#-. Works for simple cases, full specs still crash (edge case TBD).
+**Recent Progress**: Fixed nested let() LocalVarScope offset tracking. Simple nested let() tests now work. Eigenclass implementation using nested let() still in progress.
 
 ---
 
 ## Current Priorities
+
+**Note**: Eigenclass implementation (needed for minus_spec/plus_spec) is **SHELVED** pending LocalVarScope nesting fixes. See Session 26 below and **[docs/NESTED_LET_BUG.md](NESTED_LET_BUG.md)** for detailed analysis.
 
 ### Remaining SEGFAULTs (5 specs)
 
@@ -33,23 +35,71 @@ ternary operator on the opstack.
 - `Integer#<=>` - complex - applying `*args` pattern naively breaks selftest
 - **Priority**: Defer until exception support added
 
-**4. minus_spec - SESSION 22 REGRESSION** - HIGH
-- **Status**: Was WORKING at Session 21, broke in Session 22, still broken
-- **Session 23 Progress**: Added coerce protocol - works perfectly in isolation
-- **Working**: `5 - mock` where mock.coerce(5) returns [5, 10] → -5 ✅
-- **Crash**: Full spec SEGFAULTs (Session 22 regression, not Session 23)
-- **Next Steps**: Identify and revert Session 22 change that broke this
-- **Effort**: 2-3 hours
+**4. minus_spec - EIGENCLASS BUG** - HIGH
+- **Root Cause IDENTIFIED**: Second eigenclass in file crashes with "Method missing NilClass#ord"
+- **Session 23 Progress**: Created minimal reproduction case (`test_eigenclass_bug.rb`)
+- **Working**: Single eigenclass per file works perfectly ✅
+- **Crash**: Second eigenclass in same file crashes ❌
+- **Minimal Reproducer**: `test_eigenclass_bug.rb` (20 lines)
+- **Next Steps**: Debug vtable/scope corruption in second eigenclass
+- **Effort**: 4-6 hours (debugging + fix)
 
-**5. plus_spec - SESSION 22 REGRESSION** - HIGH
-- **Status**: Same as minus_spec - Session 22 regression
-- **Session 23 Progress**: Added coerce protocol - works perfectly in isolation
-- **Next Steps**: Fix Session 22 regression (same root cause as minus_spec)
+**5. plus_spec - EIGENCLASS BUG** - HIGH
+- **Status**: Same root cause as minus_spec
+- **Root Cause**: Second eigenclass in file crashes
+- **See**: `eigenclass_bug_findings.md` for detailed analysis
+- **Next Steps**: Fix eigenclass bug (same fix will resolve both specs)
 
 
 ---
 
 ## Recent Session Summary
+
+### Session 27: Nested let() Fix Complete (2025-10-21) ✅
+
+**Goal**: Fix nested let() LocalVarScope offset tracking to enable eigenclass implementation
+
+**Status**: NESTED LET() FIXED - eigenclass implementation still in progress
+
+**Changes Made**:
+
+1. **LocalVarScope stack_size tracking** (`localvarscope.rb:6-14`)
+   - Added `@stack_size` attribute to track stack allocation per scope
+   - Tracks `vars.size + 2` to match `let()` helper's stack allocation
+   - Returns 0 if no locals (no stack allocated)
+
+2. **LocalVarScope.lvaroffset method** (`localvarscope.rb:27-31`)
+   - Returns cumulative stack offset for nested LocalVarScopes
+   - Accumulates offsets from current scope + parent scopes
+   - Stops at FuncScope (doesn't have lvaroffset method)
+
+3. **LocalVarScope.get_arg updates** (`localvarscope.rb:39-47`)
+   - Local variables: use index + rest adjustment + parent's lvaroffset
+   - Outer variables: delegate to parent (offset already correct)
+   - Proper handling of nested scope variable resolution
+
+4. **Test syntax fixes**:
+   - Fixed `test_nested_let_minimal.rb` - removed extra parentheses around let() body
+   - Correct syntax: `(let (var) expr1 expr2)` not `(let (var) ( expr1 expr2 ))`
+
+**Results**:
+- ✅ selftest: 0 failures (no regressions)
+- ✅ selftest-c: 0 failures (bootstrap stable)
+- ✅ test_nested_let_minimal.rb: PASS (nested let() works correctly)
+- ⚠️ Eigenclass implementation: Not yet complete (attempted but reverted)
+
+**Eigenclass Attempt**:
+- Attempted to rewrite compile_eigenclass using nested let()'s
+- MRI compilation works, but compiled compiler crashes
+- Issue: compile_eval_arg with [:call, :__new_class_object, ...] doesn't work as expected
+- Reverted to working state to preserve selftest-c passing
+
+**Next Steps**:
+- Debug why compile_eval_arg approach fails for eigenclass
+- May need to keep manual assembly for eigenclass creation
+- Or find correct way to generate __new_class_object call via compiler machinery
+
+---
 
 ### Session 22: SEGFAULT Fixes - exponent_spec & pow_spec (2025-10-19) ✅
 
@@ -93,18 +143,21 @@ ternary operator on the opstack.
 
 ---
 
-### Session 23: Eigenclass Bug Fix - `class << obj` Now Works ✅ (2025-10-19)
+### Session 23: Eigenclass Bug - Partial Fix (2025-10-19) ⚠️
 
 **Goal**: Fix minus_spec and plus_spec SEGFAULTs caused by broken eigenclass implementation
 
-**Root Cause**: `compile_eigenclass` in `compile_class.rb` corrupted objects when creating eigenclasses
-- Bug: Was evaluating `expr` twice, causing stack/register corruption
-- Also loading Class/Object constants and reading obj[0] directly (wrong approach)
+**Status**: PARTIALLY FIXED - first eigenclass works, second one crashes
 
-**Solution**: Completely rewrote `compile_eigenclass` to follow correct Ruby semantics:
+**Root Cause Found**: `compile_eigenclass` had multiple bugs:
+- Bug 1: Was evaluating `expr` twice, causing stack/register corruption ✅ FIXED
+- Bug 2: Was loading Class/Object constants and reading obj[0] directly ✅ FIXED
+- Bug 3: Second eigenclass in file crashes with "Method missing NilClass#ord" ❌ NOT FIXED
+
+**Partial Solution Applied**: Rewrote `compile_eigenclass` to follow correct Ruby semantics:
 1. Evaluate object expression once and save result
-2. Call `obj.class` method (NOT read obj[0]) to get superclass
-3. Create eigenclass with `__new_class_object(size, obj.class, ssize, 0)`
+2. Get obj's class (obj[0]) to use as eigenclass superclass
+3. Create eigenclass with `__new_class_object(size, superclass, ssize, 0)`
 4. Assign eigenclass to object via `obj[0] = eigenclass`
 5. Evaluate body with eigenclass as self
 
@@ -138,13 +191,197 @@ ternary operator on the opstack.
 **Results**:
 - ✅ Selftest: 0 failures (no regressions)
 - ✅ Selftest-c: 0 failures (bootstrap stable)
-- ✅ Eigenclass creation: Now works correctly
+- ✅ Single eigenclass: Works correctly (`test_reduction.rb` passes)
 - ✅ Coerce protocol: Works in isolation
-- ⚠️ Full minus_spec.rb: Still crashes (different issue, Session 22 regression)
-- ⚠️ Full plus_spec.rb: Still crashes (different issue, Session 22 regression)
-- **Net**: 5 SEGFAULTs remain, but eigenclass bug is FIXED
+- ❌ Multiple eigenclasses: Second one crashes (`test_eigenclass_bug.rb` fails)
+- ⚠️ Full minus_spec.rb: Still crashes (multiple eigenclasses in spec)
+- ⚠️ Full plus_spec.rb: Still crashes (multiple eigenclasses in spec)
+- **Net**: 5 SEGFAULTs remain, eigenclass bug is PARTIALLY FIXED
 
-**Note**: The remaining crashes in minus_spec/plus_spec are pre-existing Session 22 regressions, NOT related to the eigenclass fix or coerce protocol. The eigenclass bug fix is complete and verified.
+**Minimal Reproduction Cases Created**:
+- `test_reduction.rb` - Single eigenclass with coerce at top-level ✅ WORKS
+- `test_plus_min.rb` - Eigenclass inside method crashes ❌ FAILS ("Method missing Hash#superclass")
+- `spec/eigenclass.rb` - RSpec test for top-level eigenclass ✅ PASSES
+- `test/selftest.rb:test_eigenclass_in_method` - Test added (will fail until bug fixed)
+
+**Note**: The remaining crashes in minus_spec/plus_spec are caused by the "second eigenclass" bug, NOT Session 22 regressions as originally thought.
+
+---
+
+### Session 24: Eigenclass Bug - Architecture Design (2025-10-20) - PAUSED
+
+**Goal**: Fix eigenclass support inside methods to resolve minus_spec/plus_spec crashes
+
+**Key Insights** (from user feedback):
+1. Runtime eigenclasses already GET their own vtable (created by `__new_class_object`)
+2. The problem is purely compile-time: where do methods get registered during compilation?
+3. Use `let` helper to properly allocate stack space for LocalVarScope
+4. LocalVarScope should WRAP EigenclassScope, not the other way around
+5. compile_defm should be unchanged except for `name.is_a?(Array)` check
+6. EigenclassScope should be identical to ClassScope except for `:self` passthrough
+
+**Correct Architecture**:
+```
+LocalVarScope (created by let, holds :self on stack)
+  └─> EigenclassScope (provides vtable, passes :self through)
+        └─> enclosing scope
+```
+
+**Design Requirements**:
+- `let(escope, :self)` creates LocalVarScope wrapping EigenclassScope
+- LocalVarScope.get_arg(:self) returns `[:lvar, 1]` (eigenclass object on stack)
+- EigenclassScope.get_arg(:self) passes through to LocalVarScope
+- EigenclassScope.get_arg(other) uses standard ClassScope behavior
+- Methods register in EigenclassScope's vtable with unique names per definition site
+- At runtime, `__set_vtable` called with eigenclass object from local var
+
+**Implementation Attempts**:
+1. Initially tried backwards structure (EigenclassScope wrapping LocalVarScope)
+2. Corrected to use `let` helper with proper wrapping order
+3. Encountered scope chain breakage causing `scope.method` to be nil in unrelated code
+4. Reverted to working state (current HEAD)
+
+**Current Status**:
+- ✅ Selftest: 0 failures (reverted, working state)
+- ✅ Architecture understood and documented
+- ❌ Implementation incomplete - broke scope chain for regular methods
+- **Test Count**: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 (7%)
+
+**Issues Encountered**:
+- EigenclassScope delegation of `method` and other scope methods unclear
+- Caused `undefined method 'name' for nil:NilClass` in compile_super
+- Affected regular (non-eigenclass) code during core library compilation
+- Needs more careful implementation to avoid breaking existing functionality
+
+**Next Steps** (for future session):
+1. Create minimal test case that doesn't require full core library
+2. Implement EigenclassScope with ONLY `:self` passthrough (nothing else)
+3. Ensure EigenclassScope inherits all other ClassScope behavior unchanged
+4. Test incrementally before applying to full compilation
+5. Debug scope chain carefully if errors occur
+
+---
+
+### Session 25: Eigenclass Bug - Implementation Attempt (2025-10-20) - FAILED
+
+**Goal**: Implement EigenclassScope-based fix for eigenclass methods
+
+**Progress**:
+1. ✅ Created minimal test cases (test_eigen_minimal2.rb, test_eigen_describe.rb)
+2. ✅ Confirmed: single eigenclass works, multiple eigenclasses crash
+3. ✅ Implemented EigenclassScope in eigenclassscope.rb
+4. ✅ Added `require 'eigenclassscope'` to compiler.rb
+5. ✅ Updated compile_eigenclass to use `let(escope, :self)` pattern
+6. ✅ Modified compile_defm to detect EigenclassScope with `scope.is_a?(EigenclassScope)`
+7. ✅ selftest-mri passes (compiler logic correct)
+
+**Current Issue**:
+- Generated assembly crashes at runtime with infinite recursion in `__get_symbol`
+- Even non-eigenclass code crashes (test_no_eigen.rb)
+- Crash happens during Object initialization, not in test code itself
+- selftest compiles successfully but segfaults on execution
+
+**Files Modified**:
+- `eigenclassscope.rb` - Created EigenclassScope with :self passthrough
+- `compiler.rb:23` - Added `require 'eigenclassscope'`
+- `compile_class.rb:16` - Changed `in_eigenclass` detection to `scope.is_a?(EigenclassScope)`
+- `compile_class.rb:126-147` - Replaced inline LocalVarScope creation with `let(escope, :self)` pattern
+
+**Root Cause Theory**:
+The crash in `__get_symbol` suggests that when `in_eigenclass` is true, the vtable_scope logic (lines 42-46 of compile_defm) may be resolving `:self` incorrectly. When `vtable_scope = orig_scope`, it should use the LocalVarScope created by `let`, but the LocalVarScope might not have the right @next pointer or the EigenclassScope.get_arg(:self) passthrough isn't working.
+
+**Critical Issues Discovered**:
+1. **Register Management**: The eigenclass creation code manually emits assembly (`@e.movl`, `@e.pushl`) instead of using compiler mechanisms like `compile_eval_arg`
+2. **Local Variable Corruption**: Manual use of `@e.save_to_local_var(:eax, 1)` with hardcoded offsets corrupts local variables in the enclosing scope
+3. **Register Clobbering**: Code assumes %eax/%ecx remain valid across operations like `evict_regs_for` and `with_stack`, but these may clobber registers
+
+**What Was Learned**:
+- EigenclassScope architecture is correct: inherit from ClassScope, pass `:self` through to LocalVarScope, delegate class variables to superclass
+- The `let` helper doesn't manually populate variables - variables are populated through normal compilation of expressions
+- Manual assembly emission bypasses the compiler's register allocation and stack management
+
+**Next Steps** (for future session):
+1. Rewrite compile_eigenclass to use ONLY `compile_eval_arg` and `compile_exp` - NO manual assembly
+2. Use the compiler's mechanisms to save/load the eigenclass object
+3. Let the `let` helper and LocalVarScope handle stack allocation automatically
+4. Trust the compiler's register management instead of manually moving values between registers
+5. The entire eigenclass body compilation should use standard compilation methods
+
+---
+
+### Session 26: Eigenclass Bug - Implementation Attempt 2 (2025-10-20) - SHELVED
+
+**Goal**: Fix eigenclass support inside methods using only compiler machinery
+
+**Key Discovery**: **LocalVarScope cannot be safely nested**
+- Nested `let()` blocks fail to correctly track stack offsets
+- Attempting `let(scope, :var1) { let(inner, :var2) { ... } }` causes stack corruption
+- This is a fundamental limitation that blocks the eigenclass implementation
+
+**Approach Attempted**:
+1. ✅ Rewrote `compile_eigenclass` to use ONLY compiler machinery (no manual assembly)
+   - Used `compile_eval_arg` with `[:let, ...]`, `[:assign, ...]`, `mk_new_class_object`, `[:index, ...]`
+   - Created EigenclassScope to handle `:self` resolution (passes through to LocalVarScope)
+   - No manual `@e.pushl`, `@e.movl`, or other assembly emission
+2. ✅ Code compiles successfully (selftest-mri passes, links without errors)
+3. ❌ Runtime crashes - stack/memory corruption from nested `let` blocks
+
+**What Was Tried**:
+- Two nested `let` blocks: outer for `__eigenclass_obj`, inner for `:self`
+- Single `let` with multiple variables: `let(scope, :__eigenclass_obj, :__eigenclass_self)`
+- Various combinations and orderings of variable assignments
+- All resulted in either compilation errors or runtime crashes
+
+**The Correct Approach** (blocked by LocalVarScope limitation):
+```ruby
+def compile_eigenclass(scope, expr, exps)
+  class_scope = find_class_scope(scope)
+
+  # Outer let: evaluate expr and assign to __eigenclass_obj
+  let(scope, :__eigenclass_obj) do |outer_scope|
+    compile_eval_arg(outer_scope, [:assign, :__eigenclass_obj, expr])
+
+    # Inner let: create eigenclass and assign to :self
+    let(outer_scope, :self) do |lscope|
+      compile_eval_arg(lscope, [:assign, :self,
+        mk_new_class_object(class_scope.klass_size,
+                           mk_class(:__eigenclass_obj),
+                           [:index, mk_class(:__eigenclass_obj), 1],
+                           0)
+      ])
+
+      compile_eval_arg(lscope, [:assign, mk_class(:__eigenclass_obj), :self])
+      compile_eval_arg(lscope, [:assign, [:index, :self, 2], "eigenclass name"])
+
+      escope = EigenclassScope.new(lscope, "Eigenclass_#{id}", @vtableoffsets, class_scope)
+      compile_ary_do(escope, exps)
+      compile_eval_arg(lscope, :self)
+    end
+  end
+end
+```
+
+**Why This Matters**:
+- `def self.foo` syntax is syntactic sugar for eigenclasses
+- Core library uses many `def self.method` definitions (Array.[], Class.new, etc.)
+- These crash during initialization because eigenclass compilation is broken
+
+**Current Workaround** (user's temporary fix):
+- Using global constants instead of local variables (messy but allows core library to compile)
+- Re-evaluates `expr` multiple times (potentially unsafe)
+- Uses `__super_self` hack to access outer :self
+
+**Resolution Path**:
+1. **Fix LocalVarScope nesting** - This is the blocker
+   - Need to properly track stack offsets through nested scopes
+   - May require rewriting parts of scope/stack management
+2. Once fixed, the eigenclass implementation approach above should work
+3. Remove temporary global constant workaround
+4. Test with minus_spec/plus_spec
+
+**Status**: SHELVED pending LocalVarScope fixes
+- Test Count: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 (7%)
+- Eigenclass issue remains unfixed
 
 ---
 
