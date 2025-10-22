@@ -87,69 +87,60 @@ class Compiler
   end
 
   def compile_eigenclass(scope, expr, exps)
-    @e.comment("=== Eigenclass start")
+    @e.comment("=== Eigenclass start (using nested let)")
 
     # Find the enclosing ClassScope for klass_size
     class_scope = find_class_scope(scope)
 
-    # BUG FIX (per WORK_STATUS.md):
-    # The old code evaluated `expr` twice, causing corruption.
-    # Solution: Evaluate expr ONCE, save obj, create eigenclass, assign to obj[0].
+    # Using nested let()'s for clean scope management
+    # Outer let: evaluate expr and save to __eigenclass_obj
+    let(scope, :__eigenclass_obj) do |outer_scope|
+      # Evaluate and assign the object expression to __eigenclass_obj
+      compile_eval_arg(outer_scope, [:assign, :__eigenclass_obj, expr])
 
-    # Step 1: Evaluate expr (the object) once and save it on stack
-    obj_val = compile_eval_arg(scope, expr)
-    @e.save_result(obj_val)
-    @e.pushl(:eax)  # Save obj pointer on stack (TOS = obj)
+      # Inner let: create eigenclass and assign to :self
+      let(outer_scope, :self) do |lscope|
+        # Mark this LocalVarScope as an eigenclass scope
+        # This is checked in compile_defm (compile_class.rb:16) to handle method definitions
+        lscope.eigenclass_scope = true
 
-    # Step 2: Get obj's class (obj[0]) to use as eigenclass superclass
-    @e.movl("(%eax)", :edx)  # Load obj[0] (obj's current class) into %edx
+        # Create the eigenclass using manual assembly (since __new_class_object is a C function)
+        # First, get __eigenclass_obj into %eax
+        obj_val = compile_eval_arg(lscope, :__eigenclass_obj)
+        @e.save_result(obj_val)
 
-    # Step 3: Create the eigenclass
-    # Call __new_class_object(size, superclass, ssize, classob)
-    # Per WORK_STATUS.md: classob must be 0 (not Class constant)
-    @e.pushl("$0")  # classob = 0 (will default to Class in the constructor)
-    @e.pushl("$#{class_scope.klass_size}")  # ssize
-    @e.pushl(:edx)  # superclass = obj[0] (obj's current class)
-    @e.pushl("$#{class_scope.klass_size}")  # size
-    @e.call("__new_class_object")
-    @e.addl("$16", :esp)  # Clean up 4 arguments
-    # Result: eigenclass now in %eax
+        # Get obj's class (obj[0]) to use as eigenclass superclass
+        @e.movl("(%eax)", :edx)  # Load obj[0] (obj's current class) into %edx
 
-    # Step 4: Assign the eigenclass to obj[0]
-    @e.movl(:eax, :ecx)  # Save eigenclass in %ecx
-    @e.popl(:eax)  # Pop obj pointer from stack into %eax
-    @e.movl(:ecx, "(%eax)")  # obj[0] = eigenclass
+        # Call __new_class_object(size, superclass, ssize, classob)
+        @e.pushl("$0")  # classob = 0 (will default to Class in the constructor)
+        @e.pushl("$#{class_scope.klass_size}")  # ssize
+        @e.pushl(:edx)  # superclass = obj[0] (obj's current class)
+        @e.pushl("$#{class_scope.klass_size}")  # size
+        @e.call("__new_class_object")
+        @e.addl("$16", :esp)  # Clean up 4 arguments
+        # Result: eigenclass now in %eax
 
-    # Step 5: Move eigenclass back to %eax for the body evaluation
-    @e.movl(:ecx, :eax)
+        # Save eigenclass to :self local variable
+        # Get the offset for :self from the LocalVarScope
+        self_lvar = lscope.get_arg(:self)
+        @e.save_to_local_var(:eax, self_lvar[1])
 
-    # Use a modified version of the `let` helper that supports eigenclass_scope marker
-    # We inline it here to pass the eigenclass_scope parameter
-    varlist = [:self]
-    vars = Hash[*(varlist.zip(1..varlist.size)).flatten]
-    lscope = LocalVarScope.new(vars, scope, true)  # true = eigenclass_scope marker
+        # Assign eigenclass to obj[0]
+        compile_eval_arg(lscope, [:assign, [:index, :__eigenclass_obj, 0], :self])
 
-    @e.evict_regs_for(varlist)
-    s = vars.size + 2
-    @e.with_stack(s) do
-      # Save eigenclass to local var - same as original let-based code
-      @e.save_to_local_var(:eax, 1)
+        # Set eigenclass name
+        compile_eval_arg(lscope, [:assign, [:index, :self, 2], "<#{class_scope.local_name.to_s} eigenclass>"])
 
-      # FIXME: Compiler @bug. Probably findvars again; see-also Compiler#let
-      scope
+        # Compile eigenclass body
+        compile_ary_do(lscope, exps)
 
-      # Set eigenclass name
-      compile_exp(lscope, [:sexp, [:assign, [:index, :self, 2], "<#{class_scope.local_name.to_s} eigenclass>"]])
-
-      # Compile eigenclass body
-      compile_ary_do(lscope, exps)
-
-      # Load eigenclass back as return value
-      @e.load_local_var(1)
+        # Return the eigenclass
+        compile_eval_arg(lscope, :self)
+      end
     end
-    @e.evict_regs_for(varlist)
-    @e.comment("=== Eigenclass end")
 
+    @e.comment("=== Eigenclass end")
     return Value.new([:subexpr], :object)
   end
 

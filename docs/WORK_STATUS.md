@@ -1,11 +1,11 @@
 # Compiler Work Status
 
-**Last Updated**: 2025-10-21 (Session 27 - Nested let() fix complete)
+**Last Updated**: 2025-10-21 (Session 27 - Eigenclass implementation complete)
 **Current Test Results**: 67 specs | PASS: 13 (19%) | FAIL: 49 (73%) | SEGFAULT: 5 (7%)
 **Individual Tests**: 1223 total | Passed: 168 (13%) | Failed: 915 (75%) | Skipped: 140 (11%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Fixed nested let() LocalVarScope offset tracking. Simple nested let() tests now work. Eigenclass implementation using nested let() still in progress.
+**Recent Progress**: Completed eigenclass implementation using nested let()! Clean code generation with proper scope management.
 
 ---
 
@@ -55,13 +55,13 @@ ternary operator on the opstack.
 
 ## Recent Session Summary
 
-### Session 27: Nested let() Fix Complete (2025-10-21) ✅
+### Session 27: Eigenclass Implementation Complete (2025-10-21) ✅
 
-**Goal**: Fix nested let() LocalVarScope offset tracking to enable eigenclass implementation
+**Goal**: Fix nested let() LocalVarScope offset tracking and implement eigenclass using nested let()
 
-**Status**: NESTED LET() FIXED - eigenclass implementation still in progress
+**Status**: COMPLETE ✅ - Both nested let() and eigenclass implementation working!
 
-**Changes Made**:
+**Part 1: Nested let() Fix**
 
 1. **LocalVarScope stack_size tracking** (`localvarscope.rb:6-14`)
    - Added `@stack_size` attribute to track stack allocation per scope
@@ -78,26 +78,43 @@ ternary operator on the opstack.
    - Outer variables: delegate to parent (offset already correct)
    - Proper handling of nested scope variable resolution
 
-4. **Test syntax fixes**:
-   - Fixed `test_nested_let_minimal.rb` - removed extra parentheses around let() body
-   - Correct syntax: `(let (var) expr1 expr2)` not `(let (var) ( expr1 expr2 ))`
+**Part 2: Eigenclass Implementation with Nested let()**
+
+4. **compile_eigenclass rewrite** (`compile_class.rb:89-144`)
+   - Uses nested let()'s for clean scope management
+   - Outer let: stores object in `__eigenclass_obj` local variable
+   - Inner let: stores eigenclass in `:self` local variable
+   - Marks inner LocalVarScope with `eigenclass_scope = true` flag
+   - Hybrid approach: nested let() for scope + manual assembly for C function call
+   - Key insight: Use `lscope.get_arg(:self)` to get correct offset for save_to_local_var
+
+**Why Hybrid Approach Works**:
+- Nested let() provides clean scope management and variable resolution
+- Manual assembly needed for `__new_class_object` (it's a C function, not Ruby method)
+- After C call returns eigenclass in %eax, save to local var using scope-calculated offset
+- All subsequent operations use compile_eval_arg with proper :self and :__eigenclass_obj resolution
+
+**Code Structure**:
+```ruby
+let(scope, :__eigenclass_obj) do |outer_scope|
+  compile_eval_arg(outer_scope, [:assign, :__eigenclass_obj, expr])
+
+  let(outer_scope, :self) do |lscope|
+    lscope.eigenclass_scope = true
+    # Manual assembly: create eigenclass
+    # Save to :self using: @e.save_to_local_var(:eax, lscope.get_arg(:self)[1])
+    # Rest uses compile_eval_arg for clean code generation
+  end
+end
+```
 
 **Results**:
-- ✅ selftest: 0 failures (no regressions)
-- ✅ selftest-c: 0 failures (bootstrap stable)
-- ✅ test_nested_let_minimal.rb: PASS (nested let() works correctly)
-- ⚠️ Eigenclass implementation: Not yet complete (attempted but reverted)
-
-**Eigenclass Attempt**:
-- Attempted to rewrite compile_eigenclass using nested let()'s
-- MRI compilation works, but compiled compiler crashes
-- Issue: compile_eval_arg with [:call, :__new_class_object, ...] doesn't work as expected
-- Reverted to working state to preserve selftest-c passing
-
-**Next Steps**:
-- Debug why compile_eval_arg approach fails for eigenclass
-- May need to keep manual assembly for eigenclass creation
-- Or find correct way to generate __new_class_object call via compiler machinery
+- ✅ selftest: 0 failures
+- ✅ selftest-c: 0 failures (CRITICAL - self-compiled compiler works!)
+- ✅ test_nested_let_minimal.rb: PASS
+- ✅ Eigenclass code generation is now clean and maintainable
+- ✅ No more manual stack offset calculations in eigenclass code
+- ✅ Proper variable scoping with access to both object and eigenclass
 
 ---
 
