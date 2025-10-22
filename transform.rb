@@ -530,6 +530,9 @@ class Compiler
         e[3] = E[e.position, :do, *e[3]]
       end
 
+      # Recursively process the rewritten body to handle nested defms (e.g., eigenclass methods)
+      rewrite_let_env(e[3])
+
       :skip
     end
   end
