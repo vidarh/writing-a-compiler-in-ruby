@@ -12,39 +12,23 @@ class Compiler
       return Value.new([:subexpr])
     end
 
-    # Check if we're in an eigenclass (LocalVarScope marked with eigenclass_scope flag)
-    in_eigenclass = orig_scope.is_a?(LocalVarScope) && orig_scope.eigenclass_scope
-
     # FIXME: Replace "__closure__" with the block argument name if one is present
     f = Function.new(name,[:self,:__closure__]+args, body, scope, @e.get_local) # "self" is "faked" as an argument to class methods
 
-#    @e.comment("method #{name}")
+    #@e.comment("method #{name}")
 
     cleaned = clean_method_name(name)
-    if in_eigenclass
-      # For eigenclass methods, use a unique identifier to avoid clashes
-      # Use the label counter to ensure uniqueness
-      unique_id = @e.get_local[2..-1]
-      fname = "__method_Eigenclass_#{unique_id}_#{cleaned}"
-    else
-      fname = "__method_#{scope.name}_#{cleaned}"
-    end
+    fname = "__method_#{scope.name}_#{cleaned}"
     fname = @global_functions.set(fname, f)
 
     # Register method in vtable (offsets are global, same for all classes)
     scope.set_vtable_entry(name, fname, f)
     v = scope.vtable[name]
 
-    # For eigenclass methods, use the eigenclass object (:self from LocalVarScope)
-    # For regular methods, use the class object (:self from ClassScope)
-    # FIXME: Compiler bug - ternary operator returns false instead of else branch
-    # vtable_scope = in_eigenclass ? orig_scope : scope
-    if in_eigenclass
-      vtable_scope = orig_scope
-    else
-      vtable_scope = scope
-    end
-    compile_eval_arg(vtable_scope,[:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
+    # Call __set_vtable with :self (resolved through scope chain)
+    # For EigenclassScope, :self resolves to the eigenclass object from LocalVarScope
+    # For regular ClassScope, :self resolves to the class object
+    compile_eval_arg(scope,[:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
 
 
     # This is taken from compile_defun - it does not necessarily make sense for defm
@@ -89,51 +73,43 @@ class Compiler
   def compile_eigenclass(scope, expr, exps)
     @e.comment("=== Eigenclass start (using nested let)")
 
-    # Find the enclosing ClassScope for klass_size
+    # Find the enclosing ClassScope for method registration
     class_scope = find_class_scope(scope)
+
+    # Eigenclasses are Class objects, so they use Class's klass_size
+    # Get Class's ClassScope to determine the correct klass_size
+    eksize = @classes[:Class].klass_size
 
     # Using nested let()'s for clean scope management
     # Outer let: evaluate expr and save to __eigenclass_obj
+    unique_id = @e.get_local[2..-1]
+    @e.comment("Eigenclass #{unique_id}")
     let(scope, :__eigenclass_obj) do |outer_scope|
-      # Evaluate and assign the object expression to __eigenclass_obj
+
       compile_eval_arg(outer_scope, [:assign, :__eigenclass_obj, expr])
 
-      # Inner let: create eigenclass and assign to :self
       let(outer_scope, :self) do |lscope|
-        # Mark this LocalVarScope as an eigenclass scope
-        # This is checked in compile_defm (compile_class.rb:16) to handle method definitions
-        lscope.eigenclass_scope = true
 
-        # Create the eigenclass using manual assembly (since __new_class_object is a C function)
-        # First, get __eigenclass_obj into %eax
-        obj_val = compile_eval_arg(lscope, :__eigenclass_obj)
-        @e.save_result(obj_val)
+        compile_eval_arg(lscope, [:assign, :self,
+          mk_new_class_object(
+            eksize,                                # size = Class's klass_size
+            [:index, :__eigenclass_obj, 0],        # superclass = obj.class
+            eksize,                                # ssize = Class's klass_size
+            0                                      # classob = 0 (defaults to Class)
+          )
+        ])
 
-        # Get obj's class (obj[0]) to use as eigenclass superclass
-        @e.movl("(%eax)", :edx)  # Load obj[0] (obj's current class) into %edx
-
-        # Call __new_class_object(size, superclass, ssize, classob)
-        @e.pushl("$0")  # classob = 0 (will default to Class in the constructor)
-        @e.pushl("$#{class_scope.klass_size}")  # ssize
-        @e.pushl(:edx)  # superclass = obj[0] (obj's current class)
-        @e.pushl("$#{class_scope.klass_size}")  # size
-        @e.call("__new_class_object")
-        @e.addl("$16", :esp)  # Clean up 4 arguments
-        # Result: eigenclass now in %eax
-
-        # Save eigenclass to :self local variable
-        # Get the offset for :self from the LocalVarScope
-        self_lvar = lscope.get_arg(:self)
-        @e.save_to_local_var(:eax, self_lvar[1])
-
-        # Assign eigenclass to obj[0]
         compile_eval_arg(lscope, [:assign, [:index, :__eigenclass_obj, 0], :self])
 
         # Set eigenclass name
-        compile_eval_arg(lscope, [:assign, [:index, :self, 2], "<#{class_scope.local_name.to_s} eigenclass>"])
+        compile_eval_arg(lscope, [:assign, [:index, :self, 2], "Eigenclass_#{unique_id}"])
 
-        # Compile eigenclass body
-        compile_ary_do(lscope, exps)
+        escope = EigenclassScope.new(lscope, "Eigenclass_#{unique_id}", @vtableoffsets, class_scope)
+
+        # Compile eigenclass body with LocalVarScope
+        # When compile_defm is called, it will find escope via lscope.class_scope
+        # Methods will register in escope's vtable, :self resolves from lscope
+        compile_ary_do(escope, exps)
 
         # Return the eigenclass
         compile_eval_arg(lscope, :self)

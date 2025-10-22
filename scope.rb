@@ -10,7 +10,7 @@ class Scope
     nil
   end
 
-  def get_arg(a)
+  def  get_arg(a)
     @next ? @next.get_arg(a) : nil
   end
 
@@ -52,6 +52,13 @@ class Scope
 
   def loop_label
     @next ? @next.loop_label : nil
+  end
+
+    # Defer to parents class variable.
+  # FIXME: This might need to actually dynamically
+  # look up the superclass?
+  def get_class_var(var)
+    @next.get_class_var(var)
   end
 
 end
