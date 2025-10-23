@@ -623,11 +623,15 @@ class Compiler
     # 4. On normal completion: pops handler
     # 5. On exception: jumps to rescue_label (via ExceptionRuntime.raise)
 
+    # Handle nil rescue_class - convert Ruby nil to :nil symbol which references global nil object
+    # If we pass nil directly, get_arg treats it as an empty string constant (bug!)
+    rescue_class_arg = rescue_class.nil? ? :nil : rescue_class
+
     # Push handler
     # handler = ExceptionRuntime.push_handler(rescue_class)
     compile_eval_arg(scope,
       [:assign, :__handler,
-        [:callm, :ExceptionRuntime, :push_handler, [rescue_class]]])
+        [:callm, :ExceptionRuntime, :push_handler, [rescue_class_arg]]])
 
     # Save stack state into handler
     # handler.save_stack_state(address_of rescue_label)
