@@ -1,3 +1,49 @@
+# Exception Handling Implementation
+#
+# This file implements basic exception handling with begin/rescue/end using a
+# separate exception stack approach (fully self-hosted in Ruby).
+#
+# CURRENT FEATURES:
+# - Raising exceptions with Kernel#raise
+# - Catching exceptions with begin/rescue/end blocks
+# - Stack unwinding using saved %ebp and rescue label addresses
+# - Unhandled exception detection and reporting
+# - Exception message support via Exception#to_s and Exception#message
+#
+# MISSING FEATURES (Future Iterations):
+#
+# 1. Exception Backtraces (SIGNIFICANT WORK REQUIRED)
+#    -----------------------------------------------
+#    Currently, exceptions do not include a backtrace showing the call stack
+#    at the point where the exception was raised.
+#
+#    Why this is deferred:
+#    - Requires maintaining debug information during execution to:
+#      * Unwind the stack frame by frame
+#      * Look up method names for each frame
+#      * Track file names and line numbers for each call
+#    - Must be done WITHOUT adding overhead to normal method calls
+#      (storing frame info only when needed, or maintaining shadow stack)
+#    - Needs integration with existing debug info generation (-g flag)
+#    - May require changes to calling convention or prologue/epilogue code
+#
+#    Implementation approach (when we tackle this):
+#    - Option 1: Lazy generation - walk stack only when exception is raised
+#      * Use %ebp chain to walk frames backward
+#      * Use debug info to map instruction pointers to method names/lines
+#      * Minimal runtime overhead, but complex stack walking
+#    - Option 2: Shadow stack - maintain call stack metadata
+#      * Update on every call/return
+#      * Immediate backtrace available
+#      * Small overhead on all calls
+#
+# 2. Typed rescue (rescue SpecificError)
+# 3. Rescue variable binding (rescue => e)
+# 4. Multiple rescue clauses
+# 5. Ensure blocks (ensure cleanup)
+# 6. Retry support (retry from rescue)
+# 7. Exception cause chains (raise new_exc from original_exc)
+#
 # Exception handler structure
 # Stores saved stack state for unwinding
 # Similar to how Proc stores function address/environment
