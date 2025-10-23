@@ -628,10 +628,10 @@ class Compiler
     rescue_class_arg = rescue_class.nil? ? :nil : rescue_class
 
     # Push handler
-    # handler = ExceptionRuntime.push_handler(rescue_class)
+    # handler = $__exception_runtime.push_handler(rescue_class)
     compile_eval_arg(scope,
       [:assign, :__handler,
-        [:callm, :ExceptionRuntime, :push_handler, [rescue_class_arg]]])
+        [:callm, :$__exception_runtime, :push_handler, [rescue_class_arg]]])
 
     # Save stack state into handler
     # handler.save_stack_state(address_of rescue_label)
@@ -642,7 +642,7 @@ class Compiler
     compile_do(scope, *exps)
 
     # Normal completion - pop handler
-    compile_eval_arg(scope, [:callm, :ExceptionRuntime, :pop_handler])
+    compile_eval_arg(scope, [:callm, :$__exception_runtime, :pop_handler])
     @e.jmp(after_label)
 
     # Rescue handler (jumped to by ExceptionRuntime.raise)

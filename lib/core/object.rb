@@ -20,7 +20,7 @@ class Object
   # FIXME: This should be in Kernel, but include doesn't work properly yet
   def raise(msg)
     exc = RuntimeError.new(msg)
-    ExceptionRuntime.raise(exc)
+    $__exception_runtime.raise(exc)
     # Never returns
   end
 

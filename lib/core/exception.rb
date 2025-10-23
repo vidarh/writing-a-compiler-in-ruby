@@ -98,7 +98,7 @@ class ExceptionRuntime
 
   # Push a handler onto the exception stack
   # Returns the handler for caller to initialize
-  def self.push_handler(rescue_classes = nil)
+  def push_handler(rescue_classes = nil)
     handler = ExceptionHandler.new
     handler.rescue_classes = rescue_classes
     handler.next = @@exc_stack
@@ -107,14 +107,14 @@ class ExceptionRuntime
   end
 
   # Pop handler from stack
-  def self.pop_handler
+  def pop_handler
     if @@exc_stack
       @@exc_stack = @@exc_stack.next
     end
   end
 
   # Get current handler
-  def self.current_handler
+  def current_handler
     @@exc_stack
   end
 
@@ -122,7 +122,7 @@ class ExceptionRuntime
   # Unwinds stack by restoring saved %ebp and jumping to handler
   # This is implemented as a low-level function because it needs to
   # manipulate stack and jump directly
-  def self.raise(exception_obj)
+  def raise(exception_obj)
     @@current_exception = exception_obj
 
     if @@exc_stack
@@ -153,15 +153,18 @@ class ExceptionRuntime
   end
 
   # Get current exception (called from rescue block)
-  def self.current_exception
+  def current_exception
     @@current_exception
   end
 
   # Clear current exception (after rescue handles it)
-  def self.clear
+  def clear
     @@current_exception = nil
   end
 end
+
+# Create global singleton instance
+$__exception_runtime = ExceptionRuntime.new
 
 # Exception classes
 class Exception
