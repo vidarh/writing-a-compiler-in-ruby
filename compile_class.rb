@@ -53,8 +53,7 @@ class Compiler
   # FIXME: compiler @bug workaround. See #compile_eigenclass
   def compile_ary_do(lscope, exps)
     exps.each do |e|
-        lscope
-        compile_do(lscope, e)
+      compile_do(lscope, e)
     end
   end
 

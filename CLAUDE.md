@@ -2,6 +2,49 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL RULE: Never Revert Without Saving
+
+**NEVER revert code changes during investigation without first saving them.**
+
+When debugging issues:
+- ✅ Commit working code before making experimental changes
+- ✅ Save changed files to backups: `cp file.rb file.rb.backup`
+- ✅ Use `git stash` to temporarily save changes
+- ❌ **NEVER** use `git checkout` to revert files during investigation
+- ❌ **NEVER** delete files without backing them up first
+- ❌ **NEVER** give up and revert - always investigate the actual issue
+
+If code must be reverted:
+1. First: `git add <files> && git stash` or `cp <files> <files>.backup`
+2. Then: Investigate the actual root cause
+3. Only revert as absolute last resort after thorough investigation
+
+## CRITICAL RULE: NEVER Use instance_variable_set/get
+
+**NEVER EVER EVER EVER use `instance_variable_set()` or `instance_variable_get()` in regular Ruby code.**
+
+These methods are **ABOMINATIONS** that should **NEVER** be used:
+- ❌ **NEVER** use `obj.instance_variable_set(:@var, value)` - use proper attribute accessors instead
+- ❌ **NEVER** use `obj.instance_variable_get(:@var)` - use proper attribute readers instead
+- ❌ **NEVER** bypass encapsulation by directly manipulating instance variables from outside
+- ❌ **NEVER** use these methods as a "quick fix" or workaround
+
+**There is NEVER a situation in regular Ruby code where you need to call `instance_variable_set` or `instance_variable_get`.**
+
+If you think you need to use these methods, you are approaching the problem incorrectly. Instead:
+- ✅ Add proper `attr_accessor`, `attr_reader`, or `attr_writer` declarations
+- ✅ Add proper setter/getter methods to the class
+- ✅ Refactor the code to use proper encapsulation
+- ✅ Pass the value through constructor parameters or method arguments
+
+**Why this rule exists:**
+- These methods violate encapsulation and object-oriented design principles
+- They make code fragile, hard to understand, and difficult to maintain
+- They bypass any validation or logic that should be in setter methods
+- They are a code smell indicating poor design
+
+**The ONLY acceptable use** is in metaprogramming frameworks or reflection tools, which this compiler is NOT.
+
 ## Project Overview
 
 This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler is designed to bootstrap itself - compile its own source code to native machine code. The project is experimental and self-hosting is achieved with various workarounds for missing functionality.

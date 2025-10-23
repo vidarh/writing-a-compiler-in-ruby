@@ -7,7 +7,7 @@ class Scope
   end
 
   def method
-    nil
+    @next.method if @next
   end
 
   def  get_arg(a)
