@@ -47,6 +47,16 @@ def it(description, &block)
     i = i + 1
   end
 
+  # NOTE: Would like to wrap block.call in begin/rescue to catch unhandled exceptions,
+  # but there's a compiler bug where rescue blocks inside functions that take blocks
+  # cause segfaults. See test_rescue_in_block.rb for minimal reproduction.
+  # TODO: Fix this compiler bug, then add:
+  #   begin
+  #     block.call
+  #   rescue
+  #     $spec_failed = $spec_failed + 1
+  #     puts "\e[33m    FAILED: Unhandled exception in test\e[0m"
+  #   end
   block.call
 
   if $spec_skipped > skipped_before
@@ -293,23 +303,26 @@ class RaiseErrorMatcher < Matcher
   end
 
   def match?(actual)
-    # Since exceptions aren't implemented, we just call the lambda/proc
-    # and assume it would have raised the expected error.
-    # This allows specs with raise_error to at least execute the code being tested.
+    # Now that exceptions are implemented, actually rescue and check them
     if actual.is_a?(Proc)
-      actual.call
+      begin
+        actual.call
+        # If we get here, no exception was raised
+        return false
+      rescue
+        exc = ExceptionRuntime.current_exception
+        # Check if the exception matches the expected type
+        # For now, we accept any exception as a match
+        # TODO: Check exception class matches @exception
+        # TODO: Check pattern matches exception message if @pattern is set
+        return true
+      end
     end
-
-    # Mark that this assertion cannot be verified
-    # Decrement the assertion count since we can't actually check this
-    $spec_assertions = $spec_assertions - 1
-
-    # Always return true to skip the exception check
-    true
+    false
   end
 
   def failure_message(actual)
-    "Exceptions not implemented"
+    "Expected exception #{@exception} to be raised, but no exception was raised"
   end
 end
 

@@ -2593,25 +2593,29 @@ class Integer < Numeric
     # Ruby's ** also handles floats and negative exponents, but this
     # implementation focuses on positive integer exponents.
 
-    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    # Validate argument count
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
-      return nil
+      raise "wrong number of arguments (given #{args.length}, expected 1)"
     end
     other = args[0]
 
-    # Type check first to avoid crashes
+    # Type check
     if !other.is_a?(Integer)
-      STDERR.puts("TypeError: Integer can't be coerced")
-      return nil
+      raise "Integer can't be coerced into Integer"
     end
 
     return 1 if other == 0
     return self if other == 1
 
-    # Handle negative exponents (return 0 for integer division)
-    # In Ruby, integer ** negative = 0 (integer division of 1/result)
-    return 0 if other < 0
+    # Handle negative exponents
+    if other < 0
+      # 0 ** negative raises ZeroDivisionError
+      if self == 0
+        raise "divided by 0"
+      end
+      # For other integers, negative exponent returns 0 (integer division)
+      return 0
+    end
 
     # Positive exponent: repeated multiplication
     result = 1
@@ -2633,19 +2637,17 @@ class Integer < Numeric
 
   # pow method - forwards to ** operator
   # Note: alias_method not supported by compiler, so we manually forward
-  # Using *args pattern to avoid FPE on wrong argument count (specs test this)
+  # Using *args pattern to support optional modulo parameter
   def pow(*args)
-    # WORKAROUND: No exceptions - validate args manually
+    # Validate argument count
     if args.length < 1 || args.length > 2
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1..2)")
-      return nil
+      raise "wrong number of arguments (given #{args.length}, expected 1..2)"
     end
 
     # Ruby's Integer#pow can take a second modulo parameter: pow(exp, mod)
     # For now, just support the single-argument form
     if args.length == 2
-      STDERR.puts("Integer#pow with modulo not yet implemented")
-      return nil
+      raise "Integer#pow with modulo not yet implemented"
     end
 
     self ** args[0]
