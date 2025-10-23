@@ -29,13 +29,7 @@ E = 2
 #  - The ones that fails because they haven't been implemented
 # Enumerable=8 #Here because modules doesn't work yet
 
-def raise *exp
-  puts "ERROR: Exception support not yet implemented"
-  puts "ERROR: Arguments to raise were:"
-  puts exp.inspect
-  puts "ERROR ============="
-  %s(div 0 0) # Force an exception so we can trap it easily in gdb.
-end
+# raise is now implemented in lib/core/kernel.rb
 
 # FIXME:
 %s(defun range (a b)

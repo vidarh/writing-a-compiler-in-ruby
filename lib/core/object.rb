@@ -15,6 +15,15 @@ class Object
     # Default. Empty on purpose
   end
 
+  # Raise an exception
+  # Simplified version - just handles string messages for now
+  # FIXME: This should be in Kernel, but include doesn't work properly yet
+  def raise(msg)
+    exc = RuntimeError.new(msg)
+    ExceptionRuntime.raise(exc)
+    # Never returns
+  end
+
   def class
     @__class__
   end

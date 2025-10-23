@@ -7,6 +7,7 @@ $: << File.dirname(__FILE__)
 require 'emitter'
 require 'parser'
 require 'scope'
+require 'eigenclassscope'
 require 'function'
 require 'extensions'
 require 'ast'
@@ -44,7 +45,7 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :stackframe, :deref, :include,
+                   :preturn, :stackframe, :deref, :include, :addr,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline, # See `inline.rb`
@@ -310,7 +311,8 @@ class Compiler
   end
 
   def compile_rescue(scope, rval, lval)
-    warning("RESCUE is NOT IMPLEMENTED")
+    # Note: rescue is now handled via compile_begin_rescue in compile_block
+    # This method is kept for backwards compatibility but shouldn't be called
     compile_exp(scope,lval)
   end
 
@@ -451,6 +453,15 @@ class Compiler
     Value.new([:reg,:ebp])
   end
 
+  # Get address of a label
+  # Similar to how Proc stores function addresses
+  # Used for exception handling to save rescue handler address
+  def compile_addr(scope, label)
+    @e.comment("Get address of label #{label}")
+    @e.movl("$#{label}", :eax)
+    Value.new([:reg, :eax])
+  end
+
   # "Special" return for `proc` and bare blocks
   # to exit past Proc#call.
   def compile_preturn(scope, arg = nil)
@@ -585,10 +596,72 @@ class Compiler
   # "executed" immediately; otherwise it should be treated like
   # a :lambda more or less.
   #
-  # FIXME: Since we don't implement "rescue" yet, we'll just
-  # treat it as a :do, which is likely to cause lots of failures
-  def compile_block(scope, *exp)
-    compile_do(scope, *exp[1])
+  # Parser returns: [:block, args, exps, rescue_clause]
+  # For begin blocks: args=[], exps=body, rescue_clause=[:rescue, ...] or nil
+  def compile_block(scope, args, exps, rescue_clause = nil)
+    if rescue_clause
+      compile_begin_rescue(scope, exps, rescue_clause)
+    else
+      compile_do(scope, *exps)
+    end
+  end
+
+  # Compile begin...rescue...end block
+  # rescue_clause = [:rescue, exception_class, var_name, body]
+  def compile_begin_rescue(scope, exps, rescue_clause)
+    rescue_label = @e.get_local    # Label for rescue handler
+    after_label = @e.get_local     # Label after rescue
+
+    rescue_class = rescue_clause[1]
+    rescue_var = rescue_clause[2]
+    rescue_body = rescue_clause[3]
+
+    # Generate code that:
+    # 1. Pushes handler onto exception stack
+    # 2. Saves stack state (ebp, esp, rescue_label address)
+    # 3. Executes try block
+    # 4. On normal completion: pops handler
+    # 5. On exception: jumps to rescue_label (via ExceptionRuntime.raise)
+
+    # Push handler
+    # handler = ExceptionRuntime.push_handler(rescue_class)
+    compile_eval_arg(scope,
+      [:assign, :__handler,
+        [:callm, :ExceptionRuntime, :push_handler, [rescue_class]]])
+
+    # Save stack state into handler
+    # handler.save_stack_state(address_of rescue_label)
+    compile_eval_arg(scope,
+      [:callm, :__handler, :save_stack_state, [[:addr, rescue_label]]])
+
+    # Compile try block
+    compile_do(scope, *exps)
+
+    # Normal completion - pop handler
+    compile_eval_arg(scope, [:callm, :ExceptionRuntime, :pop_handler])
+    @e.jmp(after_label)
+
+    # Rescue handler (jumped to by ExceptionRuntime.raise)
+    @e.label(rescue_label)
+
+    # Get exception from ExceptionRuntime
+    compile_eval_arg(scope,
+      [:assign, :__exc, [:callm, :ExceptionRuntime, :current_exception]])
+
+    # Bind to rescue variable if specified
+    if rescue_var
+      compile_assign(scope, rescue_var, :__exc)
+    end
+
+    # Compile rescue body
+    compile_do(scope, *rescue_body) if rescue_body
+
+    # Clear exception
+    compile_eval_arg(scope, [:callm, :ExceptionRuntime, :clear])
+
+    @e.label(after_label)
+
+    Value.new([:subexpr])
   end
 
   # Compile a literal Array initalization

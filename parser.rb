@@ -188,7 +188,8 @@ class Parser < ParserBase
       end
     end
     ws
-    return E[pos, :rescue, c, name, parse_opt_defexp]
+    body = parse_opt_defexp
+    return E[pos, :rescue, c, name, body]
   end
 
   # begin ::= "begin" ws* defexp* rescue? "end"
@@ -196,9 +197,46 @@ class Parser < ParserBase
     pos = position
     keyword(:begin) or return
     ws
-    exps = parse_opt_defexp
-    rescue_ = parse_rescue
-    keyword(:end) or expected("expression or 'end' for open 'begin' block")
+    # Parse expressions until we hit rescue or end
+    # Problem: parse_defexp may consume 'rescue' as a statement modifier
+    # If so, we'll get a :rescue node with wrong structure
+    exps = []
+    rescue_ = nil
+    loop do
+      exp = parse_defexp
+      break if !exp
+      # Check if parse_defexp consumed a rescue modifier
+      # Rescue modifiers have structure: [:rescue, rval, lval] (3 elements)
+      # Proper rescue clauses have: [:rescue, class, name, body] (4 elements)
+      if exp.is_a?(Array) && exp[0] == :rescue && exp.size == 3
+        # This is a malformed rescue from modifier syntax
+        # exp[1] is the first body expression, exp[2] is nil
+        # Need to parse the rest of the rescue body
+        rescue_body = [exp[1]]
+        # Continue parsing expressions until we hit 'end'
+        loop do
+          ws
+          break if keyword(:end)
+          e = parse_defexp
+          break if !e
+          rescue_body << e
+        end
+        rescue_ = E[exp.position, :rescue, nil, nil, rescue_body]
+        # Don't break - we need to continue to consume 'end'
+        return E[pos, :block, [], exps, rescue_]
+      elsif exp.is_a?(Array) && exp[0] == :rescue && exp.size == 4
+        # Proper rescue clause
+        rescue_ = exp
+        break
+      end
+      exps << exp
+    end
+    # If we don't have rescue yet, try to parse it (it's optional)
+    if !rescue_
+      rescue_ = parse_rescue
+    end
+    ws
+    keyword(:end) or expected("'end' for open 'begin' block")
     return E[pos, :block, [], exps, rescue_]
   end
 
