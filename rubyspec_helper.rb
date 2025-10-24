@@ -36,9 +36,11 @@ def describe(description, options = nil, &block)
 end
 
 def it(description, &block)
-  failures_before = $spec_failed
   skipped_before = $spec_skipped
   assertions_before = $spec_assertions
+
+  # Track whether this specific test had any assertion failures
+  $current_test_has_failure = false
 
   # Run before :each blocks
   i = 0
@@ -54,25 +56,27 @@ def it(description, &block)
   #   begin
   #     block.call
   #   rescue
-  #     $spec_failed = $spec_failed + 1
+  #     $current_test_has_failure = true
   #     puts "\e[33m    FAILED: Unhandled exception in test\e[0m"
   #   end
   block.call
 
   if $spec_skipped > skipped_before
-    puts "\e[33m  - #{description}\e[0m"
-  elsif $spec_failed == failures_before
+    puts "\e[33m  - #{description} [P:#{$spec_passed} F:#{$spec_failed} S:#{$spec_skipped}]\e[0m"
+  elsif $current_test_has_failure
+    # This test had assertion failures - count it as 1 failed test
+    $spec_failed = $spec_failed + 1
+    puts "\e[31m  ✗ #{description} [P:#{$spec_passed} F:#{$spec_failed} S:#{$spec_skipped}]\e[0m"
+  else
     # Check if any assertions were actually executed
     if $spec_assertions == assertions_before
       # No assertions were made - mark as skipped
       $spec_skipped = $spec_skipped + 1
-      puts "\e[33m  - #{description} (NO ASSERTIONS)\e[0m"
+      puts "\e[33m  - #{description} (NO ASSERTIONS) [P:#{$spec_passed} F:#{$spec_failed} S:#{$spec_skipped}]\e[0m"
     else
       $spec_passed = $spec_passed + 1
-      puts "\e[32m  ✓ #{description}\e[0m"
+      puts "\e[32m  ✓ #{description} [P:#{$spec_passed} F:#{$spec_failed} S:#{$spec_skipped}]\e[0m"
     end
-  else
-    puts "\e[31m  ✗ #{description}\e[0m"
   end
 end
 
@@ -365,7 +369,7 @@ class ShouldProxy
     result = @target == expected
     if result
     else
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED: Expected #{expected.inspect} but got #{@target.inspect}\e[0m"
     end
     result
@@ -376,7 +380,7 @@ class ShouldProxy
     result = @target != expected
     if result
     else
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED: Expected not to equal #{expected.inspect} but got #{@target.inspect}\e[0m"
     end
     result
@@ -387,7 +391,7 @@ class ShouldProxy
     result = @target.nil?
     if result
     else
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED: Expected to be nil\e[0m"
     end
     result
@@ -399,7 +403,7 @@ class ShouldProxy
 
     if result
     else
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED: Expected to be truthy\e[0m"
     end
     result
@@ -415,7 +419,7 @@ class ShouldNotProxy
     $spec_assertions = $spec_assertions + 1
     result = @target == expected
     if result
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED: Expected #{@target.inspect} != #{expected.inspect}\e[0m"
     end
     result
@@ -425,7 +429,7 @@ class ShouldNotProxy
     $spec_assertions = $spec_assertions + 1
     result = @target.__send__(method, *args)
     if result
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED: Expected to be falsy, got #{@result.inspect}\e[0m"
     end
     result
@@ -443,7 +447,7 @@ class Object
     matcher = args[0]
     match_result = matcher.match?(self)
     if match_result == false
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED\e[0m"
       return false
     end
@@ -458,7 +462,7 @@ class Object
     $spec_assertions = $spec_assertions + 1
     matcher = args[0]
     if matcher.match?(self)
-      $spec_failed = $spec_failed + 1
+      $current_test_has_failure = true
       puts "\e[33m    FAILED\e[0m"
       return false
     end
