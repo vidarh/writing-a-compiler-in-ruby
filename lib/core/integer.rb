@@ -2281,23 +2281,41 @@ class Integer < Numeric
   end
 
   def << other
-    if other.is_a?(Integer)
-      other_raw = other.__get_raw
-      %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
-    else
-      raise TypeError.new("Integer can't be coerced into Integer")
-      nil
+    # Try to_int conversion if not Integer
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        if !other.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return nil
+        end
+      else
+        raise TypeError.new("Integer can't be coerced into Integer")
+        return nil
+      end
     end
+
+    other_raw = other.__get_raw
+    %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
   end
 
   def >> other
-    if other.is_a?(Integer)
-      other_raw = other.__get_raw
-      %s(__int (sarl other_raw (callm self __get_raw)))
-    else
-      raise TypeError.new("Integer can't be coerced into Integer")
-      nil
+    # Try to_int conversion if not Integer
+    if !other.is_a?(Integer)
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        if !other.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return nil
+        end
+      else
+        raise TypeError.new("Integer can't be coerced into Integer")
+        return nil
+      end
     end
+
+    other_raw = other.__get_raw
+    %s(__int (sarl other_raw (callm self __get_raw)))
   end
 
   # Predicates
