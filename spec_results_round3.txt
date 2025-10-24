@@ -1,0 +1,86 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/integer/
+Running all specs in rubyspec/core/integer/...
+================================
+
+[32m[PASS] rubyspec/core/integer/abs_spec.rb (P:2 F:0 S:0 T:2)
+[31m[FAIL] rubyspec/core/integer/allbits_spec.rb (P:1 F:3 S:0 T:4)
+[31m[FAIL] rubyspec/core/integer/anybits_spec.rb (P:2 F:2 S:0 T:4)
+[34m[CRASH] rubyspec/core/integer/bit_and_spec.rb
+[31m[FAIL] rubyspec/core/integer/bit_length_spec.rb (P:0 F:4 S:0 T:4)
+[34m[CRASH] rubyspec/core/integer/bit_or_spec.rb
+[34m[CRASH] rubyspec/core/integer/bit_xor_spec.rb
+[31m[FAIL] rubyspec/core/integer/case_compare_spec.rb (P:1 F:4 S:0 T:5)
+[34m[CRASH] rubyspec/core/integer/ceildiv_spec.rb
+[31m[FAIL] rubyspec/core/integer/ceil_spec.rb (P:7 F:2 S:0 T:9)
+[31m[FAIL] rubyspec/core/integer/chr_spec.rb (P:9 F:17 S:0 T:26)
+[31m[FAIL] rubyspec/core/integer/coerce_spec.rb (P:2 F:10 S:0 T:12)
+[31m[FAIL] rubyspec/core/integer/comparison_spec.rb (P:20 F:12 S:1 T:33)
+[32m[PASS] rubyspec/core/integer/complement_spec.rb (P:2 F:0 S:0 T:2)
+[31m[FAIL] rubyspec/core/integer/constants_spec.rb (P:0 F:0 S:2 T:2)
+[32m[PASS] rubyspec/core/integer/denominator_spec.rb (P:1 F:0 S:0 T:1)
+[31m[FAIL] rubyspec/core/integer/digits_spec.rb (P:6 F:3 S:0 T:9)
+[34m[CRASH] rubyspec/core/integer/divide_spec.rb
+[34m[CRASH] rubyspec/core/integer/divmod_spec.rb
+[34m[CRASH] rubyspec/core/integer/div_spec.rb
+[31m[FAIL] rubyspec/core/integer/downto_spec.rb (P:3 F:6 S:0 T:9)
+[32m[PASS] rubyspec/core/integer/dup_spec.rb (P:2 F:0 S:0 T:2)
+[34m[CRASH] rubyspec/core/integer/element_reference_spec.rb
+[31m[FAIL] rubyspec/core/integer/equal_value_spec.rb (P:1 F:4 S:0 T:5)
+[32m[PASS] rubyspec/core/integer/even_spec.rb (P:6 F:0 S:0 T:6)
+[34m[CRASH] rubyspec/core/integer/exponent_spec.rb
+[31m[FAIL] rubyspec/core/integer/fdiv_spec.rb (P:0 F:14 S:0 T:14)
+[31m[FAIL] rubyspec/core/integer/floor_spec.rb (P:7 F:1 S:0 T:8)
+[31m[FAIL] rubyspec/core/integer/gcdlcm_spec.rb (P:7 F:3 S:0 T:10)
+[31m[FAIL] rubyspec/core/integer/gcd_spec.rb (P:6 F:6 S:0 T:12)
+[31m[FAIL] rubyspec/core/integer/gte_spec.rb (P:0 F:5 S:0 T:5)
+[31m[FAIL] rubyspec/core/integer/gt_spec.rb (P:0 F:5 S:0 T:5)
+[34m[CRASH] rubyspec/core/integer/integer_spec.rb
+[31m[FAIL] rubyspec/core/integer/lcm_spec.rb (P:6 F:5 S:0 T:11)
+[31m[FAIL] rubyspec/core/integer/left_shift_spec.rb (P:8 F:26 S:0 T:34)
+[31m[FAIL] rubyspec/core/integer/lte_spec.rb (P:3 F:4 S:0 T:7)
+[31m[FAIL] rubyspec/core/integer/lt_spec.rb (P:1 F:4 S:0 T:5)
+[32m[PASS] rubyspec/core/integer/magnitude_spec.rb (P:2 F:0 S:0 T:2)
+[31m[FAIL] rubyspec/core/integer/minus_spec.rb (P:2 F:5 S:0 T:7)
+[31m[FAIL] rubyspec/core/integer/modulo_spec.rb (P:0 F:16 S:0 T:16)
+[31m[FAIL] rubyspec/core/integer/multiply_spec.rb (P:0 F:5 S:0 T:5)
+[32m[PASS] rubyspec/core/integer/next_spec.rb (P:6 F:0 S:0 T:6)
+[31m[FAIL] rubyspec/core/integer/nobits_spec.rb (P:2 F:2 S:0 T:4)
+[32m[PASS] rubyspec/core/integer/numerator_spec.rb (P:1 F:0 S:0 T:1)
+[32m[PASS] rubyspec/core/integer/odd_spec.rb (P:5 F:0 S:0 T:5)
+[31m[FAIL] rubyspec/core/integer/ord_spec.rb (P:0 F:1 S:0 T:1)
+[31m[FAIL] rubyspec/core/integer/plus_spec.rb (P:2 F:5 S:1 T:8)
+[34m[CRASH] rubyspec/core/integer/pow_spec.rb
+[32m[PASS] rubyspec/core/integer/pred_spec.rb (P:1 F:0 S:0 T:1)
+[31m[FAIL] rubyspec/core/integer/rationalize_spec.rb (P:2 F:3 S:0 T:5)
+[31m[FAIL] rubyspec/core/integer/remainder_spec.rb (P:0 F:7 S:0 T:7)
+[31m[FAIL] rubyspec/core/integer/right_shift_spec.rb (P:8 F:27 S:0 T:35)
+[34m[CRASH] rubyspec/core/integer/round_spec.rb
+[31m[FAIL] rubyspec/core/integer/size_spec.rb (P:1 F:2 S:0 T:3)
+[31m[FAIL] rubyspec/core/integer/sqrt_spec.rb (P:3 F:3 S:0 T:6)
+[32m[PASS] rubyspec/core/integer/succ_spec.rb (P:6 F:0 S:0 T:6)
+[34m[CRASH] rubyspec/core/integer/times_spec.rb
+[31m[FAIL] rubyspec/core/integer/to_f_spec.rb (P:0 F:3 S:0 T:3)
+[32m[PASS] rubyspec/core/integer/to_int_spec.rb (P:1 F:0 S:0 T:1)
+[32m[PASS] rubyspec/core/integer/to_i_spec.rb (P:1 F:0 S:0 T:1)
+[31m[FAIL] rubyspec/core/integer/to_r_spec.rb (P:4 F:1 S:0 T:5)
+[31m[FAIL] rubyspec/core/integer/to_s_spec.rb (P:7 F:3 S:0 T:10)
+[31m[FAIL] rubyspec/core/integer/truncate_spec.rb (P:4 F:1 S:0 T:5)
+[31m[FAIL] rubyspec/core/integer/try_convert_spec.rb (P:4 F:3 S:0 T:7)
+[31m[FAIL] rubyspec/core/integer/uminus_spec.rb (P:2 F:1 S:0 T:3)
+[31m[FAIL] rubyspec/core/integer/upto_spec.rb (P:3 F:6 S:0 T:9)
+[31m[FAIL] rubyspec/core/integer/zero_spec.rb (P:1 F:1 S:0 T:2)
+
+================================
+Summary:
+  Total spec files: 67
+  Passed: 13
+  Failed: 41
+  Crashed (no test output): 13
+  Failed to compile: 0
+
+Individual Test Cases:
+  Total tests: 410
+  Passed: 171
+  Failed: 235
+  Skipped: 4
+  Pass rate: 41%
