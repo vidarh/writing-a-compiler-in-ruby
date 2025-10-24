@@ -1958,7 +1958,7 @@ class Integer < Numeric
     if cmp < 0
       # Check signs for floor division
       if my_sign == other_sign
-        
+        return 0
       else
         return -1
       end
