@@ -321,7 +321,7 @@ class Integer < Numeric
 
       if cmp == 0
         # Magnitudes equal - result is 0
-        
+        return 0
       else
         if cmp > 0
           # |self| > |other| - subtract other from self, keep self's sign
@@ -351,7 +351,7 @@ class Integer < Numeric
 
       if cmp == 0
         # Magnitudes equal - result is 0
-        
+        return 0
       else
         if cmp > 0
           # |self| > |other| - subtract other from self, keep self's sign
@@ -465,7 +465,7 @@ class Integer < Numeric
     end
 
     # All limbs equal
-    
+    return 0
   end
 
   # Subtract limbs_b from limbs_a (assumes limbs_a >= limbs_b)
