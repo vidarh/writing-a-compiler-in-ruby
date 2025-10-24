@@ -209,18 +209,23 @@ if [ -d "$TARGET" ]; then
             COUNT_STR=" (P:${PASSED_COUNT:-0} F:${FAILED_COUNT:-0} S:${SKIPPED_COUNT:-0} T:${TOTAL_COUNT})"
         fi
 
-        if [ $RESULT -eq 0 ]; then
+        # If there's no TOTAL_COUNT, the spec crashed before printing summary
+        # This is top priority to fix regardless of exit code
+        if [ -z "$TOTAL_COUNT" ]; then
+            if [ $RESULT -eq 3 ]; then
+                echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE${COUNT_STR}"
+                FAILED_COMPILE=$((FAILED_COMPILE + 1))
+            else
+                echo -e "\e[34m[CRASH] $SPEC_FILE${COUNT_STR}"
+                SEGFAULT=$((SEGFAULT + 1))
+            fi
+        elif [ $RESULT -eq 0 ]; then
             echo -e "\e[32m[PASS] $SPEC_FILE${COUNT_STR}"
             PASSED=$((PASSED + 1))
-        elif [ $RESULT -eq 1 ]; then
+        else
+            # Exit code 1 or 2 but has counts means tests ran but some failed
             echo -e "\e[31m[FAIL] $SPEC_FILE${COUNT_STR}"
             FAILED=$((FAILED + 1))
-        elif [ $RESULT -eq 2 ]; then
-            echo -e "\e[34m[SEGFAULT] $SPEC_FILE${COUNT_STR}"
-            SEGFAULT=$((SEGFAULT + 1))
-        else
-            echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE${COUNT_STR}"
-            FAILED_COMPILE=$((FAILED_COMPILE + 1))
         fi
 
         # Accumulate counts for summary
@@ -247,7 +252,7 @@ if [ -d "$TARGET" ]; then
     echo "  Total spec files: $TOTAL_FILES"
     echo "  Passed: $PASSED"
     echo "  Failed: $FAILED"
-    echo "  Segfault/Runtime error: $SEGFAULT"
+    echo "  Crashed (no test output): $SEGFAULT"
     echo "  Failed to compile: $FAILED_COMPILE"
     echo
     echo "Individual Test Cases:"

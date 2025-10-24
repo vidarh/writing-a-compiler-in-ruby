@@ -18,8 +18,13 @@ class Object
   # Raise an exception
   # Simplified version - just handles string messages for now
   # FIXME: This should be in Kernel, but include doesn't work properly yet
-  def raise(msg)
-    exc = RuntimeError.new(msg)
+  def raise(msg_or_exc)
+    # Handle both String messages and Exception objects
+    if msg_or_exc.is_a?(StandardError)
+      exc = msg_or_exc
+    else
+      exc = RuntimeError.new(msg_or_exc)
+    end
     $__exception_runtime.raise(exc)
     # Never returns
   end
