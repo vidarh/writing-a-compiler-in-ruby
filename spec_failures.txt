@@ -64,3 +64,22 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/to_r_spec.rb (P:4 F:1 S:0 T:5)
 [31m[FAIL] rubyspec/core/integer/to_s_spec.rb (P:7 F:3 S:0 T:10)
 [31m[FAIL] rubyspec/core/integer/truncate_spec.rb (P:4 F:1 S:0 T:5)
+[31m[FAIL] rubyspec/core/integer/try_convert_spec.rb (P:4 F:3 S:0 T:7)
+[31m[FAIL] rubyspec/core/integer/uminus_spec.rb (P:2 F:1 S:0 T:3)
+[31m[FAIL] rubyspec/core/integer/upto_spec.rb (P:3 F:6 S:0 T:9)
+[31m[FAIL] rubyspec/core/integer/zero_spec.rb (P:1 F:1 S:0 T:2)
+
+================================
+Summary:
+  Total spec files: 67
+  Passed: 13
+  Failed: 39
+  Crashed (no test output): 15
+  Failed to compile: 0
+
+Individual Test Cases:
+  Total tests: 341
+  Passed: 155
+  Failed: 182
+  Skipped: 4
+  Pass rate: 45%
