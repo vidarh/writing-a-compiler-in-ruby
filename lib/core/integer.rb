@@ -2692,7 +2692,8 @@ class Integer < Numeric
     # Ruby's Integer#pow can take a second modulo parameter: pow(exp, mod)
     # For now, just support the single-argument form
     if args.length == 2
-      raise "Integer#pow with modulo not yet implemented"
+      raise ArgumentError.new("Integer#pow with modulo not yet implemented")
+      return nil
     end
 
     self ** args[0]
