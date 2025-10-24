@@ -138,8 +138,8 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       # SAFETY: Check if other is nil to prevent crashes
       if other == nil
-        STDERR.puts("TypeError: nil can't be coerced into Integer")
-        return 0
+        raise TypeError.new("nil can't be coerced into Integer")
+        
       end
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
@@ -194,8 +194,8 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       # SAFETY: Check if other is nil to prevent crashes
       if other == nil
-        STDERR.puts("TypeError: nil can't be coerced into Integer")
-        return 0
+        raise TypeError.new("nil can't be coerced into Integer")
+        
       end
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
@@ -209,20 +209,20 @@ class Integer < Numeric
         if coerced && coerced.is_a?(Array) && coerced.length == 2
           return coerced[0] - coerced[1]
         end
-        STDERR.puts("TypeError: coerce must return [x, y]")
-        return 0
+        raise TypeError.new("coerce must return [x, y]")
+        
       elsif other.respond_to?(:to_int)
         # Try to_int conversion
         other = other.to_int
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
-          return 0
+          raise TypeError.new("can't convert to Integer")
+          
         end
         # Fall through to integer arithmetic below
       else
         # Type doesn't support coercion
-        STDERR.puts("TypeError: Integer can't be coerced")
-        return 0
+        raise TypeError.new("Integer can't be coerced")
+        
       end
     end
 
@@ -321,7 +321,7 @@ class Integer < Numeric
 
       if cmp == 0
         # Magnitudes equal - result is 0
-        return 0
+        
       else
         if cmp > 0
           # |self| > |other| - subtract other from self, keep self's sign
@@ -351,7 +351,7 @@ class Integer < Numeric
 
       if cmp == 0
         # Magnitudes equal - result is 0
-        return 0
+        
       else
         if cmp > 0
           # |self| > |other| - subtract other from self, keep self's sign
@@ -465,7 +465,7 @@ class Integer < Numeric
     end
 
     # All limbs equal
-    return 0
+    
   end
 
   # Subtract limbs_b from limbs_a (assumes limbs_a >= limbs_b)
@@ -1526,15 +1526,15 @@ class Integer < Numeric
         # WORKAROUND: Rational arithmetic not implemented, return stub Rational
         return Rational.new(self, 1)
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
-        return 0
+        raise TypeError.new("Integer can't be coerced")
+        
       end
     end
 
     # Check for modulo by zero
     if other == 0
-      STDERR.puts("ZeroDivisionError: divided by 0")
-      return 0
+      raise ZeroDivisionError.new("divided by 0")
+      
     end
 
     # Dispatch based on representation (fixnum vs heap)
@@ -1576,8 +1576,8 @@ class Integer < Numeric
   def remainder(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
-      return 0
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
     end
 
     other = args[0]
@@ -1591,8 +1591,8 @@ class Integer < Numeric
         # WORKAROUND: Rational arithmetic not implemented, return stub Rational
         return Rational.new(self, 1)
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
-        return 0
+        raise TypeError.new("Integer can't be coerced")
+        
       end
     end
 
@@ -1600,9 +1600,9 @@ class Integer < Numeric
     # remainder has same sign as dividend (self), modulo has same sign as divisor (other)
     # For now, use simple implementation: self - (self / other) * other
     quotient = self / other
-    # If division returned nil (e.g., divide by zero error), return 0
+    # If division returned nil (e.g., divide by zero error), 
     if quotient.nil?
-      return 0
+      
     end
     self - (quotient * other)
   end
@@ -1620,12 +1620,12 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
-          return 0
+          raise TypeError.new("can't convert to Integer")
+          
         end
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
-        return 0
+        raise TypeError.new("Integer can't be coerced")
+        
       end
     end
 
@@ -1759,19 +1759,19 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
-          return 0
+          raise TypeError.new("can't convert to Integer")
+          
         end
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
-        return 0
+        raise TypeError.new("Integer can't be coerced")
+        
       end
     end
 
     # Check for division by zero
     if other == 0
-      STDERR.puts("ZeroDivisionError: divided by 0")
-      return 0
+      raise ZeroDivisionError.new("divided by 0")
+      
     end
 
     # Dispatch based on representation (fixnum vs heap)
@@ -1817,7 +1817,7 @@ class Integer < Numeric
   def fdiv *args
     # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return nil
     end
     Float.new
@@ -1835,7 +1835,7 @@ class Integer < Numeric
     # If different sign and |self| < |other|, quotient = -1 (floor division)
     # For simplicity, since fixnum magnitude is always < heap magnitude:
     if self_sign == other_sign
-      return 0
+      
     else
       return -1  # Ruby floor division
     end
@@ -1958,7 +1958,7 @@ class Integer < Numeric
     if cmp < 0
       # Check signs for floor division
       if my_sign == other_sign
-        return 0
+        
       else
         return -1
       end
@@ -2242,12 +2242,12 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
+          raise TypeError.new("can't convert to Integer")
           return nil
         end
       else
         # If to_int doesn't exist, raise TypeError
-        STDERR.puts("TypeError: Integer can't be coerced into Integer")
+        raise TypeError.new("Integer can't be coerced into Integer")
         return nil
       end
     end
@@ -2261,7 +2261,7 @@ class Integer < Numeric
       other_raw = other.__get_raw
       %s(__int (bitor (callm self __get_raw) other_raw))
     else
-      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      raise TypeError.new("Integer can't be coerced into Integer")
       nil
     end
   end
@@ -2271,7 +2271,7 @@ class Integer < Numeric
       other_raw = other.__get_raw
       %s(__int (bitxor (callm self __get_raw) other_raw))
     else
-      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      raise TypeError.new("Integer can't be coerced into Integer")
       nil
     end
   end
@@ -2285,7 +2285,7 @@ class Integer < Numeric
       other_raw = other.__get_raw
       %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
     else
-      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      raise TypeError.new("Integer can't be coerced into Integer")
       nil
     end
   end
@@ -2295,7 +2295,7 @@ class Integer < Numeric
       other_raw = other.__get_raw
       %s(__int (sarl other_raw (callm self __get_raw)))
     else
-      STDERR.puts("TypeError: Integer can't be coerced into Integer")
+      raise TypeError.new("Integer can't be coerced into Integer")
       nil
     end
   end
@@ -2456,7 +2456,7 @@ class Integer < Numeric
   def to_r *args
     # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
     if args.length != 0
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0)")
       return nil
     end
     Rational.new(self,1)
@@ -2491,7 +2491,7 @@ class Integer < Numeric
   def self.try_convert(*args)
     # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return nil
     end
     obj = args[0]
@@ -2535,11 +2535,11 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
+          raise TypeError.new("can't convert to Integer")
           return nil
         end
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
+        raise TypeError.new("Integer can't be coerced")
         return nil
       end
     end
@@ -2556,11 +2556,11 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
+          raise TypeError.new("can't convert to Integer")
           return nil
         end
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
+        raise TypeError.new("Integer can't be coerced")
         return nil
       end
     end
@@ -2611,7 +2611,7 @@ class Integer < Numeric
         raise "divided by 0"
       end
       # For other integers, negative exponent returns 0 (integer division)
-      return 0
+      
     end
 
     # Positive exponent: repeated multiplication
@@ -2653,15 +2653,15 @@ class Integer < Numeric
   def [](*args)
     # Arity check - expect 1 or 2 arguments
     if args.length < 1 || args.length > 2
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1..2)")
-      return 0
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1..2)")
+      
     end
 
     i = args[0]
 
     # Type check first
     if !i.is_a?(Integer)
-      STDERR.puts("TypeError: Integer can't be coerced")
+      raise TypeError.new("Integer can't be coerced")
       return nil
     end
 
@@ -2675,8 +2675,8 @@ class Integer < Numeric
     # If two arguments: [i, len] - returns len bits starting at position i
     len = args[1]
     if !len.is_a?(Integer)
-      STDERR.puts("TypeError: length must be an Integer")
-      return 0
+      raise TypeError.new("length must be an Integer")
+      
     end
 
     # Handle negative length: ignore it and return self >> i
@@ -2691,7 +2691,7 @@ class Integer < Numeric
 
   def allbits?(*args)
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return false
     end
     mask = args[0]
@@ -2700,7 +2700,7 @@ class Integer < Numeric
 
   def anybits?(*args)
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return false
     end
     mask = args[0]
@@ -2709,7 +2709,7 @@ class Integer < Numeric
 
   def nobits?(*args)
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return false
     end
     mask = args[0]
@@ -2768,7 +2768,7 @@ class Integer < Numeric
     # round(ndigits, half: mode) -> self (hash passed as 2nd arg without keyword support)
 
     if args.length > 2
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0..2)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0..2)")
       return nil
     end
 
@@ -2785,15 +2785,15 @@ class Integer < Numeric
   def gcd(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
-      return 0
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
     end
 
     other = args[0]
 
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
-      STDERR.puts("TypeError: Integer can't be coerced")
+      raise TypeError.new("Integer can't be coerced")
       return nil
     end
 
@@ -2821,15 +2821,15 @@ class Integer < Numeric
   def lcm(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
-      return 0
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
     end
 
     other = args[0]
 
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
-      STDERR.puts("TypeError: Integer can't be coerced")
+      raise TypeError.new("Integer can't be coerced")
       return nil
     end
 
@@ -2851,7 +2851,7 @@ class Integer < Numeric
   def gcdlcm(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return [0, 0]
     end
 
@@ -2859,7 +2859,7 @@ class Integer < Numeric
 
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
-      STDERR.puts("TypeError: Integer can't be coerced")
+      raise TypeError.new("Integer can't be coerced")
       return nil
     end
 
@@ -2870,8 +2870,8 @@ class Integer < Numeric
   def ceildiv(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
-      return 0
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
     end
 
     other = args[0]
@@ -2882,18 +2882,18 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
+          raise TypeError.new("can't convert to Integer")
           return nil
         end
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
+        raise TypeError.new("Integer can't be coerced")
         return nil
       end
     end
 
     # Check for division by zero
     if other == 0
-      STDERR.puts("ZeroDivisionError: divided by 0")
+      raise ZeroDivisionError.new("divided by 0")
       return nil
     end
 
@@ -2926,7 +2926,7 @@ class Integer < Numeric
   def digits(*args)
     # Arity check - expect 0 or 1 arguments
     if args.length > 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0..1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0..1)")
       return []
     end
 
@@ -2934,12 +2934,12 @@ class Integer < Numeric
 
     # Validate base
     if !base.is_a?(Integer)
-      STDERR.puts("TypeError: base must be an Integer")
+      raise TypeError.new("base must be an Integer")
       return []
     end
 
     if base < 2
-      STDERR.puts("ArgumentError: negative radix")
+      raise ArgumentError.new("negative radix")
       return []
     end
 
@@ -2971,7 +2971,7 @@ class Integer < Numeric
   def chr(*args)
     # Arity check - expect 0 or 1 arguments
     if args.length > 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 0..1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0..1)")
       return ""
     end
 
@@ -3001,11 +3001,11 @@ class Integer < Numeric
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
+          raise TypeError.new("can't convert to Integer")
           return nil
         end
       else
-        STDERR.puts("TypeError: Integer can't be coerced")
+        raise TypeError.new("Integer can't be coerced")
         return nil
       end
     end
@@ -3028,7 +3028,7 @@ class Integer < Numeric
   def downto(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return nil
     end
 
@@ -3049,7 +3049,7 @@ class Integer < Numeric
   def upto(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return nil
     end
 
@@ -3071,7 +3071,7 @@ class Integer < Numeric
   def coerce(*args)
     # Arity check - expect exactly 1 argument
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
       return [nil, nil]
     end
 
