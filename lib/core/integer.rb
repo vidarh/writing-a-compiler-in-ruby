@@ -2628,13 +2628,23 @@ class Integer < Numeric
 
     # Validate argument count
     if args.length != 1
-      raise "wrong number of arguments (given #{args.length}, expected 1)"
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
     end
     other = args[0]
 
-    # Type check
+    # Type check - try to_int conversion
     if !other.is_a?(Integer)
-      raise "Integer can't be coerced into Integer"
+      if other.respond_to?(:to_int)
+        other = other.to_int
+        if !other.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return nil
+        end
+      else
+        raise TypeError.new("Integer can't be coerced into Integer")
+        return nil
+      end
     end
 
     return 1 if other == 0
@@ -2644,10 +2654,11 @@ class Integer < Numeric
     if other < 0
       # 0 ** negative raises ZeroDivisionError
       if self == 0
-        raise "divided by 0"
+        raise ZeroDivisionError.new("divided by 0")
+        return nil
       end
       # For other integers, negative exponent returns 0 (integer division)
-      
+      return 0
     end
 
     # Positive exponent: repeated multiplication
@@ -2674,7 +2685,8 @@ class Integer < Numeric
   def pow(*args)
     # Validate argument count
     if args.length < 1 || args.length > 2
-      raise "wrong number of arguments (given #{args.length}, expected 1..2)"
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1..2)")
+      return nil
     end
 
     # Ruby's Integer#pow can take a second modulo parameter: pow(exp, mod)
