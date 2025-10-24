@@ -193,6 +193,14 @@ class Class
     end
   end
 
+  # WORKAROUND: Stub for Class#include? to prevent crashes
+  # This should check if a module is included in the class hierarchy
+  # For now, just return false to prevent hangs/crashes
+  def include?(mod)
+    # FIXME: Should actually check the module hierarchy
+    false
+  end
+
 end
 
 %s(assign (index Class 0) Class)

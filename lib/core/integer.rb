@@ -1760,11 +1760,19 @@ class Integer < Numeric
         # Check if to_int returned nil (failed conversion)
         if other.nil?
           raise TypeError.new("can't convert to Integer")
-          
+
         end
+      elsif other.respond_to?(:coerce)
+        # Try coercion protocol to prevent crashes
+        coerced = other.coerce(self)
+        if coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] / coerced[1]
+        end
+        raise TypeError.new("coerce must return [x, y]")
+
       else
         raise TypeError.new("Integer can't be coerced")
-        
+
       end
     end
 
@@ -2245,6 +2253,14 @@ class Integer < Numeric
           raise TypeError.new("can't convert to Integer")
           return nil
         end
+      elsif other.respond_to?(:coerce)
+        # Try coercion protocol to prevent crashes
+        coerced = other.coerce(self)
+        if coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] & coerced[1]
+        end
+        raise TypeError.new("coerce must return [x, y]")
+        return nil
       else
         # If to_int doesn't exist, raise TypeError
         raise TypeError.new("Integer can't be coerced into Integer")
@@ -2265,6 +2281,14 @@ class Integer < Numeric
           raise TypeError.new("can't convert to Integer")
           return nil
         end
+      elsif other.respond_to?(:coerce)
+        # Try coercion protocol to prevent crashes
+        coerced = other.coerce(self)
+        if coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] | coerced[1]
+        end
+        raise TypeError.new("coerce must return [x, y]")
+        return nil
       else
         raise TypeError.new("Integer can't be coerced into Integer")
         return nil
@@ -2284,6 +2308,14 @@ class Integer < Numeric
           raise TypeError.new("can't convert to Integer")
           return nil
         end
+      elsif other.respond_to?(:coerce)
+        # Try coercion protocol to prevent crashes
+        coerced = other.coerce(self)
+        if coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] ^ coerced[1]
+        end
+        raise TypeError.new("coerce must return [x, y]")
+        return nil
       else
         raise TypeError.new("Integer can't be coerced into Integer")
         return nil
@@ -2574,6 +2606,14 @@ class Integer < Numeric
           raise TypeError.new("can't convert to Integer")
           return nil
         end
+      elsif other.respond_to?(:coerce)
+        # Try coercion protocol to prevent crashes
+        coerced = other.coerce(self)
+        if coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0].div(coerced[1])
+        end
+        raise TypeError.new("coerce must return [x, y]")
+        return nil
       else
         raise TypeError.new("Integer can't be coerced")
         return nil
@@ -2641,6 +2681,14 @@ class Integer < Numeric
           raise TypeError.new("can't convert to Integer")
           return nil
         end
+      elsif other.respond_to?(:coerce)
+        # Try coercion protocol to prevent crashes
+        coerced = other.coerce(self)
+        if coerced.is_a?(Array) && coerced.length == 2
+          return coerced[0] ** coerced[1]
+        end
+        raise TypeError.new("coerce must return [x, y]")
+        return nil
       else
         raise TypeError.new("Integer can't be coerced into Integer")
         return nil
