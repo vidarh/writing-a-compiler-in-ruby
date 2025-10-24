@@ -94,22 +94,62 @@ end
    - Store intermediate result: `obj = Foo.new; obj.bar`
    - Don't use: `Foo.new.bar`
 
+## Technical Investigation (Session 30 Continuation)
+
+### What I Discovered
+
+1. **Class variables compile to global variables**:
+   - `@@exc_stack` becomes `__classvar__ExceptionRuntime__exc_stack` in assembly
+   - These ARE globally accessible and should work across contexts
+   - Not a scoping issue
+
+2. **The real problem**: Class methods and blocks don't work together properly
+   - Tests with `def self.method` crash with segfaults
+   - `ExceptionRuntime.raise(exc)` in kernel.rb calls a class method, but raise is an instance method
+   - This somehow works in simple methods but fails across block boundaries
+
+3. **Root cause**: Deep compiler limitation
+   - Not just exception handling - affects any use of class methods with blocks
+   - Cannot be fixed with simple changes to exception.rb or kernel.rb
+   - Requires fixing how the compiler handles class methods and block contexts
+
+### Why Simple Fixes Failed
+
+**Attempt 1**: Convert @@exc_stack to $__exc_stack (global variables)
+- Result: Everything crashed, even basic rescue
+- Reason: Broke initialization/access patterns
+
+**Attempt 2**: Change ExceptionRuntime.raise to $__exception_runtime.raise
+- Result: Still didn't work, "Unhandled exception" in blocks
+- Reason: Deeper issue than just the method call
+
+**Attempt 3**: Test class variables across blocks
+- Result: Segfault even with simple class method tests
+- Reason: Class methods themselves don't work properly in this context
+
 ## Future Work
 
-To fix rescue across block boundaries:
+To fix rescue across block boundaries requires fixing fundamental compiler issues:
 
-1. **Option A**: Save/restore exception handler stack when calling blocks
-   - Modify Proc#call to preserve @@exc_stack context
-   - May require changes to closure compilation
+1. **Fix class method compilation**:
+   - Understand why `def self.method` causes segfaults with blocks
+   - Fix how class methods are called vs instance methods
+   - May require changes to vtable or method resolution
 
-2. **Option B**: Use dynamic handler lookup instead of stack
-   - Walk stack frames at raise time to find handlers
-   - More complex but more robust
+2. **Fix Kernel#raise implementation**:
+   - Currently calls `ExceptionRuntime.raise(exc)` (class method)
+   - But `raise` is defined as instance method in ExceptionRuntime
+   - Need consistent calling convention
 
 3. **Investigation needed**:
-   - How are blocks/closures compiled?
-   - Where is the handler stack context lost?
-   - Can we pass handler context through closure environment?
+   - Why do class methods crash when combined with blocks?
+   - How are class methods vs instance methods dispatched?
+   - Can we use a different approach that avoids class methods?
+
+4. **Alternative approach**: Redesign exception handling to avoid class methods entirely
+   - Use only global variables and functions
+   - Implement raise/unwind as s-expression primitives
+   - Would require significant refactoring
 
 ## Test Cases
 
