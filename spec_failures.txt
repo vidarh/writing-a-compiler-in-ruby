@@ -1,3 +1,4 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/integer/
 Running all specs in rubyspec/core/integer/...
 ================================
 
@@ -78,8 +79,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 913
-  Passed: 144
-  Failed: 765
+  Total tests: 898
+  Passed: 152
+  Failed: 742
   Skipped: 4
-  Pass rate: 15%
+  Pass rate: 16%

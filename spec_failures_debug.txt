@@ -68,3 +68,19 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/try_convert_spec.rb
 [31m[FAIL] rubyspec/core/integer/uminus_spec.rb
 [31m[FAIL] rubyspec/core/integer/upto_spec.rb
+[31m[FAIL] rubyspec/core/integer/zero_spec.rb
+
+================================
+Summary:
+  Total spec files: 67
+  Passed: 11
+  Failed: 56
+  Segfault/Runtime error: 0
+  Failed to compile: 0
+
+Individual Test Cases:
+  Total tests: 898
+  Passed: 152
+  Failed: 742
+  Skipped: 4
+  Pass rate: 16%
