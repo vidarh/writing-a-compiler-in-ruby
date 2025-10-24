@@ -8,7 +8,7 @@ class Kernel
   # Simplified version - just handles string messages for now
   def raise(msg)
     exc = RuntimeError.new(msg)
-    ExceptionRuntime.raise(exc)
+    $__exception_runtime.raise(exc)
     # Never returns
   end
 

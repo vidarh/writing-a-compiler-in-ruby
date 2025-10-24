@@ -90,42 +90,43 @@ class ExceptionHandler
 end
 
 # Exception runtime - manages the exception handler stack
-# This is a singleton-like class (using class variables)
+# Uses a singleton instance with instance variables (accessible via global)
 class ExceptionRuntime
-  # Global exception state
-  @@exc_stack = nil           # Top of handler stack
-  @@current_exception = nil   # Currently raised exception object
+  def initialize
+    @exc_stack = nil           # Top of handler stack
+    @current_exception = nil   # Currently raised exception object
+  end
 
   # Push a handler onto the exception stack
   # Returns the handler for caller to initialize
   def push_handler(rescue_classes = nil)
     handler = ExceptionHandler.new
     handler.rescue_classes = rescue_classes
-    handler.next = @@exc_stack
-    @@exc_stack = handler
+    handler.next = @exc_stack
+    @exc_stack = handler
     return handler
   end
 
   # Pop handler from stack
   def pop_handler
-    if @@exc_stack
-      @@exc_stack = @@exc_stack.next
+    if @exc_stack != nil
+      @exc_stack = @exc_stack.next
     end
   end
 
   # Get current handler
   def current_handler
-    @@exc_stack
+    @exc_stack
   end
 
   # Raise an exception
-  # Unwinds stack and jumps to handler (like preturn for Proc)
+  # Unwinds stack and jumps to handler (like :preturn for Proc)
   def raise(exception_obj)
-    @@current_exception = exception_obj
+    @current_exception = exception_obj
 
-    if @@exc_stack
-      handler = @@exc_stack
-      @@exc_stack = handler.next  # Pop before jumping
+    if @exc_stack
+      handler = @exc_stack
+      @exc_stack = handler.next  # Pop before jumping
 
       # Use :unwind primitive to unwind stack (like :preturn for Proc)
       %s(unwind handler)
@@ -141,12 +142,12 @@ class ExceptionRuntime
 
   # Get current exception (called from rescue block)
   def current_exception
-    @@current_exception
+    @current_exception
   end
 
   # Clear current exception (after rescue handles it)
   def clear
-    @@current_exception = nil
+    @current_exception = nil
   end
 end
 
