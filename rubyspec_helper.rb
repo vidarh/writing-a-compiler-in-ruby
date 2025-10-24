@@ -57,7 +57,7 @@ def it(description, &block)
   #     block.call
   #   rescue
   #     $current_test_has_failure = true
-  #     puts "\e[33m    FAILED: Unhandled exception in test\e[0m"
+  #     puts "\e[31m    FAILED: Unhandled exception in test\e[0m"
   #   end
   block.call
 
@@ -370,7 +370,7 @@ class ShouldProxy
     if result
     else
       $current_test_has_failure = true
-      puts "\e[33m    FAILED: Expected #{expected.inspect} but got #{@target.inspect}\e[0m"
+      puts "\e[31m    FAILED: Expected #{expected.inspect} but got #{@target.inspect}\e[0m"
     end
     result
   end
@@ -381,7 +381,7 @@ class ShouldProxy
     if result
     else
       $current_test_has_failure = true
-      puts "\e[33m    FAILED: Expected not to equal #{expected.inspect} but got #{@target.inspect}\e[0m"
+      puts "\e[31m    FAILED: Expected not to equal #{expected.inspect} but got #{@target.inspect}\e[0m"
     end
     result
   end
@@ -392,7 +392,7 @@ class ShouldProxy
     if result
     else
       $current_test_has_failure = true
-      puts "\e[33m    FAILED: Expected to be nil\e[0m"
+      puts "\e[31m    FAILED: Expected to be nil\e[0m"
     end
     result
   end
@@ -404,7 +404,7 @@ class ShouldProxy
     if result
     else
       $current_test_has_failure = true
-      puts "\e[33m    FAILED: Expected to be truthy\e[0m"
+      puts "\e[31m    FAILED: Expected to be truthy\e[0m"
     end
     result
   end
@@ -420,7 +420,7 @@ class ShouldNotProxy
     result = @target == expected
     if result
       $current_test_has_failure = true
-      puts "\e[33m    FAILED: Expected #{@target.inspect} != #{expected.inspect}\e[0m"
+      puts "\e[31m    FAILED: Expected #{@target.inspect} != #{expected.inspect}\e[0m"
     end
     result
   end
@@ -430,7 +430,7 @@ class ShouldNotProxy
     result = @target.__send__(method, *args)
     if result
       $current_test_has_failure = true
-      puts "\e[33m    FAILED: Expected to be falsy, got #{@result.inspect}\e[0m"
+      puts "\e[31m    FAILED: Expected to be falsy, got #{@result.inspect}\e[0m"
     end
     result
   end
@@ -448,7 +448,13 @@ class Object
     match_result = matcher.match?(self)
     if match_result == false
       $current_test_has_failure = true
-      puts "\e[33m    FAILED\e[0m"
+      matcher_name = matcher.class.name
+      failure_msg = matcher.failure_message(self) if matcher.respond_to?(:failure_message)
+      if failure_msg
+        puts "\e[31m    FAILED: #{failure_msg}\e[0m"
+      else
+        puts "\e[31m    FAILED: #{matcher_name}\e[0m"
+      end
       return false
     end
     return true
@@ -463,7 +469,8 @@ class Object
     matcher = args[0]
     if matcher.match?(self)
       $current_test_has_failure = true
-      puts "\e[33m    FAILED\e[0m"
+      matcher_name = matcher.class.name
+      puts "\e[31m    FAILED: should_not #{matcher_name}\e[0m"
       return false
     end
     true

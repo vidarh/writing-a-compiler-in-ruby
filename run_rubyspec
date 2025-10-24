@@ -190,27 +190,41 @@ if [ -d "$TARGET" ]; then
             rm -f "/tmp/spec_last_output_$$"
         fi
 
-        if [ $RESULT -eq 0 ]; then
-            echo -e "\e[32m[PASS] $SPEC_FILE"
-            PASSED=$((PASSED + 1))
-        elif [ $RESULT -eq 1 ]; then
-            echo -e "\e[31m[FAIL] $SPEC_FILE"
-            FAILED=$((FAILED + 1))
-        elif [ $RESULT -eq 2 ]; then
-            echo -e "\e[34m[SEGFAULT] $SPEC_FILE"
-            SEGFAULT=$((SEGFAULT + 1))
-        else
-            echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE"
-            FAILED_COMPILE=$((FAILED_COMPILE + 1))
-        fi
-
         # Extract individual test counts from output if available
         # Look for pattern: "X passed, Y failed, Z skipped (N total)"
+        PASSED_COUNT=""
+        FAILED_COUNT=""
+        SKIPPED_COUNT=""
+        TOTAL_COUNT=""
         if echo "$SPEC_OUTPUT" | grep -q "passed.*failed.*skipped"; then
             PASSED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* passed" | grep -o "[0-9]*" | head -1)
             FAILED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* failed" | grep -o "[0-9]*" | head -1)
             SKIPPED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* skipped" | grep -o "[0-9]*" | head -1)
             TOTAL_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "([0-9]* total)" | grep -o "[0-9]*" | head -1)
+        fi
+
+        # Format count string
+        COUNT_STR=""
+        if [ -n "$TOTAL_COUNT" ]; then
+            COUNT_STR=" (P:${PASSED_COUNT:-0} F:${FAILED_COUNT:-0} S:${SKIPPED_COUNT:-0} T:${TOTAL_COUNT})"
+        fi
+
+        if [ $RESULT -eq 0 ]; then
+            echo -e "\e[32m[PASS] $SPEC_FILE${COUNT_STR}"
+            PASSED=$((PASSED + 1))
+        elif [ $RESULT -eq 1 ]; then
+            echo -e "\e[31m[FAIL] $SPEC_FILE${COUNT_STR}"
+            FAILED=$((FAILED + 1))
+        elif [ $RESULT -eq 2 ]; then
+            echo -e "\e[34m[SEGFAULT] $SPEC_FILE${COUNT_STR}"
+            SEGFAULT=$((SEGFAULT + 1))
+        else
+            echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE${COUNT_STR}"
+            FAILED_COMPILE=$((FAILED_COMPILE + 1))
+        fi
+
+        # Accumulate counts for summary
+        if [ -n "$TOTAL_COUNT" ]; then
 
             if [ -n "$PASSED_COUNT" ]; then
                 TOTAL_TESTS_PASSED=$((TOTAL_TESTS_PASSED + PASSED_COUNT))
