@@ -140,7 +140,7 @@ class Mock
   # Since we can't raise exceptions, return nil to avoid crashes
   def and_raise(error)
     if @current_method
-      @expectations[@current_method] = nil
+      @expectations[@current_method] = [:raise, error]
     end
     self
   end
@@ -154,11 +154,22 @@ class Mock
   def method_missing(method, *args)
     if @expectations[method]
       result = @expectations[method]
-      # Just return the result directly
-      # NOTE: If result is an array, we return the array (not sequential values)
-      # To return sequential values, use and_return(val1, val2, ...) which stores
-      # them as an array in @expectations
-      result
+      # Check if this is a raise expectation
+      if result.is_a?(Array) && result.length == 2 && result[0] == :raise
+        # Raise the specified exception
+        error_class = result[1]
+        if error_class.is_a?(Class)
+          raise error_class.new
+        else
+          raise error_class
+        end
+      else
+        # Just return the result directly
+        # NOTE: If result is an array, we return the array (not sequential values)
+        # To return sequential values, use and_return(val1, val2, ...) which stores
+        # them as an array in @expectations
+        result
+      end
     else
       STDERR.puts("Mock: No expectation set for #{method}")
       nil
@@ -303,23 +314,43 @@ class RaiseErrorMatcher < Matcher
   end
 
   def match?(actual)
-    # Since exceptions aren't fully working yet, we just call the lambda/proc
-    # and assume it would have raised the expected error.
-    # This allows specs with raise_error to at least execute the code being tested.
+    # Now that exceptions work, actually catch and verify them
     if actual.is_a?(Proc)
-      actual.call
+      raised = false
+      begin
+        actual.call
+      rescue
+        raised = true
+      end
+
+      if raised
+        if @exception
+          return check_exception_type
+        else
+          return true
+        end
+      else
+        return false
+      end
     end
 
-    # Mark that this assertion cannot be verified
-    # Decrement the assertion count since we can't actually check this
-    $spec_assertions = $spec_assertions - 1
+    # Not a proc, can't test
+    false
+  end
 
-    # Always return true to skip the exception check
-    true
+  def check_exception_type
+    # Get the exception from the runtime and check its type
+    # Note: We can't use local variables in methods called from rescue blocks
+    # due to a compiler limitation, so we call methods directly
+    return $__exception_runtime.current_exception.class.name == @exception.name
   end
 
   def failure_message(actual)
-    "Exceptions not fully implemented"
+    if @exception
+      "Expected #{@exception.name} to be raised but nothing was raised"
+    else
+      "Expected an exception to be raised but nothing was raised"
+    end
   end
 end
 

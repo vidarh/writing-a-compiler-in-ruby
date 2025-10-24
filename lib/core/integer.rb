@@ -153,20 +153,17 @@ class Integer < Numeric
         if coerced && coerced.is_a?(Array) && coerced.length == 2
           return coerced[0] + coerced[1]
         end
-        STDERR.puts("TypeError: coerce must return [x, y]")
-        return 0
+        raise TypeError.new("coerce must return [x, y]")
       elsif other.respond_to?(:to_int)
         # Try to_int conversion
         other = other.to_int
         if other.nil?
-          STDERR.puts("TypeError: can't convert to Integer")
-          return 0
+          raise TypeError.new("can't convert to Integer")
         end
         # Fall through to integer arithmetic below
       else
         # Type doesn't support coercion
-        STDERR.puts("TypeError: Integer can't be coerced")
-        return 0
+        raise TypeError.new("Integer can't be coerced")
       end
     end
 
