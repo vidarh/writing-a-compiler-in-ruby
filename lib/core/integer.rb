@@ -1835,7 +1835,7 @@ class Integer < Numeric
     # If different sign and |self| < |other|, quotient = -1 (floor division)
     # For simplicity, since fixnum magnitude is always < heap magnitude:
     if self_sign == other_sign
-      
+      return 0
     else
       return -1  # Ruby floor division
     end
@@ -2659,10 +2659,18 @@ class Integer < Numeric
 
     i = args[0]
 
-    # Type check first
+    # Type check - try to_int conversion if not Integer
     if !i.is_a?(Integer)
-      raise TypeError.new("Integer can't be coerced")
-      return nil
+      if i.respond_to?(:to_int)
+        i = i.to_int
+        if !i.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return nil
+        end
+      else
+        raise TypeError.new("Integer can't be coerced")
+        return nil
+      end
     end
 
     # If single argument: returns bit at position i
