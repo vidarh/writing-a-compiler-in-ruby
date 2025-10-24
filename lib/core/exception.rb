@@ -57,11 +57,11 @@ class ExceptionHandler
 
   # Save current stack state
   # Called when setting up begin...rescue
+  # saved_ebp is the caller's %ebp (evaluated at call site)
   # handler_addr is the address of the rescue: label (computed by compiler)
-  def save_stack_state(handler_addr)
+  def save_stack_state(saved_ebp, handler_addr)
+    @saved_ebp = saved_ebp
     @handler_addr = handler_addr
-    # Save current frame pointer
-    %s(assign @saved_ebp (stackframe))
   end
 
   def saved_ebp
@@ -119,9 +119,7 @@ class ExceptionRuntime
   end
 
   # Raise an exception
-  # Unwinds stack by restoring saved %ebp and jumping to handler
-  # This is implemented as a low-level function because it needs to
-  # manipulate stack and jump directly
+  # Unwinds stack and jumps to handler (like preturn for Proc)
   def raise(exception_obj)
     @@current_exception = exception_obj
 
@@ -129,20 +127,9 @@ class ExceptionRuntime
       handler = @@exc_stack
       @@exc_stack = handler.next  # Pop before jumping
 
-      # TODO: Check if exception matches rescue classes
-
-      # Get the saved stack frame and handler address
-      saved_frame = handler.saved_ebp
-      handler_addr = handler.handler_addr
-
-      # Restore stack frame and jump to handler
-      # This is similar to preturn but jumps to a label instead of returning
-      %s(do
-        (assign ebp saved_frame)
-        (assign ebx (index ebp -4))
-        (call handler_addr)
-      )
-      # Never returns (the call above jumps to rescue handler)
+      # Use :unwind primitive to unwind stack (like :preturn for Proc)
+      %s(unwind handler)
+      # Never returns
     else
       # Unhandled exception
       %s(printf "Unhandled exception: ")

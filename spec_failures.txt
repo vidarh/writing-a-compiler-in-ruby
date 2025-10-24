@@ -13,7 +13,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/ceil_spec.rb
 [31m[FAIL] rubyspec/core/integer/chr_spec.rb
 [31m[FAIL] rubyspec/core/integer/coerce_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/comparison_spec.rb
+[31m[FAIL] rubyspec/core/integer/comparison_spec.rb
 [32m[PASS] rubyspec/core/integer/complement_spec.rb
 [31m[FAIL] rubyspec/core/integer/constants_spec.rb
 [32m[PASS] rubyspec/core/integer/denominator_spec.rb
@@ -26,7 +26,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/element_reference_spec.rb
 [31m[FAIL] rubyspec/core/integer/equal_value_spec.rb
 [32m[PASS] rubyspec/core/integer/even_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/exponent_spec.rb
+[31m[FAIL] rubyspec/core/integer/exponent_spec.rb
 [31m[FAIL] rubyspec/core/integer/fdiv_spec.rb
 [31m[FAIL] rubyspec/core/integer/floor_spec.rb
 [31m[FAIL] rubyspec/core/integer/gcdlcm_spec.rb
@@ -48,12 +48,12 @@ Running all specs in rubyspec/core/integer/...
 [32m[PASS] rubyspec/core/integer/odd_spec.rb
 [31m[FAIL] rubyspec/core/integer/ord_spec.rb
 [31m[FAIL] rubyspec/core/integer/plus_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/pow_spec.rb
+[31m[FAIL] rubyspec/core/integer/pow_spec.rb
 [32m[PASS] rubyspec/core/integer/pred_spec.rb
 [31m[FAIL] rubyspec/core/integer/rationalize_spec.rb
 [31m[FAIL] rubyspec/core/integer/remainder_spec.rb
 [31m[FAIL] rubyspec/core/integer/right_shift_spec.rb
-[34m[SEGFAULT] rubyspec/core/integer/round_spec.rb
+[31m[FAIL] rubyspec/core/integer/round_spec.rb
 [31m[FAIL] rubyspec/core/integer/size_spec.rb
 [31m[FAIL] rubyspec/core/integer/sqrt_spec.rb
 [32m[PASS] rubyspec/core/integer/succ_spec.rb
@@ -73,13 +73,13 @@ Running all specs in rubyspec/core/integer/...
 Summary:
   Total spec files: 67
   Passed: 13
-  Failed: 49
-  Segfault/Runtime error: 5
+  Failed: 53
+  Segfault/Runtime error: 1
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 1135
-  Passed: 172
-  Failed: 834
-  Skipped: 129
-  Pass rate: 15%
+  Total tests: 1167
+  Passed: 192
+  Failed: 843
+  Skipped: 132
+  Pass rate: 16%

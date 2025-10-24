@@ -418,6 +418,15 @@ All 41 SEGFAULT specs systematically analyzed and categorized:
 ### 🐛 Known Bugs
 
 #### Parser Bugs
+- ❌ **OPEN**: Boolean Operators (`or`/`and`) Parser Bug
+  - **Issue**: Parser treats `or`/`and` as method calls instead of boolean operators
+  - **Example**: `a.shift or break` parsed as `a.shift.or(break)` → "Method missing Object#break"
+  - **Impact**: times_spec crashes (only remaining SEGFAULT in integer specs)
+  - **Fix Required**: Update parser to recognize `or`/`and` as control flow operators
+  - **Complexity**: Significant parser changes needed (operator precedence, control flow keywords)
+  - **Effort**: 4-6 hours
+  - **Workaround**: Rewrite as `break if !condition` (not acceptable for RubySpec compatibility)
+  - **Note**: `or` and `and` are low-precedence boolean operators in Ruby, distinct from `||` and `&&`
 - ✅ **FIXED (2025-10-17)**: Stabby Lambda Parser Bug (see docs/STABBY_LAMBDA_PARSER_BUG.md)
   - **Issue**: Expressions after stabby lambda method calls incorrectly parsed as block arguments
   - **Example**: `-> { x }.a\nlambda { y }` parsed second lambda as block arg to `.a`
@@ -433,11 +442,21 @@ All 41 SEGFAULT specs systematically analyzed and categorized:
 ## Critical Missing Language Features
 
 ### Exception Handling
-- **Priority: High**
-- Limited begin/rescue support
-- No ensure blocks
-- Basic infrastructure exists but commented out for bootstrap
-- **File**: `driver.rb:45-50`
+- **Status**: ✅ BASIC SUPPORT IMPLEMENTED (2025-10-23)
+- **Working Features**:
+  - `raise "message"` - Raise RuntimeError with message
+  - `begin...rescue...end` - Catch exceptions in rescue blocks
+  - Stack unwinding through multiple function call levels
+  - Exception objects with messages
+  - Unhandled exception reporting
+- **Not Yet Implemented**:
+  - Typed rescue (`rescue SpecificError`)
+  - Rescue variable binding (`rescue => e`)
+  - Multiple rescue clauses
+  - Ensure blocks
+  - Retry support
+- **Implementation**: See docs/WORK_STATUS.md Session 29 for details
+- **Files**: `lib/core/exception.rb`, `compiler.rb:488-514` (compile_unwind), `compiler.rb:640-703` (compile_begin_rescue)
 
 ### Regular Expressions
 - **Priority: High**

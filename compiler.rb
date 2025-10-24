@@ -51,7 +51,8 @@ class Compiler
                    :__inline, # See `inline.rb`
                    :bitand, :bitor, :bitxor, # Bitwise operators
                    :mulfull, # Widening multiply - returns both low and high words
-                  :div64 # 64-bit division - divides EDX:EAX by operand
+                  :div64, # 64-bit division - divides EDX:EAX by operand
+                  :unwind # Exception stack unwinding
                   ]
 
   Keywords = @@keywords
@@ -484,6 +485,34 @@ class Compiler
     return Value.new([:subexpr])
   end
 
+  # Stack unwinding for exceptions (like preturn but for exception handlers)
+  # Takes a handler object with saved_ebp and handler_addr fields
+  def compile_unwind(scope, handler_expr)
+    @e.comment("raise - unwind to exception handler")
+
+    # Evaluate handler expression to get the handler object
+    handler = compile_eval_arg(scope, handler_expr)
+
+    # Load handler fields
+    @e.pushl(handler)
+    @e.load_indirect(@e.sp, :ecx)
+    @e.movl("4(%ecx)", :eax)  # Load saved_ebp (offset 1)
+    @e.movl("8(%ecx)", :edx)  # Load handler_addr (offset 2)
+    @e.popl(:ecx)
+
+    # Restore %ebp AND %esp to the saved frame (like LEAVE instruction)
+    # This unwinds all intermediate stack frames
+    @e.movl(:eax, :esp)        # Set esp to saved_ebp (this discards all deeper frames)
+    @e.movl(:eax, :ebp)        # Set ebp to saved_ebp
+    @e.movl("-4(%ebp)", :ebx)  # Restore numargs
+
+    # Jump to handler
+    @e.emit(:jmp, "*%edx")
+
+    @e.evict_all
+    return Value.new([:subexpr])
+  end
+
   # Compiles and evaluates a given argument within a given scope.
   def compile_eval_arg(scope, arg)
     if arg.respond_to?(:position) && arg.position != nil
@@ -627,41 +656,46 @@ class Compiler
     # If we pass nil directly, get_arg treats it as an empty string constant (bug!)
     rescue_class_arg = rescue_class.nil? ? :nil : rescue_class
 
-    # Push handler
-    # handler = $__exception_runtime.push_handler(rescue_class)
-    compile_eval_arg(scope,
-      [:assign, :__handler,
-        [:callm, :$__exception_runtime, :push_handler, [rescue_class_arg]]])
+    # Use let() to create local variables for handler and exception
+    let(scope, :__handler, :__exc) do |lscope|
+      # Push handler
+      compile_eval_arg(lscope,
+        [:assign, :__handler,
+          [:callm, :$__exception_runtime, :push_handler, [rescue_class_arg]]])
 
-    # Save stack state into handler
-    # handler.save_stack_state(address_of rescue_label)
-    compile_eval_arg(scope,
-      [:callm, :__handler, :save_stack_state, [[:addr, rescue_label]]])
+      # Save stack state with CALLER's stackframe and address of rescue label
+      # The :stackframe must be evaluated here, not inside save_stack_state
+      compile_eval_arg(lscope,
+        [:callm, :__handler, :save_stack_state, [[:stackframe], [:addr, rescue_label]]])
 
-    # Compile try block
-    compile_do(scope, *exps)
+      # Compile try block
+      compile_do(lscope, *exps)
 
-    # Normal completion - pop handler
-    compile_eval_arg(scope, [:callm, :$__exception_runtime, :pop_handler])
-    @e.jmp(after_label)
+      # Normal completion - pop handler
+      compile_eval_arg(lscope, [:callm, :$__exception_runtime, :pop_handler])
+      @e.jmp(after_label)
 
-    # Rescue handler (jumped to by ExceptionRuntime.raise)
-    @e.label(rescue_label)
+      # Rescue handler label (jumped to by compile_unwind via :unwind primitive)
+      @e.label(rescue_label)
 
-    # Get exception from ExceptionRuntime
-    compile_eval_arg(scope,
-      [:assign, :__exc, [:callm, :ExceptionRuntime, :current_exception]])
+      # Get exception from ExceptionRuntime singleton
+      compile_eval_arg(lscope,
+        [:assign, :__exc, [:callm, :$__exception_runtime, :current_exception]])
 
-    # Bind to rescue variable if specified
-    if rescue_var
-      compile_assign(scope, rescue_var, :__exc)
+      # Bind to rescue variable if specified
+      if rescue_var
+        compile_assign(lscope, rescue_var, :__exc)
+      end
+
+      # Compile rescue body
+      compile_do(lscope, *rescue_body) if rescue_body
+
+      # Clear exception from singleton
+      compile_eval_arg(lscope, [:callm, :$__exception_runtime, :clear])
+
+      # Jump to after label (rescue completed normally)
+      @e.jmp(after_label)
     end
-
-    # Compile rescue body
-    compile_do(scope, *rescue_body) if rescue_body
-
-    # Clear exception
-    compile_eval_arg(scope, [:callm, :ExceptionRuntime, :clear])
 
     @e.label(after_label)
 
