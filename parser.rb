@@ -178,16 +178,18 @@ class Parser < ParserBase
   end
 
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
+  # Supports: rescue, rescue => e, rescue Error, rescue Error => e
   def parse_rescue
     pos = position
     keyword(:rescue) or return
     nolfws
-    if c = parse_name
-      nolfws
-      if literal("=>")
-        ws
-        name = parse_name or expected("variable to hold exception")
-      end
+    c = parse_name  # Optional exception class
+    nolfws
+    name = nil
+    # Check for => regardless of whether exception class was provided
+    if literal("=>")
+      ws
+      name = parse_name or expected("variable to hold exception")
     end
     ws
     body = parse_opt_defexp
@@ -205,6 +207,29 @@ class Parser < ParserBase
     exps = []
     rescue_ = nil
     loop do
+      # Check for rescue/end keywords before parse_defexp to prevent rescue
+      # from being parsed as a statement modifier (which fails on rescue => e)
+      ws
+      if keyword(:rescue)
+        # Found rescue keyword - parse it properly
+        # Need to "put back" the rescue keyword for parse_rescue
+        # We do this by manually calling parse_rescue's body
+        nolfws
+        c = parse_name  # Optional exception class
+        nolfws
+        name = nil
+        if literal("=>")
+          ws
+          name = parse_name or expected("variable to hold exception")
+        end
+        ws
+        body = parse_opt_defexp
+        rescue_ = E[pos, :rescue, c, name, body]
+        break
+      elsif keyword(:end)
+        # Found end - break without rescue
+        break
+      end
       exp = parse_defexp
       break if !exp
       # Check if parse_defexp consumed a rescue modifier

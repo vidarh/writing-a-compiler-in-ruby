@@ -666,8 +666,12 @@ class Compiler
     # If we pass nil directly, get_arg treats it as an empty string constant (bug!)
     rescue_class_arg = rescue_class.nil? ? :nil : rescue_class
 
-    # Use let() to create local variables for handler and exception
-    let(scope, :__handler, :__exc) do |lscope|
+    # Build variable list for let() - include rescue_var if specified
+    let_vars = [:__handler, :__exc]
+    let_vars << rescue_var if rescue_var
+
+    # Use let() to create local variables for handler, exception, and optional rescue var
+    let(scope, *let_vars) do |lscope|
       # Push handler
       compile_eval_arg(lscope,
         [:assign, :__handler,

@@ -52,10 +52,10 @@ def it(description, &block)
   # Wrap block.call in begin/rescue to catch unhandled exceptions
   begin
     block.call
-  rescue
+  rescue => e
     $current_test_has_failure = true
     $spec_failed = $spec_failed + 1
-    puts "    \e[31mFAILED: Unhandled exception in test\e[0m"
+    puts "    \e[31mFAILED: Unhandled exception: #{e.to_s}\e[0m"
   end
 
   if $spec_skipped > skipped_before
