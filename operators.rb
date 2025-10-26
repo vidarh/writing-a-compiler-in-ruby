@@ -79,7 +79,7 @@ Operators = {
 
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND
   "&"         => {
-    :infix_or_postfix => Oper.new( 11, :"&",      :infix, 2, 2, :left),
+    :infix_or_postfix => Oper.new(  8, :"&",      :infix, 2, 2, :left),
     :prefix           => Oper.new(  5, :to_block, :prefix)
   },
 
@@ -104,7 +104,7 @@ Operators = {
   # Note: & is defined above as context-sensitive
 
   "^"         => Oper.new( 12, :"^",      :infix, 2, 2, :left),
-  "|"         => Oper.new( 13, :"|",      :infix, 2, 2, :left),
+  "|"         => Oper.new(  8, :"|",      :infix, 2, 2, :left),
 
   "<"         => Oper.new(  9, :"\<",       :infix),
   "<="        => Oper.new(  9, :"<=",       :infix),

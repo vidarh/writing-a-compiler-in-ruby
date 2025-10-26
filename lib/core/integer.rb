@@ -2268,8 +2268,103 @@ class Integer < Numeric
       end
     end
 
-    other_raw = other.__get_raw
-    %s(__int (bitand (callm self __get_raw) other_raw))
+    # Dispatch based on whether self and other are fixnum or heap integers
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (if (eq (bitand other 1) 1)
+          # Both fixnums
+          (return (callm self __bitand_fixnum_fixnum other))
+          # self fixnum, other heap
+          (return (callm self __bitand_fixnum_heap other)))
+        # self is heap
+        (if (eq (bitand other 1) 1)
+          # self heap, other fixnum
+          (return (callm self __bitand_heap_fixnum other))
+          # Both heap
+          (return (callm self __bitand_heap_heap other))))
+    )
+  end
+
+  # Step 1: fixnum & fixnum - untag, AND, retag
+  def __bitand_fixnum_fixnum(other)
+    %s(__int (bitand (sar self) (sar other)))
+  end
+
+  # Helper: AND two limbs (both fixnums)
+  def __bitand_limbs(a, b)
+    %s(
+      (let (a_raw b_raw result)
+        (assign a_raw (sar a))
+        (assign b_raw (sar b))
+        (assign result (bitand a_raw b_raw))
+        (return (__int result)))
+    )
+  end
+
+  # Step 2a: fixnum & heap - convert fixnum to heap, then process
+  def __bitand_fixnum_heap(other)
+    self_heap = Integer.new
+    self_heap.__set_heap_data([self], 1)
+    self_heap.__bitand_heap_heap(other)
+  end
+
+  # Step 2b: heap & fixnum - convert fixnum to heap, then process
+  def __bitand_heap_fixnum(other)
+    other_heap = Integer.new
+    other_heap.__set_heap_data([other], 1)
+    __bitand_heap_heap(other_heap)
+  end
+
+  # Step 3: heap & heap - iterate over limbs
+  def __bitand_heap_heap(other)
+    limbs_a = __get_limbs
+    limbs_b = other.__get_limbs
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+
+    # For AND, result length is minimum of the two
+    # (AND with nothing is 0, which we can ignore)
+    min_len = __min_fixnum(len_a, len_b)
+
+    result_limbs = []
+    i = 0
+
+    while __less_than(i, min_len) != 0
+      limb_a = limbs_a[i]
+      limb_b = limbs_b[i]
+      result_limb = __bitand_limbs(limb_a, limb_b)
+      result_limbs << result_limb
+      i = i + 1
+    end
+
+    # Check if result fits in fixnum and demote
+    if result_limbs.length == 0
+      return 0
+    end
+
+    result_len = result_limbs.length
+    first_limb = result_limbs[0]
+    half_max = __half_limb_base
+
+    should_demote = 0
+    if result_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      return first_limb
+    else
+      result = Integer.new
+      result.__set_heap_data(result_limbs, 1)
+      return result
+    end
+  end
+
+  def __min_fixnum(a, b)
+    %s((if (lt a b) (return a) (return b)))
   end
 
   def | other
@@ -2417,8 +2512,103 @@ class Integer < Numeric
       end
     end
 
-    other_raw = other.__get_raw
-    %s(__int (bitxor (callm self __get_raw) other_raw))
+    # Dispatch based on whether self and other are fixnum or heap integers
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (if (eq (bitand other 1) 1)
+          # Both fixnums
+          (return (callm self __bitxor_fixnum_fixnum other))
+          # self fixnum, other heap
+          (return (callm self __bitxor_fixnum_heap other)))
+        # self is heap
+        (if (eq (bitand other 1) 1)
+          # self heap, other fixnum
+          (return (callm self __bitxor_heap_fixnum other))
+          # Both heap
+          (return (callm self __bitxor_heap_heap other))))
+    )
+  end
+
+  # Step 1: fixnum ^ fixnum - untag, XOR, retag
+  def __bitxor_fixnum_fixnum(other)
+    # For XOR: (a<<1|1) ^ (b<<1|1) = (a^b)<<1, need to re-add tag bit
+    %s(
+      (let (result)
+        (assign result (bitxor (sar self) (sar other)))
+        (return (__int result)))
+    )
+  end
+
+  # Helper: XOR two limbs (both fixnums)
+  def __bitxor_limbs(a, b)
+    %s(
+      (let (a_raw b_raw result)
+        (assign a_raw (sar a))
+        (assign b_raw (sar b))
+        (assign result (bitxor a_raw b_raw))
+        (return (__int result)))
+    )
+  end
+
+  # Step 2a: fixnum ^ heap - convert fixnum to heap, then process
+  def __bitxor_fixnum_heap(other)
+    self_heap = Integer.new
+    self_heap.__set_heap_data([self], 1)
+    self_heap.__bitxor_heap_heap(other)
+  end
+
+  # Step 2b: heap ^ fixnum - convert fixnum to heap, then process
+  def __bitxor_heap_fixnum(other)
+    other_heap = Integer.new
+    other_heap.__set_heap_data([other], 1)
+    __bitxor_heap_heap(other_heap)
+  end
+
+  # Step 3: heap ^ heap - iterate over limbs
+  def __bitxor_heap_heap(other)
+    limbs_a = __get_limbs
+    limbs_b = other.__get_limbs
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+
+    # For XOR, result length is max (like OR: x ^ 0 = x)
+    max_len = __max_fixnum(len_a, len_b)
+
+    result_limbs = []
+    i = 0
+
+    while __less_than(i, max_len) != 0
+      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
+      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
+      result_limb = __bitxor_limbs(limb_a, limb_b)
+      result_limbs << result_limb
+      i = i + 1
+    end
+
+    # Check if result fits in fixnum and demote
+    if result_limbs.length == 0
+      return 0
+    end
+
+    result_len = result_limbs.length
+    first_limb = result_limbs[0]
+    half_max = __half_limb_base
+
+    should_demote = 0
+    if result_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      return first_limb
+    else
+      result = Integer.new
+      result.__set_heap_data(result_limbs, 1)
+      return result
+    end
   end
 
   def ~
