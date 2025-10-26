@@ -45,6 +45,30 @@ If you think you need to use these methods, you are approaching the problem inco
 
 **The ONLY acceptable use** is in metaprogramming frameworks or reflection tools, which this compiler is NOT.
 
+## CRITICAL RULE: Documentation Files in docs/ Directory
+
+**NEVER create .md files outside of the docs/ directory unless specifically instructed.**
+
+When creating documentation:
+- ✅ Place all .md files in `docs/` directory
+- ✅ Use existing documentation files when updating status (e.g., `docs/WORK_STATUS.md`)
+- ✅ Keep root directory clean - only `README.md` and `CLAUDE.md` allowed in root
+- ❌ **NEVER** create session summaries, bug reports, or investigation files in root
+- ❌ **NEVER** create multiple copies of the same documentation
+
+**Exception**: Only `README.md` and `CLAUDE.md` belong in the root directory.
+
+**Why this rule exists:**
+- Keeps the repository organized and maintainable
+- Makes documentation easy to find in one location
+- Prevents clutter in the root directory
+- Maintains consistency across sessions
+
+**If you've created .md files in the wrong location:**
+1. Move them to `docs/` immediately: `mv FILE.md docs/`
+2. Update any references to the moved files
+3. Commit the cleanup
+
 ## Project Overview
 
 This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler is designed to bootstrap itself - compile its own source code to native machine code. The project is experimental and self-hosting is achieved with various workarounds for missing functionality.
