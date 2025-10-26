@@ -1447,7 +1447,7 @@ class Integer < Numeric
   def __to_s_multi(radix)
     # Validate radix
     if radix < 2 || radix > 36
-      STDERR.puts("ERROR: Invalid radix - must be between 2 and 36")
+      raise ArgumentError.new("invalid radix #{radix}")
       return "0"
     end
 
@@ -3370,7 +3370,7 @@ class Integer < Numeric
     end
 
     if self < 0
-      STDERR.puts("Math::DomainError: out of domain")
+      raise Math::DomainError.new("out of domain")
       return []
     end
 
