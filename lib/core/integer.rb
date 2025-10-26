@@ -1815,12 +1815,7 @@ class Integer < Numeric
 
   # Float division - returns a Float
   # WORKAROUND: Float arithmetic not implemented, return stub Float object
-  def fdiv *args
-    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return nil
-    end
+  def fdiv(other)
     Float.new
   end
 
@@ -2799,12 +2794,7 @@ class Integer < Numeric
     self
   end
 
-  def to_r *args
-    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
-    if args.length != 0
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0)")
-      return nil
-    end
+  def to_r
     Rational.new(self,1)
   end
 
@@ -2834,13 +2824,7 @@ class Integer < Numeric
   end
 
   # FIXME: Stub - should try to convert to Integer
-  def self.try_convert(*args)
-    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return nil
-    end
-    obj = args[0]
+  def self.try_convert(obj)
     return obj if obj.is_a?(Integer)
     if obj.respond_to?(:to_int)
       obj.to_int
