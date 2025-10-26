@@ -2805,17 +2805,8 @@ class Integer < Numeric
 
   # Integer square root using Newton's method
   def self.sqrt(n)
-    # Try to convert to Integer
-    if !n.is_a?(Integer)
-      if n.respond_to?(:to_int)
-        n = n.to_int
-        if !n.is_a?(Integer)
-          raise TypeError.new("can't convert to Integer")
-        end
-      else
-        raise TypeError.new("can't convert to Integer")
-      end
-    end
+    # Coerce to Integer
+    n = coerce_to_integer(n)
 
     # Check for negative numbers
     if n < 0
@@ -3444,6 +3435,24 @@ class Integer < Numeric
       # FIXME: Should raise TypeError for unsupported types
       # For now, just return [other, self] to avoid crashes
       [other, self]
+    end
+  end
+
+  private
+
+  # Helper to coerce an object to Integer
+  # Tries to_int if available, raises TypeError otherwise
+  def self.coerce_to_integer(obj)
+    return obj if obj.is_a?(Integer)
+
+    if obj.respond_to?(:to_int)
+      result = obj.to_int
+      if !result.is_a?(Integer)
+        raise TypeError.new("can't convert to Integer")
+      end
+      result
+    else
+      raise TypeError.new("can't convert to Integer")
     end
   end
 
