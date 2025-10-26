@@ -3135,11 +3135,31 @@ class Integer < Numeric
   end
 
   def ceil(prec=0)
-    self
+    # Positive or zero prec: integer is already at ceiling
+    return self if prec >= 0
+
+    # Special case: 0 always ceils to 0
+    return 0 if self == 0
+
+    # Negative prec: ceil to 10^abs(prec)
+    # e.g., 123.ceil(-1) = 130, -123.ceil(-1) = -120
+    power = 10 ** (-prec)
+    q, r = divmod(power)
+    if r == 0
+      self
+    else
+      (q + 1) * power
+    end
   end
 
   def floor(prec=0)
-    self
+    # Positive or zero prec: integer is already at floor
+    return self if prec >= 0
+
+    # Negative prec: floor to 10^abs(prec)
+    # e.g., 123.floor(-1) = 120, -123.floor(-1) = -130
+    power = 10 ** (-prec)
+    (self / power) * power
   end
 
   def truncate(ndigits=0)
