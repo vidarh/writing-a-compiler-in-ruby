@@ -117,38 +117,32 @@ Documented in `docs/BITWISE_OPERATORS_ISSUE.md`:
 
 **Implementation Status**:
 
-✅ **Completed** (commit d94a032):
+✅ **Completed** (commit f4293f2 - FIXED):
 - 3-step dispatch implemented for `|` operator
+- **Key fix**: Use `(eq (bitand self 1) 1)` for type checking instead of directly using result in conditionals
 - Type detection via s-expression (fixnum vs heap)
-- `__bitor_fixnum_fixnum`: untag, OR, retag
+- `__bitor_fixnum_fixnum`: untag, OR raw values, retag
 - `__bitor_fixnum_heap`: convert fixnum to heap, call heap|heap
 - `__bitor_heap_fixnum`: convert fixnum to heap, call heap|heap
 - `__bitor_heap_heap`: iterate limbs, OR with `__bitor_limbs` helper
-- `__bitor_limbs`: parallel to `__add_limbs_with_carry`
+- `__bitor_limbs`: untag limbs (fixnums), OR, retag
 
-⚠️ **BLOCKED - Debugging Required**:
-- Logic works correctly in MRI Ruby (test: 170 | 2147483648 = 2147483818 ✓)
-- Compiled output produces incorrect results (test: 170 | 2147483648 = 837108986 ✗)
-- Test results:
-  - test_or_fixnum.rb: ✅ PASS (5 | 3 = 7)
-  - test_or_allbits.rb: ❌ FAIL (170 | 2147483648 wrong)
-  - allbits_spec: 2/4 pass (was 3/4 before changes - regression!)
+**Test Results** (positive integers):
+- test_or_fixnum.rb: ✅ PASS (5 | 3 = 7)
+- test_heap_or_simple.rb: ✅ PASS (2147483648 | 4294967296 = 6442450944)
+- test_or_allbits.rb: ✅ PASS (170 | 2147483648 = 2147483818)
+- bit_or_spec: 6/12 pass, 6/12 fail
 
-**Problem**:
-- S-expressions or object creation not compiling correctly
-- Heap integer structure or limb operations have compilation issue
-- Demotion logic or to_s reconstruction might be broken
-- Need to investigate assembly output or add debug traces
+**Remaining Issues**:
+1. **Negative numbers**: All failures involve negative operands - need two's complement
+2. **Float type checking**: Not raising TypeError for Float arguments (3 failures)
+3. **allbits_spec**: Still 2/4 fail (requires `&` operator implementation)
 
 **Next Steps**:
 
-1. **DEBUG**: Investigate why compiled output differs from MRI
-   - Check assembly output for __bitor_heap_heap
-   - Verify heap integer creation (Integer.new + __set_heap_data)
-   - Trace limb values through OR operation
-   - Check if s-expression `(bitor ...)` compiles correctly
-2. Apply same pattern to `&`, `^`, `~` operators (after fixing |)
-3. Handle negative integers with two's complement (future)
+1. Implement two's complement handling for negative heap integers
+2. Fix Float type rejection in coercion code
+3. Apply same pattern to `&`, `^`, `~` operators
 
 ---
 
