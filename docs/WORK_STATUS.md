@@ -60,6 +60,76 @@ ternary operator on the opstack.
 
 ## Recent Session Summary
 
+### Session 31: Bitwise Operators Investigation (2025-10-26) - DOCUMENTED
+
+**Goal**: Fix remaining allbits_spec failure (3/4 tests passing)
+
+**Status**: Root cause identified and documented, implementation pending
+
+**Problem Identified**:
+
+Bitwise operators (`&`, `|`, `^`, `~`) fail for heap integers (bignums) because they use `__get_raw`, which truncates values to 32 bits:
+
+- allbits_spec: 3/4 tests pass (failure on heap integer test)
+- bit_and_spec: 5/13 tests pass (most bignum tests fail)
+- Test values use `2^31 + small_value` which become heap integers
+- Current implementation: `other_raw = other.__get_raw; %s(__int (bitor ...))`
+- Result: Values >= 2^31 truncated, producing wrong results
+
+**Root Cause Analysis**:
+
+All bitwise operators share the same broken pattern that only works for fixnums:
+```ruby
+def | other
+  other_raw = other.__get_raw  # ← Truncates heap integers to 32 bits!
+  %s(__int (bitor (callm self __get_raw) other_raw))
+end
+```
+
+**Solution Approach - 3 Step Implementation**:
+
+Documented in `docs/BITWISE_OPERATORS_ISSUE.md`:
+
+1. **Fixnum OP fixnum**: Apply operation directly to tagged values
+   - `(a<<1|1) | (b<<1|1) = ((a|b)<<1|1)` because `1|1 = 1`
+   - Implementation: `%s((bitor self other))`
+
+2. **Mixed fixnum/heap**: Promote fixnum to heap integer
+   - Convert fixnum to single-limb heap integer
+   - Process uniformly with Step 3
+
+3. **Heap OP heap**: Iterate over limb arrays
+   - Limbs are fixnums - apply operation directly
+   - Handle different array lengths (max length)
+   - Demote result to fixnum if possible
+
+**Key Insights**:
+
+- **Tagged fixnums**: Bitwise ops preserve tag bit (`1|1=1`, `1&1=1`)
+- **Limbs are fixnums**: No `__get_raw` needed when processing limbs
+- **Uniform processing**: Convert to heap, iterate limbs, build result
+- **`__get_raw` should be removed**: Only hack for old fixnum-only implementation
+
+**Documentation Created**:
+
+- `docs/BITWISE_OPERATORS_ISSUE.md` - Comprehensive analysis, code patterns, implementation guide
+- Includes failing test cases, evidence, and step-by-step solution
+
+**Implementation Status**:
+
+- Not implemented (encountered compilation issues with s-expressions in control flow)
+- Clear path forward documented for future implementation
+- Applies to all bitwise operators: `&`, `|`, `^`, `~`
+
+**Next Steps**:
+
+1. Implement 3-step approach for `|` operator
+2. Test each step incrementally (fixnum, mixed, heap)
+3. Apply same pattern to `&`, `^`, `~` operators
+4. Handle negative integers with two's complement (future)
+
+---
+
 ### Session 30: Rescue+Yield Interaction Fix (2025-10-26) ✅
 
 **Goal**: Fix rescue+yield interaction so exceptions raised in yielded blocks can be caught by rescue in the yielding method
