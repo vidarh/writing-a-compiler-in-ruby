@@ -2805,7 +2805,22 @@ class Integer < Numeric
 
   # Integer square root using Newton's method
   def self.sqrt(n)
-    n = Integer(n)
+    # Try to convert to Integer
+    if !n.is_a?(Integer)
+      if n.respond_to?(:to_int)
+        n = n.to_int
+        if !n.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+        end
+      else
+        raise TypeError.new("can't convert to Integer")
+      end
+    end
+
+    # Check for negative numbers
+    if n < 0
+      raise Math::DomainError.new("Numerical argument is out of domain - \"sqrt\"")
+    end
 
     return 0 if n == 0
     return 1 if n < 4
