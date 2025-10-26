@@ -45,7 +45,7 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :stackframe, :deref, :include, :addr,
+                   :preturn, :stackframe, :stackpointer, :deref, :include, :addr,
                    :protected, :array, :splat, :mod, :or_assign, :break, :next,
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline, # See `inline.rb`
@@ -454,6 +454,11 @@ class Compiler
     Value.new([:reg,:ebp])
   end
 
+  def compile_stackpointer(scope)
+    @e.comment("Stack pointer")
+    Value.new([:reg,:esp])
+  end
+
   # Get address of a label
   # Similar to how Proc stores function addresses
   # Used for exception handling to save rescue handler address
@@ -486,7 +491,7 @@ class Compiler
   end
 
   # Stack unwinding for exceptions (like preturn but for exception handlers)
-  # Takes a handler object with saved_ebp and handler_addr fields
+  # Takes a handler object with saved_ebp, saved_esp, and handler_addr fields
   def compile_unwind(scope, handler_expr)
     @e.comment("raise - unwind to exception handler")
 
@@ -496,18 +501,23 @@ class Compiler
     # Load handler fields
     @e.pushl(handler)
     @e.load_indirect(@e.sp, :ecx)
-    @e.movl("4(%ecx)", :eax)  # Load saved_ebp (offset 1)
-    @e.movl("8(%ecx)", :edx)  # Load handler_addr (offset 2)
+    @e.movl("4(%ecx)", :eax)   # Load saved_ebp (offset 1)
+    @e.movl("8(%ecx)", :edx)   # Load saved_esp (offset 2)
+    @e.movl("12(%ecx)", :esi)  # Load handler_addr (offset 3)
     @e.popl(:ecx)
 
-    # Restore %ebp AND %esp to the saved frame (like LEAVE instruction)
+    # Restore %ebp AND %esp to the saved state
     # This unwinds all intermediate stack frames
-    @e.movl(:eax, :esp)        # Set esp to saved_ebp (this discards all deeper frames)
     @e.movl(:eax, :ebp)        # Set ebp to saved_ebp
-    @e.movl("-4(%ebp)", :ebx)  # Restore numargs
+    @e.movl(:edx, :esp)        # Set esp to saved_esp
+    # Adjust ESP: saved_esp was captured during save_stack_state call when ESP
+    # was adjusted for call overhead. We need to restore to the let() block base.
+    # The save_stack_state call used 36 bytes (9 slots * 4 bytes)
+    @e.addl(36, :esp)          # Restore to let() block base
+    # Note: Don't restore %ebx here - let function epilogue handle it
 
     # Jump to handler
-    @e.emit(:jmp, "*%edx")
+    @e.emit(:jmp, "*%esi")
 
     @e.evict_all
     return Value.new([:subexpr])
@@ -663,10 +673,10 @@ class Compiler
         [:assign, :__handler,
           [:callm, :$__exception_runtime, :push_handler, [rescue_class_arg]]])
 
-      # Save stack state with CALLER's stackframe and address of rescue label
-      # The :stackframe must be evaluated here, not inside save_stack_state
+      # Save stack state with CALLER's stackframe, stack pointer, and address of rescue label
+      # The :stackframe and :stackpointer must be evaluated here, not inside save_stack_state
       compile_eval_arg(lscope,
-        [:callm, :__handler, :save_stack_state, [[:stackframe], [:addr, rescue_label]]])
+        [:callm, :__handler, :save_stack_state, [[:stackframe], [:stackpointer], [:addr, rescue_label]]])
 
       # Compile try block
       compile_do(lscope, *exps)
@@ -695,9 +705,10 @@ class Compiler
 
       # Jump to after label (rescue completed normally)
       @e.jmp(after_label)
-    end
 
-    @e.label(after_label)
+      # IMPORTANT: after_label must be INSIDE the let() block so stack gets restored
+      @e.label(after_label)
+    end
 
     Value.new([:subexpr])
   end

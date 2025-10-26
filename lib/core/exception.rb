@@ -50,6 +50,7 @@
 class ExceptionHandler
   def initialize
     @saved_ebp = nil      # Saved stack frame pointer
+    @saved_esp = nil      # Saved stack pointer
     @handler_addr = nil   # Address of rescue label to jump to
     @rescue_classes = nil # nil = catch all, or Array of classes to catch
     @next = nil           # Next handler in chain
@@ -58,14 +59,20 @@ class ExceptionHandler
   # Save current stack state
   # Called when setting up begin...rescue
   # saved_ebp is the caller's %ebp (evaluated at call site)
+  # saved_esp is the caller's %esp (evaluated at call site)
   # handler_addr is the address of the rescue: label (computed by compiler)
-  def save_stack_state(saved_ebp, handler_addr)
+  def save_stack_state(saved_ebp, saved_esp, handler_addr)
     @saved_ebp = saved_ebp
+    @saved_esp = saved_esp
     @handler_addr = handler_addr
   end
 
   def saved_ebp
     @saved_ebp
+  end
+
+  def saved_esp
+    @saved_esp
   end
 
   def handler_addr

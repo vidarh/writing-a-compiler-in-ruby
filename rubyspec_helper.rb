@@ -49,17 +49,14 @@ def it(description, &block)
     i = i + 1
   end
 
-  # NOTE: Would like to wrap block.call in begin/rescue to catch unhandled exceptions,
-  # but there's a compiler bug where rescue blocks inside functions that take blocks
-  # cause segfaults. See test_rescue_in_block.rb for minimal reproduction.
-  # TODO: Fix this compiler bug, then add:
-  #   begin
-  #     block.call
-  #   rescue
-  #     $current_test_has_failure = true
-  #     puts "\e[31m    FAILED: Unhandled exception in test\e[0m"
-  #   end
-  block.call
+  # Wrap block.call in begin/rescue to catch unhandled exceptions
+  begin
+    block.call
+  rescue
+    $current_test_has_failure = true
+    $spec_failed = $spec_failed + 1
+    puts "    \e[31mFAILED: Unhandled exception in test\e[0m"
+  end
 
   if $spec_skipped > skipped_before
     puts "\e[33m  - #{description} [P:#{$spec_passed} F:#{$spec_failed} S:#{$spec_skipped}]\e[0m"
