@@ -53,14 +53,18 @@ end
 ))
 
 (defun __minarg (name minargs actual) (do
-  (__printerr "ArgumentError: In %s - expected a minimum of %d arguments, got %d\n"
-          name minargs (sub actual 2))
+  (callm (callm ArgumentError new
+    (__get_string "wrong number of arguments (given %d, expected %d+)"
+      (sub actual 2) minargs))
+    raise)
 ))
 
 
 (defun __maxarg (name maxargs actual) (do
-  (__printerr "ArgumentError: In %s - expected a maximum of %d arguments, got %d\n"
-          name maxargs (sub actual 2))
+  (callm (callm ArgumentError new
+    (__get_string "wrong number of arguments (given %d, expected 0..%d)"
+      (sub actual 2) maxargs))
+    raise)
 ))
 
  (defun __eqarg (name eqargs actual) (do
