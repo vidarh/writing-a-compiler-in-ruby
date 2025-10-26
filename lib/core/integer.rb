@@ -3394,15 +3394,7 @@ class Integer < Numeric
     self
   end
 
-  def downto(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return nil
-    end
-
-    limit = args[0]
-
+  def downto(limit)
     if !block_given?
       # WORKAROUND: Full Enumerator not implemented, return stub
       return Enumerator.new
@@ -3415,15 +3407,7 @@ class Integer < Numeric
     self
   end
 
-  def upto(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return nil
-    end
-
-    limit = args[0]
-
+  def upto(limit)
     if !block_given?
       # WORKAROUND: Full Enumerator not implemented, return stub
       return Enumerator.new
@@ -3437,15 +3421,7 @@ class Integer < Numeric
   end
 
   # FIXME: Stub - minimal implementation for integer coercion
-  def coerce(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return [nil, nil]
-    end
-
-    other = args[0]
-
+  def coerce(other)
     if other.is_a?(Integer)
       [other, self]
     else
