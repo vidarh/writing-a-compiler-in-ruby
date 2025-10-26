@@ -2295,8 +2295,109 @@ class Integer < Numeric
       end
     end
 
-    other_raw = other.__get_raw
-    %s(__int (bitor (callm self __get_raw) other_raw))
+    # Use s-expression to check representations and dispatch
+    %s(
+      (let (self_is_fixnum other_is_fixnum)
+        (assign self_is_fixnum (bitand self 1))
+        (assign other_is_fixnum (bitand other 1))
+
+        # If both are fixnums (bit 0 = 1), use direct bitwise OR
+        (if (and self_is_fixnum other_is_fixnum)
+          (return (callm self __bitor_fixnum_fixnum other)))
+
+        # If self is fixnum but other is heap
+        (if self_is_fixnum
+          (return (callm self __bitor_fixnum_heap other)))
+
+        # If other is fixnum but self is heap
+        (if other_is_fixnum
+          (return (callm self __bitor_heap_fixnum other)))
+
+        # Both are heap integers
+        (return (callm self __bitor_heap_heap other))
+      )
+    )
+  end
+
+  # Step 1: fixnum | fixnum - untag, OR, retag
+  def __bitor_fixnum_fixnum(other)
+    %s(__int (bitor (sar self) (sar other)))
+  end
+
+  # Helper: OR two limbs (both fixnums)
+  def __bitor_limbs(a, b)
+    %s(
+      (let (a_raw b_raw result)
+        (assign a_raw (sar a))
+        (assign b_raw (sar b))
+        (assign result (bitor a_raw b_raw))
+        (return (__int result)))
+    )
+  end
+
+  # Step 2a: fixnum | heap - convert fixnum to heap, then process
+  def __bitor_fixnum_heap(other)
+    # Convert self (fixnum) to heap integer
+    self_heap = Integer.new
+    self_heap.__set_heap_data([self], 1)
+    self_heap.__bitor_heap_heap(other)
+  end
+
+  # Step 2b: heap | fixnum - convert fixnum to heap, then process
+  def __bitor_heap_fixnum(other)
+    # Convert other (fixnum) to heap integer
+    other_heap = Integer.new
+    other_heap.__set_heap_data([other], 1)
+    __bitor_heap_heap(other_heap)
+  end
+
+  # Step 3: heap | heap - iterate over limbs
+  def __bitor_heap_heap(other)
+    limbs_a = __get_limbs
+    limbs_b = other.__get_limbs
+    len_a = limbs_a.length
+    len_b = limbs_b.length
+
+    # Calculate max length
+    max_len = __max_fixnum(len_a, len_b)
+
+    result_limbs = []
+    i = 0
+
+    # Iterate over all limbs
+    while __less_than(i, max_len) != 0
+      # Get limbs (0 if out of bounds)
+      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
+      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
+
+      # OR the limbs using helper
+      result_limb = __bitor_limbs(limb_a, limb_b)
+
+      result_limbs << result_limb
+      i = i + 1
+    end
+
+    # Check if result fits in a fixnum (single limb < 2^30)
+    result_len = result_limbs.length
+    first_limb = result_limbs[0]
+    half_max = __half_limb_base
+
+    should_demote = 0
+    if result_len == 1
+      if __less_than(first_limb, half_max) != 0
+        should_demote = 1
+      end
+    end
+
+    if should_demote != 0
+      # Convert to fixnum - result already has tag bit
+      return first_limb
+    else
+      # Create heap integer
+      result = Integer.new
+      result.__set_heap_data(result_limbs, 1)
+      return result
+    end
   end
 
   def ^ other
