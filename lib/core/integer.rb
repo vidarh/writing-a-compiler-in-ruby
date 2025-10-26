@@ -2786,7 +2786,12 @@ class Integer < Numeric
     1
   end
 
-  def rationalize(eps = nil)
+  def rationalize(*args)
+    # Check arity: 0 or 1 argument
+    if args.length > 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0..1)")
+    end
+
     # Integers are already rational (self/1)
     # Since we don't have Rational class, just return self
     # In real Ruby this would return Rational(self, 1)
