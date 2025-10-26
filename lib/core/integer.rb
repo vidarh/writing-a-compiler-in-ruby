@@ -2297,25 +2297,19 @@ class Integer < Numeric
 
     # Use s-expression to check representations and dispatch
     %s(
-      (let (self_is_fixnum other_is_fixnum)
-        (assign self_is_fixnum (bitand self 1))
-        (assign other_is_fixnum (bitand other 1))
-
-        # If both are fixnums (bit 0 = 1), use direct bitwise OR
-        (if (and self_is_fixnum other_is_fixnum)
-          (return (callm self __bitor_fixnum_fixnum other)))
-
-        # If self is fixnum but other is heap
-        (if self_is_fixnum
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (if (eq (bitand other 1) 1)
+          # Both fixnums
+          (return (callm self __bitor_fixnum_fixnum other))
+          # self fixnum, other heap
           (return (callm self __bitor_fixnum_heap other)))
-
-        # If other is fixnum but self is heap
-        (if other_is_fixnum
-          (return (callm self __bitor_heap_fixnum other)))
-
-        # Both are heap integers
-        (return (callm self __bitor_heap_heap other))
-      )
+        # self is heap
+        (if (eq (bitand other 1) 1)
+          # self heap, other fixnum
+          (return (callm self __bitor_heap_fixnum other))
+          # Both heap
+          (return (callm self __bitor_heap_heap other))))
     )
   end
 
