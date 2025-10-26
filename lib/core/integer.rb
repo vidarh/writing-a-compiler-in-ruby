@@ -2791,6 +2791,21 @@ class Integer < Numeric
       return false
     end
     mask = args[0]
+
+    # Try to_int conversion if not an Integer
+    if !mask.is_a?(Integer)
+      if mask.respond_to?(:to_int)
+        mask = mask.to_int
+        if !mask.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return false
+        end
+      else
+        raise TypeError.new("Integer can't be coerced into Integer")
+        return false
+      end
+    end
+
     self & mask == mask
   end
 
@@ -2800,6 +2815,21 @@ class Integer < Numeric
       return false
     end
     mask = args[0]
+
+    # Try to_int conversion if not an Integer
+    if !mask.is_a?(Integer)
+      if mask.respond_to?(:to_int)
+        mask = mask.to_int
+        if !mask.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return false
+        end
+      else
+        raise TypeError.new("Integer can't be coerced into Integer")
+        return false
+      end
+    end
+
     self & mask != 0
   end
 
@@ -2809,6 +2839,21 @@ class Integer < Numeric
       return false
     end
     mask = args[0]
+
+    # Try to_int conversion if not an Integer
+    if !mask.is_a?(Integer)
+      if mask.respond_to?(:to_int)
+        mask = mask.to_int
+        if !mask.is_a?(Integer)
+          raise TypeError.new("can't convert to Integer")
+          return false
+        end
+      else
+        raise TypeError.new("Integer can't be coerced into Integer")
+        return false
+      end
+    end
+
     self & mask == 0
   end
 
