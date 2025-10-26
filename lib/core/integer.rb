@@ -1573,14 +1573,7 @@ class Integer < Numeric
     self % other
   end
 
-  def remainder(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      
-    end
-
-    other = args[0]
+  def remainder(other)
 
     # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
@@ -3208,15 +3201,7 @@ class Integer < Numeric
   end
 
   # Euclidean algorithm for GCD
-  def gcd(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      
-    end
-
-    other = args[0]
-
+  def gcd(other)
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
       raise TypeError.new("Integer can't be coerced")
