@@ -3282,29 +3282,14 @@ class Integer < Numeric
       return nil
     end
 
-    quotient = self / other
-    remainder = self % other
-
-    # If there's a remainder and quotient should round up
-    if remainder != 0
-      # Same sign: need to round up (away from zero)
-      same_sign = false
-      if self > 0
-        if other > 0
-          same_sign = true
-        end
-      elsif self < 0
-        if other < 0
-          same_sign = true
-        end
-      end
-
-      if same_sign
-        quotient = quotient + 1
-      end
+    # Ceiling division: always round toward positive infinity
+    # If there's a remainder, add 1 to the floor quotient
+    q, r = divmod(other)
+    if r == 0
+      q
+    else
+      q + 1
     end
-
-    quotient
   end
 
   # Return array of digits in given base (least significant first)
