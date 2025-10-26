@@ -60,11 +60,11 @@ ternary operator on the opstack.
 
 ## Recent Session Summary
 
-### Session 31: Bitwise Operators Investigation (2025-10-26) - DOCUMENTED
+### Session 31: Bitwise Operators Implementation (2025-10-26) - IN PROGRESS ⚠️
 
 **Goal**: Fix remaining allbits_spec failure (3/4 tests passing)
 
-**Status**: Root cause identified and documented, implementation pending
+**Status**: Root cause identified and documented. 3-step implementation complete but produces incorrect compiled output. Logic works in MRI Ruby but not when compiled. **BLOCKED - needs debugging**
 
 **Problem Identified**:
 
@@ -117,16 +117,38 @@ Documented in `docs/BITWISE_OPERATORS_ISSUE.md`:
 
 **Implementation Status**:
 
-- Not implemented (encountered compilation issues with s-expressions in control flow)
-- Clear path forward documented for future implementation
-- Applies to all bitwise operators: `&`, `|`, `^`, `~`
+✅ **Completed** (commit d94a032):
+- 3-step dispatch implemented for `|` operator
+- Type detection via s-expression (fixnum vs heap)
+- `__bitor_fixnum_fixnum`: untag, OR, retag
+- `__bitor_fixnum_heap`: convert fixnum to heap, call heap|heap
+- `__bitor_heap_fixnum`: convert fixnum to heap, call heap|heap
+- `__bitor_heap_heap`: iterate limbs, OR with `__bitor_limbs` helper
+- `__bitor_limbs`: parallel to `__add_limbs_with_carry`
+
+⚠️ **BLOCKED - Debugging Required**:
+- Logic works correctly in MRI Ruby (test: 170 | 2147483648 = 2147483818 ✓)
+- Compiled output produces incorrect results (test: 170 | 2147483648 = 837108986 ✗)
+- Test results:
+  - test_or_fixnum.rb: ✅ PASS (5 | 3 = 7)
+  - test_or_allbits.rb: ❌ FAIL (170 | 2147483648 wrong)
+  - allbits_spec: 2/4 pass (was 3/4 before changes - regression!)
+
+**Problem**:
+- S-expressions or object creation not compiling correctly
+- Heap integer structure or limb operations have compilation issue
+- Demotion logic or to_s reconstruction might be broken
+- Need to investigate assembly output or add debug traces
 
 **Next Steps**:
 
-1. Implement 3-step approach for `|` operator
-2. Test each step incrementally (fixnum, mixed, heap)
-3. Apply same pattern to `&`, `^`, `~` operators
-4. Handle negative integers with two's complement (future)
+1. **DEBUG**: Investigate why compiled output differs from MRI
+   - Check assembly output for __bitor_heap_heap
+   - Verify heap integer creation (Integer.new + __set_heap_data)
+   - Trace limb values through OR operation
+   - Check if s-expression `(bitor ...)` compiles correctly
+2. Apply same pattern to `&`, `^`, `~` operators (after fixing |)
+3. Handle negative integers with two's complement (future)
 
 ---
 
