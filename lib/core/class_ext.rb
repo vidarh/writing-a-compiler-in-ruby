@@ -52,33 +52,39 @@ end
    (div 1 0)
 ))
 
-(defun __minarg (name minargs actual) (do
-  (assign __argbuf (__alloc_leaf 200))
-  (snprintf __argbuf 200 "wrong number of arguments (given %d, expected %d+)"
-    (sub actual 2) minargs)
-  (assign __argmsg (__get_string __argbuf))
-  (assign __argexc (callm ArgumentError new __argmsg))
-  (callm $__exception_runtime raise __argexc)
-))
+(defun __minarg (name minargs actual)
+  (let (__argbuf __argmsg __argexc) (do
+    (assign __argbuf (__alloc_leaf 200))
+    (snprintf __argbuf 200 "wrong number of arguments (given %d, expected %d+)"
+      (sub actual 2) minargs)
+    (assign __argmsg (__get_string __argbuf))
+    (assign __argexc (callm ArgumentError new __argmsg))
+    (callm $__exception_runtime raise __argexc)
+  ))
+)
 
 
-(defun __maxarg (name maxargs actual) (do
-  (assign __argbuf (__alloc_leaf 200))
-  (snprintf __argbuf 200 "wrong number of arguments (given %d, expected 0..%d)"
-    (sub actual 2) maxargs)
-  (assign __argmsg (__get_string __argbuf))
-  (assign __argexc (callm ArgumentError new __argmsg))
-  (callm $__exception_runtime raise __argexc)
-))
+(defun __maxarg (name maxargs actual)
+  (let (__argbuf __argmsg __argexc) (do
+    (assign __argbuf (__alloc_leaf 200))
+    (snprintf __argbuf 200 "wrong number of arguments (given %d, expected 0..%d)"
+      (sub actual 2) maxargs)
+    (assign __argmsg (__get_string __argbuf))
+    (assign __argexc (callm ArgumentError new __argmsg))
+    (callm $__exception_runtime raise __argexc)
+  ))
+)
 
- (defun __eqarg (name eqargs actual) (do
-  (assign __argbuf (__alloc_leaf 200))
-  (snprintf __argbuf 200 "wrong number of arguments (given %d, expected %d)"
-    (sub actual 2) eqargs)
-  (assign __argmsg (__get_string __argbuf))
-  (assign __argexc (callm ArgumentError new __argmsg))
-  (callm $__exception_runtime raise __argexc)
-))
+ (defun __eqarg (name eqargs actual)
+  (let (__argbuf __argmsg __argexc) (do
+    (assign __argbuf (__alloc_leaf 200))
+    (snprintf __argbuf 200 "wrong number of arguments (given %d, expected %d)"
+      (sub actual 2) eqargs)
+    (assign __argmsg (__get_string __argbuf))
+    (assign __argexc (callm ArgumentError new __argmsg))
+    (callm $__exception_runtime raise __argexc)
+  ))
+)
 
 )
 
