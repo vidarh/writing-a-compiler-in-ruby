@@ -312,16 +312,19 @@ class RaiseErrorMatcher < Matcher
   def initialize(exception, pattern = nil)
     @exception = exception
     @pattern = pattern
+    @caught_exception = nil
   end
 
   def match?(actual)
     # Now that exceptions work, actually catch and verify them
     if actual.is_a?(Proc)
       raised = false
+      @caught_exception = nil
       begin
         actual.call
-      rescue
+      rescue => e
         raised = true
+        @caught_exception = e
       end
 
       if raised
@@ -340,10 +343,11 @@ class RaiseErrorMatcher < Matcher
   end
 
   def check_exception_type
-    # Get the exception from the runtime and check its type
-    # Note: We can't use local variables in methods called from rescue blocks
-    # due to a compiler limitation, so we call methods directly
-    return $__exception_runtime.current_exception.class.name == @exception.name
+    # Check if the caught exception matches the expected type
+    if @caught_exception
+      return @caught_exception.class.name == @exception.name
+    end
+    false
   end
 
   def failure_message(actual)

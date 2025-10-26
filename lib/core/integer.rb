@@ -2626,19 +2626,10 @@ class Integer < Numeric
   end
 
   def divmod other
-    # Type check first to avoid crashes
-    if !other.is_a?(Integer)
-      if other.respond_to?(:to_int)
-        other = other.to_int
-        # Check if to_int returned nil (failed conversion)
-        if other.nil?
-          raise TypeError.new("can't convert to Integer")
-          return nil
-        end
-      else
-        raise TypeError.new("Integer can't be coerced")
-        return nil
-      end
+    # divmod accepts Integer and Float, but no implicit conversion via to_int
+    if !other.is_a?(Integer) && !other.is_a?(Float)
+      raise TypeError.new("Integer can't be coerced into Integer")
+      return nil
     end
 
     [self / other, self % other]
