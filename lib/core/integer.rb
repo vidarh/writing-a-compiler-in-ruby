@@ -3063,13 +3063,7 @@ class Integer < Numeric
     (self >> i) & mask
   end
 
-  def allbits?(*args)
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return false
-    end
-    mask = args[0]
-
+  def allbits?(mask)
     # Try to_int conversion if not an Integer
     if !mask.is_a?(Integer)
       if mask.respond_to?(:to_int)
@@ -3087,13 +3081,7 @@ class Integer < Numeric
     self & mask == mask
   end
 
-  def anybits?(*args)
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return false
-    end
-    mask = args[0]
-
+  def anybits?(mask)
     # Try to_int conversion if not an Integer
     if !mask.is_a?(Integer)
       if mask.respond_to?(:to_int)
@@ -3111,13 +3099,7 @@ class Integer < Numeric
     self & mask != 0
   end
 
-  def nobits?(*args)
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return false
-    end
-    mask = args[0]
-
+  def nobits?(mask)
     # Try to_int conversion if not an Integer
     if !mask.is_a?(Integer)
       if mask.respond_to?(:to_int)
