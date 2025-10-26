@@ -3229,15 +3229,7 @@ class Integer < Numeric
   end
 
   # LCM using GCD
-  def lcm(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      
-    end
-
-    other = args[0]
-
+  def lcm(other)
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
       raise TypeError.new("Integer can't be coerced")
@@ -3259,15 +3251,7 @@ class Integer < Numeric
   end
 
   # Return both GCD and LCM
-  def gcdlcm(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      return [0, 0]
-    end
-
-    other = args[0]
-
+  def gcdlcm(other)
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
       raise TypeError.new("Integer can't be coerced")
@@ -3278,15 +3262,7 @@ class Integer < Numeric
   end
 
   # Ceiling division: divide and round towards positive infinity
-  def ceildiv(*args)
-    # Arity check - expect exactly 1 argument
-    if args.length != 1
-      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
-      
-    end
-
-    other = args[0]
-
+  def ceildiv(other)
     # Convert other to integer if it's not already an Integer
     if !other.is_a?(Integer)
       if other.respond_to?(:to_int)
