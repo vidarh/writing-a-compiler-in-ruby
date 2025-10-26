@@ -12,7 +12,7 @@ require 'set'
 #  - Association: Whether the operator binds to the left or right argument first (the default is right)
 #
 # The priority defines the precedence-rules for the parser.
-# Smaller numbers mean higher priority.
+# LARGER numbers mean TIGHTER binding (higher precedence).
 class Oper
   attr_accessor :pri, :sym, :type, :arity, :minarity,:assoc
 
@@ -79,7 +79,7 @@ Operators = {
 
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND
   "&"         => {
-    :infix_or_postfix => Oper.new(  8, :"&",      :infix, 2, 2, :left),
+    :infix_or_postfix => Oper.new( 11, :"&",      :infix, 2, 2, :left),
     :prefix           => Oper.new(  5, :to_block, :prefix)
   },
 
@@ -103,24 +103,24 @@ Operators = {
   # Bitwise operators (in Ruby precedence order: & then ^ then |)
   # Note: & is defined above as context-sensitive
 
-  "^"         => Oper.new( 12, :"^",      :infix, 2, 2, :left),
-  "|"         => Oper.new(  8, :"|",      :infix, 2, 2, :left),
+  "^"         => Oper.new( 10, :"^",      :infix, 2, 2, :left),
+  "|"         => Oper.new(  9, :"|",      :infix, 2, 2, :left),
 
-  "<"         => Oper.new(  9, :"\<",       :infix),
-  "<="        => Oper.new(  9, :"<=",       :infix),
-  ">"         => Oper.new(  9, :>,       :infix),
-  ">="        => Oper.new(  9, :>=,       :infix),
-  "==="       => Oper.new(  9, :===,      :infix),
-  "=="        => Oper.new(  9, :==,       :infix),
-  "!="        => Oper.new(  9, :"!=",       :infix),
-  "<=>"       => Oper.new(  9, :"<=>",      :infix),
+  "<"         => Oper.new(  8, :"\<",       :infix),
+  "<="        => Oper.new(  8, :"<=",       :infix),
+  ">"         => Oper.new(  8, :>,       :infix),
+  ">="        => Oper.new(  8, :>=,       :infix),
+  "==="       => Oper.new(  8, :===,      :infix),
+  "=="        => Oper.new(  8, :==,       :infix),
+  "!="        => Oper.new(  8, :"!=",       :infix),
+  "<=>"       => Oper.new(  8, :"<=>",      :infix),
 
   "+"         => {
-    :infix_or_postfix  => Oper.new( 10, :+,      :infix, 2, 2, :left),
+    :infix_or_postfix  => Oper.new( 14, :+,      :infix, 2, 2, :left),
     :prefix => Oper.new( 99, :+,      :prefix)
   },
   "-"         => {
-    :infix_or_postfix  => Oper.new( 10, :-,      :infix, 2, 2, :left),
+    :infix_or_postfix  => Oper.new( 14, :-,      :infix, 2, 2, :left),
     :prefix => Oper.new( 99, :-,      :prefix)
   },
   "%"         => {
