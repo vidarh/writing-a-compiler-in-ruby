@@ -3143,7 +3143,19 @@ class Integer < Numeric
   end
 
   def truncate(ndigits=0)
-    self
+    # Positive or zero ndigits: integer is already truncated
+    return self if ndigits >= 0
+
+    # Negative ndigits: truncate to 10^abs(ndigits)
+    # e.g., 1832.truncate(-1) = 1830, 1832.truncate(-2) = 1800
+    # For negative numbers, we need to round toward zero (not floor)
+    power = 10 ** (-ndigits)
+    if self < 0
+      # For negative, use ceiling division to round toward zero
+      -((-self) / power) * power
+    else
+      (self / power) * power
+    end
   end
 
   def round(*args)
