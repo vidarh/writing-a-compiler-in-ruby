@@ -64,8 +64,10 @@ end
 ))
 
  (defun __eqarg (name eqargs actual) (do
-  (__printerr "ArgumentError: In %s - expected exactly %d arguments, got %d\n"
-          name eqargs (sub actual 2))
+  (callm (callm ArgumentError new
+    (__get_string "wrong number of arguments (given %d, expected %d)"
+      (sub actual 2) eqargs))
+    raise)
 ))
 
 )
