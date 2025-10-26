@@ -4,6 +4,86 @@ This document tracks known bugs, missing features, and architectural issues. Ite
 
 **For debugging help, see [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md) for effective patterns and techniques.**
 
+## High-Priority Bugs
+
+### Self-Hosted Compiler Doesn't Initialize Local Variables to Nil
+
+**Status**: Workaround in place in `parser.rb:155`
+
+**Issue**: The self-hosted compiler (out/driver) does not properly initialize local variables to nil. When a variable is only assigned conditionally, it contains garbage from the stack if the condition is false.
+
+**Impact**:
+- Broke `make selftest-c` until workaround was added
+- Causes Scanner::Position objects to leak into AST in parser.rb
+- Any code with conditionally-assigned variables is at risk
+
+**Root Cause**: Bug in compiler's variable initialization for the self-hosted version. MRI Ruby and the MRI-compiled driver initialize variables correctly, but when the compiler compiles itself, it generates code that doesn't initialize local variables.
+
+**Example Symptom** (before fix in parser.rb:155):
+```ruby
+def parse_case
+  # ...
+  whens = kleene { parse_when }
+  # elses is not initialized here
+  if keyword(:else)
+    elses = parse_opt_defexp  # Only assigned if condition true
+  end
+  # If no else clause, elses contains garbage (e.g., Scanner::Position from prior variable)
+  return E[pos, :case, cond, whens, elses].compact
+end
+```
+
+**Current Workaround**: Explicit `elses = nil` initialization in `parser.rb:155-156`
+
+**Test Case**: `test_uninitialized_var.rb` demonstrates the issue - works correctly with workaround in all three scenarios (MRI, MRI-compiled, self-hosted).
+
+**Verification**:
+```bash
+# All three should pass:
+ruby test_uninitialized_var.rb
+./compile test_uninitialized_var.rb -I. && ./out/test_uninitialized_var
+./compile2 test_uninitialized_var.rb -I. && ./out/test_uninitialized_var2
+```
+
+**TODO**:
+1. Investigate compiler.rb to find where local variable initialization is generated
+2. Fix the root cause so all local variables are initialized to nil
+3. Remove workaround from parser.rb once fix is verified
+4. Search codebase for other locations that may need similar workarounds until root cause is fixed
+
+**Related Files**:
+- `parser.rb:155-156` - Current workaround
+- `compiler.rb` - Likely location of bug in variable initialization code generation
+- `test_uninitialized_var.rb` - Test case
+
+---
+
+## Known Low-Priority Bugs
+
+### Ternary Operator Output Difference
+
+**Test Case** (`test_class_new_behavior.rb`):
+```ruby
+class MyArray < Array
+  def test
+    a = self.class.new
+    puts a.class.to_s == "MyArray" ? "PASS" : "FAIL"
+  end
+end
+
+m = MyArray.new
+m << 1 << 2
+m.test
+```
+
+**Observed Behavior**:
+- MRI Ruby: prints `PASS`
+- Compiled with MRI driver: prints `true`
+
+The ternary operator appears to return the boolean condition result instead of the selected branch value. This does not affect selftest.
+
+---
+
 ## Current Integer Spec Test Status (2025-10-17) ✅ NO REGRESSION
 
 **Summary**: 67 spec files total

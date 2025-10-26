@@ -152,6 +152,8 @@ class Parser < ParserBase
     ws
     whens = kleene { parse_when }
     ws
+    elses = nil  # FIXME: Self-hosted compiler doesn't initialize local vars to nil.
+                 # Without this, elses contains garbage when there's no else clause.
     if keyword(:else)
       ws
       elses = parse_opt_defexp
