@@ -810,11 +810,14 @@ class Integer < Numeric
         # Add product_limb to result[i+j] with carry
         result_idx = i + j
         current = result_limbs[result_idx]
-        sum = current + product_limb
 
-        # Check for overflow when adding
-        if __less_than(sum, current) != 0
-          # Overflow occurred, propagate carry
+        # Use helper to add with overflow detection
+        add_result = __add_two_limbs_with_overflow(current, product_limb)
+        sum = add_result[0]
+        overflow = add_result[1]
+
+        # If overflow occurred, propagate carry
+        if overflow != 0
           product_carry = product_carry + 1
         end
 
@@ -828,7 +831,22 @@ class Integer < Numeric
       if carry != 0
         result_idx = my_len + j
         current = result_limbs[result_idx]
-        result_limbs[result_idx] = current + carry
+
+        # Use helper to add with overflow detection
+        add_result = __add_two_limbs_with_overflow(current, carry)
+        sum = add_result[0]
+        overflow = add_result[1]
+
+        result_limbs[result_idx] = sum
+
+        # If overflow occurred, propagate to next limb
+        # This handles cases where final carry + existing value exceeds limb_base
+        if overflow != 0
+          next_idx = result_idx + 1
+          if __less_than(next_idx, max_result_len) != 0
+            result_limbs[next_idx] = result_limbs[next_idx] + 1
+          end
+        end
       end
 
       j = j + 1
@@ -2128,6 +2146,28 @@ class Integer < Numeric
     end
 
     result
+  end
+
+  # Helper: add two limbs and detect overflow
+  # Returns [sum, overflow] where overflow is 1 if sum >= limb_base, 0 otherwise
+  def __add_two_limbs_with_overflow(limb_a, limb_b)
+    %s(
+      (let (a_raw b_raw sum_raw limb_base overflow)
+        (assign a_raw (sar limb_a))
+        (assign b_raw (sar limb_b))
+        (assign sum_raw (add a_raw b_raw))
+        (assign limb_base (callm self __limb_base_raw))
+
+        # Check if sum_raw >= limb_base
+        (if (ge sum_raw limb_base)
+          (do
+            (assign sum_raw (sub sum_raw limb_base))
+            (assign overflow 1))
+          (assign overflow 0))
+
+        # Return array [sum, overflow]
+        (return (callm self __make_overflow_result ((__int sum_raw) (__int overflow)))))
+    )
   end
 
   # Helper: shift a single limb left by 1 bit with carry-in
