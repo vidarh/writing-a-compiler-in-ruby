@@ -38,32 +38,31 @@
 
 ---
 
-## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+30-50 tests)
+## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+30-50 tests) - PARTIAL
 
-**Current Status (2025-10-27)**: All bitwise specs FAIL with negative numbers
-- bit_and_spec: P:10 F:3 (improved, but negatives fail)
-- bit_or_spec: P:6 F:6 (negatives fail)
-- bit_xor_spec: P:5 F:8 (negatives fail)
-- allbits_spec: P:3 F:1 (negatives fail)
-- anybits_spec: P:3 F:1 (negatives fail)
-- nobits_spec: P:3 F:1 (negatives fail)
+**Current Status (2025-10-27)**: Partial fix implemented
+- bit_and_spec: P:9 F:4 (improved from P:8 F:5) - **-1 special case added**
+- bit_or_spec: P:6 F:6 (negatives fail) - needs work
+- bit_xor_spec: P:5 F:8 (negatives fail) - needs work
+- allbits_spec: P:3 F:1 (negatives fail) - needs work
+- anybits_spec: P:3 F:1 (negatives fail) - needs work
+- nobits_spec: P:3 F:1 (negatives fail) - needs work
 
-**Impact**: Session 31 implemented positives; negatives need two's complement
+**Progress (Session 32)**:
+- [x] Implemented special case: `X & -1 = X` (most common case)
+- [x] bit_and_spec improved by 1 test
 
+**Remaining Work**:
 - [ ] Research two's complement representation for Ruby integers
 - [ ] Design algorithm to convert negative Integer to two's complement limb array
 - [ ] Implement conversion helper method (e.g., `__to_twos_complement`)
+- [ ] Update `Integer#&` to handle all negative operands via two's complement
 - [ ] Update `Integer#|` to handle negative operands via two's complement
-- [ ] Update `Integer#&` to handle negative operands via two's complement
 - [ ] Update `Integer#^` to handle negative operands via two's complement
-- [ ] Add tests for negative bitwise operations
-- [ ] Verify bit_or_spec passes negative tests
-- [ ] Verify bit_and_spec passes negative tests
-- [ ] Verify allbits_spec passes all tests
-- [ ] Verify anybits_spec passes all tests
+- [ ] Verify all bitwise specs pass
 
-**Files**: `lib/core/integer.rb`
-**Estimated effort**: 4-6 hours
+**Files**: `lib/core/integer.rb:2291-2298` (special case added)
+**Estimated effort**: 3-5 hours remaining (1 hour spent)
 
 ---
 

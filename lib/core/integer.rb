@@ -2288,6 +2288,15 @@ class Integer < Numeric
       end
     end
 
+    # Special case: X & -1 = X (since -1 has all bits set in two's complement)
+    if other == -1
+      return self
+    end
+    # Special case: -1 & X = X
+    if self == -1
+      return other
+    end
+
     # Dispatch based on whether self and other are fixnum or heap integers
     %s(
       (if (eq (bitand self 1) 1)

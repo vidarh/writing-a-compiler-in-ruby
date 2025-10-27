@@ -42,9 +42,13 @@ See CLAUDE.md for full details.
 
 ## Recent Work (Last 3 Sessions)
 
-### Session 32: TODO List Re-assessment (2025-10-27) ✅
+### Session 32: TODO List Re-assessment + Bitwise -1 Fix (2025-10-27) ✅
 
-**Completed**: Re-assessed all 67 integer specs to verify current status. Updated spec_failures.txt with latest results. Discovered that ceil_spec and truncate_spec now PASS (fixed by commits c66e6e2, a64e125, 94a989c, aeedc76), sqrt_spec improved from CRASH to FAIL, and bit_and_spec improved. Corrected TODO.md and WORK_STATUS.md with accurate numbers. Files: `docs/TODO.md`, `docs/WORK_STATUS.md`, `spec_failures.txt`. Result: Current status verified as 18/67 specs (27%), 265/507 tests (52%). Note: WORK_STATUS Session 30 incorrectly claimed pow_spec and exponent_spec were fixed - they still CRASH.
+**Part 1 - Re-assessment**: Re-assessed all 67 integer specs to verify current status. Updated spec_failures.txt with latest results. Discovered that ceil_spec and truncate_spec now PASS (fixed by commits c66e6e2, a64e125, 94a989c, aeedc76), sqrt_spec improved from CRASH to FAIL. Corrected TODO.md and WORK_STATUS.md with accurate numbers. Result: Current status verified as 18/67 specs (27%), 265/507 tests (52%).
+
+**Part 2 - Bitwise AND -1 Special Case**: Implemented special case optimization for `X & -1 = X` in Integer#&. This is the most common negative bitwise operation (since -1 has all bits set in two's complement). Files: `lib/core/integer.rb:2291-2298`. Result: bit_and_spec improved from P:8 F:5 to P:9 F:4. Selftest-c passes with 0 failures.
+
+**Note**: Full two's complement implementation for all negative bitwise operations remains TODO (complex, needs careful design).
 
 ### Session 31: Bitwise Operators & Precedence Fix (2025-10-26) ✅
 
