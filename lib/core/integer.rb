@@ -939,6 +939,12 @@ class Integer < Numeric
     )
   end
 
+  # Helper: get 2^30 = 1073741824 (limb base)
+  # Note: This exceeds fixnum range, so it returns a heap integer
+  def __limb_base
+    1073741824
+  end
+
   # Helper to get sign for multi-limb operations
   def __get_sign
     @sign
@@ -2106,8 +2112,7 @@ class Integer < Numeric
     i = 0
 
     # Limb base is 2^30 = 1073741824
-    # Half base is 2^29 = 536870912
-    half_base = __half_limb_base
+    limb_base = __limb_base
 
     while __less_than(i, len) != 0
       limb = limbs[i]
@@ -2118,12 +2123,9 @@ class Integer < Numeric
 
       # Check if we overflowed
       # new_limb >= 2^30 means we need to wrap and carry
-      # We can check this by comparing with half_base * 2
-      # But simpler: if new_limb >= half_base + half_base
-      twice_half = half_base + half_base
-      if __ge_fixnum(new_limb, twice_half) != 0
+      if __ge_fixnum(new_limb, limb_base) != 0
         # Overflow - wrap around
-        new_limb = new_limb - twice_half
+        new_limb = new_limb - limb_base
         carry = 1
       else
         carry = 0
