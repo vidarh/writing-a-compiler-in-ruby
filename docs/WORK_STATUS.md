@@ -75,8 +75,12 @@ See CLAUDE.md for full details.
 - bit_and_spec: P:11 F:2 (was P:9 F:4) +2 tests
 - bit_or_spec: P:7 F:5 (was P:6 F:6) +1 test
 - bit_xor_spec: P:6 F:7 (was P:5 F:8) +1 test
-- **Total: +4 tests passing** across bitwise operations with negative integers
-- Remaining failures are mostly Float type checking (separate issue from two's complement)
+- allbits_spec: P:4 F:0 (was P:3 F:1) +1 test ✓ NOW PASS
+- anybits_spec: P:4 F:0 (was P:3 F:1) +1 test ✓ NOW PASS
+- nobits_spec: P:4 F:0 (was P:3 F:1) +1 test ✓ NOW PASS
+- **Total: +7 tests passing** across bitwise operations with negative integers
+- Remaining failures in bit_or/bit_xor are due to Integer#<< (shift) not handling large shifts (separate issue)
+- Remaining Float type checking failures are separate issue from two's complement
 - Selftest-c passes with 0 failures
 
 ### Session 31: Bitwise Operators & Precedence Fix (2025-10-26) ✅

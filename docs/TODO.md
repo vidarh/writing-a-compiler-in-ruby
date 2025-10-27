@@ -38,17 +38,18 @@
 
 ---
 
-## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+30-50 tests) - IN PROGRESS
+## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+7 tests) - COMPLETED ✓
 
-**Current Status (2025-10-27)**: Two's complement implemented for &, |, ^ operations
-- bit_and_spec: P:11 F:2 (improved from P:9 F:4 → +2 tests)
-- bit_or_spec: P:7 F:5 (improved from P:6 F:6 → +1 test)
-- bit_xor_spec: P:6 F:7 (improved from P:5 F:8 → +1 test)
-- allbits_spec: P:3 F:1 (negatives fail) - uses Integer#& internally
-- anybits_spec: P:3 F:1 (negatives fail) - uses Integer#& internally
-- nobits_spec: P:3 F:1 (negatives fail) - uses Integer#& internally
+**Final Status (2025-10-27 Session 32)**: Two's complement implemented and working correctly
+- bit_and_spec: P:11 F:2 (was P:9 F:4) → **+2 tests**
+- bit_or_spec: P:7 F:5 (was P:6 F:6) → **+1 test**
+- bit_xor_spec: P:6 F:7 (was P:5 F:8) → **+1 test**
+- allbits_spec: P:4 F:0 (was P:3 F:1) → **+1 test ✓ NOW PASS**
+- anybits_spec: P:4 F:0 (was P:3 F:1) → **+1 test ✓ NOW PASS**
+- nobits_spec: P:4 F:0 (was P:3 F:1) → **+1 test ✓ NOW PASS**
+- **Total: +7 tests passing**
 
-**Progress (Session 32)**:
+**Completed (Session 32)**:
 - [x] Implemented special case: `X & -1 = X` (most common case)
 - [x] Research two's complement representation for Ruby integers
 - [x] Design algorithm to convert negative Integer to two's complement limb array
@@ -56,15 +57,15 @@
 - [x] Update `Integer#&` to handle all negative operands via two's complement
 - [x] Update `Integer#|` to handle negative operands via two's complement
 - [x] Update `Integer#^` to handle negative operands via two's complement
-- [x] **Total: +4 tests passing** (bit_and +2, bit_or +1, bit_xor +1)
+- [x] Verify allbits/anybits/nobits specs - all now PASS
 
-**Remaining Work**:
-- [ ] Investigate remaining bitwise failures (some may be edge cases)
-- [ ] Verify allbits/anybits/nobits specs (depend on Integer#&)
-- [ ] Add Float type checking to raise TypeError (separate from two's complement)
+**Remaining Failures (Not Related to Two's Complement)**:
+- Float type checking: bit_and/bit_or/bit_xor should raise TypeError for Float (LOW PRIORITY)
+- Integer#<< failures: Large shifts like `1 << 33` incorrectly produce small values (SEPARATE ISSUE - see LOW PRIORITY section below)
 
 **Files**: `lib/core/integer.rb:2291-2298` (-1 special case), `2348-2550` (two's complement helpers and updated __bitand/bitor/bitxor_heap_heap)
-**Estimated effort**: 1-2 hours remaining for edge cases (4 hours spent)
+**Time spent**: 5 hours
+**Commits**: 8661b29 (special case), 58fe4d6 (full two's complement)
 
 ---
 
@@ -162,6 +163,7 @@
 
 ## LOW PRIORITY: Other Integer Methods
 
+- [ ] **Fix Integer#<< for large shift amounts** (e.g., `1 << 33` produces 2 instead of 8589934592) - BLOCKS bit_or/bit_xor spec tests
 - [ ] Fix negative shift handling in `Integer#<<`
 - [ ] Fix negative shift handling in `Integer#>>`
 - [ ] Implement multi-limb `Integer#<=>` (spaceship)
@@ -171,6 +173,7 @@
 - [ ] Add Float type checking to operators (should raise TypeError)
 
 **Files**: `lib/core/integer.rb`, `lib/core/fixnum.rb`
+**Note**: Integer#<< currently uses s-expression with `sall` which only handles fixnum shifts correctly
 
 ---
 
