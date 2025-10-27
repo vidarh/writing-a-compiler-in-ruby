@@ -14,14 +14,14 @@
 
 ---
 
-**Last Updated**: 2025-10-27 (Session 32)
-**Current Test Results**: 67 specs | PASS: 21 (31%) | FAIL: 43 (64%) | CRASH: 3 (4%)
-**Individual Tests**: 507 total | Passed: 290 (57%) | Failed: 212 (42%) | Skipped: 5 (1%)
+**Last Updated**: 2025-10-27 (Session 34)
+**Current Test Results**: 67 specs | PASS: 22 (33%) | FAIL: 44 (66%) | CRASH: 1 (1%)
+**Individual Tests**: 609 total | Passed: 311 (51%) | Failed: 289 (47%) | Skipped: 9 (1%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Fixed fixnum overflow bug in division code. 3 specs (divide_spec, divmod_spec, div_spec) no longer crash - now 25 tests passing!
+**Recent Progress**: Fixed carry overflow in heap integer multiplication! pow_spec and exponent_spec now RUN instead of crashing. Added +14 passing tests from pow/exponent operations.
 
-**Next Steps**: Continue with Heap Integer Division task (remaining edge cases) or move to next HIGH PRIORITY task.
+**Next Steps**: Parser bugs (times_spec crash, round_spec failures) or shift operators for heap integers.
 
 ---
 
@@ -41,6 +41,42 @@ See CLAUDE.md for full details.
 ---
 
 ## Recent Work (Last 3 Sessions)
+
+### Session 34: pow_spec and exponent_spec Crash Fix (2025-10-27) ✅
+
+**Problem**: pow_spec and exponent_spec were both crashing during compilation/execution. Investigation revealed two root causes:
+1. **Carry overflow in multiplication**: The formula `carry_out = low_contribution + sign_adjust + (sum_high * 4)` in `__multiply_limb_by_fixnum_with_carry` can produce values >= 2^30 when sum_high ≈ 2^28. Since fixnum max is 2^29-1, tagging these large values creates corrupted "fake fixnums" that break heap integer multiplication.
+2. **Huge exponent hang**: Tests like `2 ** 427387904` caused infinite memory allocation loops.
+
+**Fix Part 1 - Carry Normalization**:
+- Created `__normalize_limb(tagged_val)` helper (lib/core/integer.rb:608-635) that splits oversized carries
+- If raw_val >= limb_base (2^30): splits into `limb = val % 2^30` and `overflow = val / 2^30`
+- Returns both as tagged fixnums in array created directly in s-expression (avoids recursion)
+- Applied normalization in `__multiply_heap_by_fixnum` (lines 763-775) and `__multiply_heap_by_heap` (lines 840-888)
+- Fixed infinite recursion bug by creating array directly instead of calling `__make_overflow_result`
+
+**Fix Part 2 - Exponent Size Limit**:
+- Added check for exponents > 32,537,661 (exact MRI limit from Ruby 3.2)
+- Returns `Float::INFINITY` for oversized exponents instead of attempting computation
+- Prevents memory explosion from huge exponents
+- Files: lib/core/integer.rb:3395-3398
+
+**Test Results**:
+- pow_spec: CRASH → P:7 F:22 S:2 (31 total) ✓ NOW RUNS (+7 tests)
+- exponent_spec: CRASH → P:7 F:12 S:2 (21 total) ✓ NOW RUNS (+7 tests)
+- 2^32 = 4294967296 ✓ (now correct, was wrong)
+- 2^40 = 1099511627776 ✓ (now correct, was wrong/timeout)
+- 2^427387904 → Float::INFINITY ✓ (was hang)
+
+**Remaining Failures**: Expected - modulo exponentiation not implemented, Float/Rational arithmetic not implemented, type checking incomplete.
+
+**Impact**: Crashes reduced from 3 to 1 (only times_spec still crashes). Overall: 22/67 specs (33%), 311/609 tests (51%).
+
+**Files Modified**: lib/core/integer.rb (normalize_limb helper, multiplication fixes, exponent limit)
+
+**Commits**: 6d80ff8 (docs update)
+
+---
 
 ### Session 32: TODO Re-assessment + Bitwise Ops + Division Crash Fix (2025-10-27) ✅
 
@@ -130,10 +166,12 @@ For detailed historical session notes, see git commit messages or separate docum
 
 ## Current Known Issues
 
-### SEGFAULTs (6 specs)
+### SEGFAULTs (1 spec) ✓ MAJOR PROGRESS
 1. **times_spec**: Parser treats `or break` as method calls instead of boolean operator
-2. **divide_spec, divmod_spec, div_spec**: Division/modulo operations crash (heap integer division not implemented)
-3. **pow_spec, exponent_spec**: Power operations crash
+
+**FIXED in Session 34**:
+- ✅ **pow_spec, exponent_spec**: Now RUN (P:7 F:22, P:7 F:12) - fixed carry overflow
+- ✅ **divide_spec, divmod_spec, div_spec**: Now RUN (Session 33) - fixed heap division
 
 ### Parser Bugs
 1. **round_spec**: Parser treats `half: :up` as ternary operator instead of hash literal (causes FAIL, not crash)
