@@ -118,6 +118,34 @@
 
 ---
 
+## LOW PRIORITY: Float Exception Handling (Stub Implementation Limitation)
+
+**Current Status (2025-10-27)**: Multiple specs expect ZeroDivisionError/FloatDomainError for Float operations, but get different results
+
+**Assessment**: LOW PRIORITY - These failures are expected because Float is not fully implemented. Fixing them requires proper Float implementation, which is out of scope for integer specs.
+
+**Observed Failures**:
+- div_spec: "Expected ZeroDivisionError to be raised but nothing was raised" for `5.div(0.0)`
+- divmod_spec: "Expected ZeroDivisionError to be raised but nothing was raised" for Float 0.0
+- divmod_spec: "Expected FloatDomainError if other is NaN"
+
+**Why Low Priority**:
+1. Float is a stub class with minimal implementation
+2. These tests are tangential to integer arithmetic
+3. Proper fix requires full Float implementation (division, zero detection, NaN handling)
+4. Current behavior (returning stub Float) is acceptable workaround
+
+**If Fixing Later**:
+- [ ] Implement Float#== for zero comparison
+- [ ] Implement proper Float division that raises ZeroDivisionError for 0.0
+- [ ] Implement FloatDomainError for NaN operations
+- [ ] Update Integer#div, Integer#divmod to properly check Float.zero?
+
+**Files**: `lib/core/float.rb`, `lib/core/integer.rb`
+**Estimated effort**: 8-12 hours (requires Float implementation)
+
+---
+
 ## MEDIUM PRIORITY: Parser Bugs (+3-13 tests)
 
 **Current Status (2025-10-27)**: times_spec CRASHES, round_spec FAILS (P:4 F:13 S:1)
