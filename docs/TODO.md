@@ -38,31 +38,33 @@
 
 ---
 
-## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+30-50 tests) - PARTIAL
+## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+30-50 tests) - IN PROGRESS
 
-**Current Status (2025-10-27)**: Partial fix implemented
-- bit_and_spec: P:9 F:4 (improved from P:8 F:5) - **-1 special case added**
-- bit_or_spec: P:6 F:6 (negatives fail) - needs work
-- bit_xor_spec: P:5 F:8 (negatives fail) - needs work
-- allbits_spec: P:3 F:1 (negatives fail) - needs work
-- anybits_spec: P:3 F:1 (negatives fail) - needs work
-- nobits_spec: P:3 F:1 (negatives fail) - needs work
+**Current Status (2025-10-27)**: Two's complement implemented for &, |, ^ operations
+- bit_and_spec: P:11 F:2 (improved from P:9 F:4 → +2 tests)
+- bit_or_spec: P:7 F:5 (improved from P:6 F:6 → +1 test)
+- bit_xor_spec: P:6 F:7 (improved from P:5 F:8 → +1 test)
+- allbits_spec: P:3 F:1 (negatives fail) - uses Integer#& internally
+- anybits_spec: P:3 F:1 (negatives fail) - uses Integer#& internally
+- nobits_spec: P:3 F:1 (negatives fail) - uses Integer#& internally
 
 **Progress (Session 32)**:
 - [x] Implemented special case: `X & -1 = X` (most common case)
-- [x] bit_and_spec improved by 1 test
+- [x] Research two's complement representation for Ruby integers
+- [x] Design algorithm to convert negative Integer to two's complement limb array
+- [x] Implement conversion helper methods: `__magnitude_to_twos_complement`, `__invert_limb`, `__add_with_carry`, etc
+- [x] Update `Integer#&` to handle all negative operands via two's complement
+- [x] Update `Integer#|` to handle negative operands via two's complement
+- [x] Update `Integer#^` to handle negative operands via two's complement
+- [x] **Total: +4 tests passing** (bit_and +2, bit_or +1, bit_xor +1)
 
 **Remaining Work**:
-- [ ] Research two's complement representation for Ruby integers
-- [ ] Design algorithm to convert negative Integer to two's complement limb array
-- [ ] Implement conversion helper method (e.g., `__to_twos_complement`)
-- [ ] Update `Integer#&` to handle all negative operands via two's complement
-- [ ] Update `Integer#|` to handle negative operands via two's complement
-- [ ] Update `Integer#^` to handle negative operands via two's complement
-- [ ] Verify all bitwise specs pass
+- [ ] Investigate remaining bitwise failures (some may be edge cases)
+- [ ] Verify allbits/anybits/nobits specs (depend on Integer#&)
+- [ ] Add Float type checking to raise TypeError (separate from two's complement)
 
-**Files**: `lib/core/integer.rb:2291-2298` (special case added)
-**Estimated effort**: 3-5 hours remaining (1 hour spent)
+**Files**: `lib/core/integer.rb:2291-2298` (-1 special case), `2348-2550` (two's complement helpers and updated __bitand/bitor/bitxor_heap_heap)
+**Estimated effort**: 1-2 hours remaining for edge cases (4 hours spent)
 
 ---
 

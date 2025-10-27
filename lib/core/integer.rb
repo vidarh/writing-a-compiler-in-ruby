@@ -2345,27 +2345,126 @@ class Integer < Numeric
     __bitand_heap_heap(other_heap)
   end
 
+  # Helper: Convert magnitude to two's complement representation
+  # Input: limbs array representing magnitude M, num_limbs (desired output size)
+  # Output: limbs array representing ~M + 1 (two's complement of -M)
+  def __magnitude_to_twos_complement(limbs, num_limbs)
+    result = []
+    i = 0
+    carry = 1  # For the +1 in two's complement
+
+    # Process existing limbs: invert and add carry
+    while __less_than(i, limbs.length) != 0
+      limb = limbs[i]
+      # Invert all bits
+      inverted = __invert_limb(limb)
+      # Add carry
+      sum_result = __add_with_carry(inverted, carry)
+      result << sum_result[0]  # sum
+      carry = sum_result[1]     # new carry
+      i = i + 1
+    end
+
+    # Extend with inverted bits (0xFFFFFFFF) if more limbs needed
+    while __less_than(i, num_limbs) != 0
+      # Inverted limb is 0xFFFFFFFF (all bits set)
+      inverted = __limb_max_value
+      sum_result = __add_with_carry(inverted, carry)
+      result << sum_result[0]
+      carry = sum_result[1]
+      i = i + 1
+    end
+
+    result
+  end
+
+  # Helper: Invert all bits in a limb
+  def __invert_limb(limb)
+    %s(
+      (let (raw inverted)
+        (assign raw (sar limb))
+        (assign inverted (bitxor raw 4294967295))
+        (return (__int inverted)))
+    )
+  end
+
+  # Helper: Get max limb value (0xFFFFFFFF as fixnum)
+  def __limb_max_value
+    %s(__int 4294967295)
+  end
+
+  # Helper: Add two limb values with carry
+  # Returns [sum, carry] where carry is 0 or 1
+  def __add_with_carry(limb1, carry_in)
+    %s(
+      (let (a_raw carry_raw sum carry_out)
+        (assign a_raw (sar limb1))
+        (assign carry_raw (sar carry_in))
+        (assign sum (add a_raw carry_raw))
+        # Check for overflow: if sum < a_raw, we had carry
+        (if (lt sum a_raw)
+          (assign carry_out 1)
+          (assign carry_out 0))
+        (return (array (__int sum) (__int carry_out))))
+    )
+  end
+
   # Step 3: heap & heap - iterate over limbs
   def __bitand_heap_heap(other)
     limbs_a = __get_limbs
     limbs_b = other.__get_limbs
     len_a = limbs_a.length
     len_b = limbs_b.length
+    sign_a = __get_sign
+    sign_b = other.__get_sign
 
-    # For AND, result length is minimum of the two
-    # (AND with nothing is 0, which we can ignore)
-    min_len = __min_fixnum(len_a, len_b)
+    # Determine result sign: negative only if both operands are negative
+    result_sign = 1
+    if __less_than(sign_a, 0) != 0
+      if __less_than(sign_b, 0) != 0
+        result_sign = -1
+      end
+    end
 
+    # For AND with negatives, we need to work with same number of limbs
+    max_len = __max_fixnum(len_a, len_b)
+
+    # Convert negative operands to two's complement
+    working_limbs_a = limbs_a
+    working_limbs_b = limbs_b
+
+    if __less_than(sign_a, 0) != 0
+      working_limbs_a = __magnitude_to_twos_complement(limbs_a, max_len)
+    elsif __less_than(len_a, max_len) != 0
+      # Positive number: extend with zeros
+      working_limbs_a = __extend_limbs_with_zeros(limbs_a, max_len)
+    end
+
+    if __less_than(sign_b, 0) != 0
+      working_limbs_b = __magnitude_to_twos_complement(limbs_b, max_len)
+    elsif __less_than(len_b, max_len) != 0
+      # Positive number: extend with zeros
+      working_limbs_b = __extend_limbs_with_zeros(limbs_b, max_len)
+    end
+
+    # AND the limbs
     result_limbs = []
     i = 0
-
-    while __less_than(i, min_len) != 0
-      limb_a = limbs_a[i]
-      limb_b = limbs_b[i]
+    while __less_than(i, max_len) != 0
+      limb_a = working_limbs_a[i]
+      limb_b = working_limbs_b[i]
       result_limb = __bitand_limbs(limb_a, limb_b)
       result_limbs << result_limb
       i = i + 1
     end
+
+    # If result is negative, convert back from two's complement to magnitude
+    if __less_than(result_sign, 0) != 0
+      result_limbs = __magnitude_to_twos_complement(result_limbs, result_limbs.length)
+    end
+
+    # Remove leading zero limbs
+    result_limbs = __trim_leading_zeros(result_limbs)
 
     # Check if result fits in fixnum and demote
     if result_limbs.length == 0
@@ -2384,16 +2483,72 @@ class Integer < Numeric
     end
 
     if should_demote != 0
-      return first_limb
+      # Apply sign for fixnum
+      if __less_than(result_sign, 0) != 0
+        return 0 - first_limb
+      else
+        return first_limb
+      end
     else
       result = Integer.new
-      result.__set_heap_data(result_limbs, 1)
+      result.__set_heap_data(result_limbs, result_sign)
       return result
     end
   end
 
   def __min_fixnum(a, b)
     %s((if (lt a b) (return a) (return b)))
+  end
+
+  def __max_fixnum(a, b)
+    %s((if (gt a b) (return a) (return b)))
+  end
+
+  # Helper: Extend limbs array with leading zeros
+  def __extend_limbs_with_zeros(limbs, target_len)
+    result = []
+    i = 0
+    # Copy existing limbs
+    while __less_than(i, limbs.length) != 0
+      result << limbs[i]
+      i = i + 1
+    end
+    # Add zeros
+    while __less_than(i, target_len) != 0
+      result << 0
+      i = i + 1
+    end
+    result
+  end
+
+  # Helper: Remove leading zero limbs from limbs array
+  def __trim_leading_zeros(limbs)
+    len = limbs.length
+    # Find last non-zero limb
+    last_nonzero = -1
+    i = 0
+    while __less_than(i, len) != 0
+      limb = limbs[i]
+      if limb != 0
+        last_nonzero = i
+      end
+      i = i + 1
+    end
+
+    # If all zeros, return empty array
+    if __less_than(last_nonzero, 0) != 0
+      return []
+    end
+
+    # Build result with limbs up to last non-zero
+    result = []
+    i = 0
+    while __less_than(i, last_nonzero) != 0
+      result << limbs[i]
+      i = i + 1
+    end
+    result << limbs[last_nonzero]
+    result
   end
 
   def | other
@@ -2475,27 +2630,63 @@ class Integer < Numeric
     limbs_b = other.__get_limbs
     len_a = limbs_a.length
     len_b = limbs_b.length
+    sign_a = __get_sign
+    sign_b = other.__get_sign
 
-    # Calculate max length
+    # Determine result sign: negative if either operand is negative
+    result_sign = 1
+    if __less_than(sign_a, 0) != 0
+      result_sign = -1
+    end
+    if __less_than(sign_b, 0) != 0
+      result_sign = -1
+    end
+
+    # For OR with negatives, we need to work with same number of limbs
     max_len = __max_fixnum(len_a, len_b)
 
+    # Convert negative operands to two's complement
+    working_limbs_a = limbs_a
+    working_limbs_b = limbs_b
+
+    if __less_than(sign_a, 0) != 0
+      working_limbs_a = __magnitude_to_twos_complement(limbs_a, max_len)
+    elsif __less_than(len_a, max_len) != 0
+      # Positive number: extend with zeros
+      working_limbs_a = __extend_limbs_with_zeros(limbs_a, max_len)
+    end
+
+    if __less_than(sign_b, 0) != 0
+      working_limbs_b = __magnitude_to_twos_complement(limbs_b, max_len)
+    elsif __less_than(len_b, max_len) != 0
+      # Positive number: extend with zeros
+      working_limbs_b = __extend_limbs_with_zeros(limbs_b, max_len)
+    end
+
+    # OR the limbs
     result_limbs = []
     i = 0
-
-    # Iterate over all limbs
     while __less_than(i, max_len) != 0
-      # Get limbs (0 if out of bounds)
-      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
-      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
-
-      # OR the limbs using helper
+      limb_a = working_limbs_a[i]
+      limb_b = working_limbs_b[i]
       result_limb = __bitor_limbs(limb_a, limb_b)
-
       result_limbs << result_limb
       i = i + 1
     end
 
-    # Check if result fits in a fixnum (single limb < 2^30)
+    # If result is negative, convert back from two's complement to magnitude
+    if __less_than(result_sign, 0) != 0
+      result_limbs = __magnitude_to_twos_complement(result_limbs, result_limbs.length)
+    end
+
+    # Remove leading zero limbs
+    result_limbs = __trim_leading_zeros(result_limbs)
+
+    # Check if result fits in fixnum and demote
+    if result_limbs.length == 0
+      return 0
+    end
+
     result_len = result_limbs.length
     first_limb = result_limbs[0]
     half_max = __half_limb_base
@@ -2508,12 +2699,15 @@ class Integer < Numeric
     end
 
     if should_demote != 0
-      # Convert to fixnum - result already has tag bit
-      return first_limb
+      # Apply sign for fixnum
+      if __less_than(result_sign, 0) != 0
+        return 0 - first_limb
+      else
+        return first_limb
+      end
     else
-      # Create heap integer
       result = Integer.new
-      result.__set_heap_data(result_limbs, 1)
+      result.__set_heap_data(result_limbs, result_sign)
       return result
     end
   end
@@ -2600,20 +2794,63 @@ class Integer < Numeric
     limbs_b = other.__get_limbs
     len_a = limbs_a.length
     len_b = limbs_b.length
+    sign_a = __get_sign
+    sign_b = other.__get_sign
 
-    # For XOR, result length is max (like OR: x ^ 0 = x)
+    # Determine result sign: negative if exactly one operand is negative (XOR of signs)
+    result_sign = 1
+    sign_a_neg = 0
+    sign_b_neg = 0
+    if __less_than(sign_a, 0) != 0
+      sign_a_neg = 1
+    end
+    if __less_than(sign_b, 0) != 0
+      sign_b_neg = 1
+    end
+    # XOR: result is negative if signs differ
+    if sign_a_neg != sign_b_neg
+      result_sign = -1
+    end
+
+    # For XOR with negatives, we need to work with same number of limbs
     max_len = __max_fixnum(len_a, len_b)
 
+    # Convert negative operands to two's complement
+    working_limbs_a = limbs_a
+    working_limbs_b = limbs_b
+
+    if __less_than(sign_a, 0) != 0
+      working_limbs_a = __magnitude_to_twos_complement(limbs_a, max_len)
+    elsif __less_than(len_a, max_len) != 0
+      # Positive number: extend with zeros
+      working_limbs_a = __extend_limbs_with_zeros(limbs_a, max_len)
+    end
+
+    if __less_than(sign_b, 0) != 0
+      working_limbs_b = __magnitude_to_twos_complement(limbs_b, max_len)
+    elsif __less_than(len_b, max_len) != 0
+      # Positive number: extend with zeros
+      working_limbs_b = __extend_limbs_with_zeros(limbs_b, max_len)
+    end
+
+    # XOR the limbs
     result_limbs = []
     i = 0
-
     while __less_than(i, max_len) != 0
-      limb_a = __get_limb_or_zero(limbs_a, i, len_a)
-      limb_b = __get_limb_or_zero(limbs_b, i, len_b)
+      limb_a = working_limbs_a[i]
+      limb_b = working_limbs_b[i]
       result_limb = __bitxor_limbs(limb_a, limb_b)
       result_limbs << result_limb
       i = i + 1
     end
+
+    # If result is negative, convert back from two's complement to magnitude
+    if __less_than(result_sign, 0) != 0
+      result_limbs = __magnitude_to_twos_complement(result_limbs, result_limbs.length)
+    end
+
+    # Remove leading zero limbs
+    result_limbs = __trim_leading_zeros(result_limbs)
 
     # Check if result fits in fixnum and demote
     if result_limbs.length == 0
@@ -2632,10 +2869,15 @@ class Integer < Numeric
     end
 
     if should_demote != 0
-      return first_limb
+      # Apply sign for fixnum
+      if __less_than(result_sign, 0) != 0
+        return 0 - first_limb
+      else
+        return first_limb
+      end
     else
       result = Integer.new
-      result.__set_heap_data(result_limbs, 1)
+      result.__set_heap_data(result_limbs, result_sign)
       return result
     end
   end

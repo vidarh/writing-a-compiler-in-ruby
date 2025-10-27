@@ -48,7 +48,36 @@ See CLAUDE.md for full details.
 
 **Part 2 - Bitwise AND -1 Special Case**: Implemented special case optimization for `X & -1 = X` in Integer#&. This is the most common negative bitwise operation (since -1 has all bits set in two's complement). Files: `lib/core/integer.rb:2291-2298`. Result: bit_and_spec improved from P:8 F:5 to P:9 F:4. Selftest-c passes with 0 failures.
 
-**Note**: Full two's complement implementation for all negative bitwise operations remains TODO (complex, needs careful design).
+**Part 3 - Two's Complement Research**: Researched current implementation of bitwise operations in lib/core/integer.rb. Findings:
+- Heap integers use sign-magnitude representation: `@sign` (1 or -1) + `@limbs` (array of absolute value limbs)
+- Current bitwise operations (`__bitand_heap_heap`, `__bitor_heap_heap`, `__bitxor_heap_heap`) completely ignore sign
+- No two's complement conversion exists yet
+- Bitwise operations need two's complement: for negative N, convert |N| to one's complement (invert all bits) then add 1
+- Failing tests: bit_and_spec P:9 F:4 - the 4 failures are operations with negative heap integers
+- Next step: implement incremental two's complement conversion for Integer#& with negative operands
+
+**Part 4 - Two's Complement Implementation for Integer#&**: Implemented full two's complement conversion for negative heap integers in bitwise AND operations. Files: `lib/core/integer.rb:2348-2410 (helpers), 2410-2495 (updated __bitand_heap_heap), 2497-2550 (helper methods)`.
+
+**Algorithm**:
+- Added `__magnitude_to_twos_complement(limbs, num_limbs)`: converts magnitude M to ~M + 1
+- Added helper methods: `__invert_limb`, `__add_with_carry`, `__extend_limbs_with_zeros`, `__trim_leading_zeros`, `__max_fixnum`
+- Updated `__bitand_heap_heap`: detects negative operands, converts to two's complement, performs AND, converts result back if negative
+- Result sign: negative iff both operands are negative (matches Ruby semantics)
+
+**Result**: bit_and_spec improved from P:9 F:4 to P:11 F:2. Remaining 2 failures are Float type checking (unrelated to two's complement). Selftest-c passes with 0 failures.
+
+**Part 5 - Two's Complement for Integer#| and Integer#^**: Applied same two's complement logic to Integer#| (bitwise OR) and Integer#^ (bitwise XOR).
+- Integer#|: result is negative if either operand is negative
+- Integer#^: result is negative if exactly one operand is negative (XOR of signs)
+- Files: Updated `__bitor_heap_heap` and `__bitxor_heap_heap` in `lib/core/integer.rb`
+
+**Final Results**:
+- bit_and_spec: P:11 F:2 (was P:9 F:4) +2 tests
+- bit_or_spec: P:7 F:5 (was P:6 F:6) +1 test
+- bit_xor_spec: P:6 F:7 (was P:5 F:8) +1 test
+- **Total: +4 tests passing** across bitwise operations with negative integers
+- Remaining failures are mostly Float type checking (separate issue from two's complement)
+- Selftest-c passes with 0 failures
 
 ### Session 31: Bitwise Operators & Precedence Fix (2025-10-26) ✅
 
