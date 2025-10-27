@@ -671,15 +671,15 @@ def nan_value
 end
 
 def fixnum_max
-  # Real value should be: 0x7FFF_FFFF_FFFF_FFFF
-  # Using 32-bit fixnum max (accounting for 1-bit tagging)
-  1073741823  # 0x3FFFFFFF
+  # This compiler uses 30-bit signed integers with 1-bit tagging
+  # Range: -2^29 to 2^29-1
+  536870911  # 0x1FFFFFFF = 2^29 - 1
 end
 
 def fixnum_min
-  # Real value should be: -0x8000_0000_0000_0000
-  # Using 32-bit fixnum min (accounting for 1-bit tagging)
-  -1073741824  # -0x40000000
+  # This compiler uses 30-bit signed integers with 1-bit tagging
+  # Range: -2^29 to 2^29-1
+  -536870912  # -0x20000000 = -2^29
 end
 
 def c_long_size

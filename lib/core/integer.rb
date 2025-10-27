@@ -3541,22 +3541,21 @@ class Integer < Numeric
     # 0.bit_length => 0
     # 1.bit_length => 1
     # 255.bit_length => 8
-    # -1.bit_length => 1 (two's complement: ...11111111)
-    # -256.bit_length => 9 (two's complement: ...111111111 00000000)
+    # -1.bit_length => 0 (two's complement: all 1s, no 0 bit needed)
+    # -256.bit_length => 8 (two's complement representation)
 
     return 0 if self == 0
 
-    # For negative numbers, compute bit_length of absolute value
-    # and handle two's complement representation
+    # Fixnum path only
     if self < 0
-      # For negative n, bit_length is one more than bit_length of (n.abs - 1)
+      # For negative n, bit_length is based on two's complement representation
       n = -self - 1  # This is ~self in two's complement
       count = 0
       while n > 0
         count = count + 1
         n = n >> 1
       end
-      return count + 1
+      return count
     end
 
     # For positive numbers, count bits
