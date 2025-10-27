@@ -20,21 +20,35 @@
 **Completed** (Session 32, 2025-10-27): Verified all specs and updated status.
 
 **Key Findings**:
-- ✓ ceil_spec.rb: NOW PASS (was P:7 F:2, now P:9 F:0)
-- ✓ truncate_spec.rb: NOW PASS (was P:4 F:1, now P:5 F:0)
-- ✓ sqrt_spec.rb: Improved from CRASH to FAIL (P:4 F:3)
+- ✓ ceil_spec.rb: NOW PASS (was P:7 F:2, now P:9 F:0) - fixed by commits 94a989c, aeedc76
+- ✓ truncate_spec.rb: NOW PASS (was P:4 F:1, now P:5 F:0) - fixed by commit aeedc76
+- ✓ sqrt_spec.rb: Improved from CRASH to FAIL (P:4 F:3) - fixed by commit a6ea0ce
 - ✓ bit_and_spec.rb: Improved from P:8 F:5 to P:10 F:3
 - ✓ Updated spec_failures.txt with current results
 - ✓ Current status: 18/67 specs (27%), 265/507 tests (52%)
+- ✓ Updated task list with current crash/fail status for all sections
 
-**Files**: `spec_failures.txt` (updated)
-**Result**: TODO list status numbers corrected, foundation for prioritization set
+**Crash Status Updates**:
+- Added: pow_spec and exponent_spec crash (not previously listed)
+- Corrected: round_spec FAILS (not crashes as previously stated)
+- Confirmed: divide_spec, divmod_spec, div_spec, times_spec still crash
+
+**Files**: `spec_failures.txt` (updated), `docs/TODO.md` (task statuses updated)
+**Result**: TODO list now reflects actual current state of all specs
 
 ---
 
 ## HIGH PRIORITY: Bitwise Operators for Negative Numbers (+30-50 tests)
 
-**Impact**: bit_or_spec, bit_and_spec, allbits_spec, anybits_spec (Session 31 fixed positives only)
+**Current Status (2025-10-27)**: All bitwise specs FAIL with negative numbers
+- bit_and_spec: P:10 F:3 (improved, but negatives fail)
+- bit_or_spec: P:6 F:6 (negatives fail)
+- bit_xor_spec: P:5 F:8 (negatives fail)
+- allbits_spec: P:3 F:1 (negatives fail)
+- anybits_spec: P:3 F:1 (negatives fail)
+- nobits_spec: P:3 F:1 (negatives fail)
+
+**Impact**: Session 31 implemented positives; negatives need two's complement
 
 - [ ] Research two's complement representation for Ruby integers
 - [ ] Design algorithm to convert negative Integer to two's complement limb array
@@ -55,7 +69,9 @@
 
 ## HIGH PRIORITY: Heap Integer Division (+40-60 tests)
 
-**Impact**: divmod_spec, div_spec, modulo_spec, remainder_spec - currently crash or fail
+**Current Status (2025-10-27)**: divide_spec CRASHES, divmod_spec CRASHES, div_spec CRASHES, modulo_spec FAILS (P:8 F:8), remainder_spec FAILS (P:2 F:5)
+
+**Impact**: 3 specs crash, 2 specs fail with heap integer division/modulo operations
 
 - [ ] Research multi-limb division algorithms (Knuth Algorithm D or simpler)
 - [ ] Implement multi-limb division helper (e.g., `__div_heap_heap`)
@@ -75,11 +91,31 @@
 
 ---
 
-## MEDIUM PRIORITY: Parser Bugs Causing SEGFAULTs (+3-10 tests)
+## HIGH PRIORITY: Integer Power/Exponent Operations - CRASHES
 
-**Impact**: times_spec, round_spec
+**Current Status (2025-10-27)**: pow_spec CRASHES, exponent_spec CRASHES
 
-### Boolean Operators (`or`/`and`) Parser Bug
+**Impact**: 2 specs crash when running power/exponent operations
+
+- [ ] Investigate why Integer#** (power operator) causes crashes
+- [ ] Check if issue is with heap integer exponentiation
+- [ ] Implement or fix heap integer power algorithm
+- [ ] Verify pow_spec no longer crashes
+- [ ] Verify exponent_spec no longer crashes
+
+**Files**: `lib/core/integer.rb`
+**Estimated effort**: 4-8 hours
+**Note**: WORK_STATUS.md Session 30 incorrectly claimed these were fixed
+
+---
+
+## MEDIUM PRIORITY: Parser Bugs (+3-13 tests)
+
+**Current Status (2025-10-27)**: times_spec CRASHES, round_spec FAILS (P:4 F:13 S:1)
+
+### Boolean Operators (`or`/`and`) Parser Bug - CAUSES CRASH
+
+**Impact**: times_spec crashes during compilation
 
 - [ ] Add `or` and `and` to operators list with correct precedence
 - [ ] Update parser to recognize `or`/`and` as boolean operators (not method names)
@@ -89,13 +125,15 @@
 **Files**: `parser.rb`, `shunting.rb`, `operators.rb`
 **Estimated effort**: 4-6 hours
 
-### Keyword Argument Hash Literal Parser Bug
+### Keyword Argument Hash Literal Parser Bug - CAUSES FAILURES
+
+**Impact**: round_spec fails 13/18 tests (P:4 F:13 S:1) - does NOT crash
 
 - [ ] Research Ruby's implicit hash syntax in method calls
 - [ ] Update parser to detect `:` not part of ternary operator
 - [ ] Create implicit hash node when parsing `key: value` patterns
 - [ ] Test `method(half: :up)` syntax parses correctly
-- [ ] Verify round_spec no longer crashes
+- [ ] Verify round_spec passes all tests
 
 **Files**: `parser.rb`, `shunting.rb`
 **Estimated effort**: 6-10 hours
