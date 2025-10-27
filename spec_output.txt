@@ -1,0 +1,9 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/integer/divide_spec.rb
+Compiling rubyspec/core/integer/divide_spec.rb...
+✓ Compilation successful
+
+Running spec...
+================================
+./run_rubyspec: line 403: 4178889 Segmentation fault      (core dumped) ./out/${TEMP_SPEC_NAME}
+
+✗ Segfault/Runtime error (exit code: 139)

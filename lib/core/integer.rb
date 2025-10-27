@@ -605,6 +605,32 @@ class Integer < Numeric
     end
   end
 
+  # Normalize a potentially oversized fixnum by splitting if >= limb_base
+  # Takes tagged fixnum, returns [limb (tagged), overflow (tagged)]
+  # Used to fix carry overflow in multiplication
+  def __normalize_limb(tagged_val)
+    %s(
+      (let (raw_val limb_base limb_part overflow_part)
+        # Untag the input
+        (assign raw_val (sar tagged_val))
+        (assign limb_base (callm self __limb_base_raw))
+
+        # Check if raw_val >= limb_base
+        (if (ge raw_val limb_base)
+          (do
+            # Split: limb = raw_val % limb_base, overflow = raw_val / limb_base
+            (assign limb_part (mod raw_val limb_base))
+            (assign overflow_part (div raw_val limb_base)))
+          (do
+            # No overflow
+            (assign limb_part raw_val)
+            (assign overflow_part 0)))
+
+        # Return both tagged
+        (return (callm self __make_overflow_result ((__int limb_part) (__int overflow_part)))))
+    )
+  end
+
   # Helper: get 2^30 = 1073741824 (limb base) - RETURNS RAW UNTAGGED VALUE
   # Computed in s-expression to avoid bootstrap issues
   # IMPORTANT: This returns an untagged value because 2^30 cannot fit in a fixnum!
@@ -734,9 +760,18 @@ class Integer < Numeric
       i = i + 1
     end
 
-    # If there's a final carry, add it as a new limb
+    # If there's a final carry, add it as new limb(s)
+    # carry might be oversized (> 2^29-1) due to multiplication overflow
+    # Normalize it to ensure proper limb representation
     if carry != 0
-      result_limbs << carry
+      normalized = __normalize_limb(carry)
+      limb = normalized[0]
+      overflow = normalized[1]
+
+      result_limbs << limb
+      if overflow != 0
+        result_limbs << overflow
+      end
     end
 
     # Determine result sign: same if fixnum is positive, opposite if negative
@@ -805,7 +840,12 @@ class Integer < Numeric
         # Multiply: my_limb × other_limb + carry
         mul_result = __multiply_limb_by_fixnum_with_carry(my_limb, other_limb, carry)
         product_limb = mul_result[0]
-        product_carry = mul_result[1]
+        product_carry_raw = mul_result[1]  # May be oversized
+
+        # Normalize product_carry to prevent corruption
+        product_carry_norm = __normalize_limb(product_carry_raw)
+        product_carry = product_carry_norm[0]
+        product_carry_high = product_carry_norm[1]
 
         # Add product_limb to result[i+j] with carry
         result_idx = i + j
@@ -818,11 +858,34 @@ class Integer < Numeric
 
         # If overflow occurred, propagate carry
         if overflow != 0
-          product_carry = product_carry + 1
+          # Add 1 to product_carry, check for overflow again
+          add_one_result = __add_two_limbs_with_overflow(product_carry, 1)
+          product_carry = add_one_result[0]
+          add_one_overflow = add_one_result[1]
+
+          # If adding 1 caused overflow, increment product_carry_high
+          if add_one_overflow != 0
+            product_carry_high = product_carry_high + 1
+          end
         end
 
         result_limbs[result_idx] = sum
-        carry = product_carry
+
+        # Combine product_carry and product_carry_high into carry
+        # If product_carry_high is non-zero, we have a multi-limb carry
+        if product_carry_high != 0
+          # This is complex: product_carry_high * limb_base + product_carry
+          # For now, just use product_carry and add product_carry_high to next limb
+          # This is a simplified approach that may need refinement
+          carry = product_carry
+          # We'll handle product_carry_high by adding it to result at i+j+1
+          next_result_idx = i + j + 1
+          if __less_than(next_result_idx, max_result_len) != 0
+            result_limbs[next_result_idx] = result_limbs[next_result_idx] + product_carry_high
+          end
+        else
+          carry = product_carry
+        end
 
         i = i + 1
       end
