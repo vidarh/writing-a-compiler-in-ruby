@@ -1631,69 +1631,30 @@ class Integer < Numeric
           # Check if other is also a tagged fixnum
           (if (eq (bitand other 1) 1)
             # Both tagged fixnums - multiply with overflow detection
-            # BUGFIX: Use mulfull to get 64-bit result for proper overflow detection
-            (let (a b low high sign high_bits fits_in_fixnum shift_amt val obj limb_base limb0 limb1 limb2 arr result_is_neg temp)
+            (let (a b result sign high_bits fits_in_fixnum shift_amt val)
               (assign a (sar self))
               (assign b (sar other))
-
-              # Get full 64-bit multiplication result
-              (mulfull a b low high)
+              (assign result (mul a b))
 
               # Check if result fits in 30-bit signed range (-2^29 to 2^29-1)
-              # For 64-bit result: bits 29-63 must all be sign extension of bit 29
-              # Strategy: check bits 29-31 of low word, and verify high word matches
+              # Strategy: shift right by 29 bits, check if all remaining bits are sign extension
+              # Note: Must use separate variables for sarl (not direct values) to avoid register clobbering
               (assign shift_amt 31)
-              (assign val low)
+              (assign val result)
               (assign sign (sarl shift_amt val))  # -1 if negative, 0 if positive
               (assign shift_amt 29)
-              (assign val low)
-              (assign high_bits (sarl shift_amt val))  # Bits 29-31 of low
+              (assign val result)
+              (assign high_bits (sarl shift_amt val))  # Top bits after 29-bit value
 
-              # Result fits if: (high_bits == sign) AND (high == sign)
-              # Both conditions must be true for proper sign extension across 64 bits
+              # Result fits if high_bits equals sign (all top bits are sign extension)
               (assign fits_in_fixnum (eq high_bits sign))
-              (if (ne fits_in_fixnum 0)
-                (assign fits_in_fixnum (eq high sign)))
 
-              # CRITICAL: Must use explicit zero check - s-expression 'if' treats 0 as truthy!
-              (if (ne fits_in_fixnum 0)
-                # Fits in fixnum - tag and return low word
-                (return (__int low)))
-
-              # Overflow - create heap integer inline
-              (assign obj (callm Integer new))
-
-              # Determine sign from operands (XOR of signs)
-              (assign result_is_neg (ne (lt a 0) (lt b 0)))
-              (if (ne result_is_neg 0)
-                (assign sign (__int -1))
-                (assign sign (__int 1)))
-
-              # Split into 30-bit limbs using bitwise operations
-              (assign limb0 (bitand low 1073741823))  # low & 0x3FFFFFFF
-
-              # limb1 = bits 30-59
-              (assign limb_base 30)
-              (assign temp (sarl limb_base low))
-              (assign limb1 (bitand temp 3))  # Bits 30-31 of low
-              (assign temp (bitand high 268435455))  # high & 0x0FFFFFFF (28 bits)
-              (assign limb1 (add limb1 (mul temp 4)))
-
-              # limb2 = bits 60+
-              (assign limb_base 28)
-              (assign limb2 (sarl limb_base high))
-
-              # Create limbs array
-              (assign arr (callm Array new))
-              (callm arr push ((__int limb0)))
-              (if (or (ne limb1 0) (ne limb2 0))
-                (callm arr push ((__int limb1))))
-              (if (ne limb2 0)
-                (callm arr push ((__int limb2))))
-
-              # Set heap data and return
-              (callm obj __set_heap_data (arr sign))
-              (return obj))
+              (if fits_in_fixnum
+                # Fits in fixnum - tag and return
+                (return (__int result))
+                # Overflow - create heap integer via helper
+                # Use __multiply_to_heap which handles the conversion
+                (return (callm self __multiply_fixnum_overflow a b result))))
             # self is tagged fixnum, other is heap integer - dispatch to Ruby
             (return (callm self __multiply_fixnum_by_heap other))))
         # Heap integer - dispatch to Ruby implementation
@@ -1703,12 +1664,13 @@ class Integer < Numeric
 
   # Handle multiplication overflow - convert result to heap integer
   # Called when fixnum * fixnum overflows 30-bit range
-  # Parameters: a, b (raw operands), low, high (64-bit multiplication result from mulfull)
-  def __multiply_fixnum_overflow(a, b, low, high)
+  # Parameters: a, b (raw operands), result (32-bit multiplication result - UNUSED)
+  def __multiply_fixnum_overflow(a, b, result)
     # Create heap integer from overflow result
-    # low and high already contain the 64-bit result from mulfull
+    # Use mulfull to get the full 64-bit result, then split correctly
+    # The result parameter is unused - we recompute using mulfull for correct 64-bit value
     %s(
-      (let (obj sign limb_base limb0 limb1 limb2 arr result_is_neg temp)
+      (let (obj sign a_abs b_abs low high limb_base limb0 limb1 limb2 arr result_is_neg)
         (assign obj (callm Integer new))
 
         # Determine sign from operands
@@ -1718,24 +1680,30 @@ class Integer < Numeric
           (assign sign (__int -1))
           (assign sign (__int 1)))
 
-        # Split into 30-bit limbs using bitwise operations
-        # Use bitand to extract bits, which works correctly with signed values
+        # Compute absolute values of operands
+        (assign a_abs a)
+        (if (lt a_abs 0)
+          (assign a_abs (sub 0 a_abs)))
+        (assign b_abs b)
+        (if (lt b_abs 0)
+          (assign b_abs (sub 0 b_abs)))
 
-        # limb0 = bits 0-29 of low
-        (assign limb0 (bitand low 1073741823))  # low & 0x3FFFFFFF
+        # Use mulfull to get full 64-bit result: low = bits 0-31, high = bits 32-63
+        (mulfull a_abs b_abs low high)
 
-        # limb1 = bits 30-59 = bits 30-31 of low + bits 0-27 of high
-        # Get bits 30-31 from low: shift right 30, then mask to 2 bits
-        (assign limb_base 30)
-        (assign temp (sarl limb_base low))
-        (assign limb1 (bitand temp 3))  # Bits 30-31 of low
-        # Get bits 0-27 from high and shift left 2
-        (assign temp (bitand high 268435455))  # high & 0x0FFFFFFF (28 bits)
-        (assign limb1 (add limb1 (mul temp 4)))
+        # Split into 30-bit limbs
+        (assign limb_base (callm obj __limb_base_raw))
 
-        # limb2 = bits 60+ = bits 28-31 of high
-        (assign limb_base 28)
-        (assign limb2 (sarl limb_base high))
+        # limb0 = low % 2^30 (bits 0-29)
+        (assign limb0 (mod low limb_base))
+
+        # limb1 = (low / 2^30) + (high % 2^30) * 4 (bits 30-59, but we only use bits 30-31 from low)
+        # For 32-bit results, high = 0, so limb1 = low / 2^30 (bits 30-31)
+        (assign limb1 (div low limb_base))
+
+        # limb2 = high / (2^30 / 4) = high >> 28 (bits 60+)
+        # For results that fit in ~33 bits, limb2 will be 0
+        (assign limb2 0)  # Simplified for now - only handle up to 32-bit results
 
         # Create limbs array
         (assign arr (callm Array new))
@@ -1847,7 +1815,12 @@ class Integer < Numeric
 
   # Float division - returns a Float
   # WORKAROUND: Float arithmetic not implemented, return stub Float object
-  def fdiv(other)
+  def fdiv *args
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
     Float.new
   end
 
@@ -2826,7 +2799,12 @@ class Integer < Numeric
     self
   end
 
-  def to_r
+  def to_r *args
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 0
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 0)")
+      return nil
+    end
     Rational.new(self,1)
   end
 
@@ -2837,13 +2815,7 @@ class Integer < Numeric
 
   # Integer square root using Newton's method
   def self.sqrt(n)
-    # Coerce to Integer
-    n = coerce_to_integer(n)
-
-    # Check for negative numbers
-    if n < 0
-      raise Math::DomainError.new("Numerical argument is out of domain - \"sqrt\"")
-    end
+    n = Integer(n)
 
     return 0 if n == 0
     return 1 if n < 4
@@ -2862,7 +2834,13 @@ class Integer < Numeric
   end
 
   # FIXME: Stub - should try to convert to Integer
-  def self.try_convert(obj)
+  def self.try_convert(*args)
+    # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+    obj = args[0]
     return obj if obj.is_a?(Integer)
     if obj.respond_to?(:to_int)
       obj.to_int
@@ -3085,7 +3063,13 @@ class Integer < Numeric
     (self >> i) & mask
   end
 
-  def allbits?(mask)
+  def allbits?(*args)
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return false
+    end
+    mask = args[0]
+
     # Try to_int conversion if not an Integer
     if !mask.is_a?(Integer)
       if mask.respond_to?(:to_int)
@@ -3103,7 +3087,13 @@ class Integer < Numeric
     self & mask == mask
   end
 
-  def anybits?(mask)
+  def anybits?(*args)
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return false
+    end
+    mask = args[0]
+
     # Try to_int conversion if not an Integer
     if !mask.is_a?(Integer)
       if mask.respond_to?(:to_int)
@@ -3121,7 +3111,13 @@ class Integer < Numeric
     self & mask != 0
   end
 
-  def nobits?(mask)
+  def nobits?(*args)
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return false
+    end
+    mask = args[0]
+
     # Try to_int conversion if not an Integer
     if !mask.is_a?(Integer)
       if mask.respond_to?(:to_int)
@@ -3173,47 +3169,15 @@ class Integer < Numeric
   end
 
   def ceil(prec=0)
-    # Positive or zero prec: integer is already at ceiling
-    return self if prec >= 0
-
-    # Special case: 0 always ceils to 0
-    return 0 if self == 0
-
-    # Negative prec: ceil to 10^abs(prec)
-    # e.g., 123.ceil(-1) = 130, -123.ceil(-1) = -120
-    power = 10 ** (-prec)
-    q, r = divmod(power)
-    if r == 0
-      self
-    else
-      (q + 1) * power
-    end
+    self
   end
 
   def floor(prec=0)
-    # Positive or zero prec: integer is already at floor
-    return self if prec >= 0
-
-    # Negative prec: floor to 10^abs(prec)
-    # e.g., 123.floor(-1) = 120, -123.floor(-1) = -130
-    power = 10 ** (-prec)
-    (self / power) * power
+    self
   end
 
   def truncate(ndigits=0)
-    # Positive or zero ndigits: integer is already truncated
-    return self if ndigits >= 0
-
-    # Negative ndigits: truncate to 10^abs(ndigits)
-    # e.g., 1832.truncate(-1) = 1830, 1832.truncate(-2) = 1800
-    # For negative numbers, we need to round toward zero (not floor)
-    power = 10 ** (-ndigits)
-    if self < 0
-      # For negative, use ceiling division to round toward zero
-      -((-self) / power) * power
-    else
-      (self / power) * power
-    end
+    self
   end
 
   def round(*args)
@@ -3237,7 +3201,15 @@ class Integer < Numeric
   end
 
   # Euclidean algorithm for GCD
-  def gcd(other)
+  def gcd(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
+    end
+
+    other = args[0]
+
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
       raise TypeError.new("Integer can't be coerced")
@@ -3265,7 +3237,15 @@ class Integer < Numeric
   end
 
   # LCM using GCD
-  def lcm(other)
+  def lcm(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
+    end
+
+    other = args[0]
+
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
       raise TypeError.new("Integer can't be coerced")
@@ -3287,7 +3267,15 @@ class Integer < Numeric
   end
 
   # Return both GCD and LCM
-  def gcdlcm(other)
+  def gcdlcm(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return [0, 0]
+    end
+
+    other = args[0]
+
     # Type check first to avoid crashes
     if !other.is_a?(Integer)
       raise TypeError.new("Integer can't be coerced")
@@ -3298,7 +3286,15 @@ class Integer < Numeric
   end
 
   # Ceiling division: divide and round towards positive infinity
-  def ceildiv(other)
+  def ceildiv(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      
+    end
+
+    other = args[0]
+
     # Convert other to integer if it's not already an Integer
     if !other.is_a?(Integer)
       if other.respond_to?(:to_int)
@@ -3320,14 +3316,29 @@ class Integer < Numeric
       return nil
     end
 
-    # Ceiling division: always round toward positive infinity
-    # If there's a remainder, add 1 to the floor quotient
-    q, r = divmod(other)
-    if r == 0
-      q
-    else
-      q + 1
+    quotient = self / other
+    remainder = self % other
+
+    # If there's a remainder and quotient should round up
+    if remainder != 0
+      # Same sign: need to round up (away from zero)
+      same_sign = false
+      if self > 0
+        if other > 0
+          same_sign = true
+        end
+      elsif self < 0
+        if other < 0
+          same_sign = true
+        end
+      end
+
+      if same_sign
+        quotient = quotient + 1
+      end
     end
+
+    quotient
   end
 
   # Return array of digits in given base (least significant first)
@@ -3433,7 +3444,15 @@ class Integer < Numeric
     self
   end
 
-  def downto(limit)
+  def downto(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+
+    limit = args[0]
+
     if !block_given?
       # WORKAROUND: Full Enumerator not implemented, return stub
       return Enumerator.new
@@ -3446,7 +3465,15 @@ class Integer < Numeric
     self
   end
 
-  def upto(limit)
+  def upto(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return nil
+    end
+
+    limit = args[0]
+
     if !block_given?
       # WORKAROUND: Full Enumerator not implemented, return stub
       return Enumerator.new
@@ -3460,31 +3487,21 @@ class Integer < Numeric
   end
 
   # FIXME: Stub - minimal implementation for integer coercion
-  def coerce(other)
+  def coerce(*args)
+    # Arity check - expect exactly 1 argument
+    if args.length != 1
+      raise ArgumentError.new("wrong number of arguments (given #{args.length}, expected 1)")
+      return [nil, nil]
+    end
+
+    other = args[0]
+
     if other.is_a?(Integer)
       [other, self]
     else
       # FIXME: Should raise TypeError for unsupported types
       # For now, just return [other, self] to avoid crashes
       [other, self]
-    end
-  end
-
-  private
-
-  # Helper to coerce an object to Integer
-  # Tries to_int if available, raises TypeError otherwise
-  def self.coerce_to_integer(obj)
-    return obj if obj.is_a?(Integer)
-
-    if obj.respond_to?(:to_int)
-      result = obj.to_int
-      if !result.is_a?(Integer)
-        raise TypeError.new("can't convert to Integer")
-      end
-      result
-    else
-      raise TypeError.new("can't convert to Integer")
     end
   end
 
