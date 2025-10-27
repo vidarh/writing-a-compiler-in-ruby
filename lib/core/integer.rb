@@ -3299,6 +3299,19 @@ class Integer < Numeric
     return 1 if other == 0
     return self if other == 1
 
+    # Special cases for base 1 and -1 (avoid expensive computation)
+    if self == 1
+      return 1
+    end
+    if self == -1
+      # -1 ** even = 1, -1 ** odd = -1
+      if other % 2 == 0
+        return 1
+      else
+        return -1
+      end
+    end
+
     # Handle negative exponents
     if other < 0
       # 0 ** negative raises ZeroDivisionError
