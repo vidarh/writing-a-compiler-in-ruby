@@ -100,21 +100,44 @@
 
 ---
 
-## HIGH PRIORITY: Integer Power/Exponent Operations - CRASHES
+## HIGH PRIORITY: Integer Power/Exponent Operations - ARCHITECTURAL ISSUE (BLOCKED)
 
-**Current Status (2025-10-27)**: pow_spec CRASHES, exponent_spec CRASHES
+**Current Status (2025-10-27 Session 33)**: pow_spec and exponent_spec timeout/crash due to fundamental architecture issue
 
-**Impact**: 2 specs crash when running power/exponent operations
+**Root Cause Identified**:
+- `__multiply_limb_by_fixnum_with_carry` in lib/core/integer.rb:669-710
+- `carry_out` calculation (line 705) can exceed fixnum range (2^29-1)
+- Formula: `carry_out = low_contribution + sign_adjust + (sum_high * 4)`
+- When sum_high ≈ 2^28, carry_out ≈ 2^30, which EXCEEDS fixnum max (2^29-1 = 536870911)
+- Tagging with `(__int carry_out)` creates invalid "large fixnum" with corrupted value
+- Corrupted carries cause heap integers to grow incorrectly during multiplication
+- Results in memory explosion (observed: 1.5GB) and timeout/crash
 
-- [ ] Investigate why Integer#** (power operator) causes crashes
-- [ ] Check if issue is with heap integer exponentiation
-- [ ] Implement or fix heap integer power algorithm
-- [ ] Verify pow_spec no longer crashes
-- [ ] Verify exponent_spec no longer crashes
+**Fundamental Architecture Problem**:
+The codebase uses **30-bit limbs** (base 2^30 = 1073741824) but stores them as **29-bit fixnums** (max 2^29-1 = 536870911). This mismatch causes carry values to exceed the fixnum range during multiplication.
 
-**Files**: `lib/core/integer.rb`
-**Estimated effort**: 4-8 hours
-**Note**: WORK_STATUS.md Session 30 incorrectly claimed these were fixed
+**Attempted Fixes** (Session 33):
+1. ❌ Return carry_out as RAW value - breaks Ruby/s-expression boundary, wrong results
+2. ❌ Mask carry_out to 29 bits - loses data, gives wrong results
+3. ❌ Split carry using __extract_limb - mixing raw/tagged values across boundary fails
+
+**Proper Fix Requires** (Breaking change):
+- Option A: Change to 29-bit limbs throughout (major refactor, ~10% efficiency loss)
+- Option B: Store limbs in different format (complex, architectural change)
+- Option C: Properly split large carries into multiple limbs (complex return value handling)
+
+**Test Results**:
+- 2^30 = 1073741824 ✓ (works)
+- 2^32 = 4294967296 ✗ (returns 611342694270107648 - WRONG)
+- 2^40 = 1099511627776 ✗ (returns 574923566328315904 - WRONG, or timeout)
+
+**Impact**: BLOCKS all exponentiation tests (pow_spec, exponent_spec)
+
+**Recommendation**: This requires architectural decision from project owner on limb representation strategy.
+
+**Files**: `lib/core/integer.rb` (lines 669-710, __multiply_limb_by_fixnum_with_carry)
+**Estimated effort**: 16-40 hours (depending on chosen fix strategy)
+**Status**: **BLOCKED - Requires architectural decision**
 
 ---
 
