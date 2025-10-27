@@ -3544,9 +3544,21 @@ class Integer < Numeric
     # -1.bit_length => 0 (two's complement: all 1s, no 0 bit needed)
     # -256.bit_length => 8 (two's complement representation)
 
+    %s(
+      (if (eq (bitand self 1) 1)
+        # Fixnum path
+        (do
+          (return (callm self __bit_length_fixnum)))
+        # Heap integer path
+        (do
+          (return (callm self __bit_length_heap))))
+    )
+  end
+
+  def __bit_length_fixnum
+    # Fixnum bit_length implementation
     return 0 if self == 0
 
-    # Fixnum path only
     if self < 0
       # For negative n, bit_length is based on two's complement representation
       n = -self - 1  # This is ~self in two's complement
@@ -3566,6 +3578,28 @@ class Integer < Numeric
       n = n >> 1
     end
     count
+  end
+
+  def __bit_length_heap
+    # Heap integer bit_length implementation
+    my_sign = @sign
+    my_limbs = @limbs
+    limbs_len = my_limbs.length
+
+    # Handle negative heap integers using two's complement formula
+    if my_sign < 0
+      # bit_length(-n) = bit_length(n - 1)
+      pos = -self - 1
+      return pos.bit_length
+    end
+
+    # Positive heap integer: each limb is 30 bits
+    # Total bit_length = (limbs - 1) * 30 + bit_length of top limb
+    return 0 if limbs_len == 0
+
+    top_limb = my_limbs[limbs_len - 1]
+    top_limb_bits = top_limb.bit_length
+    (limbs_len - 1) * 30 + top_limb_bits
   end
 
   def ceil(prec=0)
