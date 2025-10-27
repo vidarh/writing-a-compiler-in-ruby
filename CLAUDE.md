@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL RULE: NEVER EDIT RUBYSPEC FILES
+
+**NEVER EVER EVER EVER edit any files inside the `rubyspec/` directory.**
+
+The RubySpec suite is a test suite that must remain unmodified:
+- ❌ **NEVER** edit files in `rubyspec/` to fix failing tests
+- ❌ **NEVER** add parentheses or modify test expectations
+- ❌ **NEVER** work around compiler bugs by changing the specs
+- ❌ **NEVER** modify rubyspec for any reason whatsoever
+
+**If a rubyspec test fails, the ONLY acceptable solution is to fix the compiler implementation, NOT the spec.**
+
+The specs define correct Ruby behavior. If they fail:
+- ✅ Fix the implementation in `lib/core/` or compiler code
+- ✅ Fix parser precedence bugs
+- ✅ Fix operator implementations (like `<<`, `**`, etc.)
+- ❌ **NEVER** modify the spec itself
+
 ## CRITICAL RULE: Never Revert Without Saving
 
 **NEVER revert code changes during investigation without first saving them.**
