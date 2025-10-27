@@ -14,14 +14,14 @@
 
 ---
 
-**Last Updated**: 2025-10-27 (Session 34)
+**Last Updated**: 2025-10-27 (Session 35)
 **Current Test Results**: 67 specs | PASS: 22 (33%) | FAIL: 44 (66%) | CRASH: 1 (1%)
 **Individual Tests**: 609 total | Passed: 311 (51%) | Failed: 289 (47%) | Skipped: 9 (1%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Fixed carry overflow in heap integer multiplication! pow_spec and exponent_spec now RUN instead of crashing. Added +14 passing tests from pow/exponent operations.
+**Recent Progress**: Implemented proper shift-based Integer#<< for both fixnums and heap integers. All positive number tests work correctly. Attempted parser precedence fix for unary minus.
 
-**Next Steps**: Parser bugs (times_spec crash, round_spec failures) or shift operators for heap integers.
+**Next Steps**: Parser bugs (times_spec crash, round_spec failures, unary minus precedence with **).
 
 ---
 
@@ -37,6 +37,83 @@ During debugging and investigation:
 - ❌ **NEVER** give up and revert - investigate the root cause
 
 See CLAUDE.md for full details.
+
+---
+
+## Session 35: Integer#<< (Left Shift) Implementation + Parser Precedence (2025-10-27) ✅ PARTIAL
+
+### Problem
+Current Integer#<< implementation uses multiplication which is inefficient and was causing incorrect results. Need proper shift-based implementation.
+
+### Implementation Plan
+
+**Step 1: Fixnum shifts without overflow**
+- Use s-expression `(sall shift_amount value)` to perform actual bit shift
+- Untag self to get raw value: `(sar self)`
+- Untag other to get shift amount: `(sar other)`
+- Perform shift: `(sall other_raw self_raw)`
+- Check if result fits in fixnum range: `(and (gte shifted -536870912) (lte shifted 536870911))`
+- If fits, retag and return: `(__int shifted)`
+- Test: `1 << 10`, `5 << 20`, `1 << 28` should work
+
+**Step 2: Fixnum shifts with overflow**
+- If shift doesn't fit in fixnum range (Step 1 check fails), convert to heap
+- Convert fixnum to heap: `Integer.new` + `__set_heap_data([self], 1)`
+- Note: Shifts >= 30 will ALWAYS overflow (2^30 exceeds fixnum range)
+- Call `__left_shift_heap(other)` on heap integer
+- Test: `1 << 29`, `1 << 30`, `1 << 100`
+
+**Step 3: Heap integer shifts**
+- Algorithm breakdown:
+  1. Calculate `full_limb_shifts = other / 30` (how many complete 30-bit limb positions to shift)
+  2. Calculate `bit_shift = other % 30` (remaining bits to shift within limbs)
+  3. Add `full_limb_shifts` zero limbs to result array (shifting entire limbs left)
+  4. If `bit_shift == 0`: just copy remaining limbs (no bit shifting needed)
+  5. If `bit_shift > 0`: shift each limb left by `bit_shift` bits with carry
+     - For each limb: shift left using s-expression `(sall bit_shift limb_raw)`
+     - Track carry from high bits that overflow 30-bit boundary
+     - Add carry to next limb
+     - If final carry > 0, add as new limb
+- Use s-expressions for actual shifts (NO multiplication)
+- Test: `(1 << 100).to_s`, verify correct large results
+
+**Step 4: Handle negative numbers**
+- Negative shifts: `self << -n` should equal `self >> n`
+- Already handled in current code with `if other < 0` check
+
+### Implementation Results
+
+**Part 1 - Left Shift Implementation**: ✅ COMPLETE
+- Implemented `__left_shift_fixnum` with overflow detection using shift-and-check-back method
+- Implemented `__left_shift_heap` with proper limb-based algorithm:
+  - Calculates full_limb_shifts = other / 30 (complete 30-bit position shifts)
+  - Calculates bit_shift = other % 30 (remaining bit shift within limbs)
+  - Adds zero limbs for full shifts
+  - Shifts remaining limbs with carry propagation using `__shift_limb_with_carry_split`
+- Fixed tagged literal bug: literals in s-expressions are automatically tagged, so `(sarl 30 val)` shifts by 29 not 30
+  - Solution: use untagged variable `(let (shift_30) (assign shift_30 30) (sarl shift_30 val))`
+- All positive number tests PASS: 1<<10, 1<<29, 1<<30, 1<<100 all correct
+- Files: `lib/core/integer.rb:3007-3118` (Integer#<<, __left_shift_fixnum, __left_shift_heap, __shift_limb_with_carry_split)
+
+**Part 2 - Parser Precedence Fix for Unary Minus**: ⚠️ INCOMPLETE
+- Problem: `-2**12` parses as `(-2)**12` = 4096 instead of `-(2**12)` = -4096
+- Root cause: Tokenizer treats `-2` as single negative literal token before parser sees it
+- Attempted fix: Changed unary +/- prefix operator priority from 99 to 7 (less than ** at 21)
+- Result: Didn't fix the issue because tokenizer combines `-2` into literal at line tokens.rb:406-409
+- Workaround discovered: `- 2 ** 12` (with space) parses correctly as `[:-, [:**, 2, 12]]`
+- Status: Parser precedence change committed but tokenizer behavior still causes `-2**12` to fail
+- Files: `operators.rb:118-125` (changed prefix +/- priority)
+
+**Testing Results**:
+- bit_length_spec: P:2 F:2 - positive number tests PASS, negative number tests FAIL (due to parser issue)
+- Shift tests: All manual tests pass (1<<10 through 1<<100)
+- make selftest-c: 0 failures ✓ NO REGRESSIONS
+
+**Known Issue**: Unary minus precedence with ** requires tokenizer changes to prevent `-<digit>` being treated as negative literal. This affects tests with expressions like `-2**12`.
+
+### Files Modified
+- `lib/core/integer.rb`: Lines 3007-3118 (Integer#<< and helper methods)
+- `operators.rb`: Lines 118-125 (unary +/- prefix priority changed from 99 to 7)
 
 ---
 

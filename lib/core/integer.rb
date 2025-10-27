@@ -3019,8 +3019,123 @@ class Integer < Numeric
       end
     end
 
-    other_raw = other.__get_raw
-    %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
+    # For negative shift, use right shift
+    if other < 0
+      return self >> (-other)
+    end
+
+    # Dispatch based on self type and shift amount
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (return (callm self __left_shift_fixnum other))
+        # self is heap integer
+        (return (callm self __left_shift_heap other)))
+    )
+  end
+
+  def __left_shift_fixnum(other)
+    # For shifts >= 30, always overflow to heap
+    if other >= 30
+      result = Integer.new
+      result.__set_heap_data([self], 1)
+      return result.__left_shift_heap(other)
+    end
+
+    # Try shift and check for overflow
+    %s(
+      (let (self_raw other_raw shifted check)
+        (assign self_raw (sar self))
+        (assign other_raw (sar other))
+        (assign shifted (sall other_raw self_raw))
+        # Shift back and check if we get original (no overflow)
+        (assign check (sarl other_raw shifted))
+        (if (eq check self_raw)
+          (return (__int shifted))))
+    )
+
+    # Overflow occurred - convert to heap
+    result = Integer.new
+    result.__set_heap_data([self], 1)
+    result.__left_shift_heap(other)
+  end
+
+  def __left_shift_heap(other)
+    # Limb-based left shift
+    my_sign = @sign
+    my_limbs = @limbs
+    limbs_len = my_limbs.length
+
+    # Step 1: Calculate full limb shifts and remaining bit shift
+    full_limb_shifts = other / 30
+    bit_shift = other % 30
+
+    result_limbs = []
+
+    # Step 2: Add zero limbs for full 30-bit shifts
+    i = 0
+    while i < full_limb_shifts
+      result_limbs << 0
+      i = i + 1
+    end
+
+    # Step 3: Handle remaining bit shift
+    if bit_shift == 0
+      # No bit shifting, just copy limbs
+      j = 0
+      while j < limbs_len
+        result_limbs << my_limbs[j]
+        j = j + 1
+      end
+    else
+      # Shift each limb with carry
+      carry = 0
+      k = 0
+      while k < limbs_len
+        limb = my_limbs[k]
+        # Shift this limb and add carry from previous, returns [new_limb, new_carry]
+        parts = __shift_limb_with_carry_split(limb, bit_shift, carry)
+        new_limb = parts[0]
+        carry = parts[1]
+        result_limbs << new_limb
+        k = k + 1
+      end
+
+      # Add final carry if non-zero
+      if carry > 0
+        result_limbs << carry
+      end
+    end
+
+    # Create result
+    result = Integer.new
+    result.__set_heap_data(result_limbs, my_sign)
+    result
+  end
+
+  # Helper: Shift a limb left by bit_amount and add carry
+  # Returns [new_limb, new_carry] as tagged fixnums
+  def __shift_limb_with_carry_split(limb, bit_amount, carry)
+    %s(
+      (let (limb_raw bit_raw carry_raw shifted total new_limb new_carry arr)
+        (assign limb_raw (sar limb))
+        (assign bit_raw (sar bit_amount))
+        (assign carry_raw (sar carry))
+        (assign shifted (sall bit_raw limb_raw))
+        (assign total (add shifted carry_raw))
+        # Extract low 30 bits
+        (assign new_limb (bitand total 0x3fffffff))
+        # Extract high bits as carry (shift right by 30)
+        # Must use untagged 30, not tagged literal
+        (let (shift_30)
+          (assign shift_30 30)
+          (assign new_carry (sarl shift_30 total)))
+        # Create array with both values
+        (assign arr (callm Array new))
+        (callm arr push ((__int new_limb)))
+        (callm arr push ((__int new_carry)))
+        (return arr))
+    )
   end
 
   def >> other
