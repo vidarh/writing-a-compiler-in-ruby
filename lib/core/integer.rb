@@ -546,7 +546,7 @@ class Integer < Numeric
   end
 
   # Subtract limb_b and borrow from limb_a
-  # Returns tagged fixnum (may be negative)
+  # Returns RAW untagged result (may be negative)
   def __subtract_with_borrow(a, b, borrow)
     %s(
       (let (a_raw b_raw borrow_raw diff)
@@ -555,12 +555,12 @@ class Integer < Numeric
         (assign borrow_raw (sar borrow))
         (assign diff (sub a_raw b_raw))
         (assign diff (sub diff borrow_raw))
-        (return (__int diff)))
+        (return diff))
     )
   end
 
   # Add three limbs (a + b + carry) - all are tagged fixnums
-  # Returns tagged fixnum result
+  # Returns RAW untagged result (to avoid overflow when tagging)
   def __add_limbs_with_carry(a, b, c)
     %s(
       (let (a_raw b_raw c_raw sum)
@@ -569,7 +569,7 @@ class Integer < Numeric
         (assign c_raw (sar c))
         (assign sum (add a_raw b_raw))
         (assign sum (add sum c_raw))
-        (return (__int sum)))
+        (return sum))
     )
   end
 
@@ -638,10 +638,9 @@ class Integer < Numeric
 
   # Check if sum overflowed limb boundary and adjust
   # Returns [adjusted_limb, carry] where carry is 0 or 1
-  def __check_limb_overflow(sum)
+  def __check_limb_overflow(sum_raw)
     %s(
-      (let (sum_raw limb_base adjusted carry_val)
-        (assign sum_raw (sar sum))
+      (let (limb_base adjusted carry_val)
         (assign limb_base (callm self __limb_base_raw))
 
         # Check if sum_raw >= limb_base
@@ -893,10 +892,9 @@ class Integer < Numeric
 
   # Check if diff is negative and add limb_base if needed
   # Returns [adjusted_limb, borrow] where borrow is 0 or 1
-  def __check_limb_borrow(diff)
+  def __check_limb_borrow(diff_raw)
     %s(
-      (let (diff_raw limb_base adjusted borrow_val)
-        (assign diff_raw (sar diff))
+      (let (limb_base adjusted borrow_val)
         (assign limb_base (callm self __limb_base_raw))
 
         # Check if diff_raw < 0
@@ -2111,25 +2109,14 @@ class Integer < Numeric
     carry = 0
     i = 0
 
-    # Limb base is 2^30 = 1073741824
-    limb_base = __limb_base
-
     while __less_than(i, len) != 0
       limb = limbs[i]
 
       # Shift left by 1: multiply by 2
-      shifted = limb + limb
-      new_limb = shifted + carry
-
-      # Check if we overflowed
-      # new_limb >= 2^30 means we need to wrap and carry
-      if __ge_fixnum(new_limb, limb_base) != 0
-        # Overflow - wrap around
-        new_limb = new_limb - limb_base
-        carry = 1
-      else
-        carry = 0
-      end
+      # Use helper to do shift and carry computation
+      shift_result = __shift_limb_with_carry(limb, carry)
+      new_limb = shift_result[0]
+      carry = shift_result[1]
 
       result << new_limb
       i = i + 1
@@ -2141,6 +2128,29 @@ class Integer < Numeric
     end
 
     result
+  end
+
+  # Helper: shift a single limb left by 1 bit with carry-in
+  # Returns [new_limb, carry_out] where both are tagged fixnums
+  def __shift_limb_with_carry(limb, carry_in)
+    %s(
+      (let (limb_raw carry_raw shifted_raw new_limb_raw limb_base carry_out)
+        (assign limb_raw (sar limb))
+        (assign carry_raw (sar carry_in))
+        (assign shifted_raw (add limb_raw limb_raw))
+        (assign new_limb_raw (add shifted_raw carry_raw))
+        (assign limb_base (callm self __limb_base_raw))
+
+        # Check if we overflowed: new_limb_raw >= limb_base
+        (if (ge new_limb_raw limb_base)
+          (do
+            (assign new_limb_raw (sub new_limb_raw limb_base))
+            (assign carry_out 1))
+          (assign carry_out 0))
+
+        # Return array [new_limb, carry]
+        (return (callm self __make_overflow_result ((__int new_limb_raw) (__int carry_out)))))
+    )
   end
 
   # Subtract limbs_b from limbs_a, return just the limbs array (no sign, no Integer object)
