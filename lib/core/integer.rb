@@ -610,7 +610,7 @@ class Integer < Numeric
   # Used to fix carry overflow in multiplication
   def __normalize_limb(tagged_val)
     %s(
-      (let (raw_val limb_base limb_part overflow_part)
+      (let (raw_val limb_base limb_part overflow_part result_array)
         # Untag the input
         (assign raw_val (sar tagged_val))
         (assign limb_base (callm self __limb_base_raw))
@@ -626,8 +626,11 @@ class Integer < Numeric
             (assign limb_part raw_val)
             (assign overflow_part 0)))
 
-        # Return both tagged
-        (return (callm self __make_overflow_result ((__int limb_part) (__int overflow_part)))))
+        # Create array directly to avoid recursion
+        (assign result_array (callm Array new))
+        (callm result_array push ((__int limb_part)))
+        (callm result_array push ((__int overflow_part)))
+        (return result_array))
     )
   end
 
@@ -3384,6 +3387,14 @@ class Integer < Numeric
       end
       # For other integers, negative exponent returns 0 (integer division)
       return 0
+    end
+
+    # Check for excessively large exponents (Ruby < 3.4)
+    # Return Float::INFINITY and warn instead of attempting computation
+    # Threshold determined by testing MRI: between 32,537,000 and 32,538,000
+    if other > 32537000
+      # FIXME: Should also emit warning to stderr: "in a**b, b may be too big"
+      return Float::INFINITY
     end
 
     # Positive exponent: repeated multiplication
