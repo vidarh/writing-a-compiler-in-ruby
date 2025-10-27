@@ -142,6 +142,39 @@
 
 ---
 
+## MEDIUM PRIORITY: Shift Operators for Heap Integers (+5-10 tests)
+
+**Current Status (2025-10-27)**: Integer#<< and Integer#>> only handle fixnum correctly
+
+**Impact**: Blocks additional tests in bit_or_spec and bit_xor_spec that use large shifts like `1 << 33`
+
+**Problem**: Current implementation uses s-expression with `sall` instruction which only works for fixnum values:
+```ruby
+def << other
+  other_raw = other.__get_raw
+  %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
+end
+```
+
+**Issues**:
+- `1 << 33` produces 2 instead of 8589934592 (shifts overflow fixnum range)
+- Negative shifts not handled (should call `>>` instead)
+- Heap integer shifts not supported at all
+
+**Tasks**:
+- [ ] Investigate current Integer#<< implementation (lib/core/integer.rb)
+- [ ] Design algorithm for multi-limb left shift
+- [ ] Implement heap integer left shift (shift by N = shift each limb + carry high bits)
+- [ ] Handle shift amounts that exceed fixnum range
+- [ ] Handle negative shift amounts (delegate to `>>`)
+- [ ] Update Integer#>> similarly for right shifts
+- [ ] Verify bit_or_spec and bit_xor_spec improvements
+
+**Files**: `lib/core/integer.rb` (around line 2841-2858 for `<<`, 2860+ for `>>`)
+**Estimated effort**: 3-5 hours
+
+---
+
 ## MEDIUM PRIORITY: Type Coercion (+20-40 tests)
 
 **Impact**: Specs using Mock objects and mixed-type operations
@@ -163,9 +196,6 @@
 
 ## LOW PRIORITY: Other Integer Methods
 
-- [ ] **Fix Integer#<< for large shift amounts** (e.g., `1 << 33` produces 2 instead of 8589934592) - BLOCKS bit_or/bit_xor spec tests
-- [ ] Fix negative shift handling in `Integer#<<`
-- [ ] Fix negative shift handling in `Integer#>>`
 - [ ] Implement multi-limb `Integer#<=>` (spaceship)
 - [ ] Refactor comparison operators to use `<=>` (reduces duplication)
 - [ ] Fix multi-limb `Integer#to_s` edge cases
@@ -173,7 +203,7 @@
 - [ ] Add Float type checking to operators (should raise TypeError)
 
 **Files**: `lib/core/integer.rb`, `lib/core/fixnum.rb`
-**Note**: Integer#<< currently uses s-expression with `sall` which only handles fixnum shifts correctly
+**Note**: Shift operators (<<, >>) moved to MEDIUM PRIORITY section
 
 ---
 
