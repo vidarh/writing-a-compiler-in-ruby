@@ -3307,22 +3307,27 @@ class Integer < Numeric
 
   # Comparison operators - refactored to use <=> operator
   # This simplifies the code and ensures consistent multi-limb heap integer support
-  def > other
-    # Type check first - only compare with other Integers
-    if !other.is_a?(Integer)
-      # For non-Integer types, return false (can't compare)
-      return false
+  # Helper: Raise ArgumentError for incomparable types in comparison operators
+  def __check_comparable(other)
+    # Integer can be compared with Integer and numeric types (Float, Rational)
+    # But not with non-numeric types (String, Array, etc.)
+    if !other.is_a?(Integer) && !other.is_a?(Float)
+      # For truly incomparable types, raise ArgumentError
+      raise ArgumentError.new("comparison of Integer with #{other.class} failed")
     end
+  end
+
+  def > other
+    # Raise ArgumentError for incomparable types
+    __check_comparable(other)
 
     cmp = self <=> other
     cmp == 1
   end
 
   def >= other
-    # Type check first - only compare with other Integers
-    if !other.is_a?(Integer)
-      return false
-    end
+    # Raise ArgumentError for incomparable types
+    __check_comparable(other)
 
     cmp = self <=> other
     if cmp == 1
@@ -3335,20 +3340,16 @@ class Integer < Numeric
   end
 
   def < other
-    # Type check first - only compare with other Integers
-    if !other.is_a?(Integer)
-      return false
-    end
+    # Raise ArgumentError for incomparable types
+    __check_comparable(other)
 
     cmp = self <=> other
     cmp == -1
   end
 
   def <= other
-    # Type check first - only compare with other Integers
-    if !other.is_a?(Integer)
-      return false
-    end
+    # Raise ArgumentError for incomparable types
+    __check_comparable(other)
 
     cmp = self <=> other
     if cmp == -1
