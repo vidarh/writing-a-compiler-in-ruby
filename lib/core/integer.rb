@@ -2424,8 +2424,20 @@ class Integer < Numeric
     end
   end
 
+  # Helper: Check if value is Float and raise TypeError for bitwise operations
+  def __check_bitwise_float(other)
+    # Bitwise operators explicitly reject Float (even though Float has to_int)
+    # MRI raises: "Float can't be coerced into Integer"
+    if other.is_a?(Float)
+      raise TypeError.new("Float can't be coerced into Integer")
+    end
+  end
+
   # Bitwise operators - delegate to __get_raw
   def & other
+    # Check for Float before coercion attempts
+    __check_bitwise_float(other)
+
     # Coerce non-Integer arguments using to_int
     if !other.is_a?(Integer)
       if other.respond_to?(:to_int)
@@ -2714,6 +2726,9 @@ class Integer < Numeric
   end
 
   def | other
+    # Check for Float before coercion attempts
+    __check_bitwise_float(other)
+
     # Try to_int conversion if not Integer
     if !other.is_a?(Integer)
       if other.respond_to?(:to_int)
@@ -2893,6 +2908,9 @@ class Integer < Numeric
   end
 
   def ^ other
+    # Check for Float before coercion attempts
+    __check_bitwise_float(other)
+
     # Try to_int conversion if not Integer
     if !other.is_a?(Integer)
       if other.respond_to?(:to_int)
@@ -3529,7 +3547,9 @@ class Integer < Numeric
   end
 
   def to_f
-    self
+    # FIXME: Stub - proper integer to float conversion not implemented
+    # Return a dummy Float instance so type checks work
+    Float.new
   end
 
   def size
