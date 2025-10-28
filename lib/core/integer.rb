@@ -4054,13 +4054,8 @@ class Integer < Numeric
   end
 
   def ord
-    %s(
-      (if (eq (bitand self 1) 1)
-        # Tagged fixnum - return self
-        (return self)
-        # Heap integer - extract raw value
-        (return (__int (callm self __get_raw))))
-    )
+    # Integer#ord returns self (the integer's ordinal value is itself)
+    self
   end
 
   def mul other
