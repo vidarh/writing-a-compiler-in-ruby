@@ -6,8 +6,15 @@
 
 **IMPORTANT**: Validate tasks before starting - check if already completed.
 
-**Current Status**: 22/67 specs passing (33%), 311/609 tests passing (51%)
+**Current Status (Session 36)**: 20/67 specs passing (30%), 321/577 tests passing (55%)
+**Previous Status**: 22/67 specs (33%), 311/609 tests (51%)
 **Goal**: Maximize test pass rate by fixing root causes
+
+**Recent Wins (Session 36)**:
+- ✅ Fixed parser precedence for `-2**12`
+- ✅ Resolved 21 COMPILE FAIL errors
+- ✅ Fixed String#[] heap integer handling
+- ✅ Fixed Integer#| and Integer#^ negative fixnum bugs (+17 tests!)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -15,51 +22,66 @@
 
 ---
 
-## QUICK WINS: Simple Fixes for Maximum Test Improvements
+## HIGHEST PRIORITY: Quick Wins (< 30 min each)
 
-### 1. Fix Integer#bit_length Off-by-One Error (EASIEST - ~5 min) → +4 specs PASS
+### 1. Fix Remaining Integer#bit_length Failure (~5 min) → +1 test
 
-**Current Status**: bit_length_spec P:0 F:4 - ALL failures are systematic off-by-one errors
-- Expected 1, got 0
-- Expected 0, got 1
-- Expected 2, got 3
-- Expected 13, got 12 / Expected 12, got 13
+**Current Status**: bit_length_spec P:3 F:1 (was P:0 F:4 - mostly fixed!)
+- Only 1 failure remains after Session 35 fixes
+- Likely edge case with specific bit pattern
 
-**Fix**: Investigate `Integer#bit_length` implementation - likely returning `value - 1` or `value + 1` instead of correct value.
+**Fix**: Investigate the one remaining failure case in bit_length
 
-**Impact**: bit_length_spec: P:0 F:4 → P:4 F:0 ✓ **FULL PASS (+1 spec)**
+**Impact**: bit_length_spec: P:3 F:1 → P:4 F:0 ✓ **FULL PASS (+1 test)**
 
 **Files**: `lib/core/integer.rb` (search for `def bit_length`)
-**Estimated effort**: 5-10 minutes
+**Estimated effort**: 5 minutes
 
 ---
 
-### 2. Add Float TypeError to Bitwise Operators (~15 min) → +3-6 tests
+### 2. Add Float TypeError to Bitwise Operators (~15 min) → +10 tests, +2 specs
 
 **Current Status**: Bitwise operators don't raise TypeError when passed Float
-- bit_and_spec: P:11 F:2 - 2 failures are missing TypeError for Float
-- bit_or_spec: P:7 F:5 - 3 failures are missing TypeError for Float
-- bit_xor_spec: P:6 F:7 - some failures are missing TypeError for Float
+- bit_and_spec: P:11 F:2 - Both failures are missing TypeError for Float
+- bit_or_spec: P:9 F:3 - All 3 failures are missing TypeError for Float
+- bit_xor_spec: P:8 F:5 - Most failures are missing TypeError for Float
 
 **Fix**: Add type check at start of Integer#&, Integer#|, Integer#^:
 ```ruby
 def & other
-  raise TypeError.new("can't convert Float into Integer") if other.is_a?(Float)
+  raise TypeError.new("Float can't be coerced into Integer") if other.is_a?(Float)
   # ... rest of implementation
 end
 ```
 
 **Impact**:
 - bit_and_spec: P:11 F:2 → P:13 F:0 ✓ **FULL PASS (+1 spec, +2 tests)**
-- bit_or_spec: P:7 F:5 → P:10 F:2 (+3 tests)
-- bit_xor_spec: P:6 F:7 → likely +1-2 tests
+- bit_or_spec: P:9 F:3 → P:12 F:0 ✓ **FULL PASS (+1 spec, +3 tests)**
+- bit_xor_spec: P:8 F:5 → likely P:13 F:0 ✓ (+5 tests)
 
 **Files**: `lib/core/integer.rb` (Integer#&, Integer#|, Integer#^)
 **Estimated effort**: 15 minutes
 
 ---
 
-### 3. Fix Integer#=== (case_compare) (~30 min) → +1 spec PASS
+### 3. Fix Simple Single-Failure Specs (~10-20 min each) → +3-5 tests
+
+**Easiest targets** (only 1 failure each):
+- **zero_spec**: P:1 F:1 - Likely Integer#zero? method issue
+- **ord_spec**: P:0 F:1 - Integer#ord not implemented or wrong
+- **uminus_spec**: P:2 F:1 - Unary minus edge case
+- **floor_spec**: P:7 F:1 - Edge case in Integer#floor
+
+**Fix**: Investigate each spec's single failure and fix
+
+**Impact**: +1 test each, potentially +3-4 specs to FULL PASS
+
+**Files**: `lib/core/integer.rb`
+**Estimated effort**: 10-20 minutes per spec
+
+---
+
+### 4. Fix Integer#=== (case_compare) (~30 min) → +1 spec PASS
 
 **Current Status**: case_compare_spec P:1 F:4 - all failures related to === not working correctly
 - "Expected true but got false" when comparing self == other
@@ -77,19 +99,24 @@ end
 
 ---
 
-### 4. Add ArgumentError to Comparison Operators (~20 min) → +8-12 tests, +2-4 specs PASS
+## HIGH PRIORITY: Comparison Operators (~30 min) → +2-4 specs PASS
 
-**Current Status**: Comparison operators don't raise ArgumentError for incomparable types
-- gt_spec (>): P:0 F:5 - 2 failures are missing ArgumentError
-- gte_spec (>=): P:0 F:5 - 2 failures are missing ArgumentError
-- lt_spec (<): P:1 F:4 - likely 2 failures are missing ArgumentError
-- lte_spec (<=): P:3 F:4 - 2 failures are missing ArgumentError
+### Fix Comparison Operators to Raise ArgumentError (~20-30 min) → +12-16 tests
 
-**Fix**: Add type check to Integer#<=> (spaceship operator):
+**Current Status**: Comparison operators fail or don't raise ArgumentError
+- **gt_spec (>)**: P:0 F:5 - ALL failures
+- **gte_spec (>=)**: P:0 F:5 - ALL failures
+- **lt_spec (<)**: P:1 F:4 - Most failures
+- **lte_spec (<=)**: P:3 F:4 - Half failures
+
+**Root Cause**: Integer#<=> (spaceship) doesn't handle incomparable types correctly
+
+**Fix**: Update Integer#<=> to raise ArgumentError for incomparable types:
 ```ruby
 def <=> other
-  # Handle Integer comparison...
-  # If other is not comparable:
+  # ... existing Integer comparison logic ...
+
+  # If we reach here, other is not comparable
   raise ArgumentError.new("comparison of Integer with #{other.class} failed")
 end
 ```
@@ -97,273 +124,158 @@ end
 **Note**: Fixing <=> will propagate to <, >, <=, >= if they use <=> internally.
 
 **Impact**:
-- gt_spec: P:0 F:5 → likely P:5 F:0 ✓ **FULL PASS (+1 spec)**
-- gte_spec: P:0 F:5 → likely P:5 F:0 ✓ **FULL PASS (+1 spec)**
-- lt_spec: P:1 F:4 → likely P:5 F:0 ✓ **FULL PASS (+1 spec)**
-- lte_spec: P:3 F:4 → likely P:7 F:0 ✓ **FULL PASS (+1 spec)**
+- gt_spec: P:0 F:5 → P:5 F:0 ✓ **FULL PASS (+1 spec)**
+- gte_spec: P:0 F:5 → P:5 F:0 ✓ **FULL PASS (+1 spec)**
+- lt_spec: P:1 F:4 → P:5 F:0 ✓ **FULL PASS (+1 spec)**
+- lte_spec: P:3 F:4 → P:7 F:0 ✓ **FULL PASS (+1 spec)**
 
 **Files**: `lib/core/integer.rb` (Integer#<=>)
-**Estimated effort**: 20 minutes
+**Estimated effort**: 20-30 minutes
 
 ---
 
-### 5. Implement Heap Integer Shift Operators (~2 hours) → +5-10 tests
+## MEDIUM PRIORITY: Remaining Crashes (~1-4 hours each)
 
-**Current Status**: Integer#<< and Integer#>> only handle fixnum, fail on large shifts
-- left_shift_spec: P:14 F:20 - many failures from `1 << 33` producing wrong values
-- right_shift_spec: P:14 F:21 - similar issues
+### Investigate times_spec, fdiv_spec, round_spec Crashes
 
-**Problem**: Current implementation uses s-expression `sall` which only works for fixnum:
-```ruby
-def << other
-  other_raw = other.__get_raw
-  %s(__int (bitand (sall other_raw (callm self __get_raw)) 0x7fffffff))
-end
-```
+**Current Crashes**:
+- **times_spec**: CRASH - Likely related to block iteration
+- **fdiv_spec**: CRASH - Float division (Float not fully implemented)
+- **round_spec**: CRASH - Rounding with precision (likely Float-related)
 
-**Issues**:
-- `1 << 33` produces 2 instead of 8589934592 (overflow)
-- Negative shifts not handled
-- Heap integer shifts not supported
+**Investigation**:
+- Run each spec individually with gdb to get backtrace
+- Identify root cause (parser bug, missing method, Float issue)
+- Estimate fix effort based on root cause
 
-**Tasks**:
-- [ ] Investigate Integer#<< implementation
-- [ ] Design multi-limb left shift algorithm
-- [ ] Implement heap integer left shift
-- [ ] Handle shift amounts exceeding fixnum range
-- [ ] Handle negative shifts (delegate to >>)
-- [ ] Update Integer#>> similarly
-
-**Files**: `lib/core/integer.rb:2841-2858` (<<), `2860+` (>>)
-**Estimated effort**: 2-3 hours
+**Estimated effort**: 1-4 hours per crash depending on cause
 
 ---
 
-## MEDIUM PRIORITY: Parser Bugs
+## MEDIUM PRIORITY: Shift Operators Improvements (~1-2 hours)
 
-### Boolean Operators (`or`/`and`) Parser Bug - CAUSES CRASH
+### Fix Integer#<< and Integer#>> Edge Cases
 
-**Current Status**: times_spec CRASHES during compilation
+**Current Status**:
+- left_shift_spec: P:23 F:11 - Good progress! (was P:14 F:20)
+- right_shift_spec: P:14 F:21 - Still many failures
 
-**Impact**: times_spec crashes, blocking all tests
+**Remaining Issues** (Session 35 implemented heap shifts):
+- Edge cases with negative shifts
+- Very large shift amounts
+- Sign handling in right shift
+- Overflow detection edge cases
 
-- [ ] Add `or` and `and` to operators list with correct precedence
-- [ ] Update parser to recognize `or`/`and` as boolean operators (not method names)
-- [ ] Test `a.shift or break` syntax parses correctly
-- [ ] Verify times_spec no longer crashes
+**Impact**: +11-21 tests if fully fixed
 
-**Files**: `parser.rb`, `shunting.rb`, `operators.rb`
-**Estimated effort**: 4-6 hours
-
----
-
-### Keyword Argument Hash Literal Parser Bug - CAUSES FAILURES
-
-**Current Status**: round_spec P:4 F:13 S:1 - does NOT crash
-
-**Impact**: round_spec fails 13/18 tests
-
-- [ ] Research Ruby's implicit hash syntax in method calls
-- [ ] Update parser to detect `:` not part of ternary operator
-- [ ] Create implicit hash node when parsing `key: value` patterns
-- [ ] Test `method(half: :up)` syntax parses correctly
-- [ ] Verify round_spec passes all tests
-
-**Files**: `parser.rb`, `shunting.rb`
-**Estimated effort**: 6-10 hours
+**Files**: `lib/core/integer.rb` (Integer#<<, Integer#>>)
+**Estimated effort**: 1-2 hours
 
 ---
 
-## MEDIUM PRIORITY: Remaining Integer Operations
+## MEDIUM PRIORITY: Arithmetic Edge Cases (~2-4 hours)
 
-### Type Coercion (+20-40 tests)
+### Division Operator Edge Cases
 
-**Impact**: Specs using Mock objects and mixed-type operations
+**Current Status**:
+- divide_spec: P:10 F:8 - Half passing
+- divmod_spec: P:5 F:8 - Needs work
+- div_spec: P:10 F:9 - Half passing
+- modulo_spec: P:8 F:8 - Half passing
 
-- [ ] Add coercion to `Integer#*`
-- [ ] Add coercion to `Integer#/`
-- [ ] Add coercion to `Integer#%`
-- [ ] Add coercion to `Integer#<=>` (spaceship)
-- [ ] Add coercion to `Integer#==`
-- [ ] Add coercion to bitwise operators (`&`, `|`, `^`, `<<`, `>>`)
-- [ ] Verify plus_spec passes coercion tests
-- [ ] Verify multiply_spec passes coercion tests
+**Known Issues**:
+- Negative division sign handling
+- Float division (Float not implemented)
+- Rational edge cases
+- Zero division edge cases
+
+**Impact**: +33 tests if fully fixed
+
+**Files**: `lib/core/integer.rb` (Integer#/, Integer#div, Integer#divmod, Integer#%)
+**Estimated effort**: 2-4 hours
+
+---
+
+### Other Arithmetic Operators
+
+- **plus_spec**: P:4 F:3 S:1 - Missing type checks
+- **minus_spec**: P:4 F:3 - Missing type checks
+- **multiply_spec**: P:1 F:4 - Missing type checks
+- **pow_spec**: P:7 F:22 S:2 - Missing modulo exponentiation, type checks
+
+**Common Fix**: Add proper type checking and coercion
+
+**Impact**: +10-32 tests
+
+**Estimated effort**: 2-4 hours
+
+---
+
+## LOW PRIORITY: Advanced Features (> 4 hours)
+
+### Type Coercion Protocol
+
+**Impact**: Tests using Mock objects and mixed-type operations
+
+- [ ] Add coercion to remaining Integer arithmetic operators
+- [ ] Verify coercion protocol order: `respond_to?(:coerce)` before `respond_to?(:to_int)`
+- [ ] Test with mock objects
 
 **Files**: `lib/core/integer.rb`
-**Pattern**: Check `respond_to?(:coerce)` before `respond_to?(:to_int)` (see Session 23)
 **Estimated effort**: 3-5 hours
 
 ---
 
 ### Other Integer Methods
 
-- [ ] Implement multi-limb `Integer#<=>` (spaceship)
-- [ ] Refactor comparison operators to use `<=>` (reduces duplication)
-- [ ] Fix multi-limb `Integer#to_s` edge cases
-- [ ] Audit heap integer methods for nil returns
-
-**Files**: `lib/core/integer.rb`, `lib/core/fixnum.rb`
-
----
-
-## LOW PRIORITY: Division Edge Cases
-
-**Current Status (Session 33)**: Division now works! Edge cases remain:
-- divide_spec: P:10 F:8
-- divmod_spec: P:5 F:8
-- div_spec: P:10 F:13
-
-**Remaining Failures**:
-- Negative division sign handling edge cases
-- Float division (Float not implemented - expected)
-- Rational division (minor off-by-one in some cases)
+- [ ] Implement Integer#ceildiv properly (P:0 F:2)
+- [ ] Fix Integer#chr edge cases (P:9 F:17)
+- [ ] Implement Integer#coerce edge cases (P:2 F:10)
+- [ ] Fix Integer#element_reference (P:18 F:16)
+- [ ] Other specialized methods
 
 ---
 
-## LOW PRIORITY: Float Exception Handling
+## LOWEST PRIORITY: Not Blocking Progress
 
-**Assessment**: LOW PRIORITY - Float not fully implemented, out of scope for integer specs
+### Float Operations
 
-**Observed Failures**:
-- div_spec: "Expected ZeroDivisionError" for `5.div(0.0)`
-- divmod_spec: "Expected ZeroDivisionError" for Float 0.0
-- divmod_spec: "Expected FloatDomainError if other is NaN"
+**Status**: LOW PRIORITY - Float not fully implemented
 
-**If Fixing Later**:
-- [ ] Implement Float#== for zero comparison
-- [ ] Implement proper Float division that raises ZeroDivisionError
-- [ ] Implement FloatDomainError for NaN operations
-- [ ] Update Integer#div, Integer#divmod to check Float.zero?
+- fdiv_spec (CRASH - Float division)
+- to_f_spec (P:0 F:3)
+- Float type errors in various specs
 
-**Files**: `lib/core/float.rb`, `lib/core/integer.rb`
 **Estimated effort**: 8-12 hours (requires Float implementation)
 
 ---
 
-## LOW PRIORITY: pow/exponent Remaining Failures
+### Language Features (Only If Blocking Rubyspec)
 
-**Current Status (Session 34)**: pow_spec and exponent_spec NOW RUN (was CRASH)!
-- pow_spec: P:7 F:22 S:2 (31 total)
-- exponent_spec: P:7 F:12 S:2 (21 total)
-
-**Remaining Failures** (Expected - features not implemented):
-- Modulo exponentiation: `Integer#pow(exp, modulo)` not implemented
-- Float exponentiation: Float arithmetic not implemented
-- Rational exponentiation: Rational arithmetic not fully implemented
-- Type checking: Missing TypeError for invalid argument types
+- Exception handling enhancements
+- HEREDOC syntax
+- Regular expressions
+- Keyword arguments
+- Method visibility
+- eval/runtime code generation
 
 ---
 
-## LOWEST PRIORITY: Bugs Not Blocking Rubyspec
+## Systematic Analysis TODO
 
-Work on these ONLY if they directly block rubyspec test improvements.
+After completing quick wins (items 1-4 above):
 
-### Self-Hosted Compiler Variable Initialization
-
-**Status**: Workaround in place (`parser.rb:155`)
-- [ ] Investigate compiler.rb local variable initialization code generation
-- [ ] Fix root cause so all local variables initialize to nil
-- [ ] Remove workaround from parser.rb
-
-**Files**: `compiler.rb`, `parser.rb:155-156`
-**Test**: `test_uninitialized_var.rb`
-
----
-
-### Ternary Operator Bug
-
-**Issue**: Returns boolean instead of selected branch in some cases
-- [ ] Investigate ternary operator compilation in `compiler.rb`
-- [ ] Fix to return selected branch value, not condition result
-
-**Test**: `test_class_new_behavior.rb`
-
----
-
-## Language Features (Only If Blocking Rubyspec)
-
-### Exception Handling Enhancements
-
-**Status**: Basic support implemented (Session 29). Missing features:
-- [ ] Implement typed rescue (`rescue SpecificError`)
-- [ ] Implement rescue variable binding (`rescue => e`)
-- [ ] Implement multiple rescue clauses
-- [ ] Implement ensure blocks
-- [ ] Implement retry support
-
-**Files**: `lib/core/exception.rb`, `compiler.rb`
-**Ref**: WORK_STATUS.md Session 29
-
----
-
-### HEREDOC Syntax
-
-**Status**: Not implemented
-- [ ] Phase 1: Implement inline HEREDOC (`foo(<<HEREDOC\\n...\\nHEREDOC)`)
-- [ ] Phase 2: Implement deferred HEREDOC (`foo(<<HEREDOC)\\n...\\nHEREDOC`)
-
-**Files**: `tokens.rb`, `scanner.rb`, `parser.rb`
-
----
-
-### Other Language Features
-
-- [ ] Regular expressions (no support currently)
-- [ ] Full Float arithmetic (literals work, operations stubbed)
-- [ ] Keyword arguments for methods
-- [ ] Method visibility (private/protected)
-- [ ] alias/alias_method
-- [ ] undef_method
-- [ ] eval/runtime code generation (conflicts with AOT model)
-
----
-
-## Architecture & Infrastructure (Not Urgent)
-
-### Compiler Improvements
-- [ ] Implement method inlining
-- [ ] Add constant folding optimization
-- [ ] Add dead code elimination
-- [ ] Improve register allocation
-- [ ] Optimize assembly patterns
-
-### Error Reporting
-- [ ] Improve compiler error messages
-- [ ] Add consistent error location reporting
-- [ ] Enhance parser error recovery
-
-### Testing
-- [ ] Expand self-test coverage
-- [ ] Add integration tests
-- [ ] Automate bootstrap verification
-
-### Documentation
-- [ ] Expand architecture documentation
-- [ ] Document interfaces
-- [ ] Improve code comments
-
----
-
-## TODO: Systematic Failure Analysis
-
-After completing the quick wins above, systematically analyze remaining failures:
-
-- [ ] Run all 67 integer specs and categorize remaining failures by type
-- [ ] Identify patterns in failures (missing methods, type errors, edge cases)
+- [ ] Re-run full spec suite
+- [ ] Analyze remaining ~42 failing specs
+- [ ] Group by failure type (missing methods, type errors, edge cases)
 - [ ] Create focused tasks for each category
-- [ ] Prioritize based on test impact and implementation difficulty
-
-**Approach**:
-1. Complete quick wins first (1-4 above)
-2. Re-run full spec suite
-3. Analyze remaining ~40 failing specs
-4. Group by failure type
-5. Add specific tasks to TODO
+- [ ] Update TODO with specific next steps
 
 ---
 
 **Historical Completed Work**: See git log or WORK_STATUS.md for details on:
+- Session 36: Parser precedence fix, String#[] heap integers, bitwise negative fixnum fix
+- Session 35: Integer#<< (left shift) implementation, Integer#bit_length fix
 - Session 34: pow_spec/exponent_spec crash fix (carry overflow)
 - Session 33: Heap integer division crash fix
 - Session 32: Bitwise operators for negative numbers (two's complement)
-- Earlier sessions: Various integer arithmetic fixes

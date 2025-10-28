@@ -3120,7 +3120,13 @@ class Integer < Numeric
     # For shifts >= 30, always overflow to heap
     if other >= 30
       result = Integer.new
-      result.__set_heap_data([self], 1)
+      # FIXED: Handle sign correctly for negative fixnums
+      if self < 0
+        magnitude = 0 - self
+        result.__set_heap_data([magnitude], -1)
+      else
+        result.__set_heap_data([self], 1)
+      end
       return result.__left_shift_heap(other)
     end
 
@@ -3138,7 +3144,13 @@ class Integer < Numeric
 
     # Overflow occurred - convert to heap
     result = Integer.new
-    result.__set_heap_data([self], 1)
+    # FIXED: Handle sign correctly for negative fixnums
+    if self < 0
+      magnitude = 0 - self
+      result.__set_heap_data([magnitude], -1)
+    else
+      result.__set_heap_data([self], 1)
+    end
     result.__left_shift_heap(other)
   end
 
@@ -3785,8 +3797,9 @@ class Integer < Numeric
 
     # Handle negative heap integers using two's complement formula
     if my_sign < 0
-      # bit_length(-n) = bit_length(n - 1)
-      pos = -self - 1
+      # bit_length(-n) = bit_length(abs(n) - 1)
+      # For negative numbers, we need the bit position of the leftmost 0 bit
+      pos = self.abs - 1
       return pos.bit_length
     end
 

@@ -14,14 +14,14 @@
 
 ---
 
-**Last Updated**: 2025-10-28 (Session 36)
-**Current Test Results**: 67 specs | PASS: 20 (30%) | FAIL: 42 (63%) | CRASH: 5 (7%) | COMPILE FAIL: 0
-**Individual Tests**: 552 total | Passed: 304 (55%) | Failed: 240 (43%) | Skipped: 8 (1%)
+**Last Updated**: 2025-10-28 (Session 36 - COMPLETE)
+**Current Test Results**: 67 specs | PASS: 20 (30%) | FAIL: 44 (66%) | CRASH: 3 (4%) | COMPILE FAIL: 0
+**Individual Tests**: 577 total | Passed: 321 (55%) | Failed: 248 (43%) | Skipped: 8 (1%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Fixed parser precedence bug for unary minus with ** operator AND fixed assembly errors with large negative constants. All 21 compile failures now resolved.
+**Recent Progress**: Session 36 COMPLETE - Fixed parser precedence, String#[] heap integers, and bitwise operators with negative fixnums. Reduced crashes from 5 to 3. Added +17 tests passing.
 
-**Next Steps**: Investigate runtime crashes in bit_or, bit_xor, fdiv, round, times specs (revealed by compile fix).
+**Next Steps**: Work on quick wins from TODO.md - bit_length final fix, Float TypeError for bitwise ops, comparison operators.
 
 ---
 
@@ -40,79 +40,94 @@ See CLAUDE.md for full details.
 
 ---
 
-## Session 36: Parser Precedence Fix for Unary Minus with ** (2025-10-28) ✅ COMPLETE
+## Session 36: Parser, String#[], and Bitwise Operators (2025-10-28) ✅ COMPLETE
 
-### Problem 1: Precedence Bug
+### Problem 1: Parser Precedence Bug
 `-2**12` parses as `(-2)**12` = 4096 instead of `-(2**12)` = -4096. Root cause: tokenizer creates `-2` as a single negative literal token before parser applies precedence rules.
 
 ### Problem 2: Assembly Errors with Large Negative Constants (REGRESSION)
-Initial fix caused 21 compile failures with assembly errors like `Error: missing or invalid immediate expression '-46116860184273879049'`. The simplified tokenization bypassed `Number.expect` which handles large integer conversion to heap integers.
+Initial precedence fix caused 21 compile failures with assembly errors like `Error: missing or invalid immediate expression '-46116860184273879049'`. The simplified tokenization bypassed `Number.expect` which handles large integer conversion to heap integers.
 
-### Solution
-**Three-part fix**:
+### Problem 3: String#[] Can't Handle Heap Integer Indices
+After fixing compile errors, bit_or_spec and bit_xor_spec crashed. Investigation revealed String#[] was calling `__get_raw` on heap integers without type checking, causing crashes when bitwise operations returned heap integers as indices.
 
-1. **Operator precedence** (operators.rb:118-125): Changed unary +/- prefix priority from 7 to 20
-   - Makes unary minus bind less tightly than `**` (priority 21)
-   - Ensures correct precedence when `-` is parsed as an operator
+### Problem 4: Bitwise Operators Crash on Negative Fixnums
+`(1 << 33) | -1` completed but crashed on `puts`. Root cause: `__bitor_fixnum_heap` and `__bitxor_fixnum_heap` always set sign=1 (positive) when converting fixnums to heap integers, even for negative fixnums like -1.
 
-2. **Tokenizer lookahead** (tokens.rb:408-431): Added special case in `-` handler
-   - When `-` followed by digit after an operator, consume the number and look ahead
-   - Check if number is followed by `**` operator
-   - If YES: unget number and `-`, return `-` as operator (precedence applies)
-   - If NO: unget number and `-`, call `Number.expect` to properly handle large integers
+### Solutions
 
-3. **Proper large integer handling**: Use `Number.expect` instead of manual `to_i`
-   - `Number.expect` checks if integer exceeds fixnum range (-2^29 to 2^29-1)
-   - Converts large integers to heap integers via `[:callm, :Integer, :__from_literal, ...]`
-   - Prevents assembly immediate value overflow errors
+**Fix 1: Operator Precedence** (operators.rb:118-125)
+- Changed unary +/- prefix priority from 7 to 20 (still less than ** at 21)
+- Makes unary minus bind less tightly than `**`
+- Ensures correct precedence when `-` is parsed as an operator
 
-### Implementation Details
+**Fix 2: Tokenizer Lookahead** (tokens.rb:408-431)
+- Added special case in `-` handler to look ahead for `**`
+- When `-` followed by digit after an operator: consume number, check for `**`
+- If followed by `**`: unget number/minus, return `-` as operator (precedence applies)
+- If NOT followed by `**`: unget and call `Number.expect` for proper heap integer handling
+- Prevents assembly immediate value overflow errors
+
+**Fix 3: String#[] Heap Integer Support** (lib/core/string.rb:115-194)
+- Added `Integer#__to_fixnum_if_possible` helper method (lib/core/integer.rb:135-179)
+- Helper checks if heap integer fits in fixnum range (-2^29 to 2^29-1)
+- Returns fixnum if in range, nil if too large/small
+- Updated String#[] to convert heap integer indices to fixnums when possible
+- Returns nil for out-of-range heap integers (consistent with Ruby semantics)
+
+**Fix 4: Bitwise Operators Sign Handling** (lib/core/integer.rb:2773-2989)
+- Fixed `__bitor_fixnum_heap`, `__bitor_heap_fixnum` to check fixnum sign before conversion
+- Fixed `__bitxor_fixnum_heap`, `__bitxor_heap_fixnum` with same sign checking
+- When converting negative fixnum to heap: negate to get magnitude, set sign=-1
+- When converting positive fixnum to heap: use value directly, set sign=1
 ```ruby
-# tokens.rb:408-431 (FINAL VERSION)
-if prev_lastop && DIGITS.member?(@s.peek)
-  # Look ahead: consume the number and check what follows
-  num_str = ""
-  while DIGITS.member?(@s.peek)
-    num_str << @s.get
-  end
-  @s.nolfws
-  followed_by_power = (@s.peek == ?* && (@s.get; @s.peek == ?*))
-
-  # Only create negative literal if NOT followed by **
-  if !followed_by_power
-    # Unget the number and use Number.expect to properly handle large integers
-    @s.unget(num_str)
-    @s.unget("-")
-    return [Number.expect(@s, true), nil]
-  end
-
-  # Followed by **, so unget the number and first * (second * is still in scanner)
-  # Then return "-" operator by falling through
-  @s.unget("*")
-  @s.unget(num_str)
-  # Fall through to return "-" operator (already consumed at line 404)
+if other < 0
+  magnitude = 0 - other
+  other_heap = Integer.new
+  other_heap.__set_heap_data([magnitude], -1)
+else
+  other_heap = Integer.new
+  other_heap.__set_heap_data([other], 1)
 end
 ```
 
 ### Test Results
+**Parser & Assembly Fix**:
 - `(-2 ** 12)` correctly outputs `-4096` ✅
-- `(2 ** 12)` correctly outputs `4096` ✅
-- `x = -4` creates literal `-4` ✅
-- `-4.to_s` works correctly ✅
+- All 21 COMPILE FAIL specs now compile ✅
+- 0 compile failures (was 21) ✅
+
+**String#[] Fix**:
 - make selftest: 0 failures ✅
 - make selftest-c: 0 failures ✅
-- All 21 previously failing specs now compile ✅
-- RubySpec integer tests: 55% pass rate (down from artificially inflated 61%)
-  - 0 COMPILE FAIL (down from 21) ✅
-  - 5 new CRASH results (bit_or, bit_xor, fdiv, round, times)
-  - These crashes were masked by compile failures - they're pre-existing runtime bugs
+- String#[] no longer crashes on heap integer indices ✅
+
+**Bitwise Operators Fix**:
+- `(1 << 33) | -1` correctly outputs `-1` ✅
+- `(1 << 33) ^ -1` correctly outputs `-8589934593` ✅
+- bit_or_spec: CRASH → P:9 F:3 (+9 tests)
+- bit_xor_spec: CRASH → P:8 F:5 (+8 tests)
+- **Total: +17 tests passing**
+
+**Final Session 36 Results**:
+- CRASH specs: 5 → 3 (fixed bit_or, bit_xor)
+- COMPILE FAIL specs: 21 → 0 (fixed all assembly errors)
+- Pass rate: 321/577 tests (55%)
+- Specs passing: 20/67 (30%)
 
 ### Files Modified
 - `operators.rb`: Lines 118-125 (unary +/- precedence: 7 → 20)
 - `tokens.rb`: Lines 408-431 (** lookahead logic + Number.expect)
+- `lib/core/integer.rb`: Lines 135-179 (__to_fixnum_if_possible helper)
+- `lib/core/integer.rb`: Lines 2773-2805 (Integer#| sign fixes)
+- `lib/core/integer.rb`: Lines 2958-2989 (Integer#^ sign fixes)
+- `lib/core/string.rb`: Lines 115-194 (heap integer index handling)
 
-### Key Insight
-The apparent pass rate drop from 61% to 55% is NOT a regression - it reveals the true state. The 21 compile failures were artificially inflating the pass rate by preventing tests from running. Now that specs compile, they run and reveal pre-existing runtime bugs.
+### Key Insights
+1. **Parser fix exposed pre-existing bugs**: The 21 compile failures were masking runtime bugs in String#[] and bitwise operators
+2. **Heap integer handling needed throughout**: Many methods assumed fixnums only, needed defensive heap integer checks
+3. **Sign handling critical for negative numbers**: Converting negative fixnums to heap integers requires explicit sign checking
+4. **Test improvement not regression**: Pass rate 55% is accurate, not a regression from artificially inflated 61%
 
 ---
 
