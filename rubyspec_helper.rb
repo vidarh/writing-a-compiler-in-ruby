@@ -193,6 +193,28 @@ class Mock
     0
   end
 
+  # Override == to use expectations instead of Object#== (which compares object_id)
+  # This is necessary because Object defines ==, which would be called before method_missing
+  def == other
+    if @expectations[:==]
+      result = @expectations[:==]
+      # Support arrays of return values for sequential calls
+      if result.is_a?(Array) && result.length > 1 && result[0] != :raise
+        # Get next return value and rotate array
+        @call_counts[:==] = 0 if @call_counts[:==].nil?
+        index = @call_counts[:==]
+        @call_counts[:==] = @call_counts[:==] + 1
+        return result[index] if index < result.length
+        return result[result.length - 1]  # Return last value if we've exhausted the array
+      else
+        return result
+      end
+    else
+      # No expectation set, fall back to object identity (Object#== behavior)
+      return object_id == other.object_id
+    end
+  end
+
   # FIXME: Stub - used by some specs to stub out methods
   # Should actually override the method behavior on this mock
   def stub!(method_name)

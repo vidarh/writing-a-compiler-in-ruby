@@ -14,14 +14,14 @@
 
 ---
 
-**Last Updated**: 2025-10-28 (Session 36 - COMPLETE)
-**Current Test Results**: 67 specs | PASS: 20 (30%) | FAIL: 44 (66%) | CRASH: 3 (4%) | COMPILE FAIL: 0
-**Individual Tests**: 577 total | Passed: 321 (55%) | Failed: 248 (43%) | Skipped: 8 (1%)
+**Last Updated**: 2025-10-28 (Sessions 37-38 - COMPLETE)
+**Current Test Results**: 67 specs | PASS: 25 (37%) | FAIL: 39 (58%) | CRASH: 3 (4%) | COMPILE FAIL: 0
+**Individual Tests**: 583 total | Passed: 339 (58%) | Failed: 237 (41%) | Skipped: 7 (1%)
 **Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
 
-**Recent Progress**: Session 36 COMPLETE - Fixed parser precedence, String#[] heap integers, and bitwise operators with negative fixnums. Reduced crashes from 5 to 3. Added +17 tests passing.
+**Recent Progress**: Sessions 37-38 COMPLETE - Implemented Integer#=== delegation, fixed Integer#==, added Mock#== override, cleaned up comparison operators, and added __check_comparable to Integer#<=>. Discovered critical lesson: Integer#<=> must return nil (not 0) for Float to prevent infinite loops in downto/upto. Added +18 tests passing.
 
-**Next Steps**: Work on quick wins from TODO.md - bit_length final fix, Float TypeError for bitwise ops, comparison operators.
+**Next Steps**: Work on remaining quick wins from TODO.md - bitwise Float TypeError edge cases (bit_or_spec, bit_xor_spec).
 
 ---
 
@@ -37,6 +37,106 @@ During debugging and investigation:
 - ❌ **NEVER** give up and revert - investigate the root cause
 
 See CLAUDE.md for full details.
+
+---
+
+## Sessions 37-38: Integer#===, Comparison Operators, and Float Handling (2025-10-28) ✅ COMPLETE
+
+### Problem 1: Integer#=== Not Delegating to Other's Equality
+case_compare_spec and equal_value_spec failing with "Expected true but got false". Integer#=== was inheriting from Object#=== which compares object_id, preventing Mock objects and other types from handling their own equality checks.
+
+### Problem 2: Object#== Preventing Mock Objects
+Mock objects couldn't override == behavior via should_receive because Object#== was being called before method_missing. Object#== compares object_id, causing all Mock == comparisons to return false.
+
+### Problem 3: Integer#<=> Returning Wrong Type for Float
+Integer#<=> was returning nil for Float comparisons, which caused TypeError in some contexts. Initial attempt to return 0 instead caused regression.
+
+### Problem 4: CRITICAL REGRESSION - Infinite Loops in downto/upto
+Changing Integer#<=> to return 0 for Float (instead of nil) caused infinite loops in downto/upto methods, leading to segfaults. Root cause: `while i >= limit` with Float limit becomes `while true` when <=> returns 0, since `0 == 1 || 0 == 0` evaluates to true.
+
+### Solutions
+
+**Fix 1: Integer#=== Delegation** (lib/core/integer.rb:3425-3439)
+```ruby
+def === other
+  if other.is_a?(Integer)
+    return self == other
+  else
+    # Call other == self to give it a chance to handle comparison
+    result = other == self
+    return result ? true : false
+  end
+end
+```
+
+**Fix 2: Integer#== Delegation** (lib/core/integer.rb:3387-3393)
+```ruby
+# If other is not an Integer, call other == self
+if !other.is_a?(Integer)
+  result = other == self
+  return result ? true : false
+end
+```
+
+**Fix 3: Mock#== Override** (rubyspec_helper.rb:196-216)
+- Added explicit Mock#== method to check @expectations
+- Overrides Object#== before method_missing is called
+- Handles array return values for sequential calls
+
+**Fix 4: Integer#<=> Validation and Cleanup** (lib/core/integer.rb:2382-2406)
+- Added __check_comparable(other) to validate comparable types
+- **REVERTED**: Initially changed return nil to return 0 for Float
+- **FINAL**: Changed back to return nil (prevents infinite loops)
+- Cleaned up <, >, <=, >= to use compact format: `cmp = self <=> other; cmp == X`
+
+### Critical Lesson Learned
+
+**Integer#<=> MUST return nil (not 0) for Float comparisons**:
+- Returning 0 means "all Integers equal all Floats"
+- This breaks loop termination: `while i >= limit` with Float limit
+- When <=> returns 0: `i >= limit` evaluates to `(0 == 1 || 0 == 0) = true` (infinite loop)
+- When <=> returns nil: `i >= limit` evaluates to `(nil == 1 || nil == 0) = false` (terminates)
+- Returning nil is SAFER than returning wrong but type-correct value
+
+### Test Results
+
+**Integer#=== and Integer#== Fixes**:
+- case_compare_spec: P:1 F:4 → P:3 F:2 (+2 tests, Float failures expected)
+- equal_value_spec: P:1 F:4 → P:3 F:2 (+2 tests, Float failures expected)
+- Mock-based tests now pass ✅
+
+**Comparison Operators Cleanup**:
+- Code cleaned up to use compact format
+- Float-related failures remain (expected without Float implementation)
+- gt_spec: P:2 F:3 (3 Float failures)
+- gte_spec: P:2 F:3 (3 Float failures)
+- lt_spec: P:3 F:2 (2 Float failures)
+- lte_spec: P:5 F:2 (2 Float failures)
+
+**Integer#<=> Revert**:
+- downto_spec: No longer crashes ✅
+- upto_spec: No longer crashes ✅
+
+**Final Sessions 37-38 Results**:
+- Specs passing: 25/67 (37%, was 22/67 or 33%)
+- Tests passing: 339/583 (58%, was 321/577 or 55%)
+- **+3 specs, +18 tests**
+- Crashes: 3 (unchanged)
+- make selftest-c: 0 failures ✅
+
+### Files Modified
+- `lib/core/integer.rb`: Lines 3425-3439 (Integer#===)
+- `lib/core/integer.rb`: Lines 3387-3393 (Integer#==)
+- `lib/core/integer.rb`: Lines 2382-2406 (Integer#<=>)
+- `lib/core/integer.rb`: Lines 3343-3356 (Integer#>=, #<=, #>, #<)
+- `rubyspec_helper.rb`: Lines 196-216 (Mock#==)
+
+### Key Insights
+1. **Delegation pattern is powerful**: Calling `other == self` allows polymorphic equality checks
+2. **Object#== is not just identity**: It's called before method_missing, so Mock needs explicit override
+3. **Type-correct but wrong values can be WORSE than nil**: Returning 0 from <=> caused infinite loops
+4. **Safe failure modes matter**: nil causes comparison to fail safely, wrong value causes infinite loops
+5. **Test loops are sensitive to comparison semantics**: downto/upto rely on comparison returning correct falsy values
 
 ---
 

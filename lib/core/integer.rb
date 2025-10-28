@@ -2380,9 +2380,13 @@ class Integer < Numeric
 
   # Spaceship operator for comparison (returns -1, 0, or 1)
   def <=> other
-    # Type check first to avoid crashes
+    # Check if types are comparable (raises ArgumentError if not)
+    __check_comparable(other)
+
+    # Type check - for non-Integer numeric types (Float), return nil
+    # Returning nil causes comparison operators to return false/nil, preventing infinite loops
+    # Returning 0 would mean "all Integers equal all Floats", breaking downto/upto loops
     if !other.is_a?(Integer)
-      # For non-Integer types, return nil (can't compare)
       return nil
     end
 
@@ -3333,47 +3337,23 @@ class Integer < Numeric
   end
 
   def > other
-    # Raise ArgumentError for incomparable types
-    __check_comparable(other)
-
     cmp = self <=> other
     cmp == 1
   end
 
   def >= other
-    # Raise ArgumentError for incomparable types
-    __check_comparable(other)
-
     cmp = self <=> other
-    if cmp == 1
-      return true
-    end
-    if cmp == 0
-      return true
-    end
-    false
+    cmp == 1 || cmp == 0
   end
 
   def < other
-    # Raise ArgumentError for incomparable types
-    __check_comparable(other)
-
     cmp = self <=> other
     cmp == -1
   end
 
   def <= other
-    # Raise ArgumentError for incomparable types
-    __check_comparable(other)
-
     cmp = self <=> other
-    if cmp == -1
-      return true
-    end
-    if cmp == 0
-      return true
-    end
-    false
+    cmp == -1 || cmp == 0
   end
 
   # Equality comparison - handles both tagged fixnums and heap integers
@@ -3383,7 +3363,14 @@ class Integer < Numeric
     if other.nil?
       return false
     end
-    return false if !other.is_a?(Integer)
+
+    # If other is not an Integer, call other == self to give it a chance
+    # This allows Float#==, Mock#==, etc. to handle the comparison
+    # Convert result to boolean (truthy/falsy -> true/false)
+    if !other.is_a?(Integer)
+      result = other == self
+      return result ? true : false
+    end
 
     # Use s-expression for direct comparison to avoid recursion
     %s(
@@ -3420,6 +3407,22 @@ class Integer < Numeric
   # Not-equal comparison
   def != other
     !(self == other)
+  end
+
+  # Case equality operator (used in case/when)
+  # For Integer, this checks value equality:
+  # - If other is an Integer, compare values using ==
+  # - If other is not an Integer, call 'other == self' to give it a chance
+  # - Always return true/false (convert truthy/falsy to boolean)
+  def === other
+    if other.is_a?(Integer)
+      # Both integers - use standard equality
+      return self == other
+    else
+      # Not an integer - call other == self and convert to boolean
+      result = other == self
+      return result ? true : false
+    end
   end
 
   def numerator
