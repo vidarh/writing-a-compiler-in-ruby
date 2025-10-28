@@ -119,6 +119,19 @@ class String
       b = index.first
       e = index.last
 
+      # Convert heap integers to fixnums if within range
+      b_fixnum = b.__to_fixnum_if_possible
+      if b_fixnum.nil?
+        return nil  # Too large/small to be valid string index
+      end
+      b = b_fixnum
+
+      e_fixnum = e.__to_fixnum_if_possible
+      if e_fixnum.nil?
+        return nil  # Too large/small to be valid string index
+      end
+      e = e_fixnum
+
       if b < 0
         b = l + b
         if b < 0
@@ -143,6 +156,13 @@ class String
       a.__copy_raw(src, e)
       return a
     end
+
+    # Convert heap integer index to fixnum if within range
+    index_fixnum = index.__to_fixnum_if_possible
+    if index_fixnum.nil?
+      return nil  # Too large/small to be valid string index
+    end
+    index = index_fixnum
 
     if index < 0
       index = l + index

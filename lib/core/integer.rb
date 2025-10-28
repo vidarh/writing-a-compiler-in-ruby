@@ -132,6 +132,50 @@ class Integer < Numeric
     )
   end
 
+  # Convert heap integer to fixnum if it fits within fixnum range
+  # Returns the fixnum value if convertible, nil otherwise
+  # Fixnum range: -2^29 to 2^29-1 = -536870912 to 536870911
+  def __to_fixnum_if_possible
+    # If already a fixnum, return self
+    %s(
+      (if (eq (bitand self 1) 1)
+        (return self))
+    )
+
+    # Check if heap integer fits in fixnum range
+    # Single-limb heap integers with values < 2^29 can be converted
+    limbs = @limbs
+    sign = @sign
+
+    # Multi-limb integers are definitely too large
+    if limbs.length > 1
+      return nil
+    end
+
+    # Single limb - check if value fits in fixnum range
+    limb = limbs[0]
+    # limb is tagged fixnum, max limb value is 2^30-1
+    # For positive: limb must be < 2^29 to fit in fixnum
+    # For negative: limb must be <= 2^29 to fit in fixnum (because -2^29 is valid)
+
+    max_positive = 536870911  # 2^29 - 1
+    min_negative_limb = 536870912  # 2^29 (represents -2^29)
+
+    %s(
+      (let (sign_raw)
+        (assign sign_raw (sar sign))
+        (if (gt sign_raw 0)
+          # Positive number
+          (if (gt limb max_positive)
+            (return nil)
+            (return limb))
+          # Negative number
+          (if (gt limb min_negative_limb)
+            (return nil)
+            (return (sub 0 limb)))))
+    )
+  end
+
   # Addition - handles both tagged fixnums and heap integers
   def + other
     # Handle non-Integer types by returning stub objects of correct type
