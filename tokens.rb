@@ -403,9 +403,31 @@ module Tokens
       when ?-
         @s.get
         # Only parse as negative number if last token was an operator (not after ')' etc.)
+        # Special case: Don't create negative literal if followed by ** to fix precedence
+        # e.g., -2**12 should parse as -(2**12) not (-2)**12
         if prev_lastop && DIGITS.member?(@s.peek)
-          @s.unget("-")
-          return [Number.expect(@s, true), nil]
+          # Look ahead: consume the number and check what follows
+          num_str = ""
+          while DIGITS.member?(@s.peek)
+            num_str << @s.get
+          end
+          # Skip whitespace and check for **
+          @s.nolfws
+          followed_by_power = (@s.peek == ?* && (@s.get; @s.peek == ?*))
+
+          # Only create negative literal if NOT followed by **
+          if !followed_by_power
+            # Unget the number and use Number.expect to properly handle large integers
+            @s.unget(num_str)
+            @s.unget("-")
+            return [Number.expect(@s, true), nil]
+          end
+
+          # Followed by **, so unget the number and first * (second * is still in scanner)
+          # Then return "-" operator by falling through
+          @s.unget("*")
+          @s.unget(num_str)
+          # Fall through to return "-" operator (already consumed at line 404)
         end
         @lastop = true
         if @s.peek == ?>
