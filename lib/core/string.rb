@@ -398,7 +398,7 @@ class String
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
   # and need to store length to be able to handle strings with \0 in the middle.
   def concat(other)
-    if (other.is_a?(Fixnum))
+    if (other.is_a?(Integer))
       other = other.chr
     else
       other = other.to_s

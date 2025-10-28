@@ -1,8 +1,8 @@
 # Fixnum class - ultra-minimal implementation
-# All methods except 1 are now inherited from Integer
+# All methods are now inherited from Integer
 #
-# Methods that MUST remain in Fixnum:
-# - class: Returns Fixnum for compiler class identity checks
+# Fixnum is deprecated in Ruby 2.4+, unified with Integer
+# For compatibility with rubyspecs, Fixnum.class now returns Integer
 #
 # Methods now inherited from Integer (57+ methods):
 # Comparison: <, >, <=, >=, <=>
@@ -14,37 +14,9 @@
 # Advanced: gcd, lcm, gcdlcm, ceildiv, digits, coerce, bit_length, size
 # Helpers: __get_raw, ceil, floor, truncate, []
 #
-# Fixnum reduced from 535 lines (58 methods) to 36 lines (1 method)!
+# Fixnum reduced from 535 lines (58 methods) to 36 lines (0 methods)!
 
 class Fixnum < Integer
-
-  def class
-    Fixnum
-  end
-
-  # % removed - now inherited from Integer
-  # Integer version includes Ruby semantics for sign handling
-
-  # __get_raw removed - now inherited from Integer
-  # Integer version handles both tagged fixnums and heap integers
-
-  # <, >, <=, >=, <=>, - removed - now inherited from Integer
-  # Integer versions handle both tagged fixnums and heap integers
-
-  # * removed - now inherited from Integer
-  # Was causing FPE because Integer#* incorrectly used __add_with_overflow for multiplication
-  # Fixed in Integer#* to use proper multiplication without overflow (first approximation)
-  #
-  # def * other
-  #   if !other.is_a?(Integer)
-  #     other = other.to_int
-  #   end
-  #   %s(let (result) (assign result (mul (sar self) (sar other)))
-  #     (__int (bitand result 0x7fffffff)))
-  # end
-
-  # / removed - now inherited from Integer
-  # Integer version uses __get_raw for both representations
+  # No methods needed - everything inherited from Integer
+  # In Ruby 2.4+, Fixnum.class returns Integer (Fixnum/Bignum unified)
 end
-
-# __int moved to integer_base.rb
