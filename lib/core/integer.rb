@@ -825,8 +825,23 @@ class Integer < Numeric
     # For now, assume fixnum is positive (will handle negative later)
     result_sign = my_sign
 
-    # Check if result fits in fixnum
+    # Special case: if result is zero, return fixnum 0
+    # This handles cases like 0 * heap_integer or heap_integer * 0
+    # Check if all limbs are zero
+    is_zero = 1
+    i = 0
     result_len = result_limbs.length
+    while __less_than(i, result_len) != 0
+      if result_limbs[i] != 0
+        is_zero = 0
+      end
+      i = i + 1
+    end
+    if is_zero != 0
+      return 0
+    end
+
+    # Check if result fits in fixnum
     first_limb = result_limbs[0]
     half_max = __half_limb_base
 
