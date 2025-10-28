@@ -6,15 +6,15 @@
 
 **IMPORTANT**: Validate tasks before starting - check if already completed.
 
-**Current Status (Session 36)**: 20/67 specs passing (30%), 321/577 tests passing (55%)
-**Previous Status**: 22/67 specs (33%), 311/609 tests (51%)
+**Current Status (Session 37)**: 25/67 specs passing (37%), ~324/577 tests passing (56%)
+**Previous Status (Session 36)**: 22/67 specs (33%), 321/577 tests (55%)
 **Goal**: Maximize test pass rate by fixing root causes
 
-**Recent Wins (Session 36)**:
-- ✅ Fixed parser precedence for `-2**12`
-- ✅ Resolved 21 COMPILE FAIL errors
-- ✅ Fixed String#[] heap integer handling
-- ✅ Fixed Integer#| and Integer#^ negative fixnum bugs (+17 tests!)
+**Recent Wins (Session 37)**:
+- ✅ Fixed Fixnum.class to return Integer for Ruby 2.4+ compatibility
+- ✅ Fixed Integer#ord to return self for all integers
+- ✅ Fixed Integer#floor edge case (0.floor(-10) now returns fixnum 0)
+- ✅ Fixed Integer multiplication zero normalization (+3 specs, +3 tests!)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -24,64 +24,7 @@
 
 ## HIGHEST PRIORITY: Quick Wins (< 30 min each)
 
-### 1. Fix Remaining Integer#bit_length Failure (~5 min) → +1 test
-
-**Current Status**: bit_length_spec P:3 F:1 (was P:0 F:4 - mostly fixed!)
-- Only 1 failure remains after Session 35 fixes
-- Likely edge case with specific bit pattern
-
-**Fix**: Investigate the one remaining failure case in bit_length
-
-**Impact**: bit_length_spec: P:3 F:1 → P:4 F:0 ✓ **FULL PASS (+1 test)**
-
-**Files**: `lib/core/integer.rb` (search for `def bit_length`)
-**Estimated effort**: 5 minutes
-
----
-
-### 2. Add Float TypeError to Bitwise Operators (~15 min) → +10 tests, +2 specs
-
-**Current Status**: Bitwise operators don't raise TypeError when passed Float
-- bit_and_spec: P:11 F:2 - Both failures are missing TypeError for Float
-- bit_or_spec: P:9 F:3 - All 3 failures are missing TypeError for Float
-- bit_xor_spec: P:8 F:5 - Most failures are missing TypeError for Float
-
-**Fix**: Add type check at start of Integer#&, Integer#|, Integer#^:
-```ruby
-def & other
-  raise TypeError.new("Float can't be coerced into Integer") if other.is_a?(Float)
-  # ... rest of implementation
-end
-```
-
-**Impact**:
-- bit_and_spec: P:11 F:2 → P:13 F:0 ✓ **FULL PASS (+1 spec, +2 tests)**
-- bit_or_spec: P:9 F:3 → P:12 F:0 ✓ **FULL PASS (+1 spec, +3 tests)**
-- bit_xor_spec: P:8 F:5 → likely P:13 F:0 ✓ (+5 tests)
-
-**Files**: `lib/core/integer.rb` (Integer#&, Integer#|, Integer#^)
-**Estimated effort**: 15 minutes
-
----
-
-### 3. Fix Simple Single-Failure Specs (~10-20 min each) → +3-5 tests
-
-**Easiest targets** (only 1 failure each):
-- **zero_spec**: P:1 F:1 - Likely Integer#zero? method issue
-- **ord_spec**: P:0 F:1 - Integer#ord not implemented or wrong
-- **uminus_spec**: P:2 F:1 - Unary minus edge case
-- **floor_spec**: P:7 F:1 - Edge case in Integer#floor
-
-**Fix**: Investigate each spec's single failure and fix
-
-**Impact**: +1 test each, potentially +3-4 specs to FULL PASS
-
-**Files**: `lib/core/integer.rb`
-**Estimated effort**: 10-20 minutes per spec
-
----
-
-### 4. Fix Integer#=== (case_compare) (~30 min) → +1 spec PASS
+### 1. Fix Integer#=== (case_compare) (~30 min) → +1 spec PASS
 
 **Current Status**: case_compare_spec P:1 F:4 - all failures related to === not working correctly
 - "Expected true but got false" when comparing self == other
@@ -99,38 +42,74 @@ end
 
 ---
 
-## HIGH PRIORITY: Comparison Operators (~30 min) → +2-4 specs PASS
+### 2. Fix Remaining Comparison Operator Logic Issues (~20 min) → +8 tests
 
-### Fix Comparison Operators to Raise ArgumentError (~20-30 min) → +12-16 tests
+**Current Status**: ArgumentError checks added in Session 37, but logic issues remain
+- **gt_spec (>)**: P:2 F:3 - Logic failures after ArgumentError fix
+- **gte_spec (>=)**: P:2 F:3 - Logic failures after ArgumentError fix
+- **lt_spec (<)**: P:3 F:2 - Logic failures after ArgumentError fix
+- **lte_spec (<=)**: P:5 F:2 - Logic failures after ArgumentError fix
 
-**Current Status**: Comparison operators fail or don't raise ArgumentError
-- **gt_spec (>)**: P:0 F:5 - ALL failures
-- **gte_spec (>=)**: P:0 F:5 - ALL failures
-- **lt_spec (<)**: P:1 F:4 - Most failures
-- **lte_spec (<=)**: P:3 F:4 - Half failures
-
-**Root Cause**: Integer#<=> (spaceship) doesn't handle incomparable types correctly
-
-**Fix**: Update Integer#<=> to raise ArgumentError for incomparable types:
-```ruby
-def <=> other
-  # ... existing Integer comparison logic ...
-
-  # If we reach here, other is not comparable
-  raise ArgumentError.new("comparison of Integer with #{other.class} failed")
-end
-```
-
-**Note**: Fixing <=> will propagate to <, >, <=, >= if they use <=> internally.
+**Root Cause**: Comparison logic doesn't handle all edge cases correctly
+- May need to fix Integer#<=> implementation details
+- Or fix how <, >, <=, >= use <=> results
 
 **Impact**:
-- gt_spec: P:0 F:5 → P:5 F:0 ✓ **FULL PASS (+1 spec)**
-- gte_spec: P:0 F:5 → P:5 F:0 ✓ **FULL PASS (+1 spec)**
-- lt_spec: P:1 F:4 → P:5 F:0 ✓ **FULL PASS (+1 spec)**
-- lte_spec: P:3 F:4 → P:7 F:0 ✓ **FULL PASS (+1 spec)**
+- gt_spec: P:2 F:3 → P:5 F:0 ✓ **FULL PASS (+3 tests)**
+- gte_spec: P:2 F:3 → P:5 F:0 ✓ **FULL PASS (+3 tests)**
+- lt_spec: P:3 F:2 → P:5 F:0 ✓ **FULL PASS (+2 tests)**
+- lte_spec: P:5 F:2 → P:7 F:0 ✓ **FULL PASS (+2 tests)**
 
-**Files**: `lib/core/integer.rb` (Integer#<=>)
-**Estimated effort**: 20-30 minutes
+**Files**: `lib/core/integer.rb` (Integer#<=>, #<, #>, #<=, #>=)
+**Estimated effort**: 20 minutes
+
+---
+
+## HIGH PRIORITY: Bitwise Operator Float Issues (~10 min) → +2 specs PASS
+
+### Fix bit_or and bit_xor Float TypeError Edge Cases
+
+**Current Status**: Most Float TypeError checks added in Session 37, but edge cases remain
+- **bit_or_spec**: P:10 F:2 - 2 Float-related failures remain
+- **bit_xor_spec**: P:9 F:4 - 4 Float-related failures remain
+
+**Fix**: Investigate remaining failures and ensure complete Float handling
+
+**Impact**:
+- bit_or_spec: P:10 F:2 → P:12 F:0 ✓ **FULL PASS (+2 tests, +1 spec)**
+- bit_xor_spec: P:9 F:4 → P:13 F:0 ✓ **FULL PASS (+4 tests, +1 spec)**
+
+**Files**: `lib/core/integer.rb` (Integer#|, Integer#^)
+**Estimated effort**: 10 minutes
+
+---
+
+## MEDIUM PRIORITY: Deferred Tasks (Requires Deeper Fixes)
+
+### Fix uminus_spec Edge Case - DEFERRED (~4+ hours)
+
+**Current Status**: uminus_spec P:2 F:1 - One edge case failure
+- Test: `(-fixnum_min) > 0` should be true but returns false
+- fixnum_min = -536870912 (-2^29)
+- -fixnum_min = 536870912 (2^29) - exactly at fixnum boundary
+
+**Root Cause**: Complex limb representation issue
+- Value 2^29 (536870912) exceeds fixnum range (max is 2^29-1)
+- When stored in heap integer limbs array, cannot be tagged as fixnum
+- Current __add_with_overflow tries to tag with __int, which overflows
+- Comparison operators then misinterpret the sign
+
+**Required Fix**: Comprehensive limb representation system changes
+- Allow limbs >= 2^29 to be stored as heap integers OR raw values
+- Update all limb arithmetic to handle this case
+- OR: Change limb_base from 2^30 to 2^29 to match fixnum range
+- This affects many heap integer operations
+
+**Impact**: uminus_spec: P:2 F:1 → P:3 F:0 (+1 test)
+
+**Files**: `lib/core/base.rb` (__add_with_overflow), `lib/core/integer.rb` (limb operations)
+**Estimated effort**: 4+ hours (architectural change)
+**Status**: DEFERRED - Requires careful design and testing
 
 ---
 
@@ -274,6 +253,7 @@ After completing quick wins (items 1-4 above):
 ---
 
 **Historical Completed Work**: See git log or WORK_STATUS.md for details on:
+- Session 37: Fixnum.class returns Integer, Integer#ord fix, Integer#floor fix, multiplication zero normalization
 - Session 36: Parser precedence fix, String#[] heap integers, bitwise negative fixnum fix
 - Session 35: Integer#<< (left shift) implementation, Integer#bit_length fix
 - Session 34: pow_spec/exponent_spec crash fix (carry overflow)
