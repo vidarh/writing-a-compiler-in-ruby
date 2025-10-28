@@ -2773,16 +2773,34 @@ class Integer < Numeric
   # Step 2a: fixnum | heap - convert fixnum to heap, then process
   def __bitor_fixnum_heap(other)
     # Convert self (fixnum) to heap integer
-    self_heap = Integer.new
-    self_heap.__set_heap_data([self], 1)
+    # Need to handle negative fixnums correctly
+    if self < 0
+      # Negative fixnum: negate to get magnitude, set sign to -1
+      magnitude = 0 - self
+      self_heap = Integer.new
+      self_heap.__set_heap_data([magnitude], -1)
+    else
+      # Positive fixnum
+      self_heap = Integer.new
+      self_heap.__set_heap_data([self], 1)
+    end
     self_heap.__bitor_heap_heap(other)
   end
 
   # Step 2b: heap | fixnum - convert fixnum to heap, then process
   def __bitor_heap_fixnum(other)
     # Convert other (fixnum) to heap integer
-    other_heap = Integer.new
-    other_heap.__set_heap_data([other], 1)
+    # Need to handle negative fixnums correctly
+    if other < 0
+      # Negative fixnum: negate to get magnitude, set sign to -1
+      magnitude = 0 - other
+      other_heap = Integer.new
+      other_heap.__set_heap_data([magnitude], -1)
+    else
+      # Positive fixnum
+      other_heap = Integer.new
+      other_heap.__set_heap_data([other], 1)
+    end
     __bitor_heap_heap(other_heap)
   end
 
@@ -2938,15 +2956,35 @@ class Integer < Numeric
 
   # Step 2a: fixnum ^ heap - convert fixnum to heap, then process
   def __bitxor_fixnum_heap(other)
-    self_heap = Integer.new
-    self_heap.__set_heap_data([self], 1)
+    # Convert self (fixnum) to heap integer
+    # Need to handle negative fixnums correctly
+    if self < 0
+      # Negative fixnum: negate to get magnitude, set sign to -1
+      magnitude = 0 - self
+      self_heap = Integer.new
+      self_heap.__set_heap_data([magnitude], -1)
+    else
+      # Positive fixnum
+      self_heap = Integer.new
+      self_heap.__set_heap_data([self], 1)
+    end
     self_heap.__bitxor_heap_heap(other)
   end
 
   # Step 2b: heap ^ fixnum - convert fixnum to heap, then process
   def __bitxor_heap_fixnum(other)
-    other_heap = Integer.new
-    other_heap.__set_heap_data([other], 1)
+    # Convert other (fixnum) to heap integer
+    # Need to handle negative fixnums correctly
+    if other < 0
+      # Negative fixnum: negate to get magnitude, set sign to -1
+      magnitude = 0 - other
+      other_heap = Integer.new
+      other_heap.__set_heap_data([magnitude], -1)
+    else
+      # Positive fixnum
+      other_heap = Integer.new
+      other_heap.__set_heap_data([other], 1)
+    end
     __bitxor_heap_heap(other_heap)
   end
 
