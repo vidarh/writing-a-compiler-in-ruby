@@ -350,4 +350,25 @@ During investigation of gcd/lcm failures, discovered that Integer#-@ (unary minu
 - uminus_spec: Failures
 - Any code using unary minus operator
 
-**Status**: Identified but not fixed in this session - requires compiler-level investigation
+**Status**: FALSE ALARM - Unary minus works correctly! Issue was test syntax (`puts -a` vs `puts(-a)`)
+
+## Comparison Operator Bug Discovered (CRITICAL)
+
+After investigation revealed unary minus works fine, discovered the REAL bug: **Integer#<=> is broken for heap-to-fixnum comparisons**
+
+**Symptoms:**
+- `1073741824 <=> 0` returns `-1` (wrong, should be `1`)
+- `1073741824 < 0` returns `true` (wrong, should be `false`)
+- `1073741824 > 0` returns nothing/nil (wrong, should be `true`)
+
+**Impact:**
+- Affects ALL comparison operators (`<`, `>`, `<=`, `>=`) for heap integers
+- Breaks gcd/lcm: `if a < 0` checks fail for heap integers
+- gcd_spec failures: Algorithm can't detect sign correctly
+- Comparison_spec: 29/39 failures
+- Any code comparing heap integers with fixnums
+
+**Root Cause:**
+Bug is in `__cmp_heap_fixnum` method (line 1191 in integer.rb). The sign comparison or magnitude comparison logic is incorrect when comparing heap integer to fixnum, causing positive heap integers to be treated as negative.
+
+**Status**: Identified but not fixed - requires careful debugging of __cmp_heap_fixnum logic
