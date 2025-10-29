@@ -2602,6 +2602,88 @@ class Integer < Numeric
     )
   end
 
+  # Helper: Get 30-bit limb base minus one (for bit inversion)
+  def __limb_base_minus_one
+    %s(__int 1073741823)  # 2^30 - 1 = 0x3FFFFFFF
+  end
+
+  # Helper: Subtract 1 from a magnitude (array of limbs)
+  def __subtract_one_magnitude(limbs)
+    result = []
+    borrow = 1
+    i = 0
+    len = limbs.length
+
+    while __less_than(i, len) != 0
+      limb = limbs[i]
+      if borrow != 0
+        if limb == 0
+          result << 1073741823  # limb_base - 1
+          borrow = 1
+        else
+          result << (limb - 1)
+          borrow = 0
+        end
+      else
+        result << limb
+      end
+      i = i + 1
+    end
+    result
+  end
+
+  # Helper: Add 1 to a magnitude (array of limbs)
+  def __add_one_magnitude(limbs)
+    result = []
+    carry = 1
+    i = 0
+    len = limbs.length
+    limb_base = 1073741824  # 2^30
+
+    while __less_than(i, len) != 0
+      limb = limbs[i]
+      sum = limb + carry
+      if __less_than(sum, limb_base) != 0
+        result << sum
+        carry = 0
+      else
+        result << (sum - limb_base)
+        carry = 1
+      end
+      i = i + 1
+    end
+
+    if carry != 0
+      result << 1
+    end
+    result
+  end
+
+  # Helper: Create heap int or demote to fixnum
+  def __make_heap_or_fixnum(limbs, sign)
+    limbs = __trim_leading_zeros(limbs)
+
+    if limbs.length == 0
+      return 0
+    end
+
+    if limbs.length == 1
+      limb = limbs[0]
+      half_max = 536870911  # 2^29 - 1
+      if __less_than(limb, half_max) != 0
+        if __less_than(sign, 0) != 0
+          return 0 - limb
+        else
+          return limb
+        end
+      end
+    end
+
+    result = Integer.new
+    result.__set_heap_data(limbs, sign)
+    return result
+  end
+
   # Step 3: heap & heap - iterate over limbs
   def __bitand_heap_heap(other)
     limbs_a = __get_limbs
@@ -2838,92 +2920,82 @@ class Integer < Numeric
     __bitor_heap_heap(other_heap)
   end
 
-  # Step 3: heap | heap - iterate over limbs
+  # Step 3: heap | heap - signed-magnitude approach
   def __bitor_heap_heap(other)
     limbs_a = __get_limbs
     limbs_b = other.__get_limbs
-    len_a = limbs_a.length
-    len_b = limbs_b.length
     sign_a = __get_sign
     sign_b = other.__get_sign
 
-    # Determine result sign: negative if either operand is negative
-    result_sign = 1
+    # Case 1: Both positive - simple limb-wise OR
+    if __less_than(sign_a, 0) == 0 && __less_than(sign_b, 0) == 0
+      len_a = limbs_a.length
+      len_b = limbs_b.length
+      max_len = __max_fixnum(len_a, len_b)
+
+      result_limbs = []
+      i = 0
+      while __less_than(i, max_len) != 0
+        limb_a = __less_than(i, len_a) != 0 ? limbs_a[i] : 0
+        limb_b = __less_than(i, len_b) != 0 ? limbs_b[i] : 0
+        result_limbs << __bitor_limbs(limb_a, limb_b)
+        i = i + 1
+      end
+
+      return __make_heap_or_fixnum(result_limbs, 1)
+    end
+
+    # Case 2: Both negative - use: ~(a-1) | ~(b-1) = ~((a-1) & (b-1))
+    if __less_than(sign_a, 0) != 0 && __less_than(sign_b, 0) != 0
+      a_minus_1 = __subtract_one_magnitude(limbs_a)
+      b_minus_1 = __subtract_one_magnitude(limbs_b)
+
+      len_a = a_minus_1.length
+      len_b = b_minus_1.length
+      max_len = __max_fixnum(len_a, len_b)
+
+      and_result = []
+      i = 0
+      while __less_than(i, max_len) != 0
+        limb_a = __less_than(i, len_a) != 0 ? a_minus_1[i] : 0
+        limb_b = __less_than(i, len_b) != 0 ? b_minus_1[i] : 0
+        and_result << __bitand_limbs(limb_a, limb_b)
+        i = i + 1
+      end
+
+      result_limbs = __add_one_magnitude(and_result)
+      return __make_heap_or_fixnum(result_limbs, -1)
+    end
+
+    # Case 3: One positive, one negative - use: pos | ~(neg-1) = ~(~pos & (neg-1))
     if __less_than(sign_a, 0) != 0
-      result_sign = -1
-    end
-    if __less_than(sign_b, 0) != 0
-      result_sign = -1
-    end
-
-    # For OR with negatives, we need to work with same number of limbs
-    max_len = __max_fixnum(len_a, len_b)
-
-    # Convert negative operands to two's complement
-    working_limbs_a = limbs_a
-    working_limbs_b = limbs_b
-
-    if __less_than(sign_a, 0) != 0
-      working_limbs_a = __magnitude_to_twos_complement(limbs_a, max_len)
-    elsif __less_than(len_a, max_len) != 0
-      # Positive number: extend with zeros
-      working_limbs_a = __extend_limbs_with_zeros(limbs_a, max_len)
+      pos_limbs = limbs_b
+      neg_limbs = limbs_a
+    else
+      pos_limbs = limbs_a
+      neg_limbs = limbs_b
     end
 
-    if __less_than(sign_b, 0) != 0
-      working_limbs_b = __magnitude_to_twos_complement(limbs_b, max_len)
-    elsif __less_than(len_b, max_len) != 0
-      # Positive number: extend with zeros
-      working_limbs_b = __extend_limbs_with_zeros(limbs_b, max_len)
-    end
+    neg_minus_1 = __subtract_one_magnitude(neg_limbs)
+    len_pos = pos_limbs.length
+    len_neg = neg_minus_1.length
+    max_len = __max_fixnum(len_pos, len_neg)
 
-    # OR the limbs
-    result_limbs = []
+    and_result = []
     i = 0
+    limb_base_minus_one = __limb_base_minus_one
     while __less_than(i, max_len) != 0
-      limb_a = working_limbs_a[i]
-      limb_b = working_limbs_b[i]
-      result_limb = __bitor_limbs(limb_a, limb_b)
-      result_limbs << result_limb
+      limb_pos = __less_than(i, len_pos) != 0 ? pos_limbs[i] : 0
+      limb_neg = __less_than(i, len_neg) != 0 ? neg_minus_1[i] : 0
+
+      inverted_pos = __bitxor_limbs(limb_pos, limb_base_minus_one)
+      and_limb = __bitand_limbs(inverted_pos, limb_neg)
+      and_result << and_limb
       i = i + 1
     end
 
-    # If result is negative, convert back from two's complement to magnitude
-    if __less_than(result_sign, 0) != 0
-      result_limbs = __magnitude_to_twos_complement(result_limbs, result_limbs.length)
-    end
-
-    # Remove leading zero limbs
-    result_limbs = __trim_leading_zeros(result_limbs)
-
-    # Check if result fits in fixnum and demote
-    if result_limbs.length == 0
-      return 0
-    end
-
-    result_len = result_limbs.length
-    first_limb = result_limbs[0]
-    half_max = __half_limb_base
-
-    should_demote = 0
-    if result_len == 1
-      if __less_than(first_limb, half_max) != 0
-        should_demote = 1
-      end
-    end
-
-    if should_demote != 0
-      # Apply sign for fixnum
-      if __less_than(result_sign, 0) != 0
-        return 0 - first_limb
-      else
-        return first_limb
-      end
-    else
-      result = Integer.new
-      result.__set_heap_data(result_limbs, result_sign)
-      return result
-    end
+    result_limbs = __add_one_magnitude(and_result)
+    return __make_heap_or_fixnum(result_limbs, -1)
   end
 
   def ^ other
