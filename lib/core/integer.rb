@@ -3097,98 +3097,82 @@ class Integer < Numeric
     __bitxor_heap_heap(other_heap)
   end
 
-  # Step 3: heap ^ heap - iterate over limbs
+  # Step 3: heap ^ heap - signed-magnitude approach
   def __bitxor_heap_heap(other)
     limbs_a = __get_limbs
     limbs_b = other.__get_limbs
-    len_a = limbs_a.length
-    len_b = limbs_b.length
     sign_a = __get_sign
     sign_b = other.__get_sign
 
-    # Determine result sign: negative if exactly one operand is negative (XOR of signs)
-    result_sign = 1
-    sign_a_neg = 0
-    sign_b_neg = 0
+    # Case 1: Both positive - simple limb-wise XOR
+    if __less_than(sign_a, 0) == 0 && __less_than(sign_b, 0) == 0
+      len_a = limbs_a.length
+      len_b = limbs_b.length
+      max_len = __max_fixnum(len_a, len_b)
+
+      result_limbs = []
+      i = 0
+      while __less_than(i, max_len) != 0
+        limb_a = __less_than(i, len_a) != 0 ? limbs_a[i] : 0
+        limb_b = __less_than(i, len_b) != 0 ? limbs_b[i] : 0
+        result_limbs << __bitxor_limbs(limb_a, limb_b)
+        i = i + 1
+      end
+
+      result_limbs = __trim_leading_zeros(result_limbs)
+      return __make_heap_or_fixnum(result_limbs, 1)
+    end
+
+    # Case 2: Both negative - use: ~(a-1) ^ ~(b-1) = (a-1) ^ (b-1)
+    if __less_than(sign_a, 0) != 0 && __less_than(sign_b, 0) != 0
+      a_minus_1 = __subtract_one_magnitude(limbs_a)
+      b_minus_1 = __subtract_one_magnitude(limbs_b)
+
+      len_a = a_minus_1.length
+      len_b = b_minus_1.length
+      max_len = __max_fixnum(len_a, len_b)
+
+      xor_result = []
+      i = 0
+      while __less_than(i, max_len) != 0
+        limb_a = __less_than(i, len_a) != 0 ? a_minus_1[i] : 0
+        limb_b = __less_than(i, len_b) != 0 ? b_minus_1[i] : 0
+        xor_result << __bitxor_limbs(limb_a, limb_b)
+        i = i + 1
+      end
+
+      xor_result = __trim_leading_zeros(xor_result)
+      return __make_heap_or_fixnum(xor_result, 1)
+    end
+
+    # Case 3: One positive, one negative - result is negative
+    # pos ^ ~(neg-1) = ~(pos ^ (neg-1))
     if __less_than(sign_a, 0) != 0
-      sign_a_neg = 1
-    end
-    if __less_than(sign_b, 0) != 0
-      sign_b_neg = 1
-    end
-    # XOR: result is negative if signs differ
-    if sign_a_neg != sign_b_neg
-      result_sign = -1
+      pos_limbs = limbs_b
+      neg_limbs = limbs_a
+    else
+      pos_limbs = limbs_a
+      neg_limbs = limbs_b
     end
 
-    # For XOR with negatives, we need to work with same number of limbs
-    max_len = __max_fixnum(len_a, len_b)
+    neg_minus_1 = __subtract_one_magnitude(neg_limbs)
+    len_pos = pos_limbs.length
+    len_neg = neg_minus_1.length
+    max_len = __max_fixnum(len_pos, len_neg)
 
-    # Convert negative operands to two's complement
-    working_limbs_a = limbs_a
-    working_limbs_b = limbs_b
-
-    if __less_than(sign_a, 0) != 0
-      working_limbs_a = __magnitude_to_twos_complement(limbs_a, max_len)
-    elsif __less_than(len_a, max_len) != 0
-      # Positive number: extend with zeros
-      working_limbs_a = __extend_limbs_with_zeros(limbs_a, max_len)
-    end
-
-    if __less_than(sign_b, 0) != 0
-      working_limbs_b = __magnitude_to_twos_complement(limbs_b, max_len)
-    elsif __less_than(len_b, max_len) != 0
-      # Positive number: extend with zeros
-      working_limbs_b = __extend_limbs_with_zeros(limbs_b, max_len)
-    end
-
-    # XOR the limbs
-    result_limbs = []
+    # XOR pos with (neg-1)
+    xor_result = []
     i = 0
     while __less_than(i, max_len) != 0
-      limb_a = working_limbs_a[i]
-      limb_b = working_limbs_b[i]
-      result_limb = __bitxor_limbs(limb_a, limb_b)
-      result_limbs << result_limb
+      limb_pos = __less_than(i, len_pos) != 0 ? pos_limbs[i] : 0
+      limb_neg = __less_than(i, len_neg) != 0 ? neg_minus_1[i] : 0
+      xor_result << __bitxor_limbs(limb_pos, limb_neg)
       i = i + 1
     end
 
-    # If result is negative, convert back from two's complement to magnitude
-    if __less_than(result_sign, 0) != 0
-      result_limbs = __magnitude_to_twos_complement(result_limbs, result_limbs.length)
-    end
-
-    # Remove leading zero limbs
-    result_limbs = __trim_leading_zeros(result_limbs)
-
-    # Check if result fits in fixnum and demote
-    if result_limbs.length == 0
-      return 0
-    end
-
-    result_len = result_limbs.length
-    first_limb = result_limbs[0]
-    half_max = __half_limb_base
-
-    should_demote = 0
-    if result_len == 1
-      if __less_than(first_limb, half_max) != 0
-        should_demote = 1
-      end
-    end
-
-    if should_demote != 0
-      # Apply sign for fixnum
-      if __less_than(result_sign, 0) != 0
-        return 0 - first_limb
-      else
-        return first_limb
-      end
-    else
-      result = Integer.new
-      result.__set_heap_data(result_limbs, result_sign)
-      return result
-    end
+    # Result is ~(pos ^ (neg-1)) which means add 1 to get magnitude
+    result_limbs = __add_one_magnitude(xor_result)
+    return __make_heap_or_fixnum(result_limbs, -1)
   end
 
   def ~
