@@ -268,13 +268,13 @@ module Tokens
         end
       end
 
-      # Now check if integer exceeds fixnum range (-2^29 to 2^29-1)
+      # Now check if integer exceeds fixnum range (-2^30 to 2^30-1)
       # If so, create a heap integer via Integer.__from_literal
       # IMPORTANT: Use fixnum arithmetic to avoid bootstrap issues
       # (literals that exceed fixnum range would trigger this very code!)
-      half_max = 268435455  # 2^28 - 1 (fits in fixnum)
-      max_fixnum = half_max * 2 + 1  # 2^29 - 1
-      min_fixnum = -max_fixnum - 1   # -2^29
+      half_max = 536870911  # 2^29 - 1 (fits in fixnum)
+      max_fixnum = half_max * 2 + 1  # 2^30 - 1
+      min_fixnum = -max_fixnum - 1   # -2^30
 
       if i > max_fixnum || i < min_fixnum
         # Extract sign and magnitude
@@ -283,8 +283,8 @@ module Tokens
 
         # Split into 30-bit limbs (least significant first)
         # Compute limb_base as 2^30 using fixnum arithmetic
-        # Use 2^28 * 4 to avoid exceeding fixnum range
-        limb_base = 268435456 * 4  # (2^28) * 4 = 2^30
+        # Use 2^29 * 2 to avoid exceeding fixnum range
+        limb_base = 536870912 * 2  # (2^29) * 2 = 2^30
         limbs = []
         while magnitude > 0
           limbs << (magnitude % limb_base)

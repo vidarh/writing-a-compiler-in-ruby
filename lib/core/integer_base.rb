@@ -5,8 +5,8 @@
 
 class Integer < Numeric
   # Minimal constants
-  MAX = 268435455   # 2^28 - 1
-  MIN = -268435456  # -2^28
+  MAX = 536870911   # 2^29 - 1
+  MIN = -536870912  # -2^29
 
   def class
     Integer

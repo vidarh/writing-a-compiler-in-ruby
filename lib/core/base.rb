@@ -56,7 +56,7 @@
 %s(defun __add_with_overflow (a b)
   (let (result high_bits obj sign shift_amt val_to_shift abs_val limb_base limb0 limb1 arr)
     (assign result (add a b))
-    (assign shift_amt 29)
+    (assign shift_amt 30)
     (assign val_to_shift result)
     (assign high_bits (sarl shift_amt val_to_shift))
     (if (or (eq high_bits 0) (eq high_bits -1))

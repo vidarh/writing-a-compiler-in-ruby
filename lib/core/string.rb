@@ -309,9 +309,9 @@ class String
       i+=1
     end
 
-    # 29-bit limit (accounting for 1-bit tagging)
+    # 30-bit limit (accounting for 1-bit tagging)
     # Stop parsing if number gets too big to prevent overflow
-    max_safe = 134217728  # 2^27 - Stop before we overflow
+    max_safe = 268435456  # 2^28 - Stop before we overflow
 
     while i <  len
       s = self[i]

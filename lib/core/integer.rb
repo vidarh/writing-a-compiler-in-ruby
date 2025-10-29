@@ -11,9 +11,9 @@ class Integer < Numeric
   # - Heap integers use @limbs/@sign instance variables
 
   # Stub constants - proper limits not implemented
-  # Using 29-bit signed integer limits (due to tagging)
-  MAX = 268435455   # 2^28 - 1
-  MIN = -268435456  # -2^28
+  # Using 30-bit signed integer limits (due to tagging)
+  MAX = 536870911   # 2^29 - 1
+  MIN = -536870912  # -2^29
 
   # Initialize a heap-allocated integer
   # This is NOT called for tagged fixnums (immediate values)
@@ -1786,15 +1786,15 @@ class Integer < Numeric
               # Get full 64-bit multiplication result
               (mulfull a b low high)
 
-              # Check if result fits in 30-bit signed range (-2^29 to 2^29-1)
-              # For 64-bit result: bits 29-63 must all be sign extension of bit 29
-              # Strategy: check bits 29-31 of low word, and verify high word matches
+              # Check if result fits in 30-bit signed range (-2^30 to 2^30-1)
+              # For 64-bit result: bits 30-63 must all be sign extension of bit 30
+              # Strategy: check bits 30-31 of low word, and verify high word matches
               (assign shift_amt 31)
               (assign val low)
               (assign sign (sarl shift_amt val))  # -1 if negative, 0 if positive
-              (assign shift_amt 29)
+              (assign shift_amt 30)
               (assign val low)
-              (assign high_bits (sarl shift_amt val))  # Bits 29-31 of low
+              (assign high_bits (sarl shift_amt val))  # Bits 30-31 of low
 
               # Result fits if: (high_bits == sign) AND (high == sign)
               # Both conditions must be true for proper sign extension across 64 bits
@@ -1823,7 +1823,7 @@ class Integer < Numeric
               (assign limb_base 30)
               (assign temp (sarl limb_base low))
               (assign limb1 (bitand temp 3))  # Bits 30-31 of low
-              (assign temp (bitand high 268435455))  # high & 0x0FFFFFFF (28 bits)
+              (assign temp (bitand high 536870911))  # high & 0x1FFFFFFF (29 bits)
               (assign limb1 (add limb1 (mul temp 4)))
 
               # limb2 = bits 60+
@@ -1876,8 +1876,8 @@ class Integer < Numeric
         (assign limb_base 30)
         (assign temp (sarl limb_base low))
         (assign limb1 (bitand temp 3))  # Bits 30-31 of low
-        # Get bits 0-27 from high and shift left 2
-        (assign temp (bitand high 268435455))  # high & 0x0FFFFFFF (28 bits)
+        # Get bits 0-28 from high and shift left 2
+        (assign temp (bitand high 536870911))  # high & 0x1FFFFFFF (29 bits)
         (assign limb1 (add limb1 (mul temp 4)))
 
         # limb2 = bits 60+ = bits 28-31 of high
