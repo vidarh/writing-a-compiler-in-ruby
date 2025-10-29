@@ -63,22 +63,45 @@
 
 ---
 
-## HIGH PRIORITY: Bitwise Operator Float Issues (~10 min) → +2 specs PASS
+## MEDIUM PRIORITY: Bitwise Operators - Two's Complement Bugs (4-8 hours) - DEFERRED
 
-### Fix bit_or and bit_xor Float TypeError Edge Cases
+### ⚠️ INVESTIGATION RESULTS (Session 38): NOT Float issues, complex two's complement bugs
 
-**Current Status**: Most Float TypeError checks added in Session 37, but edge cases remain
-- **bit_or_spec**: P:10 F:2 - 2 Float-related failures remain
-- **bit_xor_spec**: P:9 F:4 - 4 Float-related failures remain
+**Original Claim**: "Float TypeError edge cases, ~10 minute quick win"
+**Reality**: Deep two's complement conversion bugs requiring architectural fixes
 
-**Fix**: Investigate remaining failures and ensure complete Float handling
+**Current Status**:
+- **bit_and_spec**: P:13 F:0 ✓ **PASS** (no issues)
+- **bit_or_spec**: P:11 F:1 - 1 failure in bignum negative OR operations
+- **bit_xor_spec**: P:10 F:3 - 3 failures in bignum negative XOR operations
 
-**Impact**:
-- bit_or_spec: P:10 F:2 → P:12 F:0 ✓ **FULL PASS (+2 tests, +1 spec)**
-- bit_xor_spec: P:9 F:4 → P:13 F:0 ✓ **FULL PASS (+4 tests, +1 spec)**
+**Root Cause Analysis** (Session 38):
+- ALL failures occur with negative heap integers (not Float!)
+- Bug is in `__magnitude_to_twos_complement` conversion logic
+- Issues:
+  1. Sign extension for negative operands not correct
+  2. Limb width calculations (30-bit limbs with 32-bit masks)
+  3. Converting back from two's complement to magnitude
+- Attempted fixes caused REGRESSIONS (bit_and went from PASS to FAIL)
 
-**Files**: `lib/core/integer.rb` (Integer#|, Integer#^)
-**Estimated effort**: 10 minutes
+**Example Failures**:
+- `(18446744073709551627 | -0x40000000000000000)` gives wrong result
+- Expected: -55340232221128654837
+- Got: -73786976294838206453
+
+**Why This Is Hard**:
+- Two's complement for multi-limb integers is complex
+- Sign extension must account for variable-width numbers
+- The current implementation mixes 30-bit limb storage with 32-bit bitwise operations
+- Fixing one case breaks others
+
+**Estimated Real Effort**: 4-8 hours (not 10 minutes)
+- Requires deep understanding of limb representation
+- Need systematic test cases for all combinations
+- May require redesigning the two's complement conversion
+
+**Files**: `lib/core/integer.rb` (__magnitude_to_twos_complement, __bitor_heap_heap, __bitxor_heap_heap)
+**Status**: DEFERRED - Not a quick win, requires dedicated session
 
 ---
 
