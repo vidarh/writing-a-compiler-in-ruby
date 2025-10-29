@@ -313,6 +313,41 @@ All operations use three cases:
 - Uses De Morgan's laws for correct bitwise semantics
 - Mathematically sound and proven by testing
 
-**Remaining Issue:**
-- Integer#== has a bug with large negative heap integers (lower priority)
+**Remaining Issue: Limb Representation Bug**
+
+Investigation shows that bitwise OR results have corrupted limb arrays:
+- Values print identically and subtract to 0 (arithmetically equal)
+- But multiplication gives different results
+- Example: `result * 2` ≠ `expected * 2` even though `result - expected == 0`
+- The `==` comparison correctly returns false
+
+Root cause appears to be subtle bug in limb array construction during signed-magnitude bitwise operations. The limb arrays differ in a way that:
+- Doesn't affect addition/subtraction
+- Doesn't affect string representation
+- DOES affect multiplication
+- DOES affect equality comparison
+
+This suggests extra limbs or incorrect limb values that are masked by some operations but not others. Requires ability to inspect limb arrays directly for proper debugging.
+
+**Status**: Deferred - lower priority, values are mathematically usable
+**Affects**: 2 spec failures (1 in bit_or_spec, 1 in bit_xor_spec)
+
+**Other Notes:**
 - AND operation still uses two's complement but passes all specs (no issues detected in spec suite)
+
+## Unary Minus Bug Discovered
+
+During investigation of gcd/lcm failures, discovered that Integer#-@ (unary minus) is **completely broken**:
+- Returns `nil` instead of negated value for ALL integers (fixnums and heap integers)
+- Example: `-5` returns nil, `-(-1073741823)` returns nil
+- Affects gcd/lcm implementations which use `-a` to convert negative values to positive
+- Root cause appears to be in `__negate` method calling `__add_with_overflow` which doesn't return properly
+- This is a CRITICAL bug affecting many operations
+
+**Impact:**
+- gcd_spec: 10/12 failures due to returning negative instead of positive (can't negate values)
+- lcm_spec: Similar issues
+- uminus_spec: Failures
+- Any code using unary minus operator
+
+**Status**: Identified but not fixed in this session - requires compiler-level investigation
