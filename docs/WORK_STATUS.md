@@ -669,6 +669,47 @@ See TODO.md for full task breakdown.
 
 ---
 
+## Session 39 (continued): Bitwise Operations Bug Investigation
+
+### Investigation: bit_or and bit_xor Negative Bignum Failures
+
+**Initial Hypothesis**: 32-bit masks should be 30-bit masks
+- Observed that `__invert_limb` uses XOR with 4294967295 (0xFFFFFFFF - 32 bits)
+- Observed that `__limb_max_value` returns 4294967295
+- Thought: limbs are 30-bit, so masks should be 30-bit (1073741823 / 0x3FFFFFFF)
+
+**Attempted Fix**:
+1. Changed `__invert_limb`: `4294967295` → `1073741823`
+2. Changed `__limb_max_value`: `4294967295` → `1073741823`
+
+**Results**: REGRESSION ❌
+- bit_or_spec: P:11 F:1 → P:10 F:2 (WORSE)
+- bit_and_spec: P:13 F:0 → P:12 F:1 (BROKEN)
+- selftest: Still passing (but specs regressed)
+
+**Conclusion**: The 32-bit masks are CORRECT!
+- Two's complement algorithm for multi-limb integers requires 32-bit operations
+- Even though limbs store 30-bit values [0, 2^30-1]
+- The bitwise operations need full 32-bit width for proper sign extension
+- Using 30-bit masks breaks the algorithm
+
+**Status**: Changes reverted ✅, bit_and back to passing
+
+**Next**: Need to investigate the actual bug - likely in:
+- Algorithm logic for converting to/from two's complement
+- Sign handling and extension
+- Limb packing/unpacking
+- Number of limbs calculation
+
+**Documentation**: Created `docs/BITWISE_BUG_ROOT_CAUSE.md` with detailed analysis and failed fix attempt
+
+**Test Status After Revert**:
+- bit_and_spec: P:13 F:0 ✅ (back to passing)
+- bit_or_spec: P:11 F:1 (original state)
+- bit_xor_spec: P:10 F:3 (original state)
+
+---
+
 ## Test Commands
 
 ```bash
