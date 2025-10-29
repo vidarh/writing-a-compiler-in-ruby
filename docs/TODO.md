@@ -69,6 +69,40 @@ The migration is functionally complete. Limb operations work correctly with 30-b
 
 ---
 
+## Current Action Plan (Session 39)
+
+**Based on comprehensive failure analysis** (see [FAILURE_ANALYSIS.md](FAILURE_ANALYSIS.md))
+
+### Phase 1: Quick Wins (Low Risk, High Confidence)
+**Target**: +4 specs, +8 tests
+- [ ] **bit_or_spec** (P:11 F:1) - Only 1 TypeError failure
+- [ ] **bit_xor_spec** (P:10 F:3) - Only 3 TypeError failures
+- [ ] **gcd_spec** (P:10 F:2) - Only 2 failures
+- [ ] **lcm_spec** (P:9 F:2) - Only 2 failures
+
+### Phase 2: Minimal Float Implementation (Medium Risk, High Impact)
+**Target**: +10-15 specs, +50-100 tests
+- [ ] Create minimal Float class (lib/core/float.rb)
+- [ ] Add Float::INFINITY constant
+- [ ] Implement basic comparison operators
+- [ ] Add Integer#coerce(Float) support
+- [ ] Test incremental impact
+
+**Strategy**: "Fake Float" - wrap integers in Float class without full arithmetic
+- No floating-point math needed initially
+- Integer-valued floats work (1.0, 2.0)
+- Unlocks ~100 tests that just need Float to exist
+
+### Phase 3: TypeError Support (Medium Risk, Medium Impact)
+**Target**: +5-10 specs, +20-40 tests
+- [ ] Add type checking to arithmetic operators
+- [ ] Raise TypeError for invalid types (nil, String, Object)
+- [ ] Add appropriate error messages
+
+**Stretch Goal**: 50/67 specs passing (75%)
+
+---
+
 ## HIGHEST PRIORITY: Quick Wins (< 30 min each)
 
 ### ✅ 1. COMPLETED: Integer#=== (case_compare) - Session 37-38
