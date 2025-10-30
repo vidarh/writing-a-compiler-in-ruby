@@ -382,4 +382,18 @@ Bug is in `__cmp_heap_fixnum` method (line 1191 in integer.rb). The sign compari
 2. Assembly-level bug in s-expression comparisons
 3. Issue with how `@sign` or `@limbs` are accessed in s-expressions
 
-**Status**: Requires assembly-level debugging or GDB to trace actual values. The logic appears correct in source but produces wrong result, suggesting low-level issue with instance variable access or sign representation.
+**Status**: ✅ FIXED in commit 9ed9335
+
+**Solution Found:**
+The bug was in how instance variables were being passed from Ruby to s-expressions:
+- Reading `@sign` or `@limbs.length` in Ruby and passing to s-expression failed
+- Untagging with `(sar self_sign)` on already-read Ruby value produced wrong results
+- **Fix**: Access `@sign` directly in s-expression: `(sar @sign)`
+- **Fix**: Compute length in s-expression: `(callm @limbs length)`
+
+This was a compiler bug with transitioning between Ruby and s-expression contexts. Variables read in Ruby code don't properly carry their values into s-expressions when untagged.
+
+**Results:**
+- comparison_spec: P:10 F:29 → P:11 F:28
+- All heap integer comparisons now work correctly
+- Unblocked gcd, lcm, and related operations
