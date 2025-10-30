@@ -14,16 +14,114 @@
 
 ---
 
-**Last Updated**: 2025-10-29 (Session 39 - COMPLETE: 29-to-30 Bit Migration Phase 1)
-**Current Test Results**: 67 specs | PASS: 28 (42%) | FAIL: 36 (54%) | CRASH: 3 (4%) | COMPILE FAIL: 0
-**Individual Tests**: 583 total | Passed: 347 (59%) | Failed: 229 (39%) | Skipped: 7 (1%)
-**Selftest Status**: ✅ selftest passes | ✅ selftest-c passes
+**Last Updated**: 2025-10-30 (Session 40 - IN PROGRESS: Systematic Comparison Operator Fix)
+**Current Test Results**: UNKNOWN - reverting to baseline
+**Individual Tests**: UNKNOWN - establishing baseline
+**Selftest Status**: UNKNOWN - establishing baseline
 
-**Recent Progress**: Session 39 - Completed 30-bit migration (+3 specs, +8 tests), analyzed all crashes and failures, designed improvement strategy. Created comprehensive documentation including failure analysis categorizing 229 failing tests into 7 root cause categories.
+**Recent Progress**: Session 39 - Completed 30-bit migration (+3 specs, +8 tests). Session 40 started with attempted comparison operator fixes that caused regressions. Now executing systematic fix plan.
 
-**Next Steps**: Execute quick wins (bit operations), implement minimal Float class, add TypeError support.
+**Next Steps**: Establish true baseline at commit dbc6792, identify what's actually broken, fix incrementally with full verification at each step.
 
 **✅ UNBLOCKED**: The representational mismatch has been resolved. Fixnum range is now [-536870912, 536870911].
+
+---
+
+## Session 40: Systematic Comparison Operator Fix (2025-10-30) 🔍 IN PROGRESS
+
+### Problem Statement
+Multiple failed attempts to fix comparison operators (commits 9ed9335, d4aa668, 3785cc6) caused regressions (20 crashes instead of 3). Need systematic approach to fix comparison operators without breaking existing functionality.
+
+### Systematic Fix Plan
+
+**Goal**: Fix comparison operators with ZERO regressions
+
+**Success Criteria**:
+- `make selftest` passes (same or better than baseline)
+- `make selftest-c` passes (same or better than baseline)
+- `./run_rubyspec rubyspec/core/integer` shows same or better results than baseline
+- NO NEW CRASHES
+- Comparison operations work correctly
+
+**Phase 0: Document Plan** ✅
+1. Document this plan in WORK_STATUS.md
+2. Update TODO.md to reference this plan
+3. Commit documentation before code changes
+
+**Phase 1: Establish True Baseline**
+1. Reset `lib/core/integer.rb` to commit `dbc6792` (last known good before any comparison fix attempts)
+2. Create `test_comparison_baseline.rb` with comprehensive comparison tests:
+   - Heap <=> fixnum (e.g., `1073741824 <=> 0`)
+   - Fixnum <=> heap (e.g., `0 <=> 1073741824`)
+   - Heap <=> heap (e.g., `1073741824 <=> 2147483648`)
+   - Negative heap integers
+   - Edge cases
+3. Run baseline tests:
+   - `make selftest` - save output to `baseline_selftest.txt`
+   - `make selftest-c` - save output to `baseline_selftest_c.txt`
+   - `./run_rubyspec rubyspec/core/integer` - save output to `baseline_rubyspec.txt`
+4. Document exact baseline numbers in this file
+5. Save test outputs for comparison
+
+**Phase 2: Identify What's Broken**
+1. Run `test_comparison_baseline.rb` - document which comparisons fail
+2. Review rubyspec baseline results - identify failing comparison specs
+3. Document specific broken behaviors with expected vs actual results
+4. **UPDATE WORK_STATUS.md** with findings
+
+**Phase 3: Understand Root Cause**
+1. Add debug output (`printf`) to ONE failing comparison method
+2. Compile and run ONE specific failing test case
+3. Examine debug output to see actual values being used
+4. Document why it fails (actual root cause, not assumptions)
+5. **UPDATE WORK_STATUS.md** with root cause analysis
+
+**Phase 4: Design Fix**
+1. Write down proposed code change in plain text
+2. Explain WHY this change should fix the problem
+3. Predict what test results should show after the change
+4. **UPDATE WORK_STATUS.md** with fix design before implementing
+
+**Phase 5: Implement First Fix**
+1. Apply fix to ONE comparison method only (e.g., `__cmp_heap_fixnum`)
+2. Run `test_comparison_baseline.rb` - verify this specific case improves
+3. **MANDATORY VERIFICATION**:
+   - `make selftest` - compare to baseline, document results
+   - `make selftest-c` - compare to baseline, document results
+   - `./run_rubyspec rubyspec/core/integer` - compare to baseline, document results
+4. **UPDATE WORK_STATUS.md** with verification results
+5. **IF ANY REGRESSION**: STOP, revert change, investigate why, document findings
+
+**Phase 6: Implement Second Fix** (only if Phase 5 succeeded)
+1. Apply fix to next comparison method (e.g., `__cmp_fixnum_heap`)
+2. Run `test_comparison_baseline.rb` - verify improvement
+3. **MANDATORY VERIFICATION**: All three test suites, compare to baseline
+4. **UPDATE WORK_STATUS.md** with results
+5. **IF ANY REGRESSION**: STOP, revert, investigate
+
+**Phase 7: Implement Third Fix** (only if Phase 6 succeeded)
+1. Apply fix to final comparison method (e.g., `__cmp_heap_heap`)
+2. Run `test_comparison_baseline.rb` - verify all cases work
+3. **MANDATORY VERIFICATION**: All three test suites, compare to baseline
+4. **UPDATE WORK_STATUS.md** with results
+5. **IF ANY REGRESSION**: STOP, revert, investigate
+
+**Phase 8: Final Verification**
+1. Run all three test suites one final time
+2. Compare to baseline - must show ZERO regressions
+3. Document improvements
+4. **UPDATE WORK_STATUS.md** and **UPDATE TODO.md**
+5. Commit ONLY if zero regressions confirmed
+
+### Key Rules
+- **After EVERY code change**: run all three test suites
+- **Update WORK_STATUS.md**: after every step
+- **NO commit** unless all three test suites show zero regressions vs baseline
+- **If regression found**: STOP immediately, revert, investigate before proceeding
+- **Document everything**: save all test outputs for comparison
+
+### Current Status
+- Phase 0: In progress - documenting plan
 
 ---
 

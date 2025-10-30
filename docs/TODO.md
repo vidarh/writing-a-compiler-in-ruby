@@ -69,11 +69,28 @@ The migration is functionally complete. Limb operations work correctly with 30-b
 
 ---
 
-## Current Action Plan (Session 39)
+## Current Action Plan (Session 40)
+
+**CRITICAL**: Systematic comparison operator fix in progress
+**See**: [WORK_STATUS.md Session 40](WORK_STATUS.md#session-40-systematic-comparison-operator-fix-2025-10-30--in-progress) for detailed plan
+
+### Session 40: Comparison Operator Fix (HIGHEST PRIORITY)
+- [ ] **Establish baseline** at commit dbc6792 (Phase 1)
+- [ ] **Identify broken comparisons** (Phase 2)
+- [ ] **Understand root cause** with debug output (Phase 3)
+- [ ] **Design fix** on paper (Phase 4)
+- [ ] **Implement fixes** one method at a time with full verification (Phases 5-7)
+- [ ] **Final verification** and commit (Phase 8)
+
+**Rule**: NO OTHER WORK until comparison operators are fixed with zero regressions
+
+---
+
+## Deferred Action Plan (Session 39)
 
 **Based on comprehensive failure analysis** (see [FAILURE_ANALYSIS.md](FAILURE_ANALYSIS.md))
 
-### Phase 1: Quick Wins (Low Risk, High Confidence)
+### Phase 1: Quick Wins (Low Risk, High Confidence) - DEFERRED
 **Target**: +4 specs, +8 tests
 - [ ] **bit_or_spec** (P:11 F:1) - Only 1 TypeError failure
 - [ ] **bit_xor_spec** (P:10 F:3) - Only 3 TypeError failures
