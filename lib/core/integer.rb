@@ -1141,16 +1141,16 @@ class Integer < Numeric
   def __cmp_fixnum_heap(other)
     # Use a single s-expression for the entire comparison to avoid compiler bugs
     # with transitioning between s-expressions and Ruby code
+    other_sign = other.__get_sign
     other_limbs = other.__get_limbs
-    other_first_limb = other_limbs[0]
     other_len = other_limbs.length
+    other_first_limb = other_limbs[0]
     # Limbs can be heap integers (for values >= 536870912), so use __get_raw
     other_first_limb_raw = other_first_limb.__get_raw
 
     %s(
-      (let (self_raw sign_raw limb_raw limbs_len other_sign)
+      (let (self_raw sign_raw limb_raw limbs_len)
         (assign self_raw (sar self))
-        (assign other_sign (index other 1))  # @sign is first ivar
         (assign sign_raw (sar other_sign))
         (assign limbs_len (sar other_len))
 
@@ -1191,15 +1191,18 @@ class Integer < Numeric
   def __cmp_heap_fixnum(other)
     # Use a single s-expression for the entire comparison to avoid compiler bugs
     # with transitioning between s-expressions and Ruby code
-    self_first_limb = @limbs[0]
+    self_sign = @sign
+    self_limbs = @limbs
+    self_len = self_limbs.length
+    self_first_limb = self_limbs[0]
     # Limbs can be heap integers (for values >= 536870912), so use __get_raw
     self_first_limb_raw = self_first_limb.__get_raw
 
     %s(
       (let (other_raw sign_raw limb_raw limbs_len)
         (assign other_raw (sar other))
-        (assign sign_raw (sar @sign))
-        (assign limbs_len (sar (callm @limbs length)))
+        (assign sign_raw (sar self_sign))
+        (assign limbs_len (sar self_len))
 
         # Compare signs: negative < positive
         (if (and (lt sign_raw 0) (gt other_raw 0))
