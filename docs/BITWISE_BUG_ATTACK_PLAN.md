@@ -371,4 +371,15 @@ After investigation revealed unary minus works fine, discovered the REAL bug: **
 **Root Cause:**
 Bug is in `__cmp_heap_fixnum` method (line 1191 in integer.rb). The sign comparison or magnitude comparison logic is incorrect when comparing heap integer to fixnum, causing positive heap integers to be treated as negative.
 
-**Status**: Identified but not fixed - requires careful debugging of __cmp_heap_fixnum logic
+**Investigation Findings:**
+- Value `1073741824` is correctly stored as heap integer with limbs=[0,1], sign=1
+- This means: limb0=0, limb1=1, representing 0 + 1*2^30 = 1073741824
+- The `__cmp_heap_fixnum` logic should handle this (len=2 > 1, check sign, return 1)
+- But somehow returns -1 instead
+
+**Likely causes:**
+1. Sign value `@sign` might be stored/read incorrectly (could be -1 instead of 1)
+2. Assembly-level bug in s-expression comparisons
+3. Issue with how `@sign` or `@limbs` are accessed in s-expressions
+
+**Status**: Requires assembly-level debugging or GDB to trace actual values. The logic appears correct in source but produces wrong result, suggesting low-level issue with instance variable access or sign representation.
