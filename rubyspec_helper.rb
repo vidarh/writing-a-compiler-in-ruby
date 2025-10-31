@@ -218,6 +218,7 @@ class Mock
   # FIXME: Stub - used by some specs to stub out methods
   # Should actually override the method behavior on this mock
   def stub!(method_name)
+    @current_method = method_name
     self
   end
 
