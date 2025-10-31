@@ -14,13 +14,45 @@
 
 ---
 
-**Last Updated**: 2025-10-31 (Session 40 - COMPLETE)
-**Current Test Results**: 28/67 specs (42%), 347/583 tests (59%)
+**Last Updated**: 2025-10-31 (Session 41 - IN PROGRESS)
+**Current Test Results**: ~30+/67 specs, ~355+/591 tests (estimated with new fixes)
 **Selftest Status**: 0 failures ✅
 
-**Recent Progress**: Session 40 - Fixed comparison operators, added sqrt size limit workaround
+**Recent Progress**:
+- Session 40: Fixed `__cmp_heap_fixnum`, added sqrt size limit
+- Session 41: Fixed Mock#stub!, fixed `__cmp_fixnum_heap`, +10 tests
 
-**Next Steps**: Address known bugs (Integer#>>, sqrt performance) or continue with deferred action plan
+**Next Steps**: Re-investigate failing specs for easy wins, reassess priorities
+
+---
+
+## Session 41: Mock#stub! and Comparison Fixes (2025-10-31) ✅ COMPLETE
+
+### Summary
+
+**Task**: Fix RangeError tests in left_shift_spec (user added RangeError exceptions)
+
+**Fixes Implemented**:
+1. **Mock#stub! fix**: Added `@current_method = method_name` to enable chained `.and_return()`
+2. **__cmp_fixnum_heap fix**: Delegated to `__cmp_heap_fixnum` and negated result
+
+**Results**:
+- ✅ left_shift_spec: P:19 F:23 → P:27 F:7 (+8 tests)
+- ✅ bit_xor_spec: P:10 F:3 → P:12 F:1 (+2 tests)
+- ✅ All fixnum <=> heap comparisons now work correctly
+- ✅ RangeError test case in left_shift_spec now passes
+- ✅ Selftest: 0 failures
+
+**Key Insight**: Comparison methods don't need duplicate implementations - one can delegate to the other and negate.
+
+### Files Modified
+- `rubyspec_helper.rb`: Fixed Mock#stub! method
+- `lib/core/integer.rb`: Simplified `__cmp_fixnum_heap` to delegate
+- `docs/TODO.md`: Removed BUG 3 (fixed)
+
+### Commits
+- 13a7f43: Fix Mock#stub! to support chained .and_return()
+- 4cb4fa1: Fix __cmp_fixnum_heap by delegating to __cmp_heap_fixnum
 
 ---
 
