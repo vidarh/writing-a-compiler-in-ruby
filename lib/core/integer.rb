@@ -1,4 +1,4 @@
-
+ 
 def __assert_fixnum(message, i)
   %s(if (eq (bitand i 1) 0)
     (do
@@ -1151,52 +1151,10 @@ class Integer < Numeric
 
   # Compare fixnum (self) with heap integer (other)
   def __cmp_fixnum_heap(other)
-    # Use a single s-expression for the entire comparison to avoid compiler bugs
-    # with transitioning between s-expressions and Ruby code
-    other_sign = other.__get_sign
-    other_limbs = other.__get_limbs
-    other_len = other_limbs.length
-    other_first_limb = other_limbs[0]
-    # Limbs can be heap integers (for values >= 536870912), so use __get_raw
-    other_first_limb_raw = other_first_limb.__get_raw
-
-    %s(
-      (let (self_raw sign_raw limb_raw limbs_len)
-        (assign self_raw (sar self))
-        (assign sign_raw (sar other_sign))
-        (assign limbs_len (sar other_len))
-
-        # Compare signs: negative < positive
-        (if (and (lt self_raw 0) (gt sign_raw 0))
-          (return (__int -1)))
-        (if (and (gt self_raw 0) (lt sign_raw 0))
-          (return (__int 1)))
-
-        # Same sign - compare magnitudes
-        # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
-        (if (gt limbs_len 1)
-          (do
-            (if (gt sign_raw 0)
-              (return (__int -1))
-              (return (__int 1)))))
-
-        # Single limb: compare directly
-        (assign limb_raw other_first_limb_raw)
-
-        (if (lt self_raw limb_raw)
-          (if (gt sign_raw 0)
-            (return (__int -1))
-            (return (__int 1))))
-
-        (if (gt self_raw limb_raw)
-          (if (gt sign_raw 0)
-            (return (__int 1))
-            (return (__int -1))))
-
-        # Equal
-        (return (__int 0))
-      )
-    )
+    # Just delegate to __cmp_heap_fixnum and negate the result
+    # If other <=> self returns 1, then self <=> other returns -1
+    result = other.__cmp_heap_fixnum(self)
+    return 0 - result
   end
 
   # Compare heap integer (self) with fixnum (other)
@@ -3204,6 +3162,14 @@ class Integer < Numeric
       return self >> (-other)
     end
 
+    if zero?
+      return 0
+    end
+
+    if other >= 2**32
+      raise RangeError.new("Unsupported")
+    end
+
     # Dispatch based on self type and shift amount
     %s(
       (if (eq (bitand self 1) 1)
@@ -3259,19 +3225,17 @@ class Integer < Numeric
     limbs_len = my_limbs.length
 
     # Step 1: Calculate full limb shifts and remaining bit shift
-    full_limb_shifts = other / 30
-    bit_shift = other % 30
+    bit_shift = other
 
     result_limbs = []
 
-    # Step 2: Add zero limbs for full 30-bit shifts
-    i = 0
-    while i < full_limb_shifts
+    # Step 1: Add zero limbs for full 30-bit shifts
+    while bit_shift > 30
       result_limbs << 0
-      i = i + 1
+      bit_shift = bit_shift - 30
     end
 
-    # Step 3: Handle remaining bit shift
+    # Step 2: Handle remaining bit shift
     if bit_shift == 0
       # No bit shifting, just copy limbs
       j = 0
