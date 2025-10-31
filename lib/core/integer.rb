@@ -12,7 +12,7 @@ end
 class Integer < Numeric
   # Integer supports two representations:
   # 1. Tagged fixnum: value stored as (n << 1) | 1, low bit = 1
-  #    Range: -536,870,912 to 536,870,911 (30-bit signed)
+  #    Range: -1,073,741,824 to 1,073,741,823 (31-bit signed: 1 tag + 30 value + sign)
   # 2. Heap integer: object with @limbs (Array) and @sign (1 or -1)
   #    Used when value overflows fixnum range
   #
@@ -20,10 +20,10 @@ class Integer < Numeric
   # - Tagged fixnums use bitwise ops in %s() expressions
   # - Heap integers use @limbs/@sign instance variables
 
-  # Stub constants - proper limits not implemented
-  # Using 30-bit signed integer limits (due to tagging)
-  MAX = 536870911   # 2^29 - 1
-  MIN = -536870912  # -2^29
+  # Fixnum constants - 31-bit signed values (1 tag bit + 30 value bits + sign)
+  # Limbs are 30-bit unsigned values stored as tagged fixnums in this range
+  MAX = 1073741823   # 2^30 - 1 (max 30-bit unsigned = max fixnum positive)
+  MIN = -1073741824  # -2^30
 
   # Initialize a heap-allocated integer
   # This is NOT called for tagged fixnums (immediate values)
@@ -2564,6 +2564,8 @@ class Integer < Numeric
 
   # Helper: Get 30-bit limb base minus one (for bit inversion)
   def __limb_base_minus_one
+    # Limbs are 30-bit unsigned values stored as tagged fixnums
+    # Max limb value is 2^30-1 = 1073741823 = fixnum MAX
     %s(__int 1073741823)  # 2^30 - 1 = 0x3FFFFFFF
   end
 
@@ -2578,7 +2580,8 @@ class Integer < Numeric
       limb = limbs[i]
       if borrow != 0
         if limb == 0
-          result << 1073741823  # limb_base - 1
+          # Limbs are 30-bit values, so limb_base = 2^30 and limb_base-1 = 2^30-1
+          result << 1073741823  # limb_base - 1 = 2^30 - 1
           borrow = 1
         else
           result << (limb - 1)

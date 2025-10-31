@@ -4,9 +4,9 @@
 # Full Integer with bignum support loaded later in integer.rb
 
 class Integer < Numeric
-  # Minimal constants
-  MAX = 536870911   # 2^29 - 1
-  MIN = -536870912  # -2^29
+  # Minimal constants - 30-bit signed values (using 31 bits: 1 tag + 30 value)
+  MAX = 1073741823   # 2^30 - 1
+  MIN = -1073741824  # -2^30
 
   def class
     Integer
