@@ -1,0 +1,7 @@
+=== Heap <=> Fixnum ===
+1073741824 <=> 0 = -1 (expected: 1)
+1073741824 <=> 1073741824 = 0 (expected: 0)
+1073741824 <=> 2000000000 = -1 (expected: -1)
+-1073741824 <=> 0 = -1 (expected: -1)
+-1073741824 <=> -1 = -1 (expected: -1)
+Unhandled exception: undefined method 'ord' for NilClass

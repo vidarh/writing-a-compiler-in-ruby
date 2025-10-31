@@ -1,4 +1,14 @@
 
+def __assert_fixnum(message, i)
+  %s(if (eq (bitand i 1) 0)
+    (do
+      (printf "%s: Expected fixnum, got likely heap integer (%p / %ld)\n" message i i)
+      (div 0 0)
+    )
+  )
+  nil
+end
+
 class Integer < Numeric
   # Integer supports two representations:
   # 1. Tagged fixnum: value stored as (n << 1) | 1, low bit = 1
@@ -34,6 +44,8 @@ class Integer < Numeric
     else
       @limbs = [limbs_or_value]
     end
+    # DEBUG: Check if sign is 0
+    %s(if (eq sign 0) (printf "WARNING: Setting @sign to 0!\n"))
     @sign = sign
   end
 
@@ -145,7 +157,7 @@ class Integer < Numeric
     # Check if heap integer fits in fixnum range
     # Single-limb heap integers with values < 2^29 can be converted
     limbs = @limbs
-    sign = __get_sign
+    sign = @sign
 
     # Multi-limb integers are definitely too large
     if limbs.length > 1
@@ -331,7 +343,7 @@ class Integer < Numeric
 
   # Add heap integer to fixnum
   def __add_heap_and_fixnum(fixnum_val)
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
 
     # Extract fixnum value and determine sign, create limb array
@@ -354,7 +366,7 @@ class Integer < Numeric
 
   # Helper for adding heap integer magnitude with fixnum magnitude
   def __add_magnitudes_fixnum(other_limb, other_sign_val)
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
     other_limbs = [other_limb]
 
@@ -383,7 +395,7 @@ class Integer < Numeric
 
   # Add two heap integers
   def __add_heap_and_heap(other_heap)
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
     other_sign = other_heap.__get_sign
     other_limbs = other_heap.__get_limbs
@@ -786,7 +798,7 @@ class Integer < Numeric
   # self is heap integer, fixnum_val is tagged fixnum
   # Returns new Integer (fixnum or heap depending on result size)
   def __multiply_heap_by_fixnum(fixnum_val)
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
     limbs_len = my_limbs.length
 
@@ -871,7 +883,7 @@ class Integer < Numeric
   # self and other are both heap integers
   # Returns new Integer (fixnum or heap)
   def __multiply_heap_by_heap(other)
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
     my_len = my_limbs.length
 
@@ -1188,56 +1200,51 @@ class Integer < Numeric
   end
 
   # Compare heap integer (self) with fixnum (other)
+  # This relies on limbs always being fixnums
   def __cmp_heap_fixnum(other)
-    self_limbs = @limbs
-    self_len = self_limbs.length
-    self_first_limb = self_limbs[0]
-    # Limbs can be heap integers (for values >= 536870912), so use __get_raw
-    self_first_limb_raw = self_first_limb.__get_raw
+    first_limb = @limbs[0]
 
-    %s(
-      (let (other_raw sign_val limb_raw limbs_len untagged_sign)
-        (assign other_raw (sar other))
-        (assign sign_val @sign)
-        (assign limbs_len (sar self_len))
-        (assign untagged_sign (sar sign_val))
+    # FIXME: Limbs should *NEVER EVER* be heap integers.  If they are, that is a
+    # *BUG*.
+    __assert_fixnum("__cmp_heap_fixnum: first limb", first_limb)
 
-        # Compare signs: negative < positive
-        (if (and (lt untagged_sign 0) (gt other_raw 0))
-          (return (__int -1)))
-        (if (and (gt untagged_sign 0) (lt other_raw 0))
-          (return (__int 1)))
+    if @sign < 0 && other > 0
+      return -1
+    end
 
-        # Same sign - compare magnitudes
-        # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
-        (if (gt limbs_len 1)
-          (do
-            (if (gt untagged_sign 0)
-              (return (__int 1))
-              (return (__int -1)))))
+    if @sign > 0 && other < 0
+      return 1
+    end
 
-        # Single limb: compare directly
-        (assign limb_raw self_first_limb_raw)
+    # Same sign - compare magnitudes
+    # If heap has more than 1 limb, it's definitely larger in magnitude than any fixnum
+    if @limbs.length > 1
+      return @sign
+    end
 
-        (if (lt limb_raw other_raw)
-          (if (gt untagged_sign 0)
-            (return (__int -1))
-            (return (__int 1))))
+    # Single limb: compare directly
+    if @sign > 0
+      if @limbs[0] < other
+        return -1
+      end
+      if @limbs[0] > other
+        return 1
+      end
+    else
+      if @limbs[0] < other
+        return 1
+      end
+      if @limbs[0] > other
+        return -1
+      end
+    end
 
-        (if (gt limb_raw other_raw)
-          (if (gt untagged_sign 0)
-            (return (__int 1))
-            (return (__int -1))))
-
-        # Equal
-        (return (__int 0))
-      )
-    )
+    return 0
   end
 
   # Compare two heap integers
   def __cmp_heap_heap(other)
-    self_sign = __get_sign
+    self_sign = @sign
     other_sign = other.__get_sign
     self_limbs = @limbs
     other_limbs = other.__get_limbs
@@ -1303,7 +1310,7 @@ class Integer < Numeric
   # Multi-limb addition: add two heap integers
   # This is the core bignum addition algorithm with carry propagation
   def __add_multi_limb(other)
-    my_sign = __get_sign
+    my_sign = @sign
     other_sign = other.__get_sign
     my_sign_raw = my_sign.__get_raw
     other_sign_raw = other_sign.__get_raw
@@ -1571,7 +1578,7 @@ class Integer < Numeric
   def __negate_heap
     # Get limbs and current sign
     limbs = @limbs
-    current_sign = __get_sign
+    current_sign = @sign
 
     # Flip sign: positive (1) becomes negative (-1), negative (-1) becomes positive (1)
     # Direct comparison to avoid arithmetic operators
@@ -2120,7 +2127,7 @@ class Integer < Numeric
   # Divide two heap integers using long division algorithm with floor division semantics
   def __divide_heap_by_heap(other)
     my_limbs = @limbs
-    my_sign = __get_sign
+    my_sign = @sign
     other_limbs = other.__get_limbs
     other_sign = other.__get_sign
 
@@ -2433,7 +2440,7 @@ class Integer < Numeric
   # Helper for abs on heap integers
   def __abs_heap
     # For heap integers, check @sign and negate if negative
-    sign = __get_sign
+    sign = @sign
     if __less_than(sign, 0) != 0
       __negate
     else
@@ -3247,7 +3254,7 @@ class Integer < Numeric
 
   def __left_shift_heap(other)
     # Limb-based left shift
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
     limbs_len = my_limbs.length
 
@@ -3518,6 +3525,16 @@ class Integer < Numeric
     return 1 if n < 4
 
     # Newton's method for integer square root
+    # FIXME: Temporarily limit size due to performance issues with large numbers
+    # Tested: 10**121 (14 limbs) works, 10**130+ crashes
+    # See docs/TODO.md for details
+    if n.__is_heap_integer?
+      limbs = n.__get_limbs
+      if limbs.length > 15
+        raise ArgumentError.new("Integer.sqrt: number too large (heap integer with #{limbs.length} limbs, max 15)")
+      end
+    end
+
     # Start with a reasonable initial guess
     x = n / 2
     while true
@@ -3546,10 +3563,11 @@ class Integer < Numeric
   # NOTE: This implementation may have issues during self-compilation
   # For now, always return false until we actually create heap integers
   def __is_heap_integer?
-    # FIXME: bitand check causes segfault in selftest-c
-    # %s(if (eq (bitand self 1) 0) true false)
-    # Temporary: always return false
-    false
+    # Check if low bit is 0 (heap integer) or 1 (tagged fixnum)
+    %s(if (eq (bitand self 1) 0)
+      (return true)
+      (return false)
+    )
   end
 
   # Methods migrated from Fixnum for vtable compatibility
@@ -3884,7 +3902,7 @@ class Integer < Numeric
 
   def __bit_length_heap
     # Heap integer bit_length implementation
-    my_sign = __get_sign
+    my_sign = @sign
     my_limbs = @limbs
     limbs_len = my_limbs.length
 

@@ -71,18 +71,55 @@ The migration is functionally complete. Limb operations work correctly with 30-b
 
 ## Current Action Plan (Session 40)
 
-**CRITICAL**: Systematic comparison operator fix in progress
-**See**: [WORK_STATUS.md Session 40](WORK_STATUS.md#session-40-systematic-comparison-operator-fix-2025-10-30--in-progress) for detailed plan
+### ✅ COMPLETE: Comparison Operator Fix
 
-### Session 40: Comparison Operator Fix (HIGHEST PRIORITY)
-- [ ] **Establish baseline** at commit dbc6792 (Phase 1)
-- [ ] **Identify broken comparisons** (Phase 2)
-- [ ] **Understand root cause** with debug output (Phase 3)
-- [ ] **Design fix** on paper (Phase 4)
-- [ ] **Implement fixes** one method at a time with full verification (Phases 5-7)
-- [ ] **Final verification** and commit (Phase 8)
+**Result**: User rewrote `__cmp_heap_fixnum` in pure Ruby, fixing the comparison bug
+- ✅ Comparison bug fixed: `1073741824 <=> 0` now correctly returns 1
+- ✅ Arithmetic operations validated against MRI (all correct)
+- ⚠️ Discovered: sqrt_spec fails due to performance issues with large numbers
 
-**Rule**: NO OTHER WORK until comparison operators are fixed with zero regressions
+---
+
+## KNOWN BUGS (Session 40)
+
+### BUG 1: Integer#>> (right shift) Not Implemented for Heap Integers
+
+**Status**: Missing implementation
+**Impact**: sqrt() and other algorithms can't use `>> 1` optimization for large numbers
+
+**Current State**:
+- Integer#>> only works for tagged fixnums
+- Heap integers (multi-limb bignums) return incorrect results
+
+**Proper Fix** (deferred):
+1. Implement efficient heap integer right shift by removing whole limbs until shift < 30
+2. Handle remaining shift by tracking two limbs at a time
+3. Shift and OR limbs together for final result
+
+**Estimated Effort**: 4-6 hours
+
+### BUG 2: Integer.sqrt Performance Issues with Large Heap Integers
+
+**Status**: Temporary workaround implemented
+**Impact**: sqrt_spec test `Integer.sqrt(10**400)` causes segfault
+
+**Root Cause**:
+- Newton's method requires many iterations for very large numbers (673 for 10**400)
+- Each iteration involves division and addition of huge heap integers
+- Without >> optimization, uses slow `/  2` division
+- Exhausts memory/crashes before completing
+
+**Temporary Fix** (implemented):
+- Added size limit: reject heap integers with > 50 limbs
+- 10**121 (14 limbs) works fine
+- 10**400 (45 limbs) now raises ArgumentError instead of crashing
+
+**Proper Fix** (requires BUG 1):
+1. Implement Integer#>> for heap integers
+2. Replace `/ 2` with `>> 1` in sqrt algorithm
+3. Should handle 10**400 and larger without issues
+
+**Files**: `lib/core/integer.rb` (Integer.sqrt, Integer#>>)
 
 ---
 

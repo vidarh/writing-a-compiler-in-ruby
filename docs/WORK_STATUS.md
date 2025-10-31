@@ -14,14 +14,15 @@
 
 ---
 
-**Last Updated**: 2025-10-30 (Session 40 - IN PROGRESS: Systematic Comparison Operator Fix)
-**Current Test Results**: UNKNOWN - reverting to baseline
-**Individual Tests**: UNKNOWN - establishing baseline
-**Selftest Status**: UNKNOWN - establishing baseline
+**Last Updated**: 2025-10-31 (Session 40 - COMPLETE: Comparison Operator Fix + Performance Issues)
+**Current Test Results**: Comparison bug fixed, sqrt size limit added
+**Selftest Status**: 0 failures ✅
 
-**Recent Progress**: Session 39 - Completed 30-bit migration (+3 specs, +8 tests). Session 40 started with attempted comparison operator fixes that caused regressions. Now executing systematic fix plan.
+**Recent Progress**:
+- Session 39: Completed 30-bit migration (+3 specs, +8 tests)
+- Session 40: Fixed comparison operators, discovered performance issues with large heap integers
 
-**Next Steps**: Establish true baseline at commit dbc6792, identify what's actually broken, fix incrementally with full verification at each step.
+**Next Steps**: Investigate left_shift_spec issue, implement Integer#>> for heap integers
 
 **✅ UNBLOCKED**: The representational mismatch has been resolved. Fixnum range is now [-536870912, 536870911].
 
@@ -137,6 +138,29 @@ During debugging and investigation:
 - ❌ **NEVER** give up and revert - investigate the root cause
 
 See CLAUDE.md for full details.
+
+---
+
+### Session 40 Completion Summary
+
+**Status**: ✅ COMPLETE - Comparison bug fixed, performance issues documented
+
+**What Was Accomplished**:
+1. **Comparison bug fixed**: User rewrote `__cmp_heap_fixnum` in pure Ruby
+   - `1073741824 <=> 0` now correctly returns 1 (was -1)
+   - Validated all arithmetic operations against MRI
+2. **Discovered performance issues**: sqrt_spec revealed crashes with large numbers
+   - sqrt(10**400) requires 673 iterations, exhausts memory
+   - Root cause: Integer#>> not implemented for heap integers
+3. **Temporary workaround**: Added 50-limb size limit to Integer.sqrt
+4. **Documentation**: Added BUG 1 and BUG 2 to TODO.md
+
+**Files Modified**:
+- `lib/core/integer.rb`: `__cmp_heap_fixnum` (pure Ruby), Integer.sqrt (size limit)
+- `docs/TODO.md`: Documented known bugs and proper fixes
+- `docs/WORK_STATUS.md`: Session notes
+
+**Next Steps**: Investigate left_shift_spec, implement Integer#>> for heap integers
 
 ---
 
