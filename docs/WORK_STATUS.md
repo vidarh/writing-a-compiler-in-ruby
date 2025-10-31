@@ -14,15 +14,16 @@
 
 ---
 
-**Last Updated**: 2025-10-31 (Session 41 - COMPLETE)
-**Current Test Results**: 28/67 specs (42%), 352/583 tests (60%)
+**Last Updated**: 2025-10-31 (Session 41 continued - IN PROGRESS)
+**Current Test Results**: PENDING - major fixes applied, retest needed
 **Selftest Status**: 0 failures ✅
 
 **Recent Progress**:
-- Session 40: Fixed `__cmp_heap_fixnum`, added sqrt size limit
-- Session 41: Fixed Mock#stub!, fixed `__cmp_fixnum_heap`, +9 tests (+2% pass rate)
+- Session 40: Fixed `__cmp_heap_fixnum` in pure Ruby
+- Session 41 (initial): Fixed Mock#stub!, `__cmp_fixnum_heap`, +9 tests
+- Session 41 (continued): CRITICAL FIXES - Fixed `__cmp_heap_heap`, corrected fixnum MAX to 2^30-1
 
-**Next Steps**: Priority 1 specs (1-2 failures each), then modulo bug (Priority 2)
+**Next Steps**: Run full rubyspec, investigate remaining negative limb issue in bitwise ops
 
 ---
 
@@ -60,6 +61,72 @@
 ### Commits
 - 13a7f43: Fix Mock#stub! to support chained .and_return()
 - 4cb4fa1: Fix __cmp_fixnum_heap by delegating to __cmp_heap_fixnum
+
+---
+
+## Session 41 (Continued): Critical Fixnum MAX Fix (2025-10-31) 🔍 IN PROGRESS
+
+### Problem Discovery
+
+**User Insight**: "If the framework shows the same number twice, then that suggests a comparison bug."
+
+Investigation revealed bit_or was producing CORRECT numerical values, but comparison was failing!
+- Test: `18446744073709551627 | -0x40000000000000000`
+- Result: `-55340232221128654837` ✓
+- Expected: `-55340232221128654837` ✓
+- But: `result == expected` returned FALSE ❌
+
+###Root Cause Found
+
+Heap integers created by bit_or had **NEGATIVE LIMBS** (e.g., `limbs: [-11, 0, 48]`), violating the invariant that limbs must be positive [0, 2^30-1]. This broke all comparison logic.
+
+**Why negative limbs?**
+- Fixnum MAX was set to 2^29-1 (536870911)
+- But limbs are 30-bit values up to 2^30-1 (1073741823)
+- Since limbs MUST be tagged fixnums, values > 536870911 overflowed and created negative values!
+
+**Critical Revelation (from user)**:
+- "Limbs ARE 30 bits"
+- "There is NO SCENARIO where it is acceptable for a limb to be ANYTHING OTHER THAN A TAGGED fixnum"
+- "There is 1 tag bit, and 31 bits for storing the values and sign"
+
+### Solution
+
+**Fix fixnum range to support 30-bit limbs:**
+
+With 32-bit integers:
+- 1 bit for tag (bit 0)
+- 31 bits for signed value (bits 1-31)
+- Signed 31-bit range: [-2^30, 2^30-1] = [-1,073,741,824, 1,073,741,823]
+
+**Changes Made:**
+1. `integer_base.rb` and `integer.rb`:
+   - MAX: 536870911 → **1073741823** (2^30-1)
+   - MIN: -536870912 → **-1073741824** (-2^30)
+
+2. Reverted temporary fixes in `integer.rb`:
+   - `__limb_base_minus_one`: Restored to 1073741823 (was temporarily 536870911)
+   - `__subtract_one_magnitude`: Restored borrow value to 1073741823
+
+### Results
+
+✅ **Selftest**: 0 failures (still passing)
+✅ **bit_or operation**: Now produces correct numerical values
+✅ **limb_base_minus_one**: Now valid (1073741823 fits in fixnum MAX)
+⚠️ **Remaining issue**: Internal representation still has negative limbs - needs investigation
+
+### Files Modified
+- `lib/core/integer_base.rb`: MAX/MIN constants
+- `lib/core/integer.rb`: MAX/MIN constants, comments, limb constants
+
+### Commits
+- 3654329: Fix __cmp_heap_heap using pure Ruby comparisons
+- e05cfe2: Fix fixnum MAX to 2^30-1 for 30-bit limb support
+
+### Next Steps
+1. Run full rubyspec to assess impact
+2. Investigate why bit_or still creates negative limbs despite correct MAX
+3. Fix two's complement conversion in bitwise operations
 
 ---
 
