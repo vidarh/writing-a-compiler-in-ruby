@@ -61,12 +61,22 @@
 
 **Based on comprehensive failure analysis** (see [FAILURE_ANALYSIS.md](FAILURE_ANALYSIS.md))
 
-### Phase 1: Quick Wins (Low Risk, High Confidence)
-**Target**: +4 specs, +8 tests
-- [ ] **bit_or_spec** (P:11 F:1) - Only 1 TypeError failure
-- [ ] **bit_xor_spec** (P:10 F:3) - Only 3 TypeError failures
-- [ ] **gcd_spec** (P:10 F:2) - Only 2 failures
-- [ ] **lcm_spec** (P:9 F:2) - Only 2 failures
+### Phase 1: Quick Wins Status
+
+**Completed**:
+- ✅ **bit_xor_spec**: P:10 F:3 → P:12 F:1 (+2 tests) - Fixed by __cmp_fixnum_heap fix
+
+**Root Cause Identified**:
+- ❌ **gcd_spec** (P:10 F:2): Modulo bug - `9999**99 % 99` returns 95 (should be 0)
+- ❌ **lcm_spec** (P:9 F:2): Same modulo bug (lcm depends on gcd)
+- Root cause: Integer#% (modulo) operation broken for heap % fixnum
+- Example: `(9999**99) % 99` returns 95 in compiler, 0 in MRI
+- Estimated effort: 2-4 hours to fix modulo operation
+
+**Needs Investigation**:
+- ❓ **bit_or_spec** (P:11 F:1): Spec shows "Expected X but got X" (same values!)
+  - Likely spec framework assertion issue, not actual failure
+  - May already be passing but framework incorrectly reporting
 
 ### Phase 2: Minimal Float Implementation (Medium Risk, High Impact)
 **Target**: +10-15 specs, +50-100 tests
