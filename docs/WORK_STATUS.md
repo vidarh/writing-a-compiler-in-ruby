@@ -14,15 +14,15 @@
 
 ---
 
-**Last Updated**: 2025-10-31 (Session 41 - IN PROGRESS)
-**Current Test Results**: ~30+/67 specs, ~355+/591 tests (estimated with new fixes)
+**Last Updated**: 2025-10-31 (Session 41 - COMPLETE)
+**Current Test Results**: 28/67 specs (42%), 352/583 tests (60%)
 **Selftest Status**: 0 failures ✅
 
 **Recent Progress**:
 - Session 40: Fixed `__cmp_heap_fixnum`, added sqrt size limit
-- Session 41: Fixed Mock#stub!, fixed `__cmp_fixnum_heap`, +10 tests
+- Session 41: Fixed Mock#stub!, fixed `__cmp_fixnum_heap`, +9 tests (+2% pass rate)
 
-**Next Steps**: Re-investigate failing specs for easy wins, reassess priorities
+**Next Steps**: Priority 1 specs (1-2 failures each), then modulo bug (Priority 2)
 
 ---
 
@@ -37,11 +37,18 @@
 2. **__cmp_fixnum_heap fix**: Delegated to `__cmp_heap_fixnum` and negated result
 
 **Results**:
-- ✅ left_shift_spec: P:19 F:23 → P:27 F:7 (+8 tests)
+- ✅ left_shift_spec: P:18 F:24 → P:27 F:7 (+9 tests)
 - ✅ bit_xor_spec: P:10 F:3 → P:12 F:1 (+2 tests)
+- ✅ lt_spec: P:3 F:2 → P:4 F:1 (+1 test - side effect)
 - ✅ All fixnum <=> heap comparisons now work correctly
 - ✅ RangeError test case in left_shift_spec now passes
+- ✅ Overall: 343/591 → 352/583 tests (+9 tests, +2% pass rate)
 - ✅ Selftest: 0 failures
+
+**Investigation Results**:
+- Identified modulo bug affecting gcd_spec/lcm_spec
+- Categorized all 36 failing specs by priority
+- Created prioritized action plan (see TODO.md)
 
 **Key Insight**: Comparison methods don't need duplicate implementations - one can delegate to the other and negate.
 

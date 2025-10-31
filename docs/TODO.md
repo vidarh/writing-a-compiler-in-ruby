@@ -4,7 +4,10 @@
 **Format**: One-line tasks. Details in referenced docs.
 **Rule**: Only work on tasks that improve rubyspec test results.
 
-**Current Status**: 28/67 specs passing (42%), 347/583 tests passing (59%)
+**Current Status (Session 41)**: 28/67 specs passing (42%), 352/583 tests passing (60%)
+**Previous Status (Session 40)**: 28/67 specs (42%), 343/591 tests (58%)
+**Improvement**: +0 specs, +9 tests (+2% test pass rate)
+**Note**: Total test count decreased 591→583 due to left_shift_spec restructure
 **Goal**: Maximize test pass rate by fixing root causes
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
@@ -61,22 +64,31 @@
 
 **Based on comprehensive failure analysis** (see [FAILURE_ANALYSIS.md](FAILURE_ANALYSIS.md))
 
-### Phase 1: Quick Wins Status
+### Immediate Priorities (Session 41+)
 
-**Completed**:
-- ✅ **bit_xor_spec**: P:10 F:3 → P:12 F:1 (+2 tests) - Fixed by __cmp_fixnum_heap fix
+**Priority 1: Specs with 1-2 Failures (Highest ROI)**:
+1. **bit_or_spec** (P:11 F:1): "Expected X but got X" - likely spec framework issue
+2. **bit_xor_spec** (P:12 F:1): Only 1 real failure remaining
+3. **lt_spec** (P:4 F:1): Only 1 failure
+4. **lte_spec** (P:5 F:2): Only 2 failures
+5. **case_compare_spec** (P:3 F:2): Only 2 failures
+6. **equal_value_spec** (P:3 F:2): Only 2 failures
+7. **ceildiv_spec** (P:0 F:2): Only 2 failures - missing method?
 
-**Root Cause Identified**:
-- ❌ **gcd_spec** (P:10 F:2): Modulo bug - `9999**99 % 99` returns 95 (should be 0)
-- ❌ **lcm_spec** (P:9 F:2): Same modulo bug (lcm depends on gcd)
-- Root cause: Integer#% (modulo) operation broken for heap % fixnum
-- Example: `(9999**99) % 99` returns 95 in compiler, 0 in MRI
-- Estimated effort: 2-4 hours to fix modulo operation
+**Priority 2: Blocked by Modulo Bug**:
+- **gcd_spec** (P:10 F:2): `(9999**99) % 99` returns 95 (should be 0)
+- **lcm_spec** (P:9 F:2): Depends on gcd
+- **modulo_spec** (P:8 F:8): Core issue with Integer#%
+- Estimated effort: 2-4 hours to fix Integer#% for heap % fixnum
 
-**Needs Investigation**:
-- ❓ **bit_or_spec** (P:11 F:1): Spec shows "Expected X but got X" (same values!)
-  - Likely spec framework assertion issue, not actual failure
-  - May already be passing but framework incorrectly reporting
+**Priority 3: Comparison Operators (Mostly Float-related)**:
+- **gt_spec** (P:2 F:3), **gte_spec** (P:2 F:3): Float comparisons
+- **comparison_spec** (P:11 F:28): Bulk Float failures
+- Deferred until Float implementation
+
+**Priority 4: Shift Operators**:
+- **left_shift_spec** (P:27 F:7): 7 edge case failures
+- **right_shift_spec** (P:16 F:19): >> not implemented for heap (BUG 1)
 
 ### Phase 2: Minimal Float Implementation (Medium Risk, High Impact)
 **Target**: +10-15 specs, +50-100 tests
