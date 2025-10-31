@@ -1201,60 +1201,57 @@ class Integer < Numeric
   end
 
   # Compare two heap integers
+  # Uses pure Ruby comparisons to avoid compiler bug with @sign in s-expressions
   def __cmp_heap_heap(other)
-    self_sign = @sign
     other_sign = other.__get_sign
-    self_limbs = @limbs
     other_limbs = other.__get_limbs
-    self_len = self_limbs.length
-    other_len = other_limbs.length
 
     # Compare signs: negative < positive
-    # Use __less_than and __greater_than with TAGGED fixnum values
-    if __less_than(self_sign, 0) != 0 && __greater_than(other_sign, 0) != 0
+    if @sign < 0 && other_sign > 0
       return -1
     end
-    if __greater_than(self_sign, 0) != 0 && __less_than(other_sign, 0) != 0
+    if @sign > 0 && other_sign < 0
       return 1
     end
 
     # Same sign - compare magnitudes
     # More limbs = larger magnitude
-    if __less_than(self_len, other_len) != 0
+    self_len = @limbs.length
+    other_len = other_limbs.length
+
+    if self_len < other_len
       # self has fewer limbs, so smaller magnitude
-      if __greater_than(self_sign, 0) != 0
-        return -1
-      else
-        return 1
-      end
+      # If positive: smaller magnitude = smaller value (-1)
+      # If negative: smaller magnitude = larger value (+1, less negative)
+      return 0 - @sign
     end
-    if __less_than(other_len, self_len) != 0
+    if self_len > other_len
       # self has more limbs, so larger magnitude
-      if __greater_than(self_sign, 0) != 0
-        return 1
-      else
-        return -1
-      end
+      # If positive: larger magnitude = larger value (+1)
+      # If negative: larger magnitude = smaller value (-1, more negative)
+      return @sign
     end
 
     # Same number of limbs - compare from most significant to least
     i = self_len - 1
-    while __ge_fixnum(i, 0) != 0
-      self_limb = self_limbs[i]
+    while i >= 0
+      self_limb = @limbs[i]
       other_limb = other_limbs[i]
 
-      if __less_than(self_limb, other_limb) != 0
-        if __greater_than(self_sign, 0) != 0
-          return -1
+      if self_limb < other_limb
+        # self magnitude is smaller
+        if @sign > 0
+          return -1  # positive: smaller magnitude = smaller value
         else
-          return 1
+          return 1   # negative: smaller magnitude = larger value (less negative)
         end
       end
-      if __greater_than(self_limb, other_limb) != 0
-        if __greater_than(self_sign, 0) != 0
-          return 1
+      if self_limb > other_limb
+        # self magnitude is larger
+        if @sign > 0
+          return 1   # positive: larger magnitude = larger value
         else
-          return -1
+          return -1  # negative: larger magnitude = smaller value (more negative)
         end
       end
 
