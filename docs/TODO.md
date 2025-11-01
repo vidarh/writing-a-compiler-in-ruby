@@ -72,6 +72,55 @@
 
 ---
 
+## SESSION 41 ADDITIONAL WINS
+
+### ✅ Integer#integer? method
+- **Status**: COMPLETE (commit 9004b84)
+- **Impact**: integer_spec P:1 F:3 → P:2 F:1 (+1 test)
+- **Implementation**: Added predicate method that returns true for all integers
+- **Files**: `lib/core/integer.rb:3476-3478`
+
+### ⏸️ Integer include Comparable
+- **Status**: PARTIAL - `include` statement added but doesn't work yet
+- **Issue**: Requires runtime module tracking (Class#include? method)
+- **Complexity**: Module inclusion tracking is complex to implement
+- **Impact**: integer_spec still has 1 failure (Comparable check)
+- **Decision**: Deferred - needs Module/Class implementation work
+- **Files**: `lib/core/integer.rb:13`
+
+---
+
+## LANGUAGE SPECS - NEW TERRITORY
+
+**Status**: Initial analysis complete (Session 41)
+**Documentation**: See [LANGUAGE_SPEC_ANALYSIS.md](LANGUAGE_SPEC_ANALYSIS.md)
+
+### Summary
+- **79 total specs** testing Ruby language features
+- **72 specs (91%) COMPILE FAIL** - mostly parser limitations
+- **5 specs runtime failures**, **2 specs crash**
+- **0 specs pass** (8% pass rate on individual tests)
+
+### Categories Identified
+1. Core Language Features (17 specs) - if/case/class/def/block/loop/proc/lambda
+2. Control Flow (5 specs) - break/next/redo/return/throw
+3. Exception Handling (3 specs) - ensure/rescue/retry
+4. Advanced Features (20 specs) - and/or/BEGIN/END/keyword args/pattern matching
+5. String/Regex Features (16 specs) - heredoc/encoding/regex/symbols
+6. Special Variables (11 specs) - __FILE__/__LINE__/delegation/private
+
+### Next Steps (DO NOT RUSH!)
+1. Sample 3-5 compile failures to understand error types
+2. **Improve error reporting first** - make parser errors helpful
+3. Create minimal test cases for each issue type
+4. Document parser limitations clearly
+5. Prioritize fixes based on impact/complexity
+6. Implement incrementally with careful validation
+
+**Warning**: This is uncharted territory. Proceed cautiously!
+
+---
+
 ## Deferred Action Plan
 
 **Based on comprehensive failure analysis** (see [FAILURE_ANALYSIS.md](FAILURE_ANALYSIS.md))
