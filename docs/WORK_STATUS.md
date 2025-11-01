@@ -14,7 +14,7 @@
 
 ---
 
-**Last Updated**: 2025-11-01 (Session 41 - Language Spec Analysis COMPLETE ✅)
+**Last Updated**: 2025-11-01 (Session 41 - Language Spec Compilation Error Fixes)
 **Current Test Results**: 30/67 specs (45%), 372/594 tests (62%), 3 crashes
 **Selftest Status**: 0 failures ✅
 
@@ -27,16 +27,20 @@
 - Session 41 (regression fix): Fixed element_reference_spec crash with 2^24 shift limit
 - Session 41 (sqrt optimization): Applied >> 1 optimization (+18 tests)
 - Session 41 (integer_spec): Added integer? method, attempted include Comparable
-- Session 41 (language spec analysis): **Analyzed 17 language specs, categorized 9 error types**
+- Session 41 (language spec analysis): Analyzed 17 language specs, categorized 9 error types
+- Session 41 (error reporting): ✅ Fixed Scanner#position= bug, ✅ Improved shunting yard error messages
 
-**Achievement**:
+**Achievements**:
 - ✅ Completed BUG 1 (Integer#>>)! right_shift_spec +14 tests, left_shift_spec +3 tests
-- ✅ Completed language spec compilation error analysis - identified critical parser bug
+- ✅ Completed language spec compilation error analysis
+- ✅ Fixed Scanner#position= parser bug (commit f541211)
+- ✅ Improved shunting yard error reporting with human-readable messages + debug mode (commit 33914d0)
 
 **Next Steps**:
-1. Fix Scanner#position= bug (HIGHEST PRIORITY - may unblock 5-10 specs)
-2. Or continue with integer spec improvements
-3. Or work on power/multiplication accuracy bug (BUG 2)
+1. Improve parser error reporting (show context, suggestions, clearer messages)
+2. Add begin/rescue else clause support
+3. Add begin/ensure block support
+4. Fix bare splat and keyword splat operators
 
 ---
 

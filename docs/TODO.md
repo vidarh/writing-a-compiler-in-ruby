@@ -18,7 +18,7 @@
 
 **Language Specs** (HIGHEST PRIORITY - unblock ~5-10 specs):
 1. [x] Fix Scanner#position= bug (parser.rb:405, scanner.rb) - add setter method ✅ DONE (commit f541211)
-2. [ ] Improve shunting yard error reporting (human readable + technical debug mode)
+2. [x] Improve shunting yard error reporting (human readable + technical debug mode) ✅ DONE (commit 33914d0)
 3. [ ] Improve parser error reporting (show context, suggestions, clearer messages)
 4. [ ] Add begin/rescue else clause support (parser.rb parse_begin)
 5. [ ] Add begin/ensure block support (parser.rb parse_begin)
