@@ -75,11 +75,14 @@
 6. **equal_value_spec** (P:3 F:2): Only 2 failures
 7. **ceildiv_spec** (P:0 F:2): Only 2 failures - missing method?
 
-**Priority 2: Blocked by Modulo Bug**:
+**Priority 2: Blocked by Power/Multiplication Bug**:
 - **gcd_spec** (P:10 F:2): `(9999**99) % 99` returns 95 (should be 0)
 - **lcm_spec** (P:9 F:2): Depends on gcd
-- **modulo_spec** (P:8 F:8): Core issue with Integer#%
-- Estimated effort: 2-4 hours to fix Integer#% for heap % fixnum
+- **modulo_spec** (P:8 F:8): Some failures due to power bug
+- **Root cause**: Integer#** (power) produces incorrect results for large exponents
+  - Example: `9999**13` differs from MRI around digit 24
+  - Likely carry/overflow bug in heap integer multiplication
+- Estimated effort: 4-8 hours to fix multiplication accuracy for very large numbers
 
 **Priority 3: Comparison Operators (Mostly Float-related)**:
 - **gt_spec** (P:2 F:3), **gte_spec** (P:2 F:3): Float comparisons
