@@ -10,6 +10,8 @@ def __assert_fixnum(message, i)
 end
 
 class Integer < Numeric
+  include Comparable
+
   # Integer supports two representations:
   # 1. Tagged fixnum: value stored as (n << 1) | 1, low bit = 1
   #    Range: -1,073,741,824 to 1,073,741,823 (31-bit signed: 1 tag + 30 value + sign)
@@ -3470,6 +3472,11 @@ class Integer < Numeric
   # Returns nil for finite values, 1 for +infinity, -1 for -infinity
   def infinite?
     nil
+  end
+
+  # Returns true for all integers (Ruby 2.4+)
+  def integer?
+    true
   end
 
   def even?
