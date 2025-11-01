@@ -3303,8 +3303,156 @@ class Integer < Numeric
       end
     end
 
-    other_raw = other.__get_raw
-    %s(__int (sarl other_raw (callm self __get_raw)))
+    # For negative shift, use left shift
+    if other < 0
+      return self << (-other)
+    end
+
+    if zero?
+      return 0
+    end
+
+    if other >= 2**32
+      raise RangeError.new("Unsupported")
+    end
+
+    # Dispatch based on self type
+    %s(
+      (if (eq (bitand self 1) 1)
+        # self is fixnum
+        (return (callm self __right_shift_fixnum other))
+        # self is heap integer
+        (return (callm self __right_shift_heap other)))
+    )
+  end
+
+  def __right_shift_fixnum(other)
+    # Fixnum right shift - simple arithmetic right shift
+    # For shifts >= 31, result is 0 (positive) or -1 (negative)
+    # x86 shift is modulo 32, so we need to handle large shifts explicitly
+    if other >= 31
+      # Shift away all bits
+      if self < 0
+        return -1
+      else
+        return 0
+      end
+    end
+
+    # For shifts < 31, use arithmetic right shift
+    %s(
+      (let (self_raw other_raw shifted)
+        (assign self_raw (sar self))
+        (assign other_raw (sar other))
+        (assign shifted (sarl other_raw self_raw))
+        (return (__int shifted)))
+    )
+  end
+
+  def __right_shift_heap(other)
+    # Limb-based right shift
+    my_sign = @sign
+    my_limbs = @limbs
+    limbs_len = my_limbs.length
+
+    # Step 1: Calculate full limb shifts and remaining bit shift
+    full_limb_shifts = other / 30
+    bit_shift = other % 30
+
+    # Step 2: Check if we're shifting away all limbs
+    if full_limb_shifts >= limbs_len
+      # All limbs shifted away
+      # For positive numbers, result is 0
+      # For negative numbers, result is -1 (sign extension in two's complement)
+      if my_sign < 0
+        return -1
+      else
+        return 0
+      end
+    end
+
+    # Step 3: Remove full limbs from the right (least significant)
+    remaining_limbs = []
+    i = full_limb_shifts
+    while i < limbs_len
+      remaining_limbs << my_limbs[i]
+      i = i + 1
+    end
+
+    # Step 4: Handle remaining bit shift
+    if bit_shift == 0
+      # No bit shifting needed, use remaining limbs as-is
+      result = Integer.new
+      result.__set_heap_data(remaining_limbs, my_sign)
+      return result
+    end
+
+    # Step 5: Shift each limb right with borrow from next limb
+    result_limbs = []
+    j = 0
+    remaining_len = remaining_limbs.length
+
+    while j < remaining_len
+      current_limb = remaining_limbs[j]
+      # Get high bits from next limb (if exists) to fill low bits of current
+      if j + 1 < remaining_len
+        next_limb = remaining_limbs[j + 1]
+      else
+        # No next limb - for negative numbers, need sign extension
+        if my_sign < 0
+          # Sign extension: fill with 1s (limb_base - 1)
+          next_limb = (1 << 30) - 1  # 0x3fffffff
+        else
+          next_limb = 0
+        end
+      end
+
+      # Shift current limb right, OR in high bits from next limb shifted left
+      parts = __shift_limb_right_with_borrow(current_limb, bit_shift, next_limb)
+      result_limbs << parts[0]
+      j = j + 1
+    end
+
+    # Step 6: Trim leading zeros and create result
+    result_limbs = __trim_leading_zeros(result_limbs)
+
+    # If result is empty, return 0 or -1 based on sign
+    if result_limbs.length == 0
+      if my_sign < 0
+        return -1
+      else
+        return 0
+      end
+    end
+
+    result = Integer.new
+    result.__set_heap_data(result_limbs, my_sign)
+    result
+  end
+
+  # Helper: Shift a limb right by bit_amount, borrowing high bits from next_limb
+  # Returns [new_limb] as array with tagged fixnum
+  def __shift_limb_right_with_borrow(limb, bit_amount, next_limb)
+    %s(
+      (let (limb_raw bit_raw next_raw shifted_low high_bits result arr)
+        (assign limb_raw (sar limb))
+        (assign bit_raw (sar bit_amount))
+        (assign next_raw (sar next_limb))
+        # Shift current limb right
+        (assign shifted_low (sarl bit_raw limb_raw))
+        # Get high bits from next limb: shift left by (30 - bit_amount)
+        (let (bits_for_borrow complement_shift)
+          (assign complement_shift (sub 30 bit_raw))
+          (assign high_bits (sall complement_shift next_raw)))
+        # Combine: shifted low bits OR high bits from next
+        (assign result (bitor shifted_low high_bits))
+        # Mask to 30 bits
+        (assign result (bitand result 0x3fffffff))
+        # Create array with result
+        (assign arr (callm Array new))
+        (callm arr push ((__int result)))
+        (return arr))
+    )
   end
 
   # Predicates
