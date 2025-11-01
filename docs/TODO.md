@@ -64,16 +64,24 @@
 
 **Based on comprehensive failure analysis** (see [FAILURE_ANALYSIS.md](FAILURE_ANALYSIS.md))
 
+**Session 41 Status**: All quick wins completed! bit_or_spec and bit_xor_spec now 100% passing.
+**Current Blockers**:
+- ⚠️ Priority 1 specs ALL require Float implementation (compiler-level changes needed)
+- ⚠️ Priority 2 specs require power/multiplication accuracy fix (4-8 hours)
+- ⚠️ Priority 4 (shift) requires Integer#>> for heap integers (4-6 hours, BUG 1)
+
+**Next Steps**: Choose between Float implementation, power/multiplication fix, or Integer#>> implementation.
+
 ### Immediate Priorities (Session 41+)
 
 **Priority 1: Specs with 1-2 Failures (Highest ROI)**:
-1. **bit_or_spec** (P:11 F:1): "Expected X but got X" - likely spec framework issue
-2. **bit_xor_spec** (P:12 F:1): Only 1 real failure remaining
-3. **lt_spec** (P:4 F:1): Only 1 failure
-4. **lte_spec** (P:5 F:2): Only 2 failures
-5. **case_compare_spec** (P:3 F:2): Only 2 failures
-6. **equal_value_spec** (P:3 F:2): Only 2 failures
-7. **ceildiv_spec** (P:0 F:2): Only 2 failures - missing method?
+1. ✅ **bit_or_spec** (P:12 F:0): COMPLETE - 100% passing
+2. ✅ **bit_xor_spec** (P:13 F:0): COMPLETE - 100% passing
+3. ⚠️ **lt_spec** (P:4 F:1): BLOCKED by Float - comparison with Float literals
+4. ⚠️ **lte_spec** (P:5 F:2): BLOCKED by Float - comparison with Float literals
+5. ⚠️ **case_compare_spec** (P:3 F:2): BLOCKED by Float - Float equality checks
+6. ⚠️ **equal_value_spec** (P:3 F:2): BLOCKED by Float - Float equality checks
+7. ⚠️ **ceildiv_spec** (P:0 F:2): BLOCKED by Float - needs Float#to_i (currently stub returns 0)
 
 **Priority 2: Blocked by Power/Multiplication Bug**:
 - **gcd_spec** (P:10 F:2): `(9999**99) % 99` returns 95 (should be 0)
@@ -90,7 +98,7 @@
 - Deferred until Float implementation
 
 **Priority 4: Shift Operators**:
-- **left_shift_spec** (P:27 F:7): 7 edge case failures
+- **left_shift_spec** (P:27 F:7): 7 failures - all involve negative m (right shift), blocked by BUG 1
 - **right_shift_spec** (P:16 F:19): >> not implemented for heap (BUG 1)
 
 ### Phase 2: Minimal Float Implementation (Medium Risk, High Impact)
