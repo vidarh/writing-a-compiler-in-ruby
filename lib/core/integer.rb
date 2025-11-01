@@ -3304,8 +3304,14 @@ class Integer < Numeric
     end
 
     # For negative shift, use left shift
+    # But first check if the absolute value is too large
+    # Limit to 2^24 bits (reasonable maximum to avoid memory exhaustion)
     if other < 0
-      return self << (-other)
+      negated = -other
+      if negated >= 16777216  # 2**24
+        raise RangeError.new("Unsupported")
+      end
+      return self << negated
     end
 
     if zero?
