@@ -14,18 +14,18 @@
 
 ---
 
-**Last Updated**: 2025-11-01 (Session 41 continued - COMPLETE)
-**Current Test Results**: 28/67 specs (42%), 352/583 tests (60%), 3 crashes
+**Last Updated**: 2025-11-01 (Session 41 continued - COMPLETE ✅)
+**Current Test Results**: 30/67 specs (45%), 354/583 tests (60%), 3 crashes
 **Selftest Status**: 0 failures ✅
 
 **Recent Progress**:
 - Session 40: Fixed `__cmp_heap_fixnum` in pure Ruby
 - Session 41 (initial): Fixed Mock#stub!, `__cmp_fixnum_heap`, +9 tests
-- Session 41 (continued): CRITICAL FIXES - Fixed `__cmp_heap_heap`, corrected fixnum MAX to 2^30-1, fixed 32-bit overflow
+- Session 41 (continued): CRITICAL FIXES - Fixed `__cmp_heap_heap`, corrected fixnum MAX to 2^30-1, fixed duplicate method bug
 
-**Achievement**: +3 tests from Session 40 baseline (349→352), NO REGRESSIONS
+**Achievement**: +5 tests, +2 specs from Session 40 baseline (349→354), bit_or and bit_xor now 100% passing
 
-**Next Steps**: Investigate remaining bitwise operation numerical accuracy issues
+**Next Steps**: Continue with Priority 1 specs from TODO.md action plan
 
 ---
 
@@ -192,10 +192,48 @@ end
   - `__add_two_limbs_with_overflow`: New overflow-safe limb addition
   - `__add_one_magnitude`: Uses new overflow-safe method
 
+### Duplicate Method Bug Fix (2025-11-01) ✅ COMPLETE
+
+**Problem**: Commit d4a9abe accidentally created TWO definitions of `__add_two_limbs_with_overflow`
+- First definition (line 2238): CORRECT - uses `__limb_base_raw`
+- Second definition (line 2601): BUGGY - tried to use literal 1073741824
+- Ruby uses the last definition, so the buggy one was active
+
+**Why the literal approach failed**:
+- Literal `1073741824` (2^30) in s-expression gets auto-tagged: `(1073741824 << 1) | 1`
+- But `1073741824 << 1 = -2147483648` (32-bit signed overflow to negative!)
+- Untagging with `sar` (arithmetic right shift): `-2147483648 >> 1 = -1073741824`
+- Wrong limb_base value caused incorrect overflow detection
+- Result: limb values were roughly half what they should be
+
+**The Correct Solution** (`__limb_base_raw`):
+```ruby
+def __limb_base_raw
+  %s(
+    (let (k1 k2 result)
+      (assign k1 1024)
+      (assign k2 (mul k1 k1))  # 1024 * 1024 = 1048576
+      (assign result (mul k2 k1))  # 1048576 * 1024 = 1073741824
+      (return result))  # Return RAW, don't tag!
+  )
+end
+```
+
+Computes 2^30 as `1024 * 1024 * 1024` in RAW (untagged) form, completely avoiding overflow.
+
+**Fix**: Removed duplicate buggy definition (lines 2598-2619)
+
+**Results**:
+- ✅ bit_or_spec: P:12 F:0 (100% PASSING, was P:11 F:1)
+- ✅ bit_xor_spec: P:13 F:0 (100% PASSING, was P:11 F:2)
+- ✅ Overall: 30/67 specs (45%, +2), 354/583 tests (60%, +2)
+- ✅ Selftest: 0 failures
+
 ### Commits
 - 3654329: Fix __cmp_heap_heap using pure Ruby comparisons
 - e05cfe2: Fix fixnum MAX to 2^30-1 for 30-bit limb support
-- (Pending): Fix 32-bit overflow in limb addition
+- d4a9abe: Fix 32-bit overflow in limb addition (introduced duplicate bug)
+- 9705019: Remove duplicate buggy __add_two_limbs_with_overflow
 
 ---
 
