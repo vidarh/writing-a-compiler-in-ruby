@@ -36,12 +36,13 @@
 - ✅ Fixed Scanner#position= parser bug (commit f541211)
 - ✅ Improved shunting yard error reporting with human-readable messages + debug mode (commit 33914d0)
 - ✅ Improved parser error reporting with line:column format + debug mode (commit 8a9e418)
+- ✅ Added begin/rescue/else clause support (commit c2c20da)
 
 **Next Steps**:
-1. Add begin/rescue else clause support (parser.rb parse_begin)
-2. Add begin/ensure block support (parser.rb parse_begin)
-3. Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist)
-4. Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
+1. Add begin/ensure block support (parser.rb parse_begin)
+2. Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist)
+3. Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
+4. Investigate brace syntax limitations (likely has bugs, not fully unsupported)
 
 ---
 
