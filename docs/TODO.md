@@ -4,10 +4,10 @@
 **Format**: One-line tasks. Details in referenced docs.
 **Rule**: Only work on tasks that improve rubyspec test results.
 
-**Current Status (Session 41)**: 28/67 specs passing (42%), 352/583 tests passing (60%)
+**Current Status (Session 41)**: 30/67 specs passing (45%), 354/583 tests passing (60%)
 **Previous Status (Session 40)**: 28/67 specs (42%), 343/591 tests (58%)
-**Improvement**: +0 specs, +9 tests (+2% test pass rate)
-**Note**: Total test count decreased 591→583 due to left_shift_spec restructure
+**Improvement**: +2 specs, +11 tests (+3% spec pass rate, +2% test pass rate)
+**Regression Fix**: element_reference_spec CRASH→PASS (was regression from Integer#>> implementation)
 **Goal**: Maximize test pass rate by fixing root causes
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
@@ -32,11 +32,17 @@
 **Results**:
 - right_shift_spec: P:16 F:19 → P:30 F:8 (+14 tests, 79% pass rate)
 - left_shift_spec: P:27 F:7 → P:30 F:8 (+3 tests)
-- Remaining failures: edge cases with very large shifts (> 2^32)
+- Remaining failures: edge cases with very large shifts (> 2^24)
 
-**Actual Effort**: ~1 hour (vs 4-6 hours estimated)
+**Regression Fix** (commit a9b554e):
+- element_reference_spec was CRASHING after Integer#>> implementation
+- Root cause: `bignum[-0xffffffff]` → `bignum << 0xffffffff` tried to allocate 143M limbs
+- Fix: Limit negative shifts to 2^24 bits (reasonable maximum)
+- Result: element_reference_spec CRASH → PASS (P:20 F:16)
+
+**Actual Effort**: ~1.5 hours (vs 4-6 hours estimated)
 **Files**: `lib/core/integer.rb` (Integer#>>, __right_shift_fixnum, __right_shift_heap, __shift_limb_right_with_borrow)
-**Commit**: eb53140
+**Commits**: eb53140 (implementation), a9b554e (regression fix)
 
 ### BUG 2: Integer.sqrt Performance Issues with Large Heap Integers
 
