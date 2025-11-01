@@ -3648,9 +3648,10 @@ class Integer < Numeric
     end
 
     # Start with a reasonable initial guess
-    x = n / 2
+    # Use >> 1 (right shift) instead of / 2 for better performance
+    x = n >> 1
     while true
-      x1 = (x + n / x) / 2
+      x1 = (x + n / x) >> 1
       # Break when we've converged (x1 >= x means we're done improving)
       if x1 >= x
         return x
