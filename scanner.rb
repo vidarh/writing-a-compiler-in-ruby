@@ -39,6 +39,13 @@ class Scanner
     Position.new(@filename,@lineno,@col)
   end
 
+  # Set the parser position from a Position object (for backtracking)
+  def position=(pos)
+    @filename = pos.filename
+    @lineno = pos.lineno
+    @col = pos.col
+  end
+
   def initialize(io)
     @io = io
     @buf = ""
