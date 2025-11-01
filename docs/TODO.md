@@ -4,10 +4,13 @@
 **Format**: One-line tasks. Details in referenced docs.
 **Rule**: Only work on tasks that improve rubyspec test results.
 
-**Current Status (Session 41)**: 30/67 specs passing (45%), 354/583 tests passing (60%)
+**Current Status (Session 41)**: 30/67 specs passing (45%), 372/594 tests passing (62%)
 **Previous Status (Session 40)**: 28/67 specs (42%), 343/591 tests (58%)
-**Improvement**: +2 specs, +11 tests (+3% spec pass rate, +2% test pass rate)
-**Regression Fix**: element_reference_spec CRASH→PASS (was regression from Integer#>> implementation)
+**Improvement**: +2 specs, +29 tests (+3% spec pass rate, +4% test pass rate)
+**Key Wins**:
+- Integer#>> implementation complete (BUG 1 fixed)
+- element_reference_spec CRASH→PASS (regression fix)
+- Integer.sqrt optimization (>> 1 instead of / 2): +18 tests
 **Goal**: Maximize test pass rate by fixing root causes
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
