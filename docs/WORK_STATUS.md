@@ -28,19 +28,20 @@
 - Session 41 (sqrt optimization): Applied >> 1 optimization (+18 tests)
 - Session 41 (integer_spec): Added integer? method, attempted include Comparable
 - Session 41 (language spec analysis): Analyzed 17 language specs, categorized 9 error types
-- Session 41 (error reporting): ✅ Fixed Scanner#position= bug, ✅ Improved shunting yard error messages
+- Session 41 (error reporting): ✅ Fixed Scanner#position=, ✅ Shunting yard errors, ✅ Parser errors
 
 **Achievements**:
 - ✅ Completed BUG 1 (Integer#>>)! right_shift_spec +14 tests, left_shift_spec +3 tests
 - ✅ Completed language spec compilation error analysis
 - ✅ Fixed Scanner#position= parser bug (commit f541211)
 - ✅ Improved shunting yard error reporting with human-readable messages + debug mode (commit 33914d0)
+- ✅ Improved parser error reporting with line:column format + debug mode (commit 8a9e418)
 
 **Next Steps**:
-1. Improve parser error reporting (show context, suggestions, clearer messages)
-2. Add begin/rescue else clause support
-3. Add begin/ensure block support
-4. Fix bare splat and keyword splat operators
+1. Add begin/rescue else clause support (parser.rb parse_begin)
+2. Add begin/ensure block support (parser.rb parse_begin)
+3. Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist)
+4. Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
 
 ---
 
