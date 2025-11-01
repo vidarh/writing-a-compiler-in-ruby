@@ -49,8 +49,14 @@ class Parser < ParserBase
     ## FIXME: If "name" is not mentioned here, it is not correctly recognised
     name = nil
     if !(name = parse_name)
-      expected("argument name following '#{prefix}'") if prefix
-      return
+      # Allow bare splat (e.g., def foo(*); end) - use special name :_
+      if prefix == ASTERISK
+        name = :_
+      elsif prefix
+        expected("argument name following '#{prefix}'")
+      else
+        return
+      end
     end
 
     nolfws
