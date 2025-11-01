@@ -6,8 +6,8 @@ Running all specs in rubyspec/core/integer/...
 [32m[PASS] rubyspec/core/integer/anybits_spec.rb (P:4 F:0 S:0 T:4)
 [32m[PASS] rubyspec/core/integer/bit_and_spec.rb (P:13 F:0 S:0 T:13)
 [32m[PASS] rubyspec/core/integer/bit_length_spec.rb (P:4 F:0 S:0 T:4)
-[31m[FAIL] rubyspec/core/integer/bit_or_spec.rb (P:11 F:1 S:0 T:12)
-[31m[FAIL] rubyspec/core/integer/bit_xor_spec.rb (P:12 F:1 S:0 T:13)
+[32m[PASS] rubyspec/core/integer/bit_or_spec.rb (P:12 F:0 S:0 T:12)
+[32m[PASS] rubyspec/core/integer/bit_xor_spec.rb (P:13 F:0 S:0 T:13)
 [31m[FAIL] rubyspec/core/integer/case_compare_spec.rb (P:3 F:2 S:0 T:5)
 [31m[FAIL] rubyspec/core/integer/ceildiv_spec.rb (P:0 F:2 S:0 T:2)
 [32m[PASS] rubyspec/core/integer/ceil_spec.rb (P:9 F:0 S:0 T:9)
@@ -72,14 +72,14 @@ Running all specs in rubyspec/core/integer/...
 ================================
 Summary:
   Total spec files: 67
-  Passed: 28
-  Failed: 36
+  Passed: 30
+  Failed: 34
   Crashed (no test output): 3
   Failed to compile: 0
 
 Individual Test Cases:
   Total tests: 583
-  Passed: 352
-  Failed: 224
+  Passed: 354
+  Failed: 222
   Skipped: 7
   Pass rate: 60%
