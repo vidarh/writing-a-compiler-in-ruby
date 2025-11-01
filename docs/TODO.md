@@ -17,7 +17,7 @@
 ## TOP PRIORITY TASKS (Session 41+)
 
 **Language Specs** (HIGHEST PRIORITY - unblock ~5-10 specs):
-1. [ ] Fix Scanner#position= bug (parser.rb:405, scanner.rb) - add setter method
+1. [x] Fix Scanner#position= bug (parser.rb:405, scanner.rb) - add setter method ✅ DONE (commit f541211)
 2. [ ] Improve shunting yard error reporting (human readable + technical debug mode)
 3. [ ] Improve parser error reporting (show context, suggestions, clearer messages)
 4. [ ] Add begin/rescue else clause support (parser.rb parse_begin)
