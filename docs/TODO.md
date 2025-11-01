@@ -18,22 +18,25 @@
 
 ## KNOWN BUGS
 
-### BUG 1: Integer#>> (right shift) Not Implemented for Heap Integers
+### ✅ BUG 1: Integer#>> (right shift) - FIXED
 
-**Status**: Missing implementation
-**Impact**: sqrt() and other algorithms can't use `>> 1` optimization for large numbers
+**Status**: COMPLETE ✅ (Session 41, 2025-11-01)
+**Impact**: Enables `>> 1` optimization for sqrt() and other algorithms with large numbers
 
-**Current State**:
-- Integer#>> only works for tagged fixnums
-- Heap integers (multi-limb bignums) return incorrect results
+**Implementation**:
+- Integer#>> now works for both fixnums and heap integers
+- Limb-based right shift with borrow propagation
+- Sign extension for negative numbers
+- Handles edge cases (shifts >= 31 for fixnums, shifts >= total limbs for heap)
 
-**Proper Fix** (deferred):
-1. Implement efficient heap integer right shift by removing whole limbs until shift < 30
-2. Handle remaining shift by tracking two limbs at a time
-3. Shift and OR limbs together for final result
+**Results**:
+- right_shift_spec: P:16 F:19 → P:30 F:8 (+14 tests, 79% pass rate)
+- left_shift_spec: P:27 F:7 → P:30 F:8 (+3 tests)
+- Remaining failures: edge cases with very large shifts (> 2^32)
 
-**Estimated Effort**: 4-6 hours
-**Files**: `lib/core/integer.rb` (Integer#>>)
+**Actual Effort**: ~1 hour (vs 4-6 hours estimated)
+**Files**: `lib/core/integer.rb` (Integer#>>, __right_shift_fixnum, __right_shift_heap, __shift_limb_right_with_borrow)
+**Commit**: eb53140
 
 ### BUG 2: Integer.sqrt Performance Issues with Large Heap Integers
 
@@ -97,9 +100,10 @@
 - **comparison_spec** (P:11 F:28): Bulk Float failures
 - Deferred until Float implementation
 
-**Priority 4: Shift Operators**:
-- **left_shift_spec** (P:27 F:7): 7 failures - all involve negative m (right shift), blocked by BUG 1
-- **right_shift_spec** (P:16 F:19): >> not implemented for heap (BUG 1)
+**Priority 4: Shift Operators** (MOSTLY COMPLETE ✅):
+- ✅ **left_shift_spec** (P:30 F:8): 79% passing (was P:27 F:7) - 8 failures are large shift edge cases
+- ✅ **right_shift_spec** (P:30 F:8): 79% passing (was P:16 F:19) - 8 failures are large shift edge cases
+- **Remaining**: Edge cases with shifts > 2^32 (raises "Unsupported" RangeError)
 
 ### Phase 2: Minimal Float Implementation (Medium Risk, High Impact)
 **Target**: +10-15 specs, +50-100 tests
