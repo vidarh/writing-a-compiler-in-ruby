@@ -262,8 +262,28 @@ class Parser < ParserBase
     if !rescue_
       rescue_ = parse_rescue
     end
+
+    # Parse optional else clause (only valid if rescue exists)
+    else_body = nil
+    ws
+    if keyword(:else)
+      if !rescue_
+        expected("'rescue' before 'else' clause")
+      end
+      ws
+      else_body = parse_opt_defexp
+    end
+
     ws
     keyword(:end) or expected("'end' for open 'begin' block")
+
+    # If we have an else clause, append it to the rescue clause
+    # rescue_ is [:rescue, class, name, body]
+    # We'll extend it to [:rescue, class, name, body, else_body]
+    if else_body && rescue_
+      rescue_ = E[rescue_.position, :rescue, rescue_[1], rescue_[2], rescue_[3], else_body]
+    end
+
     return E[pos, :block, [], exps, rescue_]
   end
 

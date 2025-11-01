@@ -645,8 +645,9 @@ class Compiler
     end
   end
 
-  # Compile begin...rescue...end block
-  # rescue_clause = [:rescue, exception_class, var_name, body]
+  # Compile begin...rescue...else...end block
+  # rescue_clause = [:rescue, exception_class, var_name, body] or
+  #                 [:rescue, exception_class, var_name, body, else_body]
   def compile_begin_rescue(scope, exps, rescue_clause)
     rescue_label = @e.get_local    # Label for rescue handler
     after_label = @e.get_local     # Label after rescue
@@ -654,6 +655,7 @@ class Compiler
     rescue_class = rescue_clause[1]
     rescue_var = rescue_clause[2]
     rescue_body = rescue_clause[3]
+    else_body = rescue_clause[4]   # Optional else clause (nil if not present)
 
     # Generate code that:
     # 1. Pushes handler onto exception stack
@@ -687,6 +689,10 @@ class Compiler
 
       # Normal completion - pop handler
       compile_eval_arg(lscope, [:callm, :$__exception_runtime, :pop_handler])
+
+      # Execute else clause if present (only runs when NO exception was raised)
+      compile_do(lscope, *else_body) if else_body
+
       @e.jmp(after_label)
 
       # Rescue handler label (jumped to by compile_unwind via :unwind primitive)
