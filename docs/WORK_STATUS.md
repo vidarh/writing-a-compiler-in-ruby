@@ -14,18 +14,19 @@
 
 ---
 
-**Last Updated**: 2025-11-01 (Session 41 continued - COMPLETE ✅)
+**Last Updated**: 2025-11-01 (Session 41 continued - Float investigation, moving to other priorities)
 **Current Test Results**: 30/67 specs (45%), 354/583 tests (60%), 3 crashes
 **Selftest Status**: 0 failures ✅
 
 **Recent Progress**:
 - Session 40: Fixed `__cmp_heap_fixnum` in pure Ruby
 - Session 41 (initial): Fixed Mock#stub!, `__cmp_fixnum_heap`, +9 tests
-- Session 41 (continued): CRITICAL FIXES - Fixed `__cmp_heap_heap`, corrected fixnum MAX to 2^30-1, fixed duplicate method bug
+- Session 41 (continued): Fixed duplicate method bug, bit_or and bit_xor now 100% passing
+- Session 41 (Float investigation): Investigated Float implementation requirements
 
 **Achievement**: +5 tests, +2 specs from Session 40 baseline (349→354), bit_or and bit_xor now 100% passing
 
-**Next Steps**: Continue with Priority 1 specs from TODO.md action plan
+**Next Steps**: Priority 1 specs that don't require Float (ceildiv_spec, remaining comparison issues)
 
 ---
 
@@ -234,6 +235,43 @@ Computes 2^30 as `1024 * 1024 * 1024` in RAW (untagged) form, completely avoidin
 - e05cfe2: Fix fixnum MAX to 2^30-1 for 30-bit limb support
 - d4a9abe: Fix 32-bit overflow in limb addition (introduced duplicate bug)
 - 9705019: Remove duplicate buggy __add_two_limbs_with_overflow
+
+### Float Implementation Investigation (2025-11-01) 📋 DOCUMENTED
+
+**Task**: Investigate minimal "Fake Float" implementation to unlock Float-related test failures
+
+**Findings**:
+
+1. **Compiler's Float Handling is Low-Level**:
+   - `compiler.rb:137-147` shows Float literals are handled at assembly level
+   - Tokenizer parses float literals (e.g., "4.999") and calls `.to_f` (MRI Ruby Float)
+   - Compiler generates code: `Float.new()` with NO arguments, then uses `storedouble` instruction
+   - `storedouble` writes double value directly to memory at offset 4 in Float object
+
+2. **Incompatibility with Ruby-Based Approach**:
+   - Attempted to implement Float using `@value` instance variable to store integer approximation
+   - But compiler expects C-style memory layout: double at fixed offset 4
+   - Instance variable storage doesn't match offset 4 memory layout
+   - This caused lte_spec to crash (was P:5 F:2, became SEGFAULT)
+
+3. **Original Float.rb Design**:
+   - Uses `@value_low` and `@value_high` to reserve space for 8-byte double (2 x 32-bit)
+   - Compiler writes double value directly to this space via `storedouble`
+   - Float methods are stubs that return `self`, `false`, or `0`
+
+**Conclusion**:
+- "Fake Float" approach incompatible with compiler's low-level Float handling
+- Proper Float implementation requires either:
+  - Changing compiler's Float instantiation (compiler.rb:137-147)
+  - OR implementing real Float arithmetic with proper memory layout
+- Decision: DEFER Float work in favor of non-Float Priority 1 specs
+
+**Files Investigated**:
+- `lib/core/float.rb`: Float class implementation
+- `tokens.rb:205-241`: Float literal parsing
+- `compiler.rb:137-147`: Float constant code generation
+
+**Status**: Investigation complete, Float work deferred, reverted to baseline
 
 ---
 
