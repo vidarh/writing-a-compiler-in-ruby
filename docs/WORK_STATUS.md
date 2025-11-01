@@ -14,8 +14,8 @@
 
 ---
 
-**Last Updated**: 2025-11-01 (Session 41 - COMPLETE ✅ - Integer#>> implementation)
-**Current Test Results**: 30/67 specs (45%), 354/556 tests (63%), 3-4 crashes
+**Last Updated**: 2025-11-01 (Session 41 - Language Spec Analysis COMPLETE ✅)
+**Current Test Results**: 30/67 specs (45%), 372/594 tests (62%), 3 crashes
 **Selftest Status**: 0 failures ✅
 
 **Recent Progress**:
@@ -23,11 +23,20 @@
 - Session 41 (initial): Fixed Mock#stub!, `__cmp_fixnum_heap`, +9 tests
 - Session 41 (continued): Fixed duplicate method bug, bit_or and bit_xor now 100% passing
 - Session 41 (Float investigation): Investigated Float implementation requirements (documented, deferred)
-- Session 41 (Integer#>> implementation): Implemented right shift for heap integers
+- Session 41 (Integer#>> implementation): Implemented right shift for heap integers (+14 tests)
+- Session 41 (regression fix): Fixed element_reference_spec crash with 2^24 shift limit
+- Session 41 (sqrt optimization): Applied >> 1 optimization (+18 tests)
+- Session 41 (integer_spec): Added integer? method, attempted include Comparable
+- Session 41 (language spec analysis): **Analyzed 17 language specs, categorized 9 error types**
 
-**Achievement**: Completed BUG 1 fix! right_shift_spec +14 tests (P:16 F:19 → P:30 F:8), left_shift_spec +3 tests
+**Achievement**:
+- ✅ Completed BUG 1 (Integer#>>)! right_shift_spec +14 tests, left_shift_spec +3 tests
+- ✅ Completed language spec compilation error analysis - identified critical parser bug
 
-**Next Steps**: Power/multiplication accuracy bug (BUG 2), or continue with other priorities
+**Next Steps**:
+1. Fix Scanner#position= bug (HIGHEST PRIORITY - may unblock 5-10 specs)
+2. Or continue with integer spec improvements
+3. Or work on power/multiplication accuracy bug (BUG 2)
 
 ---
 
@@ -364,6 +373,83 @@ Computes 2^30 as `1024 * 1024 * 1024` in RAW (untagged) form, completely avoidin
 
 ### Commit
 - 0fa0f25: Session 40 completion
+
+---
+
+## Session 41 (continued): Language Spec Compilation Error Analysis (2025-11-01) ✅ COMPLETE
+
+### Task
+Analyze compilation failures in rubyspec/language/ specs to categorize error types and prioritize fixes.
+
+### Approach
+1. Sampled 17 specs across all 6 categories from LANGUAGE_SPEC_ANALYSIS.md
+2. Documented actual compilation errors with context
+3. Categorized errors by root cause and fix complexity
+4. Prioritized fixes by impact and difficulty
+
+### Specs Analyzed
+**Category 1 - Core Language Features**: if_spec, case_spec, def_spec, block_spec, class_spec, loop_spec, lambda_spec
+**Category 2 - Control Flow**: break_spec, return_spec
+**Category 3 - Exception Handling**: ensure_spec, rescue_spec
+**Category 4 - Advanced Features**: and_spec, or_spec, keyword_arguments_spec
+**Category 5 - String/Regex Features**: heredoc_spec, hash_spec, string_spec
+
+### Key Findings
+
+**CRITICAL: Parser Bug Discovered** 🐛
+- Error: `undefined method 'position=' for #<Scanner:...>`
+- Affected: break_spec, string_spec, and likely 5-10 more specs
+- Root cause: parser.rb:405 calls `scanner.position = ...` but Scanner only has `position` getter, not setter
+- **Impact**: Actual compiler bug blocking many specs
+- **Priority**: HIGHEST - fixing this may unblock many specs immediately
+- **Complexity**: LOW - just add setter method
+
+### Error Categories Identified
+
+1. **Parser Internal Bug** (CRITICAL) - Scanner#position= missing
+2. **Argument Parsing** (HIGH) - Splat/keyword arguments not supported
+3. **Begin/Rescue/Ensure** (HIGH) - Missing else/ensure support
+4. **Shunting Yard Errors** (MEDIUM-HIGH) - Expression parsing issues
+5. **Multiple Assignment** (MEDIUM) - Destructuring not supported
+6. **Lambda Brace Syntax** (MEDIUM) - Only do..end supported
+7. **Heredoc Parsing** (LOW-MEDIUM) - Various heredoc issues
+8. **String/Symbol Parsing** (LOW-MEDIUM) - Edge cases
+9. **Link Failures** (LOW) - Missing exception classes (NameError)
+
+### Documentation Created
+
+**LANGUAGE_SPEC_COMPILATION_ERRORS.md**:
+- 9 error categories with examples
+- Affected specs for each category
+- Root cause analysis
+- Fix complexity estimates
+- Recommended fix order (4 phases)
+- Error reporting improvement suggestions
+
+### Recommended Action Plan (from docs)
+
+**Phase 1**: Fix Scanner#position= bug - may unblock 5-10 specs
+**Phase 2**: Add else/ensure to begin/rescue parser
+**Phase 3**: Support splat/keyword arguments
+**Phase 4**: Fix shunting yard errors incrementally
+
+**Before ALL fixes**: Improve error reporting to make parser errors more helpful
+
+### Results
+- ✅ Comprehensive error categorization complete
+- ✅ Critical parser bug identified (Scanner#position=)
+- ✅ Fix priorities established
+- ✅ Documentation complete and linked from TODO.md
+
+### Files Created/Modified
+- `docs/LANGUAGE_SPEC_COMPILATION_ERRORS.md` - **NEW** comprehensive analysis
+- `docs/TODO.md` - Updated with error categories and action plan
+- `docs/WORK_STATUS.md` - This session documentation
+
+### Next Steps
+1. **Fix Scanner#position= bug** (highest priority, quick win)
+2. **Or** continue with integer spec improvements
+3. **Or** work on power/multiplication accuracy bug (BUG 2)
 
 ---
 

@@ -92,8 +92,10 @@
 
 ## LANGUAGE SPECS - NEW TERRITORY
 
-**Status**: Initial analysis complete (Session 41)
-**Documentation**: See [LANGUAGE_SPEC_ANALYSIS.md](LANGUAGE_SPEC_ANALYSIS.md)
+**Status**: Compilation error analysis complete (Session 41)
+**Documentation**:
+- [LANGUAGE_SPEC_ANALYSIS.md](LANGUAGE_SPEC_ANALYSIS.md) - Overall categorization
+- [LANGUAGE_SPEC_COMPILATION_ERRORS.md](LANGUAGE_SPEC_COMPILATION_ERRORS.md) - **Detailed error analysis**
 
 ### Summary
 - **79 total specs** testing Ruby language features
@@ -101,21 +103,27 @@
 - **5 specs runtime failures**, **2 specs crash**
 - **0 specs pass** (8% pass rate on individual tests)
 
-### Categories Identified
-1. Core Language Features (17 specs) - if/case/class/def/block/loop/proc/lambda
-2. Control Flow (5 specs) - break/next/redo/return/throw
-3. Exception Handling (3 specs) - ensure/rescue/retry
-4. Advanced Features (20 specs) - and/or/BEGIN/END/keyword args/pattern matching
-5. String/Regex Features (16 specs) - heredoc/encoding/regex/symbols
-6. Special Variables (11 specs) - __FILE__/__LINE__/delegation/private
+### Compilation Error Categories (from 17 spec sample)
+1. **Parser Bug** (CRITICAL): Scanner#position= missing - affects break_spec, string_spec
+2. **Argument Parsing**: Splat/keyword arguments not supported - affects 3+ specs
+3. **Begin/Rescue/Ensure**: Missing else/ensure support - affects 3+ specs
+4. **Shunting Yard Errors**: Expression parsing issues - affects 4+ specs
+5. **Multiple Assignment**: Destructuring not supported - affects 2+ specs
+6. **Lambda Syntax**: Brace syntax not supported - affects lambda_spec
+7. **Heredoc Parsing**: Various heredoc issues - affects heredoc_spec
+8. **String/Symbol Parsing**: Edge cases - affects hash_spec
+9. **Link Failures**: Missing exception classes (NameError) - affects loop_spec
 
-### Next Steps (DO NOT RUSH!)
-1. Sample 3-5 compile failures to understand error types
-2. **Improve error reporting first** - make parser errors helpful
-3. Create minimal test cases for each issue type
-4. Document parser limitations clearly
-5. Prioritize fixes based on impact/complexity
-6. Implement incrementally with careful validation
+### Recommended Action Plan
+1. ✅ **Sample compilation errors** (COMPLETE - 17 specs analyzed)
+2. **Fix Scanner#position= bug** (parser.rb:405, scanner.rb) - HIGHEST PRIORITY
+   - Expected impact: May unblock 5-10 specs immediately
+3. **Improve error reporting** - make parser errors more helpful
+4. **Fix begin/rescue/ensure parsing** - add else/ensure support
+5. **Fix argument parsing** - add splat/keyword argument support
+6. **Fix shunting yard errors** - investigate and fix one at a time
+7. Create minimal test cases for each error type
+8. Implement incrementally with careful validation
 
 **Warning**: This is uncharted territory. Proceed cautiously!
 
