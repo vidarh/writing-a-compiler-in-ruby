@@ -127,6 +127,13 @@ Incomplete expression - [[:splat, ...], [:to_block, ...]]
 
 **Note**: These may be multiple distinct bugs that manifest as shunting yard errors. Need to investigate each case individually.
 
+**IMPORTANT - Error Reporting**:
+- Current errors are cryptic and hard to debug
+- Need BOTH human-readable output AND optional technical debug mode
+- Human-readable: "Expected value after method call" with code context
+- Technical mode: Show operator stack, value stack, current token, operator priorities
+- Can now use exceptions for error handling (self-hosted compiler supports it)
+
 ---
 
 ### 5. Multiple Assignment / Destructuring (MEDIUM IMPACT)
@@ -169,21 +176,26 @@ x, *rest = array  # NOT SUPPORTED
 Expected: do .. end block
 ```
 
-**Root cause**: Parser only supports `do..end` for lambdas/procs, not braces `{ }`
+**Root cause**: Brace syntax likely HAS BUGS or LIMITATIONS (not fully unsupported)
+- Parser likely supports `{ }` in some contexts but not others
+- May have precedence issues or context-sensitive bugs
+- Need to investigate where braces work vs. where they fail
 
 **Impact**: MEDIUM - both syntaxes are common in Ruby
 
-**Fix priority**: MEDIUM - nice to have but not critical
+**Fix priority**: MEDIUM - investigate actual limitations first
 
-**Estimated complexity**: LOW-MEDIUM - extend lambda parser to accept braces
+**Estimated complexity**: MEDIUM - needs investigation to find actual bugs
 
 **Files**: parser.rb (parse_lambda method around line 286)
 
 **Example failures**:
 ```ruby
-lambda { |x| x + 1 }  # NOT SUPPORTED - only lambda do |x| ... end works
-->arg { var = arg }   # NOT SUPPORTED - stabby lambda with braces
+lambda { |x| x + 1 }  # May have issues
+->arg { var = arg }   # Stabby lambda with braces
 ```
+
+**Action**: Test brace syntax in various contexts to identify actual bugs/limitations
 
 ---
 

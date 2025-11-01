@@ -1,21 +1,51 @@
 # Ruby Compiler TODO
 
-**Purpose**: Task list for improving rubyspec integer test pass rate.
+**Purpose**: Task list for improving rubyspec test pass rate (integer specs + language specs)
 **Format**: One-line tasks. Details in referenced docs.
-**Rule**: Only work on tasks that improve rubyspec test results.
 
-**Current Status (Session 41)**: 30/67 specs passing (45%), 372/594 tests passing (62%)
-**Previous Status (Session 40)**: 28/67 specs (42%), 343/591 tests (58%)
-**Improvement**: +2 specs, +29 tests (+3% spec pass rate, +4% test pass rate)
-**Key Wins**:
-- Integer#>> implementation complete (BUG 1 fixed)
-- element_reference_spec CRASH→PASS (regression fix)
-- Integer.sqrt optimization (>> 1 instead of / 2): +18 tests
-**Goal**: Maximize test pass rate by fixing root causes
+**Current Status (Session 41)**:
+- **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
+- **Language specs**: 0/79 passing (0%), 72 compile failures (91%)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
 **For debugging**: See [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md)
+**For language spec errors**: See [LANGUAGE_SPEC_COMPILATION_ERRORS.md](LANGUAGE_SPEC_COMPILATION_ERRORS.md)
+
+---
+
+## TOP PRIORITY TASKS (Session 41+)
+
+**Language Specs** (HIGHEST PRIORITY - unblock ~5-10 specs):
+1. [ ] Fix Scanner#position= bug (parser.rb:405, scanner.rb) - add setter method
+2. [ ] Improve shunting yard error reporting (human readable + technical debug mode)
+3. [ ] Improve parser error reporting (show context, suggestions, clearer messages)
+4. [ ] Add begin/rescue else clause support (parser.rb parse_begin)
+5. [ ] Add begin/ensure block support (parser.rb parse_begin)
+6. [ ] Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist)
+7. [ ] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
+8. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+9. [ ] Fix shunting yard expression parsing errors (investigate case by case)
+10. [ ] Add NameError exception class (lib/core/exception.rb)
+
+**Integer Specs** (Continue improvements):
+11. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)
+12. [ ] Consider minimal Float implementation (would unblock ~10-15 specs)
+13. [ ] Consider power/multiplication accuracy fix for large numbers (BUG 2)
+
+**Note**: Exception handling now supported in self-hosted compiler - can use exceptions for error handling where appropriate
+
+---
+
+## Session 41 Status Summary
+
+**Key Wins**:
+- Integer#>> implementation complete (BUG 1 fixed) - +14 tests in right_shift_spec
+- element_reference_spec CRASH→PASS (regression fix)
+- Integer.sqrt optimization (>> 1 instead of / 2) - +18 tests
+- Language spec compilation error analysis complete - identified critical parser bug
+
+**Goal**: Fix compilation errors first (make specs compile), then improve pass rates
 
 ---
 
@@ -107,23 +137,17 @@
 1. **Parser Bug** (CRITICAL): Scanner#position= missing - affects break_spec, string_spec
 2. **Argument Parsing**: Splat/keyword arguments not supported - affects 3+ specs
 3. **Begin/Rescue/Ensure**: Missing else/ensure support - affects 3+ specs
-4. **Shunting Yard Errors**: Expression parsing issues - affects 4+ specs
+4. **Shunting Yard Errors**: Expression parsing issues - affects 4+ specs (needs better error reporting!)
 5. **Multiple Assignment**: Destructuring not supported - affects 2+ specs
-6. **Lambda Syntax**: Brace syntax not supported - affects lambda_spec
+6. **Lambda Brace Syntax**: Likely has bugs/limitations (not fully unsupported) - affects lambda_spec
 7. **Heredoc Parsing**: Various heredoc issues - affects heredoc_spec
 8. **String/Symbol Parsing**: Edge cases - affects hash_spec
 9. **Link Failures**: Missing exception classes (NameError) - affects loop_spec
 
-### Recommended Action Plan
-1. ✅ **Sample compilation errors** (COMPLETE - 17 specs analyzed)
-2. **Fix Scanner#position= bug** (parser.rb:405, scanner.rb) - HIGHEST PRIORITY
-   - Expected impact: May unblock 5-10 specs immediately
-3. **Improve error reporting** - make parser errors more helpful
-4. **Fix begin/rescue/ensure parsing** - add else/ensure support
-5. **Fix argument parsing** - add splat/keyword argument support
-6. **Fix shunting yard errors** - investigate and fix one at a time
-7. Create minimal test cases for each error type
-8. Implement incrementally with careful validation
+**Note on Error Reporting**:
+- Shunting yard errors need both human-readable output AND optional technical debug mode
+- Parser errors should show context, line/column, and helpful suggestions
+- Exceptions can now be used for error handling (self-hosted compiler supports it)
 
 **Warning**: This is uncharted territory. Proceed cautiously!
 
