@@ -635,20 +635,28 @@ class Compiler
   # "executed" immediately; otherwise it should be treated like
   # a :lambda more or less.
   #
-  # Parser returns: [:block, args, exps, rescue_clause]
-  # For begin blocks: args=[], exps=body, rescue_clause=[:rescue, ...] or nil
-  def compile_block(scope, args, exps, rescue_clause = nil)
-    if rescue_clause
-      compile_begin_rescue(scope, exps, rescue_clause)
+  # Parser returns: [:block, args, exps, rescue_clause, ensure_body]
+  # For begin blocks: args=[], exps=body, rescue_clause=[:rescue, ...] or nil, ensure_body=... or nil
+  def compile_block(scope, args, exps, rescue_clause = nil, ensure_body = nil)
+    if rescue_clause || ensure_body
+      compile_begin_rescue(scope, exps, rescue_clause, ensure_body)
     else
       compile_do(scope, *exps)
     end
   end
 
-  # Compile begin...rescue...else...end block
+  # Compile begin...rescue...else...ensure...end block
   # rescue_clause = [:rescue, exception_class, var_name, body] or
   #                 [:rescue, exception_class, var_name, body, else_body]
-  def compile_begin_rescue(scope, exps, rescue_clause)
+  # ensure_body = expressions to run in all cases (nil if not present)
+  def compile_begin_rescue(scope, exps, rescue_clause, ensure_body = nil)
+    # Handle ensure-only blocks (no rescue)
+    if !rescue_clause && ensure_body
+      compile_do(scope, *exps)
+      compile_do(scope, *ensure_body)
+      return Value.new([:subexpr])
+    end
+
     rescue_label = @e.get_local    # Label for rescue handler
     after_label = @e.get_local     # Label after rescue
 
@@ -693,6 +701,9 @@ class Compiler
       # Execute else clause if present (only runs when NO exception was raised)
       compile_do(lscope, *else_body) if else_body
 
+      # Execute ensure clause if present (always runs on normal completion)
+      compile_do(lscope, *ensure_body) if ensure_body
+
       @e.jmp(after_label)
 
       # Rescue handler label (jumped to by compile_unwind via :unwind primitive)
@@ -712,6 +723,9 @@ class Compiler
 
       # Clear exception from singleton
       compile_eval_arg(lscope, [:callm, :$__exception_runtime, :clear])
+
+      # Execute ensure clause if present (always runs even after rescue)
+      compile_do(lscope, *ensure_body) if ensure_body
 
       # Jump to after label (rescue completed normally)
       @e.jmp(after_label)

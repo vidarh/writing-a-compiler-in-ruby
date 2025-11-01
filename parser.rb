@@ -207,8 +207,10 @@ class Parser < ParserBase
     exps = []
     rescue_ = nil
     loop do
-      # Check for rescue/end keywords before parse_defexp to prevent rescue
-      # from being parsed as a statement modifier (which fails on rescue => e)
+      # Check for rescue keyword before parse_defexp
+      # We manually parse rescue inline to handle "rescue => e" syntax correctly
+      # For other keywords (else/ensure/end), we let parse_defexp naturally stop
+      # when it sees them (keywords cause shunting yard to exit)
       ws
       if keyword(:rescue)
         # Found rescue keyword - parse it properly
@@ -225,9 +227,6 @@ class Parser < ParserBase
         ws
         body = parse_opt_defexp
         rescue_ = E[pos, :rescue, c, name, body]
-        break
-      elsif keyword(:end)
-        # Found end - break without rescue
         break
       end
       exp = parse_defexp
@@ -274,6 +273,14 @@ class Parser < ParserBase
       else_body = parse_opt_defexp
     end
 
+    # Parse optional ensure clause (can exist with or without rescue)
+    ensure_body = nil
+    ws
+    if keyword(:ensure)
+      ws
+      ensure_body = parse_opt_defexp
+    end
+
     ws
     keyword(:end) or expected("'end' for open 'begin' block")
 
@@ -284,7 +291,9 @@ class Parser < ParserBase
       rescue_ = E[rescue_.position, :rescue, rescue_[1], rescue_[2], rescue_[3], else_body]
     end
 
-    return E[pos, :block, [], exps, rescue_]
+    # Return block with ensure as 5th element
+    # [:block, args, exps, rescue_clause, ensure_body]
+    return E[pos, :block, [], exps, rescue_, ensure_body]
   end
 
   # subexp ::= exp nolfws*
