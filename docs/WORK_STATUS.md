@@ -14,16 +14,18 @@
 
 ---
 
-**Last Updated**: 2025-10-31 (Session 41 continued - IN PROGRESS)
-**Current Test Results**: PENDING - major fixes applied, retest needed
+**Last Updated**: 2025-11-01 (Session 41 continued - COMPLETE)
+**Current Test Results**: 28/67 specs (42%), 352/583 tests (60%), 3 crashes
 **Selftest Status**: 0 failures ✅
 
 **Recent Progress**:
 - Session 40: Fixed `__cmp_heap_fixnum` in pure Ruby
 - Session 41 (initial): Fixed Mock#stub!, `__cmp_fixnum_heap`, +9 tests
-- Session 41 (continued): CRITICAL FIXES - Fixed `__cmp_heap_heap`, corrected fixnum MAX to 2^30-1
+- Session 41 (continued): CRITICAL FIXES - Fixed `__cmp_heap_heap`, corrected fixnum MAX to 2^30-1, fixed 32-bit overflow
 
-**Next Steps**: Run full rubyspec, investigate remaining negative limb issue in bitwise ops
+**Achievement**: +3 tests from Session 40 baseline (349→352), NO REGRESSIONS
+
+**Next Steps**: Investigate remaining bitwise operation numerical accuracy issues
 
 ---
 
@@ -64,7 +66,7 @@
 
 ---
 
-## Session 41 (Continued): Critical Fixnum MAX Fix (2025-10-31) 🔍 IN PROGRESS
+## Session 41 (Continued): Critical Fixnum MAX and Overflow Fixes (2025-10-31 to 2025-11-01) ✅ COMPLETE
 
 ### Problem Discovery
 
@@ -123,10 +125,77 @@ With 32-bit integers:
 - 3654329: Fix __cmp_heap_heap using pure Ruby comparisons
 - e05cfe2: Fix fixnum MAX to 2^30-1 for 30-bit limb support
 
-### Next Steps
-1. Run full rubyspec to assess impact
-2. Investigate why bit_or still creates negative limbs despite correct MAX
-3. Fix two's complement conversion in bitwise operations
+### 32-Bit Overflow Fix (2025-11-01)
+
+**Problem**: When adding limb (1073741823) + carry (1):
+- Tagged values: 2147483647 + 3 = 2147483650
+- Exceeds 32-bit signed max (2147483647)
+- Wraps to negative, creating negative limbs in result
+
+**Error Encountered**: "wrong number of arguments (given 3, expected 2)"
+- Root cause: Two definitions of `__add_limbs_with_carry` with different signatures
+- Old version: `(a, b, c)` - returns raw sum value
+- New version: `(a, b)` - returns [limb, carry] array
+
+**Solution**: Renamed new method to `__add_two_limbs_with_overflow(a, b)`
+- Uses raw arithmetic in s-expression to avoid tagged overflow
+- Returns [result_limb, carry] where result_limb < 2^30
+- Properly handles limb_base = 2^30 (1073741824) by untagging literal
+
+**Implementation** (lib/core/integer.rb:2601-2620):
+```ruby
+def __add_two_limbs_with_overflow(a, b)
+  %s(
+    (let (a_raw b_raw sum limb_base_tagged limb_base result_limb carry_out)
+      (assign a_raw (sar a))
+      (assign b_raw (sar b))
+      (assign sum (add a_raw b_raw))
+      (assign limb_base_tagged 1073741824)
+      (assign limb_base (sar limb_base_tagged))  # Untag to get raw 2^30
+      (if (ge sum limb_base)
+        (do
+          (assign result_limb (sub sum limb_base))
+          (assign carry_out 1))
+        (do
+          (assign result_limb sum)
+          (assign carry_out 0)))
+      (return (array (__int result_limb) (__int carry_out))))
+  )
+end
+```
+
+**Used by**: `__add_one_magnitude` (line 2630)
+
+### Final Results
+
+✅ **Selftest**: 0 failures (no regressions)
+✅ **Overall**: 352/583 tests (60%), +3 from baseline 349
+✅ **Specs**: 28/67 (42%), same as baseline
+✅ **Crashes**: 3 (same as baseline - fdiv, round, times)
+
+**Improvements**:
+- bit_or_spec: Now functional (P:11 F:1)
+- bit_xor_spec: Now functional (P:11 F:2)
+- Limbs are now positive values [0, 2^30-1] ✓
+- Comparisons work correctly ✓
+- No 32-bit overflow in limb addition ✓
+
+**Remaining Issues**:
+- Some bitwise operations produce numerically incorrect results (limbs appear half expected value)
+- Issue is in bitwise logic, not in addition/comparison
+
+### Files Modified
+- `lib/core/integer_base.rb`: MAX/MIN constants (2^30-1, -2^30)
+- `lib/core/integer.rb`:
+  - MAX/MIN constants
+  - `__cmp_heap_heap`: Pure Ruby comparisons
+  - `__add_two_limbs_with_overflow`: New overflow-safe limb addition
+  - `__add_one_magnitude`: Uses new overflow-safe method
+
+### Commits
+- 3654329: Fix __cmp_heap_heap using pure Ruby comparisons
+- e05cfe2: Fix fixnum MAX to 2^30-1 for 30-bit limb support
+- (Pending): Fix 32-bit overflow in limb addition
 
 ---
 

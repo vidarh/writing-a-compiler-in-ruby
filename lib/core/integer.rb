@@ -2598,22 +2598,23 @@ class Integer < Numeric
   # Helper: Safely add two limb values with overflow detection
   # Returns [result_limb, carry] where result_limb < 2^30
   # Uses raw arithmetic to avoid 32-bit signed overflow
-  def __add_limbs_with_carry(a, b)
+  def __add_two_limbs_with_overflow(a, b)
     %s(
-      (let (a_raw b_raw sum_raw limb_base result_limb carry)
+      (let (a_raw b_raw sum limb_base_tagged limb_base result_limb carry_out)
         (assign a_raw (sar a))
         (assign b_raw (sar b))
-        (assign sum_raw (add a_raw b_raw))
-        (assign limb_base 1073741824)
-        (if (ge sum_raw limb_base)
+        (assign sum (add a_raw b_raw))
+        # limb_base = 2^30 = 1073741824 - need to untag it since literals are auto-tagged
+        (assign limb_base_tagged 1073741824)
+        (assign limb_base (sar limb_base_tagged))
+        (if (ge sum limb_base)
           (do
-            (assign result_limb (__int (sub sum_raw limb_base)))
-            (assign carry (__int 1))
-            (return (array result_limb carry)))
+            (assign result_limb (sub sum limb_base))
+            (assign carry_out 1))
           (do
-            (assign result_limb (__int sum_raw))
-            (assign carry (__int 0))
-            (return (array result_limb carry)))))
+            (assign result_limb sum)
+            (assign carry_out 0)))
+        (return (array (__int result_limb) (__int carry_out))))
     )
   end
 
@@ -2626,7 +2627,7 @@ class Integer < Numeric
 
     while __less_than(i, len) != 0
       limb = limbs[i]
-      limb_and_carry = __add_limbs_with_carry(limb, carry)
+      limb_and_carry = __add_two_limbs_with_overflow(limb, carry)
       result << limb_and_carry[0]
       carry = limb_and_carry[1]
       i = i + 1
