@@ -2595,24 +2595,40 @@ class Integer < Numeric
     result
   end
 
+  # Helper: Safely add two limb values with overflow detection
+  # Returns [result_limb, carry] where result_limb < 2^30
+  # Uses raw arithmetic to avoid 32-bit signed overflow
+  def __add_limbs_with_carry(a, b)
+    %s(
+      (let (a_raw b_raw sum_raw limb_base result_limb carry)
+        (assign a_raw (sar a))
+        (assign b_raw (sar b))
+        (assign sum_raw (add a_raw b_raw))
+        (assign limb_base 1073741824)
+        (if (ge sum_raw limb_base)
+          (do
+            (assign result_limb (__int (sub sum_raw limb_base)))
+            (assign carry (__int 1))
+            (return (array result_limb carry)))
+          (do
+            (assign result_limb (__int sum_raw))
+            (assign carry (__int 0))
+            (return (array result_limb carry)))))
+    )
+  end
+
   # Helper: Add 1 to a magnitude (array of limbs)
   def __add_one_magnitude(limbs)
     result = []
     carry = 1
     i = 0
     len = limbs.length
-    limb_base = 1073741824  # 2^30
 
     while __less_than(i, len) != 0
       limb = limbs[i]
-      sum = limb + carry
-      if __less_than(sum, limb_base) != 0
-        result << sum
-        carry = 0
-      else
-        result << (sum - limb_base)
-        carry = 1
-      end
+      limb_and_carry = __add_limbs_with_carry(limb, carry)
+      result << limb_and_carry[0]
+      carry = limb_and_carry[1]
       i = i + 1
     end
 
