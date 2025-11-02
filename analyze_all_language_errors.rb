@@ -4,35 +4,50 @@
 puts "Analyzing all language spec compilation errors..."
 puts "=" * 60
 
-# Find all language spec temp files (created by run_rubyspec)
-temp_files = Dir.glob("rubyspec_temp_*_spec.rb").sort
+# Get list of actual language spec files (including subdirectories)
+language_specs = Dir.glob("rubyspec/language/**/*_spec.rb").sort
 
-# If no temp files exist, we need to create them by running the specs
-if temp_files.empty?
-  puts "No temp files found. Please run: ./run_rubyspec rubyspec/language/"
-  exit 1
-end
+puts "Found #{language_specs.size} language spec files"
+puts
 
 errors = {}
 compiling_specs = []
+passing_specs = []
+failing_specs = []
 total = 0
 
-temp_files.each do |spec|
+language_specs.each do |spec_path|
   total += 1
-  spec_name = File.basename(spec, ".rb").sub("rubyspec_temp_", "")
+  spec_name = File.basename(spec_path, ".rb")
 
-  # Skip non-language specs
-  next unless spec_name.match(/_spec$/)
+  print "Analyzing #{spec_name}... "
 
-  # Try to compile and capture error
-  output = `ruby -I. driver.rb #{spec} -I. 2>&1`
+  # Run the spec and capture output
+  output = `./run_rubyspec #{spec_path} 2>&1`
+  exit_status = $?.exitstatus
 
-  if $?.success?
-    compiling_specs << spec_name
-    next
+  # Check if it compiled
+  if output =~ /(\d+) spec files?: (\d+) passed, (\d+) failed, (\d+) errors?/
+    passed = $2.to_i
+    failed = $3.to_i
+    errors = $4.to_i
+
+    if failed == 0 && errors == 0
+      puts "PASS (#{passed} tests)"
+      passing_specs << spec_name
+      next
+    elsif passed > 0
+      puts "PARTIAL (P:#{passed} F:#{failed} E:#{errors})"
+      failing_specs << spec_name
+      next
+    else
+      puts "FAIL (all tests failed)"
+      failing_specs << spec_name
+      next
+    end
   end
 
-  # Extract error message
+  # Check for compilation errors
   error_msg = nil
 
   # Try different error patterns
@@ -48,15 +63,20 @@ temp_files.each do |spec|
     error_msg = $1.strip
   elsif output =~ /undefined reference to '(\w+)'/
     error_msg = "Link error: undefined reference to '#{$1}'"
+  elsif output =~ /([^:]+\.rb:\d+:in `[^']+': .+? \([A-Z]\w+Error\))/
+    error_msg = $1.strip
   else
     # Unknown error format
     error_msg = output.lines.first&.strip || "Unknown error"
   end
 
+  puts "COMPILE ERROR"
+
   # Normalize error message (remove file-specific details)
   normalized = error_msg
     .gsub(/\/home\/[^\s]+\//, "")
     .gsub(/rubyspec_temp_\w+_spec\.rb/, "<spec>")
+    .gsub(/rubyspec\/language\/\w+_spec\.rb/, "<spec>")
     .gsub(/:\d+:\d+:/, ":[LINE]:[COL]:")
     .gsub(/line \d+/, "line N")
     .gsub(/\d+ passed/, "N passed")
@@ -74,13 +94,20 @@ puts "=" * 60
 puts "SUMMARY"
 puts "=" * 60
 puts "Total language specs analyzed: #{total}"
-puts "Specs that COMPILE successfully: #{compiling_specs.size}"
+puts "Specs that PASS all tests: #{passing_specs.size}"
+puts "Specs that RUN but have failures: #{failing_specs.size}"
 puts "Specs with compilation errors: #{errors.size}"
 puts
 
-if compiling_specs.any?
-  puts "✓ Specs that compile:"
-  compiling_specs.each { |s| puts "  - #{s}" }
+if passing_specs.any?
+  puts "✓ Specs that pass:"
+  passing_specs.each { |s| puts "  - #{s}" }
+  puts
+end
+
+if failing_specs.any?
+  puts "⚠ Specs that run but have test failures:"
+  failing_specs.each { |s| puts "  - #{s}" }
   puts
 end
 
@@ -105,28 +132,25 @@ puts
 
 # Categorize errors by type
 categories = {
-  "Parser - include keyword" => [],
   "Parser - other" => [],
   "Compiler - assignment" => [],
-  "Compiler - other" => [],
   "Shunting yard" => [],
   "Link errors" => [],
+  "Internal errors" => [],
   "Unknown" => []
 }
 
 sorted_errors.each do |msg, specs|
-  if msg.include?("name of module to include")
-    categories["Parser - include keyword"] << [msg, specs]
-  elsif msg.include?("Parse error") || msg.include?("Expected:")
+  if msg.include?("Parse error") || msg.include?("Expected:")
     categories["Parser - other"] << [msg, specs]
   elsif msg.include?("assignment")
     categories["Compiler - assignment"] << [msg, specs]
-  elsif msg.include?("Compiler error")
-    categories["Compiler - other"] << [msg, specs]
   elsif msg.include?("Missing value") || msg.include?("requires two values")
     categories["Shunting yard"] << [msg, specs]
   elsif msg.include?("undefined reference")
     categories["Link errors"] << [msg, specs]
+  elsif msg.include?("undefined method") || msg.include?("NoMethodError") || msg.include?("NilClass")
+    categories["Internal errors"] << [msg, specs]
   else
     categories["Unknown"] << [msg, specs]
   end
@@ -155,18 +179,18 @@ priorities = []
 sorted_errors.each do |msg, specs|
   ease = 3 # default medium
 
-  if msg.include?("name of module to include")
-    ease = 4 # Easy: just remove keyword, add method
-    priorities << [specs.size * ease, "Remove 'include' keyword, implement as method", specs.size, ease]
-  elsif msg.include?("assignment") && msg.include?("subexpr")
-    ease = 2 # Hard: requires destructuring implementation
-    priorities << [specs.size * ease, "Implement multiple assignment/destructuring", specs.size, ease]
+  if msg.include?("undefined method") || msg.include?("NoMethodError")
+    ease = 4 # Likely needs better error handling/reporting
+    priorities << [specs.size * ease, "Fix internal error: #{msg[0...40]}", specs.size, ease]
   elsif msg.include?("Missing value") || msg.include?("requires two values")
     ease = 2 # Medium-hard: shunting yard bugs
     priorities << [specs.size * ease, "Fix shunting yard: #{msg[0...40]}", specs.size, ease]
   elsif msg.include?("undefined reference")
     ease = 5 # Very easy: just add stub classes
     priorities << [specs.size * ease, "Add missing exception/class stubs", specs.size, ease]
+  elsif msg.include?("Expected:")
+    ease = 3 # Medium: parser fixes
+    priorities << [specs.size * ease, "Parser fix: #{msg[0...40]}", specs.size, ease]
   else
     priorities << [specs.size * ease, msg[0...60], specs.size, ease]
   end
