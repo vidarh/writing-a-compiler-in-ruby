@@ -610,7 +610,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_class || parse_module || parse_def || parse_include || parse_defexp || literal("protected")
+    ret = parse_class || parse_module || parse_def || parse_defexp || literal("protected")
     if ret.is_a?(Array)
       ret = E[pos].concat(ret)
     elsif ret.respond_to?(:position) && !ret.position

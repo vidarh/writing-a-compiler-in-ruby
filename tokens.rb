@@ -5,7 +5,7 @@ require 'set'
 module Tokens
 
   Keywords = Set[
-    :begin, :break, :case, :class, :def, :do, :else, :end, :ensure, :if, :include,
+    :begin, :break, :case, :class, :def, :do, :else, :end, :ensure, :if,
     :module, :require, :require_relative, :rescue, :then, :unless, :when, :elsif,
     :protected, :next, :lambda
   ]
