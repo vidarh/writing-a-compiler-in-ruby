@@ -39,14 +39,49 @@
 - ✅ Added begin/rescue/else clause support (commit c2c20da)
 
 **Next Steps**:
-1. ⚠️ **PRIORITY SHIFT**: Re-evaluate language spec priorities with data-driven error frequency analysis
-2. Complete full error frequency analysis of all 72 failing language specs
-3. Focus on highest-frequency errors adjusted by implementation difficulty
-4. Consider `include` keyword ambiguity as early win (implement as Class/Module method, not keyword)
+1. Fix highest-frequency compilation errors (Expected EOF, do..end block, missing ')'/missing 'end')
+2. Consider shunting yard errors for "Method call requires two values"
+3. Continue with lower-frequency parser bugs
 
 ---
 
-## Session 41 (continued): Language Spec Priority Re-evaluation (2025-11-01) 🔍 IN PROGRESS
+## Session 41 (final): Error Frequency Analysis Complete (2025-11-02) ✅ COMPLETE
+
+**Completed Tasks**:
+1. ✅ Removed `include` as keyword, implemented as method (commit 815ada4)
+   - Allows `.include?` method calls to work
+   - Preserves compile-time module inclusion via special handling in compile_calls.rb
+2. ✅ Created analyze_all_language_errors.rb script (commit 83aebaf)
+3. ✅ Ran full error frequency analysis on all 79 language specs
+4. ✅ Documented actual error patterns and frequencies
+
+**Error Frequency Analysis Results**:
+- 79 total language specs analyzed
+- ~20 specs appear to compile/run successfully (show only debug output in error capture)
+- ~47 specs have compilation errors with clear patterns
+
+**Top 5 Compilation Errors** (by frequency):
+1. Expected EOF - 6 specs
+2. Method call requires two values (:should) - 5 specs (shunting yard)
+3. Expected: do .. end block - 5 specs
+4. Expected: ')' - 4 specs
+5. Expected: 'end' for 'do'-block - 4 specs
+
+**Files Created/Modified**:
+- analyze_all_language_errors.rb - Full error analysis script
+- language_spec_error_analysis_correct.txt - Complete analysis output
+- docs/TODO.md - Updated with actual error frequencies
+- docs/WORK_STATUS.md - This file
+
+**Commits**:
+- 20d7d49: Document language spec priority list failure
+- 815ada4: Remove 'include' as keyword, implement as method
+- 83aebaf: Fix analyze_all_language_errors.rb to run actual specs
+- 7419fd4: Correct TODO.md with accurate language spec status
+
+---
+
+## Session 41 (continued): Language Spec Priority Re-evaluation (2025-11-01) ✅ COMPLETE
 
 ### Problem Statement
 After implementing begin/ensure blocks (commit 8bf7f18) and bare splat operator (commit 6d1dce2), language spec compilation failures only decreased by 1 (72 → 71), with one regression (safe_spec crash→fail). This indicates the priority list in LANGUAGE_SPEC_COMPILATION_ERRORS.md was not focused on high-impact fixes.

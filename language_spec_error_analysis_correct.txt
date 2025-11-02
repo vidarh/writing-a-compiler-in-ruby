@@ -1,0 +1,376 @@
+Analyzing all language spec compilation errors...
+============================================================
+Found 79 language spec files
+
+Analyzing BEGIN_spec... COMPILE ERROR
+Analyzing END_spec... COMPILE ERROR
+Analyzing alias_spec... COMPILE ERROR
+Analyzing and_spec... COMPILE ERROR
+Analyzing array_spec... COMPILE ERROR
+Analyzing assignments_spec... COMPILE ERROR
+Analyzing block_spec... COMPILE ERROR
+Analyzing break_spec... COMPILE ERROR
+Analyzing case_spec... COMPILE ERROR
+Analyzing class_spec... COMPILE ERROR
+Analyzing class_variable_spec... COMPILE ERROR
+Analyzing comment_spec... COMPILE ERROR
+Analyzing constants_spec... COMPILE ERROR
+Analyzing def_spec... COMPILE ERROR
+Analyzing defined_spec... COMPILE ERROR
+Analyzing delegation_spec... COMPILE ERROR
+Analyzing encoding_spec... COMPILE ERROR
+Analyzing ensure_spec... COMPILE ERROR
+Analyzing execution_spec... COMPILE ERROR
+Analyzing file_spec... COMPILE ERROR
+Analyzing for_spec... COMPILE ERROR
+Analyzing hash_spec... COMPILE ERROR
+Analyzing heredoc_spec... COMPILE ERROR
+Analyzing if_spec... COMPILE ERROR
+Analyzing keyword_arguments_spec... COMPILE ERROR
+Analyzing lambda_spec... COMPILE ERROR
+Analyzing line_spec... COMPILE ERROR
+Analyzing loop_spec... COMPILE ERROR
+Analyzing magic_comment_spec... COMPILE ERROR
+Analyzing match_spec... COMPILE ERROR
+Analyzing metaclass_spec... COMPILE ERROR
+Analyzing method_spec... COMPILE ERROR
+Analyzing module_spec... COMPILE ERROR
+Analyzing next_spec... COMPILE ERROR
+Analyzing not_spec... COMPILE ERROR
+Analyzing numbered_parameters_spec... COMPILE ERROR
+Analyzing numbers_spec... COMPILE ERROR
+Analyzing optional_assignments_spec... COMPILE ERROR
+Analyzing or_spec... COMPILE ERROR
+Analyzing order_spec... COMPILE ERROR
+Analyzing pattern_matching_spec... COMPILE ERROR
+Analyzing precedence_spec... COMPILE ERROR
+Analyzing data_spec... COMPILE ERROR
+Analyzing toplevel_binding_spec... COMPILE ERROR
+Analyzing predefined_spec... COMPILE ERROR
+Analyzing private_spec... COMPILE ERROR
+Analyzing proc_spec... COMPILE ERROR
+Analyzing range_spec... COMPILE ERROR
+Analyzing redo_spec... COMPILE ERROR
+Analyzing anchors_spec... COMPILE ERROR
+Analyzing back-references_spec... COMPILE ERROR
+Analyzing character_classes_spec... COMPILE ERROR
+Analyzing empty_checks_spec... COMPILE ERROR
+Analyzing encoding_spec... COMPILE ERROR
+Analyzing escapes_spec... COMPILE ERROR
+Analyzing grouping_spec... COMPILE ERROR
+Analyzing interpolation_spec... COMPILE ERROR
+Analyzing modifiers_spec... COMPILE ERROR
+Analyzing repetition_spec... COMPILE ERROR
+Analyzing subexpression_call_spec... COMPILE ERROR
+Analyzing regexp_spec... COMPILE ERROR
+Analyzing rescue_spec... COMPILE ERROR
+Analyzing retry_spec... COMPILE ERROR
+Analyzing return_spec... COMPILE ERROR
+Analyzing safe_navigator_spec... COMPILE ERROR
+Analyzing safe_spec... COMPILE ERROR
+Analyzing send_spec... COMPILE ERROR
+Analyzing singleton_class_spec... COMPILE ERROR
+Analyzing source_encoding_spec... COMPILE ERROR
+Analyzing string_spec... COMPILE ERROR
+Analyzing super_spec... COMPILE ERROR
+Analyzing symbol_spec... COMPILE ERROR
+Analyzing throw_spec... COMPILE ERROR
+Analyzing undef_spec... COMPILE ERROR
+Analyzing unless_spec... COMPILE ERROR
+Analyzing until_spec... COMPILE ERROR
+Analyzing variables_spec... COMPILE ERROR
+Analyzing while_spec... COMPILE ERROR
+Analyzing yield_spec... COMPILE ERROR
+
+============================================================
+SUMMARY
+============================================================
+Total language specs analyzed: 79
+Specs that PASS all tests: 0
+Specs that RUN but have failures: 0
+Specs with compilation errors: 47
+
+============================================================
+ERROR FREQUENCY ANALYSIS
+============================================================
+
+1. [12 specs] DEBUG: Starting run_rubyspec for <spec>
+   Affected: BEGIN_spec, class_variable_spec, comment_spec, encoding_spec, loop_spec, not_spec, numbers_spec, order_spec, redo_spec, source_encoding_spec, throw_spec, undef_spec
+
+2. [6 specs] /app/<spec>:[LINE]:[COL]: Expected EOF
+   Affected: alias_spec, break_spec, for_spec, next_spec, send_spec, until_spec
+
+3. [5 specs] Method call requires two values, but only one was found (:should).
+   Affected: case_spec, metaclass_spec, symbol_spec, unless_spec, while_spec
+
+4. [5 specs] /app/<spec>:[LINE]:[COL]: Expected: do .. end block
+   Affected: lambda_spec, magic_comment_spec, method_spec, predefined_spec, yield_spec
+
+5. [4 specs] /app/<spec>:[LINE]:[COL]: Expected: ')'
+   Affected: assignments_spec, delegation_spec, keyword_arguments_spec, super_spec
+
+6. [4 specs] /app/<spec>:[LINE]:[COL]: Expected: 'end' for 'do'-block
+   Affected: class_spec, execution_spec, encoding_spec, safe_spec
+
+7. [2 specs] Constant reference requires two values, but only one was found (:ChildA).
+   Affected: constants_spec, optional_assignments_spec
+
+8. [2 specs] /app/<spec>:[LINE]:[COL]: Unable to open 'rubygems'
+   Affected: file_spec, line_spec
+
+9. [1 specs] '<spec> -I.' into out/rubyspec_temp_END_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_END_spec.s
+/app/shunting.rb:190:in `shunt': Synta
+   Affected: END_spec
+
+10. [1 specs] Expected an argument on left hand side of assignment - got TYPE, (left: [[:index, :__env__, 1], :false, [:index, :__env__, 2]], right: [:callm, :__des
+   Affected: and_spec
+
+11. [1 specs] '<spec> -I.' into out/rubyspec_temp_array_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_array_spec.s
+/app/quoted.rb:159:in `expect': un
+   Affected: array_spec
+
+12. [1 specs] '<spec> -I.' into out/rubyspec_temp_block_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_block_spec.s
+/app/treeoutput.rb:111:in `operato
+   Affected: block_spec
+
+13. [1 specs] '<spec> -I.' into out/rubyspec_temp_def_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_def_spec.s
+/app/shunting.rb:190:in `shunt': Synta
+   Affected: def_spec
+
+14. [1 specs] '<spec> -I.' into out/rubyspec_temp_defined_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_defined_spec.s
+/app/treeoutput.rb:111:in `ope
+   Affected: defined_spec
+
+15. [1 specs] /app/<spec>:[LINE]:[COL]: Expected: expression or 'end' for open def 'raise_in_method_with_ensure'
+   Affected: ensure_spec
+
+16. [1 specs] '<spec> -I.' into out/rubyspec_temp_hash_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_hash_spec.s
+/app/quoted.rb:105:in `expect_squote
+   Affected: hash_spec
+
+17. [1 specs] '<spec> -I.' into out/rubyspec_temp_heredoc_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_heredoc_spec.s
+/app/tokens.rb:538:in `get_raw
+   Affected: heredoc_spec
+
+18. [1 specs] /app/<spec>:[LINE]:[COL]: Expected: condition for 'if' block
+   Affected: if_spec
+
+19. [1 specs] '<spec> -I.' into out/rubyspec_temp_match_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_match_spec.s
+/app/treeoutput.rb:111:in `operato
+   Affected: match_spec
+
+20. [1 specs] Constant reference requires two values, but only one was found (:Nested).
+   Affected: module_spec
+
+21. [1 specs] Method call requires two values, but only one was found ([:call, :call, ["a"]]).
+   Affected: numbered_parameters_spec
+
+22. [1 specs] Expected an argument on left hand side of assignment - got TYPE, (left: [:sexp, 3], right: [:callm, :__destruct, :[], [[:sexp, 3]]]) near (after) line
+   Affected: or_spec
+
+23. [1 specs] Operator: pair requires two values, but only one was found ([:hash, [:ternalt, [:ternalt, [:hash, [:ternalt,...).
+   Affected: pattern_matching_spec
+
+24. [1 specs] '<spec> -I.' into out/rubyspec_temp_precedence_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_precedence_spec.s
+/app/shunting.rb:184:in 
+   Affected: precedence_spec
+
+25. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/predefined/data_spec.rb
+   Affected: data_spec
+
+26. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/predefined/toplevel_binding_spec.rb
+   Affected: toplevel_binding_spec
+
+27. [1 specs] Operator: assign requires two values, but only one was found ([:callm, [:deref, [:deref, :g, :Private], :G], :...).
+   Affected: private_spec
+
+28. [1 specs] Method call requires two values, but only one was found (:call).
+   Affected: proc_spec
+
+29. [1 specs] Operator: range requires two values, but only one was found (1).
+   Affected: range_spec
+
+30. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/anchors_spec.rb
+   Affected: anchors_spec
+
+31. [1 specs] /app/rubyspec_temp_back-references_spec.rb:[LINE]:[COL]: Expected: '}' for '{'-block
+   Affected: back-references_spec
+
+32. [1 specs] Method call requires two values, but only one was found (:to_a).
+   Affected: character_classes_spec
+
+33. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/empty_checks_spec.rb
+   Affected: empty_checks_spec
+
+34. [1 specs] '<spec> -I.' into out/rubyspec_temp_escapes_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_escapes_spec.s
+/app/shunting.rb:190:in `shunt
+   Affected: escapes_spec
+
+35. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/grouping_spec.rb
+   Affected: grouping_spec
+
+36. [1 specs] '<spec> -I.' into out/rubyspec_temp_interpolation_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_interpolation_spec.s
+/app/treeoutput.rb
+   Affected: interpolation_spec
+
+37. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/modifiers_spec.rb
+   Affected: modifiers_spec
+
+38. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/repetition_spec.rb
+   Affected: repetition_spec
+
+39. [1 specs] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/subexpression_call_spec.rb
+   Affected: subexpression_call_spec
+
+40. [1 specs] '<spec> -I.' into out/rubyspec_temp_regexp_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_regexp_spec.s
+/app/shunting.rb:190:in `shunt':
+   Affected: regexp_spec
+
+41. [1 specs] Operator: pair requires two values, but only one was found (:@@captured_error).
+   Affected: rescue_spec
+
+42. [1 specs] /app/<spec>:[LINE]:[COL]: Expected: expression or 'end' for open def 'run_specs'
+   Affected: retry_spec
+
+43. [1 specs] '<spec> -I.' into out/rubyspec_temp_return_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_return_spec.s
+/app/shunting.rb:190:in `shunt':
+   Affected: return_spec
+
+44. [1 specs] Bitwise AND requires two values, but only one was found ([:callm, [:callm, :nil, :unknown], :should]).
+   Affected: safe_navigator_spec
+
+45. [1 specs] '<spec> -I.' into out/rubyspec_temp_singleton_class_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_singleton_class_spec.s
+/app/compile_c
+   Affected: singleton_class_spec
+
+46. [1 specs] Subtraction operator requires two values, but only one was found (77).
+   Affected: string_spec
+
+47. [1 specs] '<spec> -I.' into out/rubyspec_temp_variables_spec
+ruby -I. ./driver.rb <spec> -I. 2>&1 >out/rubyspec_temp_variables_spec.s
+/app/treeoutput.rb:111:in 
+   Affected: variables_spec
+
+============================================================
+CATEGORIZED RECOMMENDATIONS
+============================================================
+
+Parser - other: 17 specs
+  [5] /app/<spec>:[LINE]:[COL]: Expected: do .. end block
+  [4] /app/<spec>:[LINE]:[COL]: Expected: ')'
+  [4] /app/<spec>:[LINE]:[COL]: Expected: 'end' for 'do'-block
+  [1] /app/<spec>:[LINE]:[COL]: Expected: expression or 'end' for open def 'raise_in_m
+  [1] /app/<spec>:[LINE]:[COL]: Expected: condition for 'if' block
+  [1] /app/rubyspec_temp_back-references_spec.rb:[LINE]:[COL]: Expected: '}' for '{'-b
+  [1] /app/<spec>:[LINE]:[COL]: Expected: expression or 'end' for open def 'run_specs'
+
+Compiler - assignment: 2 specs
+  [1] Expected an argument on left hand side of assignment - got TYPE, (left: [[:index
+  [1] Expected an argument on left hand side of assignment - got TYPE, (left: [:sexp, 
+
+Shunting yard: 17 specs
+  [5] Method call requires two values, but only one was found (:should).
+  [2] Constant reference requires two values, but only one was found (:ChildA).
+  [1] Constant reference requires two values, but only one was found (:Nested).
+  [1] Method call requires two values, but only one was found ([:call, :call, ["a"]]).
+  [1] Operator: pair requires two values, but only one was found ([:hash, [:ternalt, [
+  [1] Operator: assign requires two values, but only one was found ([:callm, [:deref, 
+  [1] Method call requires two values, but only one was found (:call).
+  [1] Operator: range requires two values, but only one was found (1).
+  [1] Method call requires two values, but only one was found (:to_a).
+  [1] Operator: pair requires two values, but only one was found (:@@captured_error).
+  [1] Bitwise AND requires two values, but only one was found ([:callm, [:callm, :nil,
+  [1] Subtraction operator requires two values, but only one was found (77).
+
+Unknown: 43 specs
+  [12] DEBUG: Starting run_rubyspec for <spec>
+  [6] /app/<spec>:[LINE]:[COL]: Expected EOF
+  [2] /app/<spec>:[LINE]:[COL]: Unable to open 'rubygems'
+  [1] '<spec> -I.' into out/rubyspec_temp_END_spec
+ruby -I. ./driver.rb <spec> -I. 2>&
+  [1] '<spec> -I.' into out/rubyspec_temp_array_spec
+ruby -I. ./driver.rb <spec> -I. 2
+  [1] '<spec> -I.' into out/rubyspec_temp_block_spec
+ruby -I. ./driver.rb <spec> -I. 2
+  [1] '<spec> -I.' into out/rubyspec_temp_def_spec
+ruby -I. ./driver.rb <spec> -I. 2>&
+  [1] '<spec> -I.' into out/rubyspec_temp_defined_spec
+ruby -I. ./driver.rb <spec> -I.
+  [1] '<spec> -I.' into out/rubyspec_temp_hash_spec
+ruby -I. ./driver.rb <spec> -I. 2>
+  [1] '<spec> -I.' into out/rubyspec_temp_heredoc_spec
+ruby -I. ./driver.rb <spec> -I.
+  [1] '<spec> -I.' into out/rubyspec_temp_match_spec
+ruby -I. ./driver.rb <spec> -I. 2
+  [1] '<spec> -I.' into out/rubyspec_temp_precedence_spec
+ruby -I. ./driver.rb <spec> 
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/predefined/data_spec.rb
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/predefined/toplevel_binding_s
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/anchors_spec.rb
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/empty_checks_spec.rb
+  [1] '<spec> -I.' into out/rubyspec_temp_escapes_spec
+ruby -I. ./driver.rb <spec> -I.
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/grouping_spec.rb
+  [1] '<spec> -I.' into out/rubyspec_temp_interpolation_spec
+ruby -I. ./driver.rb <spe
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/modifiers_spec.rb
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/repetition_spec.rb
+  [1] DEBUG: Starting run_rubyspec for rubyspec/language/regexp/subexpression_call_spe
+  [1] '<spec> -I.' into out/rubyspec_temp_regexp_spec
+ruby -I. ./driver.rb <spec> -I. 
+  [1] '<spec> -I.' into out/rubyspec_temp_return_spec
+ruby -I. ./driver.rb <spec> -I. 
+  [1] '<spec> -I.' into out/rubyspec_temp_singleton_class_spec
+ruby -I. ./driver.rb <s
+  [1] '<spec> -I.' into out/rubyspec_temp_variables_spec
+ruby -I. ./driver.rb <spec> -
+
+============================================================
+RECOMMENDED FIX ORDER (by impact × ease)
+============================================================
+
+1. [Score: 36] DEBUG: Starting run_rubyspec for <spec>
+   Impact: 12 specs, Ease: 3/5
+
+2. [Score: 18] /app/<spec>:[LINE]:[COL]: Expected EOF
+   Impact: 6 specs, Ease: 3/5
+
+3. [Score: 15] Parser fix: /app/<spec>:[LINE]:[COL]: Expected: do .
+   Impact: 5 specs, Ease: 3/5
+
+4. [Score: 12] Parser fix: /app/<spec>:[LINE]:[COL]: Expected: ')'
+   Impact: 4 specs, Ease: 3/5
+
+5. [Score: 12] Parser fix: /app/<spec>:[LINE]:[COL]: Expected: 'end
+   Impact: 4 specs, Ease: 3/5
+
+6. [Score: 10] Fix shunting yard: Method call requires two values, but onl
+   Impact: 5 specs, Ease: 2/5
+
+7. [Score: 6] /app/<spec>:[LINE]:[COL]: Unable to open 'rubygems'
+   Impact: 2 specs, Ease: 3/5
+
+8. [Score: 4] Fix shunting yard: Constant reference requires two values, 
+   Impact: 2 specs, Ease: 2/5
+
+9. [Score: 3] '<spec> -I.' into out/rubyspec_temp_END_spec
+ruby -I. ./driv
+   Impact: 1 specs, Ease: 3/5
+
+10. [Score: 3] Expected an argument on left hand side of assignment - got T
+   Impact: 1 specs, Ease: 3/5
+

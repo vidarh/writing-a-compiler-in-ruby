@@ -16,10 +16,19 @@
 
 **⚠️ SECOND CRITICAL ERROR (Session 41)**: Initial "data-driven" analysis incorrectly analyzed temp files from BOTH integer and language specs, giving completely wrong numbers (claimed 87/145 specs compile when reality is ~4%). **Always verify you're analyzing the correct data set.**
 
-**🔄 IN PROGRESS (Session 41)**:
-- Created analyze_all_language_errors.rb to run actual language specs through run_rubyspec
-- Waiting for complete language spec run to finish
-- Will analyze actual compilation error patterns once data is available
+**✅ COMPLETE (Session 41)**:
+- Created analyze_all_language_errors.rb and ran full error frequency analysis
+- **Actual Results**: 79 language specs analyzed
+  - ~20 specs appear to compile/run (show only debug output in error capture)
+  - ~47 specs have actual compilation errors
+  - 0 specs fully pass all tests
+
+**Top Compilation Errors by Frequency** (excluding debug output):
+1. **Expected EOF** - 6 specs (alias, break, for, next, send, until)
+2. **Method call requires two values** (:should) - 5 specs (shunting yard issue)
+3. **Expected: do .. end block** - 5 specs (lambda, magic_comment, method, predefined, yield)
+4. **Expected: ')'** - 4 specs (assignments, delegation, keyword_arguments, super)
+5. **Expected: 'end' for 'do'-block** - 4 specs (class, execution, encoding, safe)
 
 ---
 
