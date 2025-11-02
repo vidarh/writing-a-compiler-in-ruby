@@ -23,7 +23,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/div_spec.rb (P:10 F:9 S:0 T:19)
 [31m[FAIL] rubyspec/core/integer/downto_spec.rb (P:4 F:5 S:0 T:9)
 [32m[PASS] rubyspec/core/integer/dup_spec.rb (P:2 F:0 S:0 T:2)
-[31m[FAIL] rubyspec/core/integer/element_reference_spec.rb (P:17 F:17 S:0 T:34)
+[31m[FAIL] rubyspec/core/integer/element_reference_spec.rb (P:20 F:16 S:0 T:36)
 [31m[FAIL] rubyspec/core/integer/equal_value_spec.rb (P:3 F:2 S:0 T:5)
 [32m[PASS] rubyspec/core/integer/even_spec.rb (P:6 F:0 S:0 T:6)
 [31m[FAIL] rubyspec/core/integer/exponent_spec.rb (P:8 F:11 S:2 T:21)
@@ -35,7 +35,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/gt_spec.rb (P:2 F:3 S:0 T:5)
 [31m[FAIL] rubyspec/core/integer/integer_spec.rb (P:1 F:3 S:0 T:4)
 [31m[FAIL] rubyspec/core/integer/lcm_spec.rb (P:9 F:2 S:0 T:11)
-[31m[FAIL] rubyspec/core/integer/left_shift_spec.rb (P:27 F:7 S:0 T:34)
+[31m[FAIL] rubyspec/core/integer/left_shift_spec.rb (P:30 F:8 S:0 T:38)
 [31m[FAIL] rubyspec/core/integer/lte_spec.rb (P:5 F:2 S:0 T:7)
 [31m[FAIL] rubyspec/core/integer/lt_spec.rb (P:4 F:1 S:0 T:5)
 [32m[PASS] rubyspec/core/integer/magnitude_spec.rb (P:2 F:0 S:0 T:2)
@@ -52,7 +52,7 @@ Running all specs in rubyspec/core/integer/...
 [32m[PASS] rubyspec/core/integer/pred_spec.rb (P:1 F:0 S:0 T:1)
 [31m[FAIL] rubyspec/core/integer/rationalize_spec.rb (P:3 F:2 S:0 T:5)
 [31m[FAIL] rubyspec/core/integer/remainder_spec.rb (P:2 F:5 S:0 T:7)
-[31m[FAIL] rubyspec/core/integer/right_shift_spec.rb (P:16 F:19 S:0 T:35)
+[31m[FAIL] rubyspec/core/integer/right_shift_spec.rb (P:28 F:12 S:0 T:40)
 [34m[CRASH] rubyspec/core/integer/round_spec.rb
 [31m[FAIL] rubyspec/core/integer/size_spec.rb (P:1 F:2 S:0 T:3)
 [31m[FAIL] rubyspec/core/integer/sqrt_spec.rb (P:4 F:3 S:0 T:7)
@@ -78,8 +78,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 583
-  Passed: 354
-  Failed: 222
+  Total tests: 594
+  Passed: 372
+  Failed: 215
   Skipped: 7
-  Pass rate: 60%
+  Pass rate: 62%
