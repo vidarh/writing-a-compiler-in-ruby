@@ -15,8 +15,7 @@ class TokenizerAdapter
     @escape_tokens = {
       :lambda => :parse_defexp,
       :class => :parse_class,
-      :module => :parse_module,
-      :case => :parse_case
+      :module => :parse_module
     }
   end
 
