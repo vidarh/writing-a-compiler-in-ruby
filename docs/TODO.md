@@ -12,6 +12,8 @@
 **For debugging**: See [DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md)
 **For language spec errors**: See [LANGUAGE_SPEC_COMPILATION_ERRORS.md](LANGUAGE_SPEC_COMPILATION_ERRORS.md)
 
+**⚠️ CRITICAL LESSON LEARNED (Session 41)**: The language spec priority list in LANGUAGE_SPEC_COMPILATION_ERRORS.md was based on a 17-spec sample and manual code inspection, NOT actual error frequency analysis. After implementing items #1-6 (Scanner#position=, begin/rescue/ensure, bare splat), only 1 compilation failure was reduced (72 → 71). **Always validate priorities with data-driven analysis before implementing fixes.**
+
 ---
 
 ## TOP PRIORITY TASKS (Session 41+)

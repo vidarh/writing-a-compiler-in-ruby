@@ -39,10 +39,59 @@
 - ✅ Added begin/rescue/else clause support (commit c2c20da)
 
 **Next Steps**:
-1. Add begin/ensure block support (parser.rb parse_begin)
-2. Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist)
-3. Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
-4. Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+1. ⚠️ **PRIORITY SHIFT**: Re-evaluate language spec priorities with data-driven error frequency analysis
+2. Complete full error frequency analysis of all 72 failing language specs
+3. Focus on highest-frequency errors adjusted by implementation difficulty
+4. Consider `include` keyword ambiguity as early win (implement as Class/Module method, not keyword)
+
+---
+
+## Session 41 (continued): Language Spec Priority Re-evaluation (2025-11-01) 🔍 IN PROGRESS
+
+### Problem Statement
+After implementing begin/ensure blocks (commit 8bf7f18) and bare splat operator (commit 6d1dce2), language spec compilation failures only decreased by 1 (72 → 71), with one regression (safe_spec crash→fail). This indicates the priority list in LANGUAGE_SPEC_COMPILATION_ERRORS.md was not focused on high-impact fixes.
+
+### Root Cause Analysis
+
+**The Priority List Was Wrong**:
+- Original analysis sampled only 17 specs out of 72 failing ones
+- Priorities based on manual code inspection, NOT actual error frequency
+- Items #1-6 implemented (Scanner#position=, begin/rescue/ensure, bare splat) had minimal impact
+
+**Discovery Process**:
+1. Attempted to analyze errors by compiling specs directly → ALL failed with "Unable to open 'mspec'" error
+2. Discovered `run_rubyspec` script bypasses mspec by:
+   - Creating temporary spec files
+   - Replacing `require_relative 'spec_helper'` with `require 'rubyspec_helper'`
+   - Filtering out all require_relative lines
+   - Inlining fixtures and shared files
+3. Analyzed preprocessed temp files to find ACTUAL compilation errors
+
+**Actual Error Examples Found**:
+- `alias_spec`: "Expected: name of module to include" - parser treats `.should include(:foo)` as `include ModuleName` keyword
+- `and_spec`: "Expected an argument on left hand side of assignment" - multiple assignment not supported
+- `array_spec`: **COMPILES SUCCESSFULLY** (one of the specs actually works!)
+- `case_spec`: "Method call requires two values" - shunting yard expression parsing error
+
+### Key Insight: `include` Keyword Ambiguity
+
+**The Issue**: Parser has `include` in Keywords set (tokens.rb:7), so it treats method calls like `.should include(:foo)` as the `include ModuleName` statement.
+
+**Proposed Solution** (suggested by user):
+- Remove `include` from Keywords set
+- Implement `include` as a method on Class/Module instead
+- This should be relatively easy and may unblock multiple specs
+
+### Next Steps
+1. ✅ Document findings in TODO.md and WORK_STATUS.md
+2. [ ] Run full error frequency analysis on all 72 language spec temp files
+3. [ ] Categorize errors and count frequencies
+4. [ ] Create new data-driven priority list
+5. [ ] Fix highest-frequency error (adjusted by ease) - likely `include` keyword ambiguity
+
+### Files Modified
+- docs/TODO.md: Added critical lesson learned warning
+- docs/WORK_STATUS.md: This section
 
 ---
 
