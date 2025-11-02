@@ -107,6 +107,7 @@ module OpPrec
 
     # Describe operator in human-friendly way
     def operator_description(o)
+      return "Unknown operator" if o.nil?
       # Use simple conditionals to avoid parser issues with case/when/then
       if o.sym == :callm
         return "Method call"
