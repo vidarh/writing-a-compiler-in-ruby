@@ -27,15 +27,16 @@
 **Status**: No ongoing work. Session 41 complete.
 
 **Most Recent Completion** (Session 41):
-- ✅ Language spec error frequency analysis complete
-- ✅ Data-driven prioritization established
-- ✅ Top 5 compilation error patterns identified
-- See git log and docs/language_spec_error_analysis_correct.txt for details
+- ✅ Fixed "Expected EOF" parse error for eigenclass/class/module as expression (commit 64e6e6b)
+  - Added :class and :module to TokenizerAdapter @escape_tokens
+  - Enabled eigenclass patterns like `meta = class << obj; self; end`
+  - No regressions: make selftest passes with 0 failures
+  - Impact: Fixes 6+ language specs compilation errors
 
 **Next Steps** (from TODO.md):
-1. Fix highest-frequency compilation errors (Expected EOF - 6 specs)
-2. Fix parser errors (do..end block, missing ')'/missing 'end')
-3. Consider shunting yard errors
+1. Fix parser errors (do..end block, missing ')'/missing 'end')
+2. Fix shunting yard expression parsing errors ("Method call requires two values")
+3. Consider keyword splat support
 
 ---
 

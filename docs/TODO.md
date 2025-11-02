@@ -24,7 +24,7 @@
   - 0 specs fully pass all tests
 
 **Top Compilation Errors by Frequency** (excluding debug output):
-1. **Expected EOF** - 6 specs (alias, break, for, next, send, until)
+1. ~~**Expected EOF** - 6 specs (alias, break, for, next, send, until)~~ ✅ **FIXED** (Session 41, commit 64e6e6b)
 2. **Method call requires two values** (:should) - 5 specs (shunting yard issue)
 3. **Expected: do .. end block** - 5 specs (lambda, magic_comment, method, predefined, yield)
 4. **Expected: ')'** - 4 specs (assignments, delegation, keyword_arguments, super)
@@ -41,10 +41,11 @@
 4. [x] Add begin/rescue else clause support (parser.rb parse_begin) ✅ DONE (commit c2c20da)
 5. [x] Add begin/ensure block support (parser.rb parse_begin, tokens.rb, compiler.rb) ✅ DONE (commit 8bf7f18)
 6. [x] Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist) ✅ DONE
-7. [ ] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
-8. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
-9. [ ] Fix shunting yard expression parsing errors (investigate case by case)
-10. [ ] Add NameError exception class (lib/core/exception.rb)
+7. [x] Fix "Expected EOF" for eigenclass/class/module as expression ✅ DONE (commit 64e6e6b)
+8. [ ] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
+9. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+10. [ ] Fix shunting yard expression parsing errors (investigate case by case)
+11. [ ] Add NameError exception class (lib/core/exception.rb)
 
 **Integer Specs** (Continue improvements):
 11. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)
