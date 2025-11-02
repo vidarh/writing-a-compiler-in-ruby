@@ -6,6 +6,7 @@
 **Current Status (Session 41)**:
 - **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
 - **Language specs**: 8/79 (10%) run, 71/79 (90%) compile failures, 4/75 tests pass (5% pass rate)
+- **Eigenclass fix impact**: Reduced compile failures from 72→71 (1 spec unblocked)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
