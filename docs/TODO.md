@@ -5,7 +5,7 @@
 
 **Current Status (Session 41)**:
 - **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
-- **Language specs**: 0/79 passing (0%), 72 compile failures (91%)
+- **Language specs**: 87/145 (60%) compile, 30 (21%) have errors, 28 (19%) not analyzed
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -13,6 +13,16 @@
 **For language spec errors**: See [LANGUAGE_SPEC_COMPILATION_ERRORS.md](LANGUAGE_SPEC_COMPILATION_ERRORS.md)
 
 **⚠️ CRITICAL LESSON LEARNED (Session 41)**: The language spec priority list in LANGUAGE_SPEC_COMPILATION_ERRORS.md was based on a 17-spec sample and manual code inspection, NOT actual error frequency analysis. After implementing items #1-6 (Scanner#position=, begin/rescue/ensure, bare splat), only 1 compilation failure was reduced (72 → 71). **Always validate priorities with data-driven analysis before implementing fixes.**
+
+**✅ DATA-DRIVEN ANALYSIS COMPLETE (Session 41)**:
+- Created analyze_all_language_errors.rb for systematic error frequency analysis
+- **Results**: 87/145 specs (60%) compile successfully, only 30 specs (21%) have errors
+- `include` keyword fix improved from 86 to 87 compiling specs
+- **Top priority errors** identified by impact × ease (see language_spec_error_analysis.txt):
+  1. **Expected EOF** (6 specs) - parser stops prematurely
+  2. **Regex tokenization** (5 specs) - `/pattern/` parsed as division (**user confirmed: basic tokenization exists, improving it is HIGH PRIORITY**)
+  3. **Internal compiler errors** (5 specs) - undefined method `sym` for nil (**needs better error reporting**)
+  4. **Expected do..end block** (5 specs) - parser issue
 
 ---
 
