@@ -351,7 +351,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_require_relative || parse_require
+    ret = parse_class || parse_module || parse_sexp || parse_while || parse_begin || parse_case || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
     # FIXME: @bug this below is needed for MRI, but not for the selfhosted compiler...
@@ -474,9 +474,9 @@ class Parser < ParserBase
     pos = position
     type = keyword(:class) or return
     ws
-    name = expect(Atom) || literal("\<\<") or expected("class name")
+    name = expect(Atom) || literal('<<') or expected("class name")
     if name == "<<"
-      ob = parse_exp
+      ob = parse_subexp
       name = [:eigen, ob]
     end
     ws
