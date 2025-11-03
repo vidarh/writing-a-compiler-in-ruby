@@ -414,11 +414,7 @@ class Parser < ParserBase
     pos = position
     return nil if !keyword(:break)
     exps = parse_subexp
-    # FIXME: Compiler @bug workaround:
-    # Current splat handling crashes if argument is not
-    # an array.
-    exps = Array(exps) if exps
-    return E[pos, :break, *exps] if exps
+    return E[pos, :break, exps] if exps
     return E[pos, :break]
   end
 
@@ -426,11 +422,8 @@ class Parser < ParserBase
     pos = position
     return nil if !keyword(:next)
     exps = parse_subexp
-    # FIXME: Compiler @bug workaround:
-    # Current splat handling crashes if argument is not
-    # an array.
-    exps = Array(exps)
-    return E[pos, :next, *exps]
+    return E[pos, :next, exps] if exps
+    return E[pos, :next]
   end
 
   # Later on "defexp" will allow anything other than "def"
