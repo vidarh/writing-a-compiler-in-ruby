@@ -72,17 +72,15 @@ class ParserBase
   # Otherwise, the message only contains the current linenumber and the error message.
   def error(message)
     if from_file?
-      # Format: filename(line:col): message
-      # Source context will be added automatically by CompilerError#message
-      error_location = "#{filename}(#{@scanner.lineno}:#{@scanner.col})"
-      full_message = "Parse error: #{error_location}: #{message}"
+      # Location and source context will be added automatically by CompilerError#message
+      full_message = "Parse error: #{message}"
 
       raise ParseError.new(full_message,
                            filename,
                            @scanner.lineno,
                            @scanner.col)
     else
-      raise ParseError.new("Parse error: #{@scanner.lineno}: #{message}",
+      raise ParseError.new("Parse error: #{message}",
                            nil,
                            @scanner.lineno)
     end

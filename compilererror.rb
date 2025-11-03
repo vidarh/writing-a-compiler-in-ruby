@@ -101,8 +101,12 @@ class CompilerError < StandardError
   def message
     base_message = super
     if @filename && @line
+      # Format location: filename:line or filename:line:col (copy-pasteable to editors)
+      location = "#{@filename}:#{@line}"
+      location = location + ":#{@column}" if @column
+
       context = CompilerError.format_source_context(@filename, @line, @column, @block_start_line)
-      return base_message + "\n" + context
+      return "#{location}: #{base_message}\n" + context
     end
     return base_message
   end
