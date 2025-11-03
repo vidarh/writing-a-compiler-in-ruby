@@ -15,18 +15,26 @@
 
 ---
 
-**Last Updated**: 2025-11-02
+**Last Updated**: 2025-11-03
 **Current Test Results**: 30/67 integer specs (45%), 372/594 tests (62%), 3 crashes
-**Language Specs**: ~8/79 run, ~71/79 compile failures (analysis complete)
+**Language Specs**: 15/79 run or crash, 64/79 compile failures (down from 71), 8/110 tests pass (7%)
 **Selftest Status**: 0 failures ✅
 
 ---
 
 ## Current Work
 
-**Status**: No ongoing work. Error handling improvements complete (Session 41 continued).
+**Status**: No ongoing work. Exception classes and parser improvements complete (Session 42 continued).
 
-**Most Recent Completion** (Session 41 continued - 2025-11-03):
+**Most Recent Completion** (Session 42 continued - 2025-11-03):
+- ✅ **Missing Exception Classes** (commit df6c7e2)
+  - Added NameError, SyntaxError, LocalJumpError, NoMatchingPatternError, UncaughtThrowError
+  - All subclasses of StandardError per Ruby stdlib
+  - Result: undef_spec and encoding_spec now compile and link
+  - Impact: 3 specs moved from compile failure to runtime (undef_spec, encoding_spec, safe_spec)
+  - Compile failures: 71 → 64 (-7 specs)
+
+**Previous Completion** (Session 42 - 2025-11-03):
 - ✅ **Error Handling Improvements** (commits 1263f71, ce1a2b8, e055b6b)
   - **Color highlighting**: ANSI colors for line numbers (cyan), error lines (red), position markers (bright red)
   - **Fixed double linefeeds**: Implemented String#chomp and String#chomp! methods (53 lines)
@@ -43,10 +51,10 @@
   - Impact: Fixes 6+ language specs compilation errors
 
 **Next Steps** (from TODO.md):
-1. Fix keyword splat: `def foo(**kwargs); end`
-2. Fix shunting yard expression parsing errors ("Method call requires two values")
-3. Investigate brace syntax limitations
-4. Add NameError exception class
+1. Investigate remaining parse errors (delegation_spec hash syntax, assignments_spec splat+begin)
+2. Fix backtick syntax for shell command execution (blocks execution_spec)
+3. Fix control structures as expressions (architectural blocker - 5 specs)
+4. Investigate runtime crashes (safe_spec segfault, undef_spec hang)
 
 ---
 
