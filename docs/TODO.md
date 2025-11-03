@@ -30,7 +30,7 @@
 1. ~~**Expected EOF** - 6 specs (alias, break, for, next, send, until)~~ ✅ **FIXED** (Session 41, commit 64e6e6b)
 2. **Method call requires two values** (:should) - 5 specs - 📋 **DOCUMENTED** (Session 42) - See [control_structures_as_expressions.md](control_structures_as_expressions.md) - Requires architectural changes to support control structures (if/while/unless/begin) as expressions. Blocked pending design decision.
 3. **Expected: do .. end block / Expected: '}'** - 5+ specs - 🔨 **PARTIAL FIX** (Session 42, commit c5b3d1a) - Stabby lambda inline parameters now supported: `->(x) {}`, `-> x {}`. **NOTE**: Some errors (magic_comment_spec, predefined_spec) are caused by run_rubyspec sed mangling, not parser bugs. Real remaining issues: splat parameters (`-> *x`), `.()` call syntax.
-4. **Expected: ')'** - 4 specs (assignments, delegation, keyword_arguments, super)
+4. **Expected: ')'** - 4 specs - 🔨 **PARTIAL FIX** (Session 42, commit d185f83) - Keyword argument parsing implemented: `kw:`, `kw: default`, `**kwargs`. keyword_arguments_spec now parses. Remaining: assignments_spec (splat + begin), delegation_spec (hash in calls), super_spec (module issue).
 5. **Expected: 'end' for 'do'-block** - 4 specs (class, execution, encoding, safe)
 
 ---
