@@ -28,7 +28,7 @@
 #
 
 class Compiler
-  def compile_include(scope, incl)
+  def compile_include(scope, incl, pos = nil)
 
     # At this point we want to:
     #
@@ -37,13 +37,9 @@ class Compiler
 
     mscope = scope.find_constant(incl)
     if !mscope
-      # Extract position info from AST node if available
-      if incl.respond_to?(:position) && incl.position
-        pos = incl.position
-        raise CompilerError.new("Module not found: #{incl}",
-                                pos.filename,
-                                pos.lineno,
-                                pos.col)
+      # Use position info from wrapping expression
+      if pos
+        raise CompilerError.new("Module not found: #{incl}", pos)
       else
         raise CompilerError.new("Module not found: #{incl}")
       end

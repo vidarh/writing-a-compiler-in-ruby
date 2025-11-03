@@ -192,14 +192,14 @@ class Compiler
   # Compiles a function call.
   # Takes the current scope, the function to call as well as the arguments
   # to call the function with.
-  def compile_call(scope, func, args, block = nil)
+  def compile_call(scope, func, args, block = nil, pos = nil)
     return compile_yield(scope, args, block) if func == :yield
 
     # Handle 'include ModuleName' as compile-time module inclusion
     if func == :include
       # args is array of module names, but we only support single module for now
       mod_name = args.is_a?(Array) ? args[0] : args
-      return compile_include(scope, mod_name)
+      return compile_include(scope, mod_name, pos)
     end
 
     # This is a bit of a hack. get_arg will also be called from

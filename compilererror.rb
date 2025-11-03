@@ -5,12 +5,25 @@
 class CompilerError < StandardError
   attr_reader :filename, :line, :column, :block_start_line
 
-  def initialize(message, filename = nil, line = nil, column = nil, block_start_line = nil)
+  # Initialize with either a Position object or individual parameters
+  # Usage: CompilerError.new(message, position)
+  #    or: CompilerError.new(message, filename, line, column, block_start_line)
+  def initialize(message, filename_or_pos = nil, line = nil, column = nil, block_start_line = nil)
     super(message)
-    @filename = filename
-    @line = line
-    @column = column
-    @block_start_line = block_start_line
+
+    # Check if second parameter is a Position object
+    if filename_or_pos.respond_to?(:filename) && filename_or_pos.respond_to?(:lineno)
+      pos = filename_or_pos
+      @filename = pos.filename
+      @line = pos.lineno
+      @column = pos.col
+      @block_start_line = block_start_line
+    else
+      @filename = filename_or_pos
+      @line = line
+      @column = column
+      @block_start_line = block_start_line
+    end
   end
 
   # ANSI color codes

@@ -887,9 +887,9 @@ class Compiler
     elsif @@oper_methods.member?(exp[0])
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
-      return compile_call(scope, exp[1], exp[2],exp[3]) if (exp[0] == :call)
+      return compile_call(scope, exp[1], exp[2],exp[3], pos) if (exp[0] == :call)
       return compile_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :callm)
-      return compile_call(scope, exp[0], exp.rest) if (exp.is_a? Array)
+      return compile_call(scope, exp[0], exp.rest, nil, pos) if (exp.is_a? Array)
     end
 
     warning("Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}")
