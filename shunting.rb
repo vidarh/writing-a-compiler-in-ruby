@@ -98,8 +98,14 @@ module OpPrec
       elsif op.sym == :quoted_exp
         @out.value(parse_quoted_exp)
       elsif op.type == :rp
-        @out.value(nil) if lastlp
-        @out.value(nil) if src.lasttoken and src.lasttoken[1] == COMMA
+        # Only push :nil for empty parentheses (), not for empty arrays [] or hashes/blocks {}
+        # Check ostack.first.sym: nil for (), :array for [], :hash_or_block for {}
+        if lastlp && ostack.first && ostack.first.sym.nil?
+          @out.value(:nil)
+        elsif lastlp
+          @out.value(nil)  # For empty [] and {}, push nil placeholder
+        end
+        @out.value(nil) if src.lasttoken and src.lasttoken[1] == COMMA  # Trailing comma - keep as nil for arrays
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break
