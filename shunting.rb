@@ -192,7 +192,8 @@ module OpPrec
           @out.value(nil)
         else
           scanner = @tokenizer.scanner
-          msg = "Missing value for prefix operator #{ostack[-1].sym.to_s} / #{token.inspect} / #{token.position.short}"
+          token_info = token.respond_to?(:position) ? token.position.short : token.inspect
+          msg = "Missing value for prefix operator #{ostack[-1].sym.to_s} / #{token_info}"
           raise ShuntingYardError.new(msg,
                                       scanner ? scanner.filename : nil,
                                       scanner ? scanner.lineno : nil,

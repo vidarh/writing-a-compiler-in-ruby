@@ -44,13 +44,26 @@ class Parser < ParserBase
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist
-    prefix = literal(ASTERISK) || literal(AMP)
+    # Check for **, *, or & prefix
+    prefix = nil
+    if literal(ASTERISK)
+      # Check if it's ** (keyword splat) or * (splat)
+      if literal(ASTERISK)
+        prefix = "**"
+      else
+        prefix = ASTERISK
+      end
+    elsif literal(AMP)
+      prefix = AMP
+    end
+
     ws if prefix
     ## FIXME: If "name" is not mentioned here, it is not correctly recognised
     name = nil
     if !(name = parse_name)
       # Allow bare splat (e.g., def foo(*); end) - use special name :_
-      if prefix == ASTERISK
+      # Also allow bare keyword splat (e.g., def foo(**); end)
+      if prefix == ASTERISK || prefix == "**"
         name = :_
       elsif prefix
         expected("argument name following '#{prefix}'")
@@ -61,12 +74,35 @@ class Parser < ParserBase
 
     nolfws
     default = nil
-    if literal("=")
+    is_keyword_arg = false
+
+    # Check for keyword argument syntax: name: or name: value
+    if literal(":")
+      is_keyword_arg = true
+      nolfws
+      # Check if there's a default value after the colon
+      # Peek to see if next token is not comma/close paren
+      if @scanner.peek != "," && @scanner.peek != ")"
+        default = @shunting.parse([COMMA])
+      end
+    elsif literal("=")
       nolfws
       default = @shunting.parse([COMMA])
     end
 
-    if prefix then args = [[name.to_sym, prefix == ASTERISK ? :rest : :block]]
+    if prefix == "**"
+      args = [[name.to_sym, :keyrest]]
+    elsif prefix == ASTERISK
+      args = [[name.to_sym, :rest]]
+    elsif prefix == AMP
+      args = [[name.to_sym, :block]]
+    elsif is_keyword_arg
+      # Keyword argument: kw: or kw: default
+      if default
+        args = [[name.to_sym, :key, default]]
+      else
+        args = [[name.to_sym, :keyreq]]
+      end
     elsif default
       args = [[name.to_sym, :default, default]]
     else

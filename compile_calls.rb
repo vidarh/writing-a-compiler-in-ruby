@@ -286,6 +286,11 @@ class Compiler
   # Compiles a super method call
   #
   def compile_super(scope, args, block = nil)
+    if !scope.method
+      raise CompilerError.new("super: no superclass method (called outside of method definition)",
+                              @filename,
+                              @lineno)
+    end
     method = scope.method.name
     @e.comment("super #{method.inspect}")
     trace(nil,"=> super #{method.inspect}\n")
