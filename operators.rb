@@ -101,6 +101,7 @@ Operators = {
   "||"        => Oper.new(  6, :or,       :infix),
 
   "!"         => Oper.new(  8, :"!",      :prefix),
+  "not"       => Oper.new(  2, :"!",      :prefix),  # Ruby keyword version of !, lower precedence
   "~"         => Oper.new(  8, :"~",      :prefix),
   "<<"        => Oper.new(  8, :<<,       :infix, 2, 2, :left),
   ">>"        => Oper.new(  8, :>>,       :infix, 2, 2, :left),
