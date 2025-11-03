@@ -3,10 +3,13 @@
 **Purpose**: Task list for improving rubyspec test pass rate (integer specs + language specs)
 **Format**: One-line tasks. Details in referenced docs.
 
-**Current Status (Session 41)**:
+**Current Status (Session 42)**:
 - **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
-- **Language specs**: 8/79 (10%) run, 71/79 (90%) compile failures, 4/75 tests pass (5% pass rate)
-- **Eigenclass fix impact**: Reduced compile failures from 72→71 (1 spec unblocked)
+- **Language specs**: Re-running after fixes (Session 42 fixes: operator precedence, empty parens, 'not' keyword)
+- **Recent fixes** (Session 42):
+  - Split precedence for assignment operators (fixes `true && x = 1` parsing)
+  - Empty parentheses now evaluate as nil (fixes `() && true` and similar expressions)
+  - Added 'not' keyword operator (improves not_spec from 4/16 to 9/10 tests)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -71,8 +74,11 @@
 7. [x] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist) ✅ DONE (commit d185f83)
 8. [x] Add missing exception classes (lib/core/exception.rb) ✅ DONE (commit df6c7e2) - Added NameError, SyntaxError, LocalJumpError, NoMatchingPatternError, UncaughtThrowError
 9. [x] Add ensure clause support to do..end blocks (parser.rb parse_block) ✅ DONE (commit 685e2f6) - Fixes 3 of 4 "Expected: 'end' for 'do'-block" errors
-10. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
-11. [ ] Fix shunting yard expression parsing errors (investigate case by case)
+10. [x] Fix empty parentheses in expressions (shunting.rb) ✅ DONE (commit ab083aa) - Empty `()` now pushes `:nil` symbol instead of nil placeholder, fixing malformed AST nodes for `() && true`, `true && ()`, `() && ()`. Only applies to `()`, not `[]` or `{}`.
+11. [x] Add split precedence support for assignment operators (operators.rb, shunting.rb) ✅ DONE (Session 42) - Assignment operators now have left precedence 7, right precedence 5, fixing `true && x = 1` parsing
+12. [x] Add 'not' keyword operator (operators.rb) ✅ DONE (commit cc2c08b) - Maps to `!` with lower precedence (2 vs 8), improves not_spec from 4/16 to 9/10 tests
+13. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+14. [ ] Fix shunting yard expression parsing errors (investigate case by case)
 
 **Integer Specs** (Continue improvements):
 12. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)
