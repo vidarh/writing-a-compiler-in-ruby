@@ -26,6 +26,24 @@
 
 **⚠️ IMPORTANT**: Some spec compilation errors are caused by the `run_rubyspec` script's sed transformations mangling valid Ruby code. See [rubyspec_runner_limitations.md](rubyspec_runner_limitations.md) for details. The `it_behaves_like` parenthesization breaks multi-line lambda blocks.
 
+## 🐛 KNOWN BUGS
+
+### Integer::MIN Literal Causes selftest-c Assembly Failure
+**Status**: WORKAROUND IN PLACE (Integer::MIN commented out)
+**Discovered**: Nov 3, 2025 (Session 42)
+
+**Problem**: Defining `Integer::MIN = -1073741824` (-2^30) as a constant causes selftest-c to fail during assembly with an invalid immediate expression. The compiled compiler (driver2) generates a huge negative literal `-1329227993309035794333046510482096127` (0xfffffff7ffffffffffffffffffffff) instead of the correct value.
+
+**Root Cause**: Unknown. The value -1073741824 is exactly at the fixnum boundary (min_fixnum). When MRI Ruby parses it, it stays as a fixnum. But when the self-compiled compiler tries to compile it again during selftest-c, something in the literal parsing/generation logic produces an incorrect huge negative number.
+
+**Workaround**: Integer::MIN is commented out in both `lib/core/integer_base.rb` and `lib/core/integer.rb`. The constant is not currently used anywhere in the codebase, so this has no functional impact.
+
+**Location**:
+- `lib/core/integer_base.rb:9`
+- `lib/core/integer.rb:28`
+
+**To Fix**: Debug why the literal -1073741824 gets corrupted during self-compilation. Likely issue in tokens.rb (Tokens::Int.expect) or in how the compiler emits integer constants at the fixnum boundary.
+
 **Top Compilation Errors by Frequency** (excluding debug output):
 1. ~~**Expected EOF** - 6 specs (alias, break, for, next, send, until)~~ ✅ **FIXED** (Session 41, commit 64e6e6b)
 2. **Method call requires two values** (:should) - 5 specs - 📋 **DOCUMENTED** (Session 42) - See [control_structures_as_expressions.md](control_structures_as_expressions.md) - Requires architectural changes to support control structures (if/while/unless/begin) as expressions. Blocked pending design decision.

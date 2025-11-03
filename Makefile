@@ -15,6 +15,7 @@ out/driver2: *.rb lib/core/*.rb *.c out/driver
 
 compiler: out/driver
 
+
 compiler-nodebug: *.rb lib/core/*.rb *.c
 	./compile driver.rb -I .
 
@@ -34,7 +35,7 @@ push:
 # failures under MRI implies the code does something wrong,
 selftest-mri:
 	@echo "== Selftest with MRI:"
-	${DR} ruby -I. test/selftest.rb
+	ruby -I. test/selftest.rb
 
 selftest:
 	./compile test/selftest.rb -I. -g

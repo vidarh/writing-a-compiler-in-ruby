@@ -294,6 +294,10 @@ class String
     self
   end
 
+  def to_str
+    self
+  end
+
   def to_sym
     buffer = @buffer
     %s(call __get_symbol buffer)

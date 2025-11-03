@@ -25,7 +25,7 @@ class Integer < Numeric
   # Fixnum constants - 31-bit signed values (1 tag bit + 30 value bits + sign)
   # Limbs are 30-bit unsigned values stored as tagged fixnums in this range
   MAX = 1073741823   # 2^30 - 1 (max 30-bit unsigned = max fixnum positive)
-  MIN = -1073741824  # -2^30
+  # MIN = -1073741824  # -2^30  # COMMENTED OUT - causes selftest-c assembly failure
 
   # Initialize a heap-allocated integer
   # This is NOT called for tagged fixnums (immediate values)

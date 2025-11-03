@@ -6,7 +6,7 @@
 class Integer < Numeric
   # Minimal constants - 30-bit signed values (using 31 bits: 1 tag + 30 value)
   MAX = 1073741823   # 2^30 - 1
-  MIN = -1073741824  # -2^30
+  # MIN = -1073741824  # -2^30  # COMMENTED OUT - causes selftest-c assembly failure
 
   def class
     Integer

@@ -52,7 +52,7 @@ module OpPrec
       # then don't strictly need to go on the stack at all - they could be pushed on after the shunt returns. May
       # do that later.
 
-      while  !ostack.empty? && (ostack.last.pri > pri || (ostack.last.pri == pri && op.assoc == :left) || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
+      while  !ostack.empty? && (ostack.last.right_pri > pri || (ostack.last.right_pri == pri && op.assoc == :left) || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
         o = ostack.pop
         @out.oper(o) if o.sym
       end

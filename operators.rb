@@ -14,10 +14,11 @@ require 'set'
 # The priority defines the precedence-rules for the parser.
 # LARGER numbers mean TIGHTER binding (higher precedence).
 class Oper
-  attr_accessor :pri, :sym, :type, :arity, :minarity,:assoc
+  attr_accessor :pri, :right_pri, :sym, :type, :arity, :minarity,:assoc
 
-  def initialize(pri, sym, type, arity = nil, minarity = nil, assoc = :right)
+  def initialize(pri, sym, type, arity = nil, minarity = nil, assoc = :right, right_pri = nil)
     @pri = pri
+    @right_pri = right_pri || @pri
     @sym = sym
     @type = type
     if !arity
@@ -83,10 +84,14 @@ Operators = {
     :prefix           => Oper.new(  5, :to_block, :prefix)
   },
 
-  "="         => Oper.new(  5, :assign,   :infix),
-  "||="       => Oper.new(  5, :or_assign,:infix),
-  "-="        => Oper.new(  5, :decr,     :infix),
-  "+="        => Oper.new(  5, :incr,     :infix),
+  # We need assignment operators to have different priority to its left and
+  # right due to Ruby grammar weirdess. E.g. && binds looser than = when
+  # on its left, and tighter than = when on its right.
+  #
+  "="         => Oper.new(  7, :assign,   :infix, 2, 2, :right, 5),
+  "||="       => Oper.new(  7, :or_assign,:infix, 2, 2, :right, 5),
+  "-="        => Oper.new(  7, :decr,     :infix, 2, 2, :right, 5),
+  "+="        => Oper.new(  7, :incr,     :infix, 2, 2, :right, 5),
 
   "?"         => Oper.new(  6, :ternif,   :infix),
   "return"    => Oper.new(  6, :return,   :prefix,1,0),
