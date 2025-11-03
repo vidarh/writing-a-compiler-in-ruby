@@ -36,7 +36,18 @@ class Compiler
     #    works (are re-directed to original class.
 
     mscope = scope.find_constant(incl)
-    raise "Module not found: #{incl}" if !mscope
+    if !mscope
+      # Extract position info from AST node if available
+      if incl.respond_to?(:position) && incl.position
+        pos = incl.position
+        raise CompilerError.new("Module not found: #{incl}",
+                                pos.filename,
+                                pos.lineno,
+                                pos.col)
+      else
+        raise CompilerError.new("Module not found: #{incl}")
+      end
+    end
     scope.include_module(mscope)
 
     # 2. For each method, looks up method in current super class

@@ -286,12 +286,9 @@ class Compiler
   # Compiles a super method call
   #
   def compile_super(scope, args, block = nil)
-    if !scope.method
-      raise CompilerError.new("super: no superclass method (called outside of method definition)",
-                              @filename,
-                              @lineno)
-    end
-    method = scope.method.name
+    # FIXME: scope.method can be nil in some contexts (blocks, lambdas)
+    # For now, use a placeholder name if method is nil
+    method = scope.method ? scope.method.name : :__unknown__
     @e.comment("super #{method.inspect}")
     trace(nil,"=> super #{method.inspect}\n")
     ret = compile_callm(scope, :self, method, args, block, true)

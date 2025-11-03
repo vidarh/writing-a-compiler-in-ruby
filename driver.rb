@@ -52,22 +52,27 @@ require 'compiler'
   end
   
   if prog
-    e = Emitter.new
-    e.debug == nil if nostabs
+    begin
+      e = Emitter.new
+      e.debug == nil if nostabs
 
-    c = Compiler.new(e)
-    c.trace = true if trace
-    c.stackfence = true if stackfence
+      c = Compiler.new(e)
+      c.trace = true if trace
+      c.stackfence = true if stackfence
 
-    c.preprocess(prog) if transform
+      c.preprocess(prog) if transform
 
-    if dump || dumpsymtabs
-      print_sexp prog if dump
-      c.global_scope.dump if dumpsymtabs
-      exit(0)
+      if dump || dumpsymtabs
+        print_sexp prog if dump
+        c.global_scope.dump if dumpsymtabs
+        exit(0)
+      end
+
+      c.compile(prog)
+    rescue CompilerError => e
+      STDERR.puts e.message
+      exit(1)
     end
-    
-    c.compile(prog)
   end
 
 
