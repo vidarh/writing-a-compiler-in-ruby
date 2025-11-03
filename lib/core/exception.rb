@@ -189,6 +189,9 @@ end
 class NoMethodError < StandardError
 end
 
+class NameError < StandardError
+end
+
 class ArgumentError < StandardError
 end
 
@@ -208,4 +211,16 @@ class RuntimeError < StandardError
 end
 
 class FloatDomainError < StandardError
+end
+
+class SyntaxError < StandardError
+end
+
+class LocalJumpError < StandardError
+end
+
+class NoMatchingPatternError < StandardError
+end
+
+class UncaughtThrowError < StandardError
 end
