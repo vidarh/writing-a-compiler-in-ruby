@@ -101,7 +101,7 @@ Operators = {
   "||"        => Oper.new(  6, :or,       :infix),
 
   "!"         => Oper.new(  8, :"!",      :prefix),
-  "not"       => Oper.new(  2, :"!",      :prefix),  # Ruby keyword version of !, lower precedence
+  "not"       => Oper.new(  7, :"!",      :prefix, nil, nil, :right, 99),  # Split precedence: pri=7 (lower than assignment left) but right_pri=99 (forces reduction before method calls)
   "~"         => Oper.new(  8, :"~",      :prefix),
   "<<"        => Oper.new(  8, :<<,       :infix, 2, 2, :left),
   ">>"        => Oper.new(  8, :>>,       :infix, 2, 2, :left),
