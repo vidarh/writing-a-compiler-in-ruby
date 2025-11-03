@@ -37,13 +37,13 @@
 
 **Language Specs** (HIGHEST PRIORITY - unblock ~5-10 specs):
 1. [x] Fix Scanner#position= bug (parser.rb:405, scanner.rb) - add setter method ✅ DONE (commit f541211)
-2. [ ] **IN PROGRESS**: Improve error reporting with multi-line source context - see [ERROR_HANDLING_IMPROVEMENT_PLAN.md](ERROR_HANDLING_IMPROVEMENT_PLAN.md)
-   - [x] Revert broken error handling (commits 33914d0, 8a9e418) - treeoutput.rb DONE
-   - [ ] Revert parserbase.rb
-   - [ ] Add format_source_context helper
-   - [ ] Improve parser error messages with multi-line context
-   - [ ] Improve shunting yard error messages with multi-line context
-   - [ ] Test and validate
+2. [x] Improve error reporting with multi-line source context ✅ DONE (commits 1263f71, ce1a2b8, e055b6b)
+   - [x] Centralized error formatting in CompilerError class
+   - [x] Added ANSI color highlighting (cyan line numbers, red error lines, bright red markers)
+   - [x] Implemented String#chomp and String#chomp! methods
+   - [x] Added block_start_line support for showing block context
+   - [x] Fixed double linefeed issue
+   - [x] All error types (ParseError, ShuntingYardError) inherit formatting automatically
 3. [x] Add begin/rescue else clause support (parser.rb parse_begin) ✅ DONE (commit c2c20da)
 4. [x] Add begin/ensure block support (parser.rb parse_begin, tokens.rb, compiler.rb) ✅ DONE (commit 8bf7f18)
 5. [x] Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist) ✅ DONE

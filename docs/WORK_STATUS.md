@@ -24,9 +24,18 @@
 
 ## Current Work
 
-**Status**: No ongoing work. Session 41 complete.
+**Status**: No ongoing work. Error handling improvements complete (Session 41 continued).
 
-**Most Recent Completion** (Session 41):
+**Most Recent Completion** (Session 41 continued - 2025-11-03):
+- ✅ **Error Handling Improvements** (commits 1263f71, ce1a2b8, e055b6b)
+  - **Color highlighting**: ANSI colors for line numbers (cyan), error lines (red), position markers (bright red)
+  - **Fixed double linefeeds**: Implemented String#chomp and String#chomp! methods (53 lines)
+  - **Block start position**: Added block_start_line parameter to show where block started (e.g., missing 'end')
+  - **Centralized formatting**: All error types inherit colored formatting from CompilerError#message
+  - **Result**: Clean, readable error messages with visual hierarchy
+  - **No regressions**: make selftest passes with 0 failures
+
+**Previous Completion** (Session 41):
 - ✅ Fixed "Expected EOF" parse error for eigenclass/class/module as expression (commit 64e6e6b)
   - Added :class and :module to TokenizerAdapter @escape_tokens
   - Enabled eigenclass patterns like `meta = class << obj; self; end`
@@ -34,9 +43,10 @@
   - Impact: Fixes 6+ language specs compilation errors
 
 **Next Steps** (from TODO.md):
-1. Fix parser errors (do..end block, missing ')'/missing 'end')
+1. Fix keyword splat: `def foo(**kwargs); end`
 2. Fix shunting yard expression parsing errors ("Method call requires two values")
-3. Consider keyword splat support
+3. Investigate brace syntax limitations
+4. Add NameError exception class
 
 ---
 
