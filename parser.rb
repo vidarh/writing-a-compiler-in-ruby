@@ -548,9 +548,47 @@ class Parser < ParserBase
     name = parse_defname
     args = parse_args || []
     literal(";")
+
+    # Parse method body - parse_block_exps will naturally stop at keywords like rescue/ensure/end
     exps = parse_block_exps
+
+    # Parse optional rescue clause (similar to parse_begin)
+    rescue_ = nil
+    ws
+    if keyword(:rescue)
+      nolfws
+      c = parse_name  # Optional exception class
+      nolfws
+      name_var = nil
+      if literal("=>")
+        ws
+        name_var = parse_name or expected("variable to hold exception")
+      end
+      ws
+      # parse_opt_defexp will naturally stop at ensure/end keywords
+      rescue_body = parse_opt_defexp
+      rescue_ = E[pos, :rescue, c, name_var, rescue_body]
+    end
+
+    # Parse optional ensure clause (similar to parse_begin)
+    ensure_body = nil
+    ws
+    if keyword(:ensure)
+      ws
+      # parse_opt_defexp will naturally stop at end keyword
+      ensure_body = parse_opt_defexp
+    end
+
+    ws
     keyword(:end) or expected("expression or 'end' for open def '#{name.to_s}'")
-    return E[pos, :defm, name, args, exps]
+
+    # If we have rescue or ensure, wrap exps in a :block node
+    if rescue_ || ensure_body
+      body = E[pos, :block, [], exps, rescue_, ensure_body]
+      return E[pos, :defm, name, args, body]
+    else
+      return E[pos, :defm, name, args, exps]
+    end
   end
 
   def parse_sexp; @sexp.parse; end
