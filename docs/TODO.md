@@ -50,15 +50,16 @@
 4. [x] Add begin/ensure block support (parser.rb parse_begin, tokens.rb, compiler.rb) ✅ DONE (commit 8bf7f18)
 5. [x] Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist) ✅ DONE
 6. [x] Fix "Expected EOF" for eigenclass/class/module as expression ✅ DONE (commit 64e6e6b)
-7. [ ] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
-8. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
-9. [ ] Fix shunting yard expression parsing errors (investigate case by case)
-10. [ ] Add NameError exception class (lib/core/exception.rb)
+7. [x] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist) ✅ DONE (commit d185f83)
+8. [x] Add missing exception classes (lib/core/exception.rb) ✅ DONE (commit df6c7e2) - Added NameError, SyntaxError, LocalJumpError, NoMatchingPatternError, UncaughtThrowError
+9. [x] Add ensure clause support to do..end blocks (parser.rb parse_block) ✅ DONE (commit 685e2f6) - Fixes 3 of 4 "Expected: 'end' for 'do'-block" errors
+10. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+11. [ ] Fix shunting yard expression parsing errors (investigate case by case)
 
 **Integer Specs** (Continue improvements):
-11. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)
-12. [ ] Consider minimal Float implementation (would unblock ~10-15 specs)
-13. [ ] Consider power/multiplication accuracy fix for large numbers (BUG 2)
+12. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)
+13. [ ] Consider minimal Float implementation (would unblock ~10-15 specs)
+14. [ ] Consider power/multiplication accuracy fix for large numbers (BUG 2)
 
 **Note**: Exception handling now supported in self-hosted compiler - can use exceptions for error handling where appropriate
 
