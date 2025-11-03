@@ -45,6 +45,27 @@ class File < IO
     return true
   end
 
+  def self.readlines(path)
+    lines = []
+    current_line = ""
+
+    f = File.open(path, "r")
+    while c = f.getc
+      current_line = current_line + c.chr
+      if c == 10  # newline character
+        lines << current_line
+        current_line = ""
+      end
+    end
+
+    # Add last line if it doesn't end with newline
+    if current_line.length > 0
+      lines << current_line
+    end
+
+    return lines
+  end
+
   def self.basename(name)
     i = name.rindex(SEPARATOR)
     if !i && ALT_SEPARATOR
