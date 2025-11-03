@@ -43,7 +43,7 @@ class CompilerError < StandardError
     if block_start_line && block_start_line < start_line && block_start_line >= 1
       block_line_text = lines[block_start_line - 1]
       # Remove trailing newline if present
-      block_line_text = block_line_text.chomp if block_line_text
+      block_line_text.chomp! if block_line_text
 
       result = result + "#{COLOR_DIM}  #{block_start_line}  #{block_line_text}#{COLOR_RESET}\n"
       result = result + "#{COLOR_DIM}  ...#{COLOR_RESET}\n"
@@ -56,7 +56,7 @@ class CompilerError < StandardError
       marker = is_error_line ? ">" : " "
       line_text = lines[line_idx]
       # Remove trailing newline if present (File.readlines includes newlines)
-      line_text = line_text.chomp if line_text
+      line_text.chomp! if line_text
 
       # Format with colors: error line in bold red, normal lines with cyan line numbers
       if is_error_line

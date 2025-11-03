@@ -504,6 +504,60 @@ class String
     ary
   end
 
+  # Remove trailing newline characters (\n, \r, \r\n)
+  # Returns a new string
+  def chomp(separator = "\n")
+    return self if self.length == 0
+
+    # Handle default case: remove \n, \r, or \r\n
+    if separator == "\n"
+      len = self.length
+      if len > 0 && self[len - 1] == "\n"
+        # Check for \r\n
+        if len > 1 && self[len - 2] == "\r"
+          return self[0..-3]
+        else
+          return self[0..-2]
+        end
+      elsif len > 0 && self[len - 1] == "\r"
+        return self[0..-2]
+      end
+      return self
+    end
+
+    # Handle custom separator
+    if separator.length == 0
+      # Empty string means remove all trailing newlines
+      result = self
+      while result.length > 0 && (result[-1] == "\n" || result[-1] == "\r")
+        result = result[0..-2]
+      end
+      return result
+    end
+
+    # Remove specific separator if present at end
+    if self.length >= separator.length && self[(-separator.length)..-1] == separator
+      return self[0..(-separator.length - 1)]
+    end
+
+    return self
+  end
+
+  # Remove trailing newline characters in place
+  # Returns self if modified, nil if no modification made
+  def chomp!(separator = "\n")
+    original_length = self.length
+    result = self.chomp(separator)
+
+    if result.length != original_length
+      # Modify self in place using __set_raw
+      self.__set_raw(result.__get_raw)
+      return self
+    end
+
+    return nil
+  end
+
 end
 
 # FIXME: This is an interesting bootstrapping problem
