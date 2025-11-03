@@ -1,4 +1,5 @@
 
+require 'compilererror'
 require 'pp'
 require 'treeoutput'
 
@@ -87,7 +88,12 @@ module OpPrec
         elsif op.sym == :hash_or_block
           opstate = shunt_subexpr([HASH],src)
         else
-          raise "Block not allowed here"
+          scanner = @tokenizer.scanner
+          msg = "Block not allowed here"
+          raise ShuntingYardError.new(msg,
+                                      scanner ? scanner.filename : nil,
+                                      scanner ? scanner.lineno : nil,
+                                      scanner ? scanner.col : nil)
         end
       elsif op.sym == :quoted_exp
         @out.value(parse_quoted_exp)
@@ -185,13 +191,23 @@ module OpPrec
         if ostack.last.minarity == 0
           @out.value(nil)
         else
-          raise "Missing value for prefix operator #{ostack[-1].sym.to_s} / #{token.inspect} / #{token.position.short}"
+          scanner = @tokenizer.scanner
+          msg = "Missing value for prefix operator #{ostack[-1].sym.to_s} / #{token.inspect} / #{token.position.short}"
+          raise ShuntingYardError.new(msg,
+                                      scanner ? scanner.filename : nil,
+                                      scanner ? scanner.lineno : nil,
+                                      scanner ? scanner.col : nil)
         end
       end
 
       reduce(@ostack)
       return @out if @ostack.empty?
-      raise "Syntax error. #{@ostack.inspect}"
+      scanner = @tokenizer.scanner
+      msg = "Syntax error. #{@ostack.inspect}"
+      raise ShuntingYardError.new(msg,
+                                  scanner ? scanner.filename : nil,
+                                  scanner ? scanner.lineno : nil,
+                                  scanner ? scanner.col : nil)
     end
 
     def parse(inhibit=[])

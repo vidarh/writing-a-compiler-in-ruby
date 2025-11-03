@@ -1,3 +1,4 @@
+require 'compilererror'
 require 'scanner'
 require 'tokens'
 require 'pp'
@@ -77,9 +78,14 @@ class ParserBase
       i += 1
     end
     if from_file?
-      raise "Parse error: #{filename}(#{@scanner.lineno}):  #{message}\nAfter: '#{str}'"
+      raise ParseError.new("Parse error: #{filename}(#{@scanner.lineno}):  #{message}\nAfter: '#{str}'",
+                           filename,
+                           @scanner.lineno,
+                           @scanner.col)
     else
-      raise "Parse error: #{@scanner.lineno}: #{message}"
+      raise ParseError.new("Parse error: #{@scanner.lineno}: #{message}",
+                           nil,
+                           @scanner.lineno)
     end
   end
 

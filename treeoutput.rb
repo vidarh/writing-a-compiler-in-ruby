@@ -1,3 +1,4 @@
+require 'compilererror'
 require 'ast'
 
 module OpPrec
@@ -91,10 +92,16 @@ module OpPrec
     end
 
     def oper(o)
-      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
+      if @vstack.empty? && o.minarity > 0
+        msg = "Missing value in expression / #{o.inspect}"
+        raise ShuntingYardError.new(msg, @filename, @scanner ? @scanner.lineno : nil, @scanner ? @scanner.col : nil)
+      end
       rightv = @vstack.pop if o.arity > 0
 
-      raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
+      if @vstack.empty? and o.minarity > 1
+        msg = "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}"
+        raise ShuntingYardError.new(msg, @filename, @scanner ? @scanner.lineno : nil, @scanner ? @scanner.col : nil)
+      end
 
       leftv = nil
       leftv = @vstack.pop if o.arity > 1
@@ -200,7 +207,10 @@ module OpPrec
     end
 
     def result
-      raise "Incomplete expression - #{@vstack.inspect}" if @vstack.length > 1
+      if @vstack.length > 1
+        msg = "Incomplete expression - #{@vstack.inspect}"
+        raise ShuntingYardError.new(msg, @filename, @scanner ? @scanner.lineno : nil, @scanner ? @scanner.col : nil)
+      end
       return @vstack[0]
     end
   end
