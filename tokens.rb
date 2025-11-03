@@ -7,7 +7,7 @@ module Tokens
   Keywords = Set[
     :begin, :break, :case, :class, :def, :do, :else, :end, :ensure, :if,
     :module, :require, :require_relative, :rescue, :then, :unless, :when, :elsif,
-    :protected, :next, :lambda
+    :protected, :next, :lambda, :stabby_lambda
   ]
 
   # Methods can end with one of these.
@@ -436,7 +436,7 @@ module Tokens
         @lastop = true
         if @s.peek == ?>
           @s.get
-          return [:lambda, nil, :atom]
+          return [:stabby_lambda, nil, :atom]
         end
         if @s.peek == ?=
           @s.get

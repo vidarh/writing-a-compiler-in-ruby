@@ -313,7 +313,59 @@ class Parser < ParserBase
     return ret
   end
 
-  # lambda ::= "lambda" *ws block
+  # parse_stabby_lambda ::= "->" *ws ("(" args ")")? *ws block
+  #                       | "->" *ws args *ws block
+  def parse_stabby_lambda
+    pos = position
+    keyword(:stabby_lambda) or return
+    ws
+
+    # Parse inline parameters: ->(x, y) { } or -> x, y { }
+    args = []
+    if literal("(")
+      # Parenthesized parameters: ->(x, y) { }
+      ws
+      while name = parse_name
+        args << name
+        ws
+        break if !literal(COMMA)
+        ws
+      end
+      ws
+      literal(")") or expected("')'")
+      ws
+    else
+      # Try to parse bare parameters: -> x, y { }
+      # Only parse parameters if we don't see { or do
+      do_token = expect(:do)
+      if do_token
+        # Found 'do' - unget it for parse_block to consume
+        @scanner.unget(do_token)
+      elsif @scanner.peek != "{"
+        # No block start yet, parse bare parameters
+        while name = parse_name
+          args << name
+          ws
+          break if !literal(COMMA)
+          ws
+        end
+      end
+      ws
+    end
+
+    block = parse_block or expected("do .. end block")
+
+    # If we have inline args, create a proc with those args
+    # Otherwise use the block's args directly
+    if args.size > 0
+      block_body = block[2] || []  # block is [:proc, args, body]
+      return E[pos, :lambda, args, block_body]
+    end
+
+    return E[pos, :lambda, *block[1..-1]]
+  end
+
+  # lambda ::= "lambda" *ws block (no inline parameters allowed)
   def parse_lambda
     pos = position
     keyword(:lambda) or return
