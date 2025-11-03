@@ -494,7 +494,25 @@ class Parser < ParserBase
     end
     exps = parse_block_exps
     ws
+
+    # Parse optional ensure clause for do..end blocks
+    # (brace blocks typically don't have ensure, but we allow it)
+    ensure_body = nil
+    if keyword(:ensure)
+      ws
+      ensure_body = parse_opt_defexp
+      ws
+    end
+
     literal(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
+
+    # Build proc node with ensure if present
+    if ensure_body
+      # [:proc, args, body, nil (rescue), ensure]
+      # The nil is for rescue compatibility with begin..end structure
+      return E[pos, :proc, args, exps, nil, ensure_body]
+    end
+
     return E[pos, :proc ] if args.size == 0 and exps.size == 0
     return E[pos, :proc, args, exps]
   end
