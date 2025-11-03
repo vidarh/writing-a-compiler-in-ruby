@@ -67,34 +67,20 @@ class ParserBase
 
 
   # Output error message by raising an exception.
-  # Error message contains filename, line number, column number, and context.
-  # Shows context BEFORE the error position (more useful than after).
-  # Set COMPILER_DEBUG=1 for additional technical details.
+  # Error message contains filename and linenumber, if reading from a file.
+  # Otherwise, the message only contains the current linenumber and the error message.
   def error(message)
-    lineno = @scanner.lineno
-    col = @scanner.col
-
-    # Build the error message
+    i = 0
+    str = ""
+    while (i < 30) && (c = @scanner.get)
+      str << c
+      i += 1
+    end
     if from_file?
-      error_msg = "Parse error: #{filename}:#{lineno}:#{col}: #{message}"
+      raise "Parse error: #{filename}(#{@scanner.lineno}):  #{message}\nAfter: '#{str}'"
     else
-      error_msg = "Parse error: line #{lineno}, column #{col}: #{message}"
+      raise "Parse error: #{@scanner.lineno}: #{message}"
     end
-
-    # Add context snippet if available
-    # (Context will be improved in future to show actual source line)
-    if ENV['COMPILER_DEBUG']
-      # Show what comes next (for debugging)
-      i = 0
-      next_chars = ""
-      while (i < 30) && (c = @scanner.get)
-        next_chars << c
-        i += 1
-      end
-      error_msg << "\n\n[DEBUG] Next characters: '#{next_chars}'"
-    end
-
-    raise error_msg
   end
 
   protected

@@ -308,6 +308,10 @@ module Tokens
     attr_accessor :keywords
     attr_reader :newline_before_current
 
+    def scanner
+      @s
+    end
+
     def initialize(scanner,parser)
       @s = scanner
       @parser = parser

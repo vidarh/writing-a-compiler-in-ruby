@@ -37,16 +37,21 @@
 
 **Language Specs** (HIGHEST PRIORITY - unblock ~5-10 specs):
 1. [x] Fix Scanner#position= bug (parser.rb:405, scanner.rb) - add setter method ✅ DONE (commit f541211)
-2. [x] Improve shunting yard error reporting (human readable + technical debug mode) ✅ DONE (commit 33914d0)
-3. [x] Improve parser error reporting (show context, suggestions, clearer messages) ✅ DONE (commit 8a9e418)
-4. [x] Add begin/rescue else clause support (parser.rb parse_begin) ✅ DONE (commit c2c20da)
-5. [x] Add begin/ensure block support (parser.rb parse_begin, tokens.rb, compiler.rb) ✅ DONE (commit 8bf7f18)
-6. [x] Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist) ✅ DONE
-7. [x] Fix "Expected EOF" for eigenclass/class/module as expression ✅ DONE (commit 64e6e6b)
-8. [ ] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
-9. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
-10. [ ] Fix shunting yard expression parsing errors (investigate case by case)
-11. [ ] Add NameError exception class (lib/core/exception.rb)
+2. [ ] **IN PROGRESS**: Improve error reporting with multi-line source context - see [ERROR_HANDLING_IMPROVEMENT_PLAN.md](ERROR_HANDLING_IMPROVEMENT_PLAN.md)
+   - [x] Revert broken error handling (commits 33914d0, 8a9e418) - treeoutput.rb DONE
+   - [ ] Revert parserbase.rb
+   - [ ] Add format_source_context helper
+   - [ ] Improve parser error messages with multi-line context
+   - [ ] Improve shunting yard error messages with multi-line context
+   - [ ] Test and validate
+3. [x] Add begin/rescue else clause support (parser.rb parse_begin) ✅ DONE (commit c2c20da)
+4. [x] Add begin/ensure block support (parser.rb parse_begin, tokens.rb, compiler.rb) ✅ DONE (commit 8bf7f18)
+5. [x] Fix bare splat operator: `def foo(*); end` (parser.rb parse_arglist) ✅ DONE
+6. [x] Fix "Expected EOF" for eigenclass/class/module as expression ✅ DONE (commit 64e6e6b)
+7. [ ] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist)
+8. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+9. [ ] Fix shunting yard expression parsing errors (investigate case by case)
+10. [ ] Add NameError exception class (lib/core/exception.rb)
 
 **Integer Specs** (Continue improvements):
 11. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)

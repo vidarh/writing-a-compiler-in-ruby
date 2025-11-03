@@ -17,6 +17,10 @@ module OpPrec
       @tokenizer = TokenizerAdapter.new(tokenizer,parser)
       @parser = parser
 
+      # Pass scanner reference to output for error messages with source context
+      scanner = @tokenizer.scanner
+      @out.set_scanner(scanner) if scanner
+
       # Tricky hack:
       #
       # We need a call operator with high priority, but *if* parentheses are not used around

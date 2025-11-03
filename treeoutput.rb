@@ -9,6 +9,11 @@ module OpPrec
       reset
     end
 
+    def set_scanner(scanner)
+      @scanner = scanner
+      @filename = scanner.filename if scanner
+    end
+
     @@dont_rewrite = false
     def self.dont_rewrite
       @@dont_rewrite = true
@@ -85,133 +90,11 @@ module OpPrec
       @vstack << expr
     end
 
-    # Generate human-readable error message for shunting yard errors
-    def human_readable_error(context, o, rightv = nil)
-      op_desc = operator_description(o)
-
-      case context
-      when "Expected value before"
-        "Parse error: #{op_desc} requires a value, but none was found.\n" +
-        "This usually means the expression started with an operator that needs an operand."
-      when "Expected value after"
-        value_desc = rightv ? format_value(rightv) : "unknown"
-        "Parse error: #{op_desc} requires two values, but only one was found (#{value_desc}).\n" +
-        "This usually means an operator is missing its left operand."
-      when "Incomplete expression"
-        "Parse error: Expression ended with multiple unconnected values.\n" +
-        "This usually means operators are missing or in the wrong order."
-      else
-        "Parse error in expression"
-      end
-    end
-
-    # Describe operator in human-friendly way
-    def operator_description(o)
-      return "Unknown operator" if o.nil?
-      # Use simple conditionals to avoid parser issues with case/when/then
-      if o.sym == :callm
-        return "Method call"
-      end
-      if o.sym == :call
-        return "Function call"
-      end
-      if o.sym == :index
-        return "Array or hash access"
-      end
-      if o.sym == :deref
-        return "Constant reference"
-      end
-      if o.sym == :-
-        return "Subtraction operator"
-      end
-      if o.sym == :+
-        return "Addition operator"
-      end
-      if o.sym == :*
-        return "Multiplication operator"
-      end
-      if o.sym == :/
-        return "Division operator"
-      end
-      if o.sym == :%
-        return "Modulo operator"
-      end
-      if o.sym == :<<
-        return "Left shift operator"
-      end
-      if o.sym == :>>
-        return "Right shift operator"
-      end
-      if o.sym == :<
-        return "Less-than comparison"
-      end
-      if o.sym == :>
-        return "Greater-than comparison"
-      end
-      if o.sym == :<=
-        return "Less-or-equal comparison"
-      end
-      if o.sym == :>=
-        return "Greater-or-equal comparison"
-      end
-      if o.sym == :==
-        return "Equality check"
-      end
-      if o.sym == :!=
-        return "Inequality check"
-      end
-      if o.sym == :and
-        return "Logical AND"
-      end
-      if o.sym == :or
-        return "Logical OR"
-      end
-      if o.sym == :&
-        return "Bitwise AND"
-      end
-      if o.sym == :|
-        return "Bitwise OR"
-      end
-      if o.sym == :^
-        return "Bitwise XOR"
-      end
-      # Default case
-      sym_str = o.sym.to_s
-      return "Operator: " + sym_str
-    end
-
-    # Format value for display (truncate if too long)
-    def format_value(v)
-      s = v.inspect
-      s.length > 50 ? s[0..47] + "..." : s
-    end
-
-    # Technical debug information (only shown with COMPILER_DEBUG=1)
-    def debug_info(o, vstack, rightv)
-      "\n\n[DEBUG INFO - Technical Details]" +
-      "\nOperator: #{o.inspect}" +
-      "\nOperator details: symbol=#{o.sym}, type=#{o.type}, arity=#{o.arity}/#{o.minarity}, priority=#{o.pri}" +
-      "\nValue stack: #{vstack.inspect}" +
-      "\nRight value: #{rightv.inspect}" +
-      "\n\nTo disable debug info, unset COMPILER_DEBUG environment variable."
-    end
-
     def oper(o)
-      # First check: operator needs at least one operand but value stack is empty
-      if @vstack.empty? && o.minarity > 0
-        msg = human_readable_error("Expected value before", o)
-        msg += debug_info(o, [], nil) if ENV['COMPILER_DEBUG']
-        raise msg
-      end
-
+      raise "Missing value in expression / #{o.inspect}" if @vstack.empty? && o.minarity > 0
       rightv = @vstack.pop if o.arity > 0
 
-      # Second check: operator needs two operands but only one value available
-      if @vstack.empty? and o.minarity > 1
-        msg = human_readable_error("Expected value after", o, rightv)
-        msg += debug_info(o, @vstack.dup, rightv) if ENV['COMPILER_DEBUG']
-        raise msg
-      end
+      raise "Missing value in expression / op: #{o.inspect} / vstack: #{@vstack.inspect} / rightv: #{rightv.inspect}" if @vstack.empty? and o.minarity > 1
 
       leftv = nil
       leftv = @vstack.pop if o.arity > 1
@@ -317,15 +200,7 @@ module OpPrec
     end
 
     def result
-      if @vstack.length > 1
-        msg = human_readable_error("Incomplete expression", nil, nil)
-        if ENV['COMPILER_DEBUG']
-          msg += "\n\n[DEBUG INFO - Technical Details]" +
-                 "\nValue stack (#{@vstack.length} unconnected values): #{@vstack.inspect}" +
-                 "\n\nTo disable debug info, unset COMPILER_DEBUG environment variable."
-        end
-        raise msg
-      end
+      raise "Incomplete expression - #{@vstack.inspect}" if @vstack.length > 1
       return @vstack[0]
     end
   end
