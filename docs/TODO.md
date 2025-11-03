@@ -5,11 +5,12 @@
 
 **Current Status (Session 42)**:
 - **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
-- **Language specs**: Re-running after fixes (Session 42 fixes: operator precedence, empty parens, 'not' keyword)
+- **Language specs**: Re-running after fixes (awaiting updated results)
 - **Recent fixes** (Session 42):
   - Split precedence for assignment operators (fixes `true && x = 1` parsing)
   - Empty parentheses now evaluate as nil (fixes `() && true` and similar expressions)
   - Added 'not' keyword operator (improves not_spec from 4/16 to 9/10 tests)
+  - Destructuring assignment now calls to_a (fixes `x, y = nil` - and_spec now 10/10 tests)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -77,8 +78,9 @@
 10. [x] Fix empty parentheses in expressions (shunting.rb) ✅ DONE (commit ab083aa) - Empty `()` now pushes `:nil` symbol instead of nil placeholder, fixing malformed AST nodes for `() && true`, `true && ()`, `() && ()`. Only applies to `()`, not `[]` or `{}`.
 11. [x] Add split precedence support for assignment operators (operators.rb, shunting.rb) ✅ DONE (Session 42) - Assignment operators now have left precedence 7, right precedence 5, fixing `true && x = 1` parsing
 12. [x] Add 'not' keyword operator (operators.rb) ✅ DONE (commit cc2c08b) - Maps to `!` with lower precedence (2 vs 8), improves not_spec from 4/16 to 9/10 tests
-13. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
-14. [ ] Fix shunting yard expression parsing errors (investigate case by case)
+13. [x] Fix destructuring assignment to call to_a (transform.rb) ✅ DONE (commit b396759) - Destructuring like `x, y = nil` now converts RHS via to_a before indexing, fixing "undefined method '[]' for NilClass". and_spec now 10/10 tests.
+14. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
+15. [ ] Fix shunting yard expression parsing errors (investigate case by case)
 
 **Integer Specs** (Continue improvements):
 12. [ ] Investigate and fix remaining 3 crashes (fdiv_spec, round_spec, times_spec)
