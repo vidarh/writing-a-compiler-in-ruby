@@ -21,7 +21,7 @@
 #
 
 # Don't output PASS's
-# $quiet = true
+#$quiet = true
 $quiet = false
 $fails = 0
 
@@ -381,10 +381,34 @@ def test_sym
 end
 
 def test_atom
-  io = MockIO.new(":sym @ivar $global $var42 @with_underscore")
+  io = MockIO.new(":sym @ivar $global $var42 @with_underscore foo")
   s  = Scanner.new(io)
 
   expect_eq(Tokens::Atom.expect(s), :":sym", "Parse atom :sym")
+  s.ws
+  expect_eq(Tokens::Atom.expect(s), :"@ivar", "Parse atom @ivar")
+  s.ws
+  expect_eq(Tokens::Atom.expect(s), :"$global", "Parse atom $global")
+  s.ws
+  expect_eq(Tokens::Atom.expect(s), :"$var42", "Parse atom $var42")
+  s.ws
+  expect_eq(Tokens::Atom.expect(s), :"@with_underscore", "Parse atom @with_underscore")
+  s.ws
+  expect_eq(Tokens::Atom.expect(s), :"foo", "Parse atom foo")
+end
+
+def test_int
+  io = MockIO.new("123 y")
+  s  = Scanner.new(io)
+  expect_eq(Tokens::Int.expect(s), 123, "Parse integer 123")
+  s.ws
+  expect_eq(Tokens::Int.expect(s), nil, "Parse non-integer y")
+
+  io = MockIO.new("1073741823 -1073741824")
+  s  = Scanner.new(io)
+  expect_eq(Tokens::Int.expect(s).to_s, "1073741823", "Parse large integer")
+  s.ws
+  expect_eq(Tokens::Int.expect(s).to_s, "-1073741824", "Parse large negative integer")
 end
 
 # The full version of respond_to? is a pre-requisite for the s-exp parsing
@@ -452,7 +476,7 @@ def test_escapes
 end
 
 def test_tokenizer
-  s  = mock_scanner(":sym test 123 'foo' +")
+  s  = mock_scanner("y :sym test 123 'foo' + y")
   t = Tokens::Tokenizer.new(s,nil)
 
   ar = []
@@ -480,8 +504,10 @@ end
 
 def test_shunting
   expect_eq(mock_shunting("5 + 1").parse.inspect, "[:+, 5, 1]", "Shunting 1")
+  expect_eq(mock_shunting("y").parse.inspect, ":y", "Shunting 2.0")
   expect_eq(mock_shunting("5 + y").parse.inspect, "[:+, 5, :y]", "Shunting 2")
   expect_eq(mock_shunting("5 + 1 * 2").parse.inspect, "[:+, 5, [:*, 1, 2]]", "Shunting 3")
+  expect_eq(mock_shunting("true && x = 1").parse.inspect, "[:and, :true, [:assign, :x, 1]]", "Shunting 4 - relative priority of '&&' and '='")
 
   # Handling of single argument with lambda wrongly used to return a non-array argument list
   expect_eq(mock_shunting("foo.bar(x) {}\n").parse.inspect, "[:callm, :foo, :bar, [:x], [:proc]]", "Shunting foo.bar(x) {}")
@@ -735,6 +761,7 @@ def test_newline_negative_parsing
   expect_eq(a, 5, "First expression should be 5")
   expect_eq(b, -2, "Second expression should be -2")
 end
+
 test_fixnum
 test_symbol
 test_array
@@ -747,6 +774,7 @@ test_scanner_basics
 test_parserbase_basics
 test_sym
 test_atom
+test_int
 test_respond_to
 test_sexp_basics
 test_escapes
@@ -763,4 +791,3 @@ test_compiler
 
 puts "DONE"
 puts "Fails: "+$fails.to_s
-
