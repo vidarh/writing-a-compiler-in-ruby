@@ -5,12 +5,13 @@
 
 **Current Status (Session 42)**:
 - **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
-- **Language specs**: Re-running after fixes (awaiting updated results)
+- **Language specs**: 10 specs failed, 6 crashed, 63 failed to compile - **18% pass rate** (up from ~5%)
+  - 116 total tests, 21 pass, 94 failed, 1 skipped
 - **Recent fixes** (Session 42):
   - Split precedence for assignment operators (fixes `true && x = 1` parsing)
-  - Empty parentheses now evaluate as nil (fixes `() && true` and similar expressions)
-  - Added 'not' keyword operator (improves not_spec from 4/16 to 9/10 tests)
-  - Destructuring assignment now calls to_a (fixes `x, y = nil` - and_spec now 10/10 tests)
+  - Empty parentheses now evaluate as nil (fixes `() && true` - commit ab083aa)
+  - Added 'not' keyword with split precedence (not_spec now 10/10 - commits cc2c08b, 2626419)
+  - Destructuring assignment now calls to_a (and_spec now 10/10 - commit b396759)
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -77,7 +78,7 @@
 9. [x] Add ensure clause support to do..end blocks (parser.rb parse_block) ✅ DONE (commit 685e2f6) - Fixes 3 of 4 "Expected: 'end' for 'do'-block" errors
 10. [x] Fix empty parentheses in expressions (shunting.rb) ✅ DONE (commit ab083aa) - Empty `()` now pushes `:nil` symbol instead of nil placeholder, fixing malformed AST nodes for `() && true`, `true && ()`, `() && ()`. Only applies to `()`, not `[]` or `{}`.
 11. [x] Add split precedence support for assignment operators (operators.rb, shunting.rb) ✅ DONE (Session 42) - Assignment operators now have left precedence 7, right precedence 5, fixing `true && x = 1` parsing
-12. [x] Add 'not' keyword operator (operators.rb) ✅ DONE (commit cc2c08b) - Maps to `!` with lower precedence (2 vs 8), improves not_spec from 4/16 to 9/10 tests
+12. [x] Add 'not' keyword operator with split precedence (operators.rb) ✅ DONE (commits cc2c08b, 2626419) - Maps to `!` with pri=7 (left), right_pri=99 (right), fixing `not(expr).method` to reduce not before method calls bind. not_spec now 10/10 tests.
 13. [x] Fix destructuring assignment to call to_a (transform.rb) ✅ DONE (commit b396759) - Destructuring like `x, y = nil` now converts RHS via to_a before indexing, fixing "undefined method '[]' for NilClass". and_spec now 10/10 tests.
 14. [ ] Investigate brace syntax limitations (likely has bugs, not fully unsupported)
 15. [ ] Fix shunting yard expression parsing errors (investigate case by case)
