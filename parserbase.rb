@@ -71,18 +71,11 @@ class ParserBase
   # Error message contains filename and linenumber, if reading from a file.
   # Otherwise, the message only contains the current linenumber and the error message.
   def error(message)
-    i = 0
-    str = ""
-    while (i < 30) && (c = @scanner.get)
-      str << c
-      i += 1
-    end
-
     if from_file?
       # Format: filename(line:col): message
       # Source context will be added automatically by CompilerError#message
       error_location = "#{filename}(#{@scanner.lineno}:#{@scanner.col})"
-      full_message = "Parse error: #{error_location}: #{message}\nAfter: '#{str}'"
+      full_message = "Parse error: #{error_location}: #{message}"
 
       raise ParseError.new(full_message,
                            filename,
