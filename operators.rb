@@ -120,6 +120,8 @@ Operators = {
   "=="        => Oper.new(  8, :==,       :infix),
   "!="        => Oper.new(  8, :"!=",       :infix),
   "<=>"       => Oper.new(  8, :"<=>",      :infix),
+  "=~"        => Oper.new(  8, :"=~",       :infix),   # Pattern match
+  "!~"        => Oper.new(  8, :"!~",       :infix),   # Negative pattern match
 
   "+"         => {
     :infix_or_postfix  => Oper.new( 14, :+,      :infix, 2, 2, :left),
@@ -143,7 +145,10 @@ Operators = {
   # "Fake" operator for function calls
   "#call#"    => Oper.new( 99, :call,     :prefix,2,1),
   "#call2#"   => Oper.new(  9, :call,     :prefix,2,1),
-  ","         => Oper.new( 99, :comma,    :infix, 2,1),
+  # Comma has high left precedence (pri=99) but low right precedence (right_pri=8)
+  # right_pri must be > assignment's pri (7) to allow destructuring: a,b = c
+  # right_pri must be >= prefix operators' pri (8) to allow: when 'f', *arr
+  ","         => Oper.new( 99, :comma,    :infix, 2, 1, :left, 8),
 
   # "Fake" operator for [] following a name
   "#index#"   => Oper.new(100, :index,    :infix),
