@@ -232,7 +232,7 @@ class Parser < ParserBase
   end
 
   # for ::= "for" ws+ lvalue ws+ "in" ws+ expr ws* (SEMICOLON | ws+ "do") ws* defexp* "end"
-  # Supports: for x in array, for a,b in array (destructuring)
+  # Supports: for x in array, for a,b in array (destructuring), for a, in array (trailing comma)
   def parse_for
     pos = position
     keyword(:for) or return
@@ -243,6 +243,12 @@ class Parser < ParserBase
     ws
     while literal(",")
       ws
+      # Check if 'in' follows (trailing comma case: "for a, in array")
+      if keyword(:in)
+        # Put back 'in' and break - we'll parse it below
+        @scanner.unget("in")
+        break
+      end
       vars << (parse_name or expected("variable name in for loop"))
       ws
     end
