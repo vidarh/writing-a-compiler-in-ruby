@@ -24,6 +24,7 @@ class Encoding
   SHIFT_JIS = Encoding.new("Shift_JIS")
   CESU_8  = Encoding.new("CESU_8")
   EUC_JP  = Encoding.new("EUC_JP")
+  Big5 = Encoding.new("Big5")
 
   # Class methods
   def self.default_internal

@@ -96,6 +96,7 @@ require 'core/method'
 require 'core/rational'
 require 'core/encoding'
 require 'core/math'
+require 'core/binding'
 
 #
 # Other support

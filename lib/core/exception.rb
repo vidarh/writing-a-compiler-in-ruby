@@ -216,6 +216,9 @@ end
 class SyntaxError < StandardError
 end
 
+class RegexpError < StandardError
+end
+
 class LocalJumpError < StandardError
 end
 
