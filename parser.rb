@@ -219,6 +219,18 @@ class Parser < ParserBase
     return E[pos, :while, cond, [:do]+exps]
   end
 
+  def parse_until
+    pos = position
+    keyword(:until) or return
+    ws
+    cond = parse_condition or expected("condition for 'until' block")
+    nolfws; literal(SEMICOLON); nolfws; keyword(:do)
+    nolfws;
+    exps = parse_opt_defexp
+    keyword(:end) or expected("expression or 'end' for open 'until' block")
+    return E[pos, :until, cond, [:do]+exps]
+  end
+
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
   # Supports: rescue, rescue => e, rescue Error, rescue Error => e
   def parse_rescue
@@ -432,7 +444,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_class || parse_module || parse_sexp || parse_while || parse_begin || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_case || parse_require_relative || parse_require
+    ret = parse_class || parse_module || parse_sexp || parse_while || parse_until || parse_begin || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
     # FIXME: @bug this below is needed for MRI, but not for the selfhosted compiler...

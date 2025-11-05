@@ -41,7 +41,7 @@ class Compiler
   # a special calling convention
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if,
-                   :assign, :while, :index, :bindex, :let, :case, :ternif,
+                   :assign, :while, :until, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,

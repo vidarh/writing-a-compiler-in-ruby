@@ -30,12 +30,12 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/line_spec.rb
 [31m[FAIL] rubyspec/language/loop_spec.rb (P:0 F:14 S:0 T:14)
 [33m[COMPILE FAIL] rubyspec/language/magic_comment_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/match_spec.rb
+[31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [33m[COMPILE FAIL] rubyspec/language/metaclass_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/method_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/module_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/next_spec.rb
-[31m[FAIL] rubyspec/language/not_spec.rb (P:4 F:12 S:0 T:16)
+[32m[PASS] rubyspec/language/not_spec.rb (P:10 F:0 S:0 T:10)
 [33m[COMPILE FAIL] rubyspec/language/numbered_parameters_spec.rb
 [31m[FAIL] rubyspec/language/numbers_spec.rb (P:4 F:18 S:0 T:22)
 [33m[COMPILE FAIL] rubyspec/language/optional_assignments_spec.rb
@@ -56,7 +56,7 @@ Running all specs in rubyspec/language/...
 [31m[FAIL] rubyspec/language/regexp/empty_checks_spec.rb (P:0 F:8 S:0 T:8)
 [33m[COMPILE FAIL] rubyspec/language/regexp/encoding_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/regexp/escapes_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/regexp/grouping_spec.rb
+[31m[FAIL] rubyspec/language/regexp/grouping_spec.rb (P:0 F:12 S:0 T:12)
 [33m[COMPILE FAIL] rubyspec/language/regexp/interpolation_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/regexp/modifiers_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/regexp/repetition_spec.rb
@@ -84,14 +84,14 @@ Running all specs in rubyspec/language/...
 ================================
 Summary:
   Total spec files: 79
-  Passed: 0
-  Failed: 9
+  Passed: 1
+  Failed: 10
   Crashed (no test output): 6
-  Failed to compile: 64
+  Failed to compile: 62
 
 Individual Test Cases:
-  Total tests: 110
-  Passed: 8
-  Failed: 101
+  Total tests: 128
+  Passed: 16
+  Failed: 111
   Skipped: 1
-  Pass rate: 7%
+  Pass rate: 12%

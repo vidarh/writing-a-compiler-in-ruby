@@ -14,6 +14,31 @@ class Compiler
     end
   end
 
+  def compile_jmp_on_true(scope, r, target)
+    # Jump on true is the inverse of jump on false
+    # We jump if the value is NOT nil and NOT false
+    if r && r.type == :object
+      @e.save_result(r)
+      @e.evict_all
+      # Create a skip label - we'll jump over the target jump if value is false/nil
+      skip = @e.get_local
+      @e.cmpl(@e.result_value, "nil")
+      @e.je(skip)
+      @e.cmpl(@e.result_value, "false")
+      @e.je(skip)
+      # Value is truthy - jump to target
+      @e.jmp(target)
+      @e.local(skip)
+    else
+      @e.evict_all
+      # For non-object types, implement manually
+      skip = @e.get_local
+      @e.jmp_on_false(skip, r)
+      @e.jmp(target)
+      @e.local(skip)
+    end
+  end
+
 
   # Changes to make #compile_if comply with real-life requirements
   # makes it hard to use it to implement 'or' without introducing a
@@ -118,6 +143,18 @@ class Compiler
     @e.loop do |br,l|
       var = compile_eval_arg(scope, cond)
       compile_jmp_on_false(scope, var, br)
+      compile_exp(ControlScope.new(scope, br,l), body)
+    end
+    compile_eval_arg(scope, :nil)
+    return Value.new([:subexpr])
+  end
+
+  # Compiles an until loop (inverse of while).
+  # Takes the current scope, a condition expression as well as the body of the function.
+  def compile_until(scope, cond, body)
+    @e.loop do |br,l|
+      var = compile_eval_arg(scope, cond)
+      compile_jmp_on_true(scope, var, br)  # Jump on true (opposite of while)
       compile_exp(ControlScope.new(scope, br,l), body)
     end
     compile_eval_arg(scope, :nil)

@@ -3,15 +3,18 @@
 **Purpose**: Task list for improving rubyspec test pass rate (integer specs + language specs)
 **Format**: One-line tasks. Details in referenced docs.
 
-**Current Status (Session 42)**:
-- **Integer specs**: 30/67 passing (45%), 372/594 tests (62%), 3 crashes
-- **Language specs**: 10 specs failed, 6 crashed, 63 failed to compile - **18% pass rate** (up from ~5%)
-  - 116 total tests, 21 pass, 94 failed, 1 skipped
-- **Recent fixes** (Session 42):
-  - Split precedence for assignment operators (fixes `true && x = 1` parsing)
-  - Empty parentheses now evaluate as nil (fixes `() && true` - commit ab083aa)
-  - Added 'not' keyword with split precedence (not_spec now 10/10 - commits cc2c08b, 2626419)
-  - Destructuring assignment now calls to_a (and_spec now 10/10 - commit b396759)
+**Current Status (Session 44 - After selftest-c recovery)**:
+- **Integer specs**: Status unchanged from Session 42
+- **Language specs**: Status needs re-assessment after Session 44 reverts
+  - **IMPORTANT**: Multiple features added in Session 43 were reverted in Session 44 because they broke selftest-c
+  - Features reverted: Empty parentheses as nil, toplevel constant paths, percent literals
+  - Features not applied: Until loops, for loops (merge conflicts)
+- **Recent fixes** (Session 44):
+  - ✅ Fixed comma operator precedence for destructuring (commit 4949a84)
+  - ✅ Added =~ and !~ pattern match operators (commit 4949a84)
+  - ✅ Added Binding class and stub constants (commit 104f818)
+  - ❌ REVERTED: Empty parentheses as nil (broke selftest-c - see [empty_parentheses_issue.md](empty_parentheses_issue.md))
+  - ❌ REVERTED: Toplevel constant paths (broke selftest-c - see [toplevel_constant_paths_issue.md](toplevel_constant_paths_issue.md))
 
 **For details**: See [RUBYSPEC_STATUS.md](RUBYSPEC_STATUS.md)
 **For ongoing work**: See [WORK_STATUS.md](WORK_STATUS.md) (journaling space)
@@ -76,7 +79,7 @@
 7. [x] Fix keyword splat: `def foo(**kwargs); end` (parser.rb parse_arglist) ✅ DONE (commit d185f83)
 8. [x] Add missing exception classes (lib/core/exception.rb) ✅ DONE (commit df6c7e2) - Added NameError, SyntaxError, LocalJumpError, NoMatchingPatternError, UncaughtThrowError
 9. [x] Add ensure clause support to do..end blocks (parser.rb parse_block) ✅ DONE (commit 685e2f6) - Fixes 3 of 4 "Expected: 'end' for 'do'-block" errors
-10. [x] Fix empty parentheses in expressions (shunting.rb) ✅ DONE (commit ab083aa) - Empty `()` now pushes `:nil` symbol instead of nil placeholder, fixing malformed AST nodes for `() && true`, `true && ()`, `() && ()`. Only applies to `()`, not `[]` or `{}`.
+10. [ ] Fix empty parentheses in expressions (shunting.rb) - **REVERTED in Session 44** - commit ab083aa broke selftest-c. Feature needed but implementation caused segfaults. See [empty_parentheses_issue.md](empty_parentheses_issue.md)
 11. [x] Add split precedence support for assignment operators (operators.rb, shunting.rb) ✅ DONE (Session 42) - Assignment operators now have left precedence 7, right precedence 5, fixing `true && x = 1` parsing
 12. [x] Add 'not' keyword operator with split precedence (operators.rb) ✅ DONE (commits cc2c08b, 2626419) - Maps to `!` with pri=7 (left), right_pri=99 (right), fixing `not(expr).method` to reduce not before method calls bind. not_spec now 10/10 tests.
 13. [x] Fix destructuring assignment to call to_a (transform.rb) ✅ DONE (commit b396759) - Destructuring like `x, y = nil` now converts RHS via to_a before indexing, fixing "undefined method '[]' for NilClass". and_spec now 10/10 tests.
