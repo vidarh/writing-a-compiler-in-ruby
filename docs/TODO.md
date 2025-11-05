@@ -7,12 +7,17 @@
 - **Percent Literals**: ✅ FULLY IMPLEMENTED - %Q{}, %q{}, %w{}, %i{} all working (commits b19b40c, e64f179)
   - Tokenizer properly distinguishes % as modulo vs percent literal using @first||prev_lastop
   - Symbol arrays prefix symbols with : for transform.rb recognition
-- **For Loops**: ✅ FULLY IMPLEMENTED - Simple and destructuring loops (commit 0b7c6c6)
+- **For Loops**: ✅ FULLY IMPLEMENTED - Simple and destructuring loops (commits 0b7c6c6, 76cc567)
   - Transforms to .each iterators: `for x in arr` => `arr.each { |x| }`
   - Supports destructuring: `for a, b in pairs` => `pairs.each { |a, b| }`
+  - Handles trailing comma: `for i, in array`
+- **Empty Parentheses**: ✅ FULLY IMPLEMENTED - () evaluates to nil in expressions (commit 2c113ea)
+  - Distinguishes `x = ()` (nil value) from `foo()` (0-argument call)
+  - Passes @is_call_context through shunt_subexpr to distinguish contexts
+  - Unblocks and_spec.rb, or_spec.rb that use `() && expr` patterns
 - **selftest**: ✅ PASSES (1 expected failure)
 - **selftest-c**: ✅ PASSES (1 expected failure)
-- **Language specs**: Should now support specs using percent literals and for loops
+- **Language specs**: Should now support specs using percent literals, for loops, and empty parentheses
 
 **Previous Status (Session 44 - After selftest-c recovery)**:
 - **Integer specs**: Status unchanged from Session 42
@@ -114,11 +119,12 @@
 **Critical Rule**: ALWAYS verify both `make selftest` AND `make selftest-c` pass before committing any feature.
 
 ### 1. Empty Parentheses as nil (ab083aa)
-**Status**: REVERTED - Causes segfault in selftest-c
+**Status**: ✅ DONE (Session 45, commit 2c113ea)
 **Details**: See [empty_parentheses_issue.md](empty_parentheses_issue.md)
 **Task**: Fix compiler bug with complex conditionals involving method chains (`ostack.first && ostack.first.sym.nil?`), then re-implement feature
 **Priority**: MEDIUM - Needed for `and_spec.rb`, `or_spec.rb` (empty expressions with boolean operators)
-**Blocker**: Compiler has bug with method chain conditionals that only manifests during self-compilation
+**Solution**: Pass @is_call_context through shunt_subexpr() to distinguish `()` in expressions from `foo()` calls
+**Testing**: Both selftest and selftest-c pass (1 expected failure each)
 
 ### 2. Toplevel Constant Paths (11b8c88)
 **Status**: REVERTED - Causes segfault in selftest-c
