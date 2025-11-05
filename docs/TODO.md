@@ -122,16 +122,17 @@
 **Details**: See [percent_literal_issue.md](percent_literal_issue.md)
 **Task**: Implement percent literals (%Q{}, %w{}, %i{}, etc.) with proper context tracking
 **Priority**: HIGH - Many specs use percent literals, currently using workarounds
-**Blocker**: Need proper context-sensitive tokenization to distinguish `%` modulo from `%Q{}` percent literal
-**Next Step**: Implement @in_value_position tracking or statement boundary detection
+**Blocker**: Two separate issues:
+  1. Must special-case %s to not consume it (let SEXParser handle)
+  2. Context checking with existing @first||prev_lastop mechanism (no new variables!)
+**Next Step**: Incremental implementation - add %Q{} first, test selftest after each type
 
 ### 4. Until Loop Support (41ae660)
-**Status**: NOT APPLIED - Merge conflicts with current parser
+**Status**: ✅ DONE (Session 44, commit b51256e)
 **Details**: See [until_for_loop_issue.md](until_for_loop_issue.md)
 **Task**: Implement `until condition; body; end` loop construct
-**Priority**: MEDIUM - Needed for ~5-10 specs with until loops in fixtures
-**Blocker**: Merge conflicts in parser.rb due to diverged code
-**Next Step**: Manual re-implementation or rebase approach
+**Implementation**: Manually re-implemented compile_jmp_on_true, compile_until, parse_until
+**Testing**: Both selftest and selftest-c pass
 
 ### 5. For Loop Support (3a3704c)
 **Status**: NOT APPLIED - Merge conflicts with current parser

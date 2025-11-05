@@ -77,6 +77,8 @@ Unhandled exception: undefined method 'each' for String
 
 The s-expression parser expected to read `%s(...)` but got a String instead.
 
+**Simple Fix for S-expressions**: The tokenizer should check if it sees `%s` and immediately unget it, letting the current handling fall through. The existing code already handles this correctly when `%` is treated as an operator.
+
 ## Context-Sensitivity Problem
 
 The fundamental issue is that `%` is context-sensitive:
@@ -139,59 +141,84 @@ This means:
 
 ## Next Steps to Fix
 
-### 1. Proper Context Tracking
+### 1. Handle %s Special Case (REQUIRED)
 
-Track tokenizer state more accurately:
-```ruby
-@in_value_position = false  # true after values, false after operators
-
-when ?%
-  if @in_value_position
-    return ["%", Operators["%"]]  # Modulo
-  else
-    # Parse percent literal
-  end
-```
-
-Update `@in_value_position` after every token based on what it represents.
-
-### 2. Reserved Handling for %s
-
-Never treat `%s` as a percent literal:
+Never treat `%s` as a percent literal - let it fall through to existing handling:
 ```ruby
 when ?%
+  # Check for %s - reserved for s-expressions
+  @s.get  # consume %
   type_char = @s.peek
   if type_char == ?s
-    # Let SEXParser handle it - just return % as operator
+    # Unget the % and let existing code handle it
+    @s.unget(?%)
+    # Fall through to return % as operator
+  else
+    @s.unget(type_char) if type_char
+    @s.unget(?%)
+    # ... rest of percent literal logic using existing @first||prev_lastop
+  end
+```
+
+### 2. Use Existing Context Mechanism
+
+The tokenizer already has `@first` and `prev_lastop` (from @lastop tracking).
+DO NOT add new state variables. Use what exists:
+```ruby
+when ?%
+  # Check for %s first (see above)
+
+  # Use existing context check
+  if @first || prev_lastop
+    # After operator or at start - try percent literal
+    # Parse %Q{}, %w{}, %i{}, etc.
+  else
+    # After value - modulo operator
     return ["%", Operators["%"]]
   end
-  # ... rest of percent literal logic
 ```
 
-### 3. Statement Boundary Tracking
+This is minimal and leverages existing infrastructure.
 
-Track when we're at a statement boundary (where values are expected):
-```ruby
-@statement_boundary = true  # Set after newlines, semicolons, keywords
+### 3. Fix Remaining Context Gaps
 
-when ?%
-  if @statement_boundary || @first || prev_lastop
-    # Percent literal is valid here
-  end
-```
+The `@first || prev_lastop` check doesn't catch all cases. Known gaps:
+- Inside statement bodies (after `do`, after `;`)
+- After method names like `eval %Q{...}`
 
-### 4. Alternative: Dedicated Percent Literal Token
+**Fix**: Enhance existing @lastop mechanism to track these cases, don't add new variables.
+Possible additions to what sets lastop=true:
+- After `do` keyword
+- After `;` semicolon
+- After method names (already tracked via Keywords vs non-Keywords)
 
-Change the scanner to recognize percent literals before tokenization:
-```ruby
-# In scanner.rb, add dedicated method
-def try_percent_literal
-  return nil if @in_value_position
-  # ... parse percent literal at scanner level
-end
-```
+### 4. Incremental Implementation Strategy
 
-This keeps tokenizer simpler and prevents interaction with s-expressions.
+Implement one percent literal type at a time, testing selftest after each:
+
+1. **Start with %Q{}** (double-quoted string with interpolation)
+   - Check which specs use it
+   - Implement just %Q with `{}`delimiters
+   - Test: `make selftest && make selftest-c`
+   - Debug any failures before moving on
+
+2. **Add %q{}** (single-quoted string, no interpolation)
+   - Simpler than %Q (no escape processing)
+   - Test after implementation
+
+3. **Add %w{}** (array of words)
+   - Split on whitespace
+   - Test after implementation
+
+4. **Add %i{}** (array of symbols)
+   - Like %w but convert to symbols
+   - Test after implementation
+
+5. **Add other delimiters** if specs need them
+   - `()`, `[]`, `<>`, `||`, etc.
+   - Each delimiter pair separately tested
+
+**Priority**: Only implement what specs actually test. Check spec files first.
 
 ### 5. Testing Strategy
 
