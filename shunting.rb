@@ -22,6 +22,8 @@ module OpPrec
       scanner = @tokenizer.scanner
       @out.set_scanner(scanner) if scanner
 
+      @is_call_context = false
+
       # Tricky hack:
       #
       # We need a call operator with high priority, but *if* parentheses are not used around
@@ -66,11 +68,14 @@ module OpPrec
       @tokenizer.get_quoted_exp
     end
 
-    def shunt_subexpr(ostack, src)
+    def shunt_subexpr(ostack, src, is_call = false)
       old = @ostack
+      old_is_call = @is_call_context
       @ostack = ostack
+      @is_call_context = is_call
       shunt(src)
       @ostack = old
+      @is_call_context = old_is_call
       :infix_or_postfix
     end
 
@@ -98,14 +103,27 @@ module OpPrec
       elsif op.sym == :quoted_exp
         @out.value(parse_quoted_exp)
       elsif op.type == :rp
-        @out.value(nil) if lastlp
+        # Handle empty parentheses/arrays/hashes
+        if lastlp
+          # Check if it's () vs [] vs {}
+          # ostack.first.sym: nil for (), :array for [], :hash_or_block for {}
+          first_sym = ostack.first ? ostack.first.sym : :unknown
+
+          # For empty (), distinguish between expression context and call context
+          # @is_call_context is set when entering subexpr for foo()
+          if first_sym == nil && !@is_call_context
+            @out.value(:nil)  # Empty () in expression: should be nil value
+          else
+            @out.value(nil)   # Empty [] and {} and foo() get placeholder nil
+          end
+        end
         @out.value(nil) if src.lasttoken and src.lasttoken[1] == COMMA
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break
       elsif op.type == :lp
         reduce(ostack, op)
-        opstate = shunt_subexpr([op],src)
+        opstate = shunt_subexpr([op], src, possible_func)
         ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
 
         # Handling function calls and a[1] vs [1]
