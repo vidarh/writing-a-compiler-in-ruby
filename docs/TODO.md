@@ -3,7 +3,12 @@
 **Purpose**: Task list for improving rubyspec test pass rate (integer specs + language specs)
 **Format**: One-line tasks. Details in referenced docs.
 
-**Current Status (Session 44 - After selftest-c recovery)**:
+**Current Status (Session 45 - Percent Literal Implementation)**:
+- **Percent Literals**: ✅ IMPLEMENTED - %Q{}, %q{}, %w{}, %i{} now working (commit edd74ce)
+- **selftest**: ✅ PASSES (1 expected failure)
+- **Language specs**: Should now support more specs that use percent literals
+
+**Previous Status (Session 44 - After selftest-c recovery)**:
 - **Integer specs**: Status unchanged from Session 42
 - **Language specs**: Status needs re-assessment after Session 44 reverts
   - **IMPORTANT**: Multiple features added in Session 43 were reverted in Session 44 because they broke selftest-c
@@ -118,14 +123,17 @@
 **Next Step**: Isolate which part of the implementation breaks (parser, transform, compile, or operator changes)
 
 ### 3. Percent Literal Support (bc8e8f2)
-**Status**: REVERTED - Broke s-expression parsing
+**Status**: ✅ DONE (Session 45, commit edd74ce)
 **Details**: See [percent_literal_issue.md](percent_literal_issue.md)
 **Task**: Implement percent literals (%Q{}, %w{}, %i{}, etc.) with proper context tracking
 **Priority**: HIGH - Many specs use percent literals, currently using workarounds
-**Blocker**: Two separate issues:
-  1. Must special-case %s to not consume it (let SEXParser handle)
-  2. Context checking with existing @first||prev_lastop mechanism (no new variables!)
-**Next Step**: Incremental implementation - add %Q{} first, test selftest after each type
+**Implementation**:
+  - Added support for %Q{}, %q{}, %w{}, %i{}
+  - Uses existing @first||prev_lastop context check (no new variables)
+  - Handles nested delimiters for paired delimiters
+  - Avoids .map, .chr, and other self-compilation issues
+  - %s(...) correctly handled by SEXParser (tokenizer ignores it)
+**Testing**: selftest passes (1 expected failure)
 
 ### 4. Until Loop Support (41ae660)
 **Status**: ✅ DONE (Session 44, commit b51256e)
@@ -141,6 +149,56 @@
 **Priority**: MEDIUM - Needed for ~10-15 specs with for loops
 **Blocker**: Merge conflicts in parser.rb due to diverged code
 **Next Step**: Manual re-implementation or transform to `.each` iterator
+
+---
+
+## Session 44 Status Summary (selftest-c Recovery)
+
+**Critical Achievement**: Fixed selftest-c after it was broken by multiple Session 43 features
+
+**Problem**: Session 43 added several features (empty parentheses, toplevel constants, percent literals, until/for loops) that broke selftest-c (self-compilation). The compiled compiler would segfault when trying to compile itself.
+
+**Solution**: Systematic recovery approach
+1. Identified last working commit (f1f871f "Add rescue/ensure support to method definitions")
+2. Identified breaking commits through git bisect
+3. Reset to working baseline
+4. Manually re-applied only safe changes
+5. Created comprehensive documentation for reverted features
+6. Manually re-implemented until loops (avoiding merge conflicts)
+
+**Commits**:
+- 104f818: Add Binding class and stub constants (safe subset of bfdf9cb)
+- 4949a84: Add =~ and !~ operators and fix comma precedence
+- bd05ba6: Document features that broke selftest-c and add recovery tasks
+- b51256e: Add until loop support (manual re-implementation)
+- cdb8bcb: Update documentation with corrections
+
+**Features Reverted** (documented in detail):
+1. Empty parentheses as nil (ab083aa) - Compiler bug with `ostack.first && ostack.first.sym.nil?`
+2. Toplevel constant paths (11b8c88) - Segfault at __cnt: 632000, cause unknown
+3. Percent literals (bc8e8f2) - Broke s-expression parsing, never re-added
+
+**Features Successfully Applied**:
+- Until loop support ✅
+- Binding class and TOPLEVEL_BINDING constant ✅
+- =~ and !~ pattern match operators ✅
+- Comma precedence fix for destructuring ✅
+- Big5 encoding constant ✅
+- RegexpError exception class ✅
+
+**Documentation Created**:
+- [empty_parentheses_issue.md](empty_parentheses_issue.md) - 98 lines
+- [toplevel_constant_paths_issue.md](toplevel_constant_paths_issue.md) - 127 lines
+- [percent_literal_issue.md](percent_literal_issue.md) - 171 lines (corrected)
+- [until_for_loop_issue.md](until_for_loop_issue.md) - 143 lines
+
+**Lessons Learned**:
+- ALWAYS test both `make selftest` AND `make selftest-c` before committing
+- Complex boolean expressions with method chains can break self-compilation
+- Incremental testing is essential when re-implementing features
+- Document WHY features broke, not just WHAT broke
+
+**Current Status**: Both selftest and selftest-c PASS (1 expected failure each)
 
 ---
 

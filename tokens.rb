@@ -375,6 +375,96 @@ module Tokens
           return [buf,nil, :keyword]
         end
         return [buf, nil]
+      when ?%
+        # Handle percent literals or modulo operator
+        # Context check: @first || prev_lastop means we're after an operator or at statement start
+        # In that context, % starts a percent literal; otherwise it's modulo
+        # Note: %s(...) for s-expressions is handled by SEXParser before tokenization
+        if @first || prev_lastop
+          @s.get  # consume '%'
+
+          # Check for type character
+          type = nil
+          if @s.peek && ALPHA.member?(@s.peek)
+            type = @s.get
+          end
+
+          # Check if we have a delimiter
+          delim = @s.peek
+          if delim && (delim == ?{ || delim == ?( || delim == ?[ || delim == ?< || delim == ?| || delim == ?! || delim == ?/)
+            # Determine closing delimiter
+            closing = case delim
+            when ?{ then ?}
+            when ?( then ?)
+            when ?[ then ?]
+            when ?< then ?>
+            else delim
+            end
+
+            @s.get  # consume opening delimiter
+
+            # Parse content until closing delimiter
+            content = ""
+            depth = 1
+            paired = (delim == ?{ || delim == ?( || delim == ?[ || delim == ?<)
+
+            while depth > 0
+              c = @s.peek
+              raise "Unterminated percent literal" if c == nil
+
+              @s.get
+
+              if paired && c == delim
+                depth += 1
+                content << c.chr
+              elsif c == closing
+                depth -= 1
+                content << c.chr if depth > 0
+              elsif c == ?\
+                # Escape sequence
+                content << c.chr
+                next_c = @s.get
+                content << next_c.chr if next_c
+              else
+                content << c.chr
+              end
+            end
+
+            # Return based on type
+            case type
+            when ?Q, nil
+              # %Q{} or %{} - double-quoted string
+              return [content, nil]
+            when ?q
+              # %q{} - single-quoted string
+              return [content, nil]
+            when ?w
+              # %w{} - array of words
+              return [[:array, *content.split], nil]
+            when ?i
+              # %i{} - array of symbols
+              # TODO: Not yet implemented - requires parser support to generate
+              # proper AST for symbol literals in arrays
+              # For now, fall through to modulo
+              @s.unget(content)
+              @s.unget(delim.chr)
+              @s.unget(type.chr) if type
+              @s.unget("%")
+            else
+              # Unknown type - treat as modulo
+              @s.unget(type.chr) if type
+              @s.unget("%")
+            end
+          else
+            # No delimiter - treat as modulo
+            @s.unget(type.chr) if type
+            @s.unget("%")
+          end
+        end
+
+        # Modulo operator
+        @s.get
+        return ["%", Operators["%"]]
       when ?/
         if @first || prev_lastop
           # Parse regexp literal
