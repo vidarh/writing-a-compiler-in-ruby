@@ -93,6 +93,53 @@
 
 ---
 
+## FEATURES THAT BROKE SELFTEST-C (Session 44)
+
+**Context**: During Session 44, identified and reverted multiple features that broke selftest-c (self-compilation). These features were needed for RubySpec tests but had implementation issues that caused segfaults during self-compilation. Tasks below are to re-implement them without breaking selftest-c.
+
+**Critical Rule**: ALWAYS verify both `make selftest` AND `make selftest-c` pass before committing any feature.
+
+### 1. Empty Parentheses as nil (ab083aa)
+**Status**: REVERTED - Causes segfault in selftest-c
+**Details**: See [empty_parentheses_issue.md](empty_parentheses_issue.md)
+**Task**: Fix compiler bug with complex conditionals involving method chains (`ostack.first && ostack.first.sym.nil?`), then re-implement feature
+**Priority**: MEDIUM - Needed for `and_spec.rb`, `or_spec.rb` (empty expressions with boolean operators)
+**Blocker**: Compiler has bug with method chain conditionals that only manifests during self-compilation
+
+### 2. Toplevel Constant Paths (11b8c88)
+**Status**: REVERTED - Causes segfault in selftest-c
+**Details**: See [toplevel_constant_paths_issue.md](toplevel_constant_paths_issue.md)
+**Task**: Implement `class ::ClassName` and `module ::ModuleName` syntax without breaking selftest-c
+**Priority**: HIGH - Needed for many specs that use `class ::Object` to avoid local constant conflicts
+**Blocker**: Segfault at __cnt: 632000 during self-compilation, root cause unknown
+**Next Step**: Isolate which part of the implementation breaks (parser, transform, compile, or operator changes)
+
+### 3. Percent Literal Support (bc8e8f2)
+**Status**: REVERTED - Broke s-expression parsing
+**Details**: See [percent_literal_issue.md](percent_literal_issue.md)
+**Task**: Implement percent literals (%Q{}, %w{}, %i{}, etc.) with proper context tracking
+**Priority**: HIGH - Many specs use percent literals, currently using workarounds
+**Blocker**: Need proper context-sensitive tokenization to distinguish `%` modulo from `%Q{}` percent literal
+**Next Step**: Implement @in_value_position tracking or statement boundary detection
+
+### 4. Until Loop Support (41ae660)
+**Status**: NOT APPLIED - Merge conflicts with current parser
+**Details**: See [until_for_loop_issue.md](until_for_loop_issue.md)
+**Task**: Implement `until condition; body; end` loop construct
+**Priority**: MEDIUM - Needed for ~5-10 specs with until loops in fixtures
+**Blocker**: Merge conflicts in parser.rb due to diverged code
+**Next Step**: Manual re-implementation or rebase approach
+
+### 5. For Loop Support (3a3704c)
+**Status**: NOT APPLIED - Merge conflicts with current parser
+**Details**: See [until_for_loop_issue.md](until_for_loop_issue.md)
+**Task**: Implement `for var in enumerable; body; end` loop with destructuring
+**Priority**: MEDIUM - Needed for ~10-15 specs with for loops
+**Blocker**: Merge conflicts in parser.rb due to diverged code
+**Next Step**: Manual re-implementation or transform to `.each` iterator
+
+---
+
 ## Session 41 Status Summary
 
 **Key Wins**:
