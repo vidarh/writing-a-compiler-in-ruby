@@ -40,7 +40,7 @@ class Compiler
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
   @@keywords = Set[
-                   :do, :class, :defun, :defm, :if,
+                   :do, :class, :defun, :defm, :if, :unless,
                    :assign, :while, :until, :index, :bindex, :let, :case, :ternif,
                    :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,

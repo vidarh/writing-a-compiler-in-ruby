@@ -127,6 +127,12 @@ class Compiler
     combine_types(ifret, elseret)
   end
 
+  # Compiles an unless expression by swapping the then/else arms
+  def compile_unless(scope, cond, unless_arm, else_arm = nil)
+    # unless cond; A; else; B; end  =>  if cond; B; else; A; end
+    compile_if(scope, cond, else_arm, unless_arm)
+  end
+
   def compile_return(scope, arg = :nil)
     @e.save_result(compile_eval_arg(scope, arg)) if arg
     @e.movl("-4(%ebp)",:ebx)
