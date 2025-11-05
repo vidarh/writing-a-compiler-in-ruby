@@ -4,10 +4,12 @@
 **Format**: One-line tasks. Details in referenced docs.
 
 **Current Status (Session 45 - Percent Literal Implementation)**:
-- **Percent Literals**: ✅ PARTIALLY IMPLEMENTED - %Q{}, %q{}, %w{} now working (commit b19b40c)
-  - %i{} NOT YET IMPLEMENTED - requires parser-level support for symbol literals
+- **Percent Literals**: ✅ FULLY IMPLEMENTED - %Q{}, %q{}, %w{}, %i{} all working
+  - Initial commit b19b40c added %Q, %q, %w
+  - Fixed %i{} to properly prefix symbols with : for transform.rb recognition
 - **selftest**: ✅ PASSES (1 expected failure)
-- **Language specs**: Should now support specs that use %Q, %q, %w percent literals
+- **selftest-c**: ✅ PASSES (1 expected failure)
+- **Language specs**: Should now support specs that use percent literals
 
 **Previous Status (Session 44 - After selftest-c recovery)**:
 - **Integer specs**: Status unchanged from Session 42

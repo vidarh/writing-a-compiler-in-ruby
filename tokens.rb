@@ -443,13 +443,9 @@ module Tokens
               return [[:array, *content.split], nil]
             when ?i
               # %i{} - array of symbols
-              # TODO: Not yet implemented - requires parser support to generate
-              # proper AST for symbol literals in arrays
-              # For now, fall through to modulo
-              @s.unget(content)
-              @s.unget(delim.chr)
-              @s.unget(type.chr) if type
-              @s.unget("%")
+              # Must prefix with : so transform.rb recognizes them as symbols
+              symbols = content.split.map { |word| (":#{word}").to_sym }
+              return [[:array, *symbols], nil]
             else
               # Unknown type - treat as modulo
               @s.unget(type.chr) if type
