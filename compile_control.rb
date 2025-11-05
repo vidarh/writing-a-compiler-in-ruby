@@ -140,24 +140,54 @@ class Compiler
   # Compiles a while loop.
   # Takes the current scope, a condition expression as well as the body of the function.
   def compile_while(scope, cond, body)
-    @e.loop do |br,l|
-      var = compile_eval_arg(scope, cond)
-      compile_jmp_on_false(scope, var, br)
-      compile_exp(ControlScope.new(scope, br,l), body)
-    end
-    compile_eval_arg(scope, :nil)
+    # We need two exit labels:
+    # - normal_exit: for when condition becomes false (returns nil)
+    # - break_label: for when break is executed (returns break value)
+    @e.evict_all
+    break_label = @e.get_local
+    normal_exit = @e.get_local
+    loop_label = @e.local
+
+    var = compile_eval_arg(scope, cond)
+    compile_jmp_on_false(scope, var, normal_exit)
+    compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    @e.evict_all
+    @e.jmp(loop_label)
+
+    # Normal exit: set %eax to nil
+    @e.local(normal_exit)
+    nilval = compile_eval_arg(scope, :nil)
+    @e.movl(nilval, :eax) if nilval != :eax
+
+    # Break label: %eax already has the break value
+    @e.local(break_label)
+
     return Value.new([:subexpr])
   end
 
   # Compiles an until loop (inverse of while).
   # Takes the current scope, a condition expression as well as the body of the function.
   def compile_until(scope, cond, body)
-    @e.loop do |br,l|
-      var = compile_eval_arg(scope, cond)
-      compile_jmp_on_true(scope, var, br)  # Jump on true (opposite of while)
-      compile_exp(ControlScope.new(scope, br,l), body)
-    end
-    compile_eval_arg(scope, :nil)
+    # Same structure as compile_while but with jmp_on_true instead of jmp_on_false
+    @e.evict_all
+    break_label = @e.get_local
+    normal_exit = @e.get_local
+    loop_label = @e.local
+
+    var = compile_eval_arg(scope, cond)
+    compile_jmp_on_true(scope, var, normal_exit)  # Jump on true (opposite of while)
+    compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    @e.evict_all
+    @e.jmp(loop_label)
+
+    # Normal exit: set %eax to nil
+    @e.local(normal_exit)
+    nilval = compile_eval_arg(scope, :nil)
+    @e.movl(nilval, :eax) if nilval != :eax
+
+    # Break label: %eax already has the break value
+    @e.local(break_label)
+
     return Value.new([:subexpr])
   end
 
