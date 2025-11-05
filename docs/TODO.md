@@ -3,13 +3,16 @@
 **Purpose**: Task list for improving rubyspec test pass rate (integer specs + language specs)
 **Format**: One-line tasks. Details in referenced docs.
 
-**Current Status (Session 45 - Percent Literal Implementation)**:
-- **Percent Literals**: ✅ FULLY IMPLEMENTED - %Q{}, %q{}, %w{}, %i{} all working
-  - Initial commit b19b40c added %Q, %q, %w
-  - Fixed %i{} to properly prefix symbols with : for transform.rb recognition
+**Current Status (Session 45 - Language Features)**:
+- **Percent Literals**: ✅ FULLY IMPLEMENTED - %Q{}, %q{}, %w{}, %i{} all working (commits b19b40c, e64f179)
+  - Tokenizer properly distinguishes % as modulo vs percent literal using @first||prev_lastop
+  - Symbol arrays prefix symbols with : for transform.rb recognition
+- **For Loops**: ✅ FULLY IMPLEMENTED - Simple and destructuring loops (commit 0b7c6c6)
+  - Transforms to .each iterators: `for x in arr` => `arr.each { |x| }`
+  - Supports destructuring: `for a, b in pairs` => `pairs.each { |a, b| }`
 - **selftest**: ✅ PASSES (1 expected failure)
 - **selftest-c**: ✅ PASSES (1 expected failure)
-- **Language specs**: Should now support specs that use percent literals
+- **Language specs**: Should now support specs using percent literals and for loops
 
 **Previous Status (Session 44 - After selftest-c recovery)**:
 - **Integer specs**: Status unchanged from Session 42
@@ -146,12 +149,12 @@
 **Testing**: Both selftest and selftest-c pass
 
 ### 5. For Loop Support (3a3704c)
-**Status**: NOT APPLIED - Merge conflicts with current parser
+**Status**: ✅ DONE (Session 45, commit 0b7c6c6)
 **Details**: See [until_for_loop_issue.md](until_for_loop_issue.md)
 **Task**: Implement `for var in enumerable; body; end` loop with destructuring
 **Priority**: MEDIUM - Needed for ~10-15 specs with for loops
-**Blocker**: Merge conflicts in parser.rb due to diverged code
-**Next Step**: Manual re-implementation or transform to `.each` iterator
+**Implementation**: Transforms for loops to .each iterators (for x in arr => arr.each { |x| })
+**Testing**: Both selftest and selftest-c pass (1 expected failure each)
 
 ---
 
