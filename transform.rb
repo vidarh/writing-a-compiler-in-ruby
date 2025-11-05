@@ -704,6 +704,26 @@ class Compiler
     end
   end
 
+  # Transform for loops to .each iterators
+  # for x in array; body; end => array.each { |x| body }
+  def rewrite_for(exps)
+    exps.depth_first(:for) do |e|
+      # e = [:for, var, enumerable, body]
+      var = e[1]
+      enumerable = e[2]
+      body = e[3]
+
+      # Transform to: [:callm, enumerable, :each, [[:lambda, [var], body]]]
+      # This creates: enumerable.each { |var| body }
+      e[0] = :callm
+      e[1] = enumerable
+      e[2] = :each
+      e[3] = [[:lambda, [var], body]]
+
+      :skip  # Don't reprocess the transformed node
+    end
+  end
+
   def setup_global_scope(exp)
     if !@global_scope
       @global_scope = GlobalScope.new(@vtableoffsets)
@@ -715,6 +735,7 @@ class Compiler
     # The global scope is needed for some rewrites
     setup_global_scope(exp)
 
+    rewrite_for(exp)
     rewrite_destruct(exp)
     rewrite_concat(exp)
     rewrite_range(exp)

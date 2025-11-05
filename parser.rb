@@ -231,6 +231,37 @@ class Parser < ParserBase
     return E[pos, :until, cond, [:do]+exps]
   end
 
+  # for ::= "for" ws+ lvalue ws+ "in" ws+ expr ws* (SEMICOLON | ws+ "do") ws* defexp* "end"
+  # Supports: for x in array, for a,b in array (destructuring)
+  def parse_for
+    pos = position
+    keyword(:for) or return
+    ws
+    # Parse loop variable(s) - can be single var or destructured (a, b, c)
+    vars = []
+    vars << (parse_name or expected("variable name after 'for'"))
+    ws
+    while literal(",")
+      ws
+      vars << (parse_name or expected("variable name in for loop"))
+      ws
+    end
+    # Expect 'in' keyword
+    keyword(:in) or expected("'in' keyword after for loop variable")
+    ws
+    # Parse the enumerable expression
+    enumerable = parse_condition or expected("expression after 'in'")
+    nolfws; literal(SEMICOLON); nolfws; keyword(:do)
+    nolfws;
+    # Parse body
+    exps = parse_opt_defexp
+    keyword(:end) or expected("expression or 'end' for open 'for' block")
+    # Return [:for, vars, enumerable, body]
+    # If single var, unwrap from array for simpler AST
+    var = vars.length == 1 ? vars[0] : [:destruct] + vars
+    return E[pos, :for, var, enumerable, [:do]+exps]
+  end
+
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
   # Supports: rescue, rescue => e, rescue Error, rescue Error => e
   def parse_rescue
@@ -444,7 +475,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_class || parse_module || parse_sexp || parse_while || parse_until || parse_begin || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_case || parse_require_relative || parse_require
+    ret = parse_class || parse_module || parse_sexp || parse_while || parse_until || parse_for || parse_begin || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
     # FIXME: @bug this below is needed for MRI, but not for the selfhosted compiler...
