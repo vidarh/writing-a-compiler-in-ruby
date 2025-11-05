@@ -186,15 +186,31 @@ module OpPrec
             opstate = r
           end
         else
-          if possible_func
-            # Fix for parser bug with parenthesis-free method chains like "result.should eql 3"
-            # Reduce operators with priority > @opcall2 (9), but not @opcall2 itself
-            # This makes "foo bar baz" parse as "foo(bar(baz))" not "foo(bar, baz)"
-            # while also properly handling single arguments like "x.y 42"
-            reduce(ostack, @opcall2)
-            ostack << @opcall2
+          # Check if this is a statement-level keyword that needs special parsing
+          # These keywords can appear as expressions (e.g., "a = while true; break; end")
+          if keyword && [:while, :until, :for, :if, :unless, :begin].include?(token)
+            # Unget the keyword and call the appropriate parser method
+            src.unget(token)
+            parser_method = case token
+              when :if, :unless then :parse_if_unless
+              when :while then :parse_while
+              when :until then :parse_until
+              when :for then :parse_for
+              when :begin then :parse_begin
+            end
+            result = @parser.send(parser_method)
+            @out.value(result)
+          else
+            if possible_func
+              # Fix for parser bug with parenthesis-free method chains like "result.should eql 3"
+              # Reduce operators with priority > @opcall2 (9), but not @opcall2 itself
+              # This makes "foo bar baz" parse as "foo(bar(baz))" not "foo(bar, baz)"
+              # while also properly handling single arguments like "x.y 42"
+              reduce(ostack, @opcall2)
+              ostack << @opcall2
+            end
+            @out.value(token)
           end
-          @out.value(token)
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
