@@ -126,17 +126,17 @@
 **Next Step**: Isolate which part of the implementation breaks (parser, transform, compile, or operator changes)
 
 ### 3. Percent Literal Support (bc8e8f2)
-**Status**: ✅ PARTIALLY DONE (Session 45, commit b19b40c)
+**Status**: ✅ FULLY DONE (Session 45, commits b19b40c, e64f179)
 **Details**: See [percent_literal_issue.md](percent_literal_issue.md)
 **Task**: Implement percent literals (%Q{}, %w{}, %i{}, etc.) with proper context tracking
 **Priority**: HIGH - Many specs use percent literals, currently using workarounds
 **Implementation**:
-  - Added support for %Q{}, %q{}, %w{}
+  - Added support for %Q{}, %q{}, %w{} (commit b19b40c)
+  - Fixed %i{} to prefix symbols with : for transform.rb (commit e64f179)
   - Uses existing @first||prev_lastop context check (no new variables)
   - Handles nested delimiters for paired delimiters
   - %s(...) correctly handled by SEXParser (tokenizer ignores it)
-**Testing**: selftest passes (1 expected failure)
-**Remaining**: %i{} requires parser-level support for symbol literal arrays
+**Testing**: Both selftest and selftest-c pass (1 expected failure each)
 
 ### 4. Until Loop Support (41ae660)
 **Status**: ✅ DONE (Session 44, commit b51256e)
