@@ -249,7 +249,21 @@ class Parser < ParserBase
         @scanner.unget("in")
         break
       end
-      vars << (parse_name or expected("variable name in for loop"))
+      # Check for splat (e.g., "for i, * in array" or "for i, *j in array")
+      if literal(ASTERISK)
+        ws
+        # Check if 'in' follows immediately (bare splat: "for i, * in array")
+        if keyword(:in)
+          @scanner.unget("in")
+          vars << :_
+        else
+          # Named splat: "for i, *j in array"
+          name = parse_name or expected("variable name or 'in' after splat in for loop")
+          vars << name
+        end
+      else
+        vars << (parse_name or expected("variable name in for loop"))
+      end
       ws
     end
     # Expect 'in' keyword
