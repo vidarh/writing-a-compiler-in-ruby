@@ -188,7 +188,8 @@ module OpPrec
         else
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
-          if keyword && [:while, :until, :for, :if, :unless, :begin].include?(token)
+          # Also handle break statement which can appear in boolean expressions (e.g., "x or break")
+          if keyword && [:while, :until, :for, :if, :unless, :begin, :break].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
@@ -197,6 +198,7 @@ module OpPrec
               when :until then :parse_until
               when :for then :parse_for
               when :begin then :parse_begin
+              when :break then :parse_break
             end
             result = @parser.send(parser_method)
             @out.value(result)
