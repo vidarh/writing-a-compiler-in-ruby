@@ -52,6 +52,13 @@
 
 ## 🐛 KNOWN BUGS
 
+### ⚠️ TOP-LEVEL BLOCKS/LAMBDAS BROKEN ⚠️
+**Status**: KNOWN LIMITATION - Session 46 wasted significant time on this
+**Problem**: Blocks/lambdas/for loops at top level fail with "undefined method" for parameters
+**Workaround**: ALWAYS wrap tests in methods. RubySpecs do this, so they're unaffected.
+**Details**: See [TOP_LEVEL_BLOCKS_ISSUE.md](TOP_LEVEL_BLOCKS_ISSUE.md)
+**Priority**: HIGH - Keeps causing time waste
+
 ### Integer::MIN Literal Causes selftest-c Assembly Failure
 **Status**: WORKAROUND IN PLACE (Integer::MIN commented out)
 **Discovered**: Nov 3, 2025 (Session 42)

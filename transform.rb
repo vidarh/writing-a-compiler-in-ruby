@@ -715,10 +715,13 @@ class Compiler
 
       # Transform to: [:callm, enumerable, :each, [[:lambda, [var], body]]]
       # This creates: enumerable.each { |var| body }
+      # Create lambda with position from original for statement
+      lambda_node = E[e.position, :lambda, [var], body]
+
       e[0] = :callm
       e[1] = enumerable
       e[2] = :each
-      e[3] = [[:lambda, [var], body]]
+      e[3] = [lambda_node]
 
       :skip  # Don't reprocess the transformed node
     end
