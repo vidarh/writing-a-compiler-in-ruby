@@ -208,7 +208,13 @@ module OpPrec
 
     def result
       if @vstack.length > 1
-        msg = "Incomplete expression - #{@vstack.inspect}"
+        # Multiple values left on stack - expression didn't reduce properly
+        # This usually means: missing operator, unexpected token, or parser bug
+        values_desc = @vstack.map.with_index do |v, i|
+          desc = v.nil? ? "nil" : (v.is_a?(Array) && v[0].is_a?(Symbol) ? v[0].to_s : v.inspect)
+          "  [#{i}]: #{desc}"
+        end.join("\n")
+        msg = "Expression did not reduce to single value (#{@vstack.length} values on stack)\n#{values_desc}"
         raise ShuntingYardError.new(msg, @filename, @scanner ? @scanner.lineno : nil, @scanner ? @scanner.col : nil)
       end
       return @vstack[0]
