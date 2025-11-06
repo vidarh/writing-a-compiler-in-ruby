@@ -85,16 +85,26 @@ class Compiler
   # Outputs nice compiler error messages, similar to
   # the parser (ParserBase#error).
   def error(error_message, current_scope = nil, current_exp = nil)
-    if current_exp.respond_to?(:position) && current_exp.position && current_exp.position.lineno
+    # Extract position information for CompilerError formatting
+    filename = nil
+    line = nil
+    column = nil
+
+    if current_exp.respond_to?(:position) && current_exp.position
       pos = current_exp.position
-      location = " @ #{pos.inspect}"
+      filename = pos.filename if pos.respond_to?(:filename)
+      line = pos.lineno if pos.respond_to?(:lineno)
+      column = pos.col if pos.respond_to?(:col)
     elsif @lastpos
-      location = " near (after) #{@lastpos}"
-    else
-      location = ""
+      # @lastpos format: "line X, col Y in filename"
+      if @lastpos =~ /line (\d+), col (\d+) in (.+)/
+        line = $1.to_i
+        column = $2.to_i
+        filename = $3
+      end
     end
-    raise "Compiler error: #{error_message}#{location}\n
-           current expression: #{current_exp.inspect}\n"
+
+    raise CompilerError.new(error_message, filename, line, column)
   end
 
 
