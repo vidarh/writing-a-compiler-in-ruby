@@ -708,20 +708,34 @@ class Compiler
   # for x in array; body; end => array.each { |x| body }
   def rewrite_for(exps)
     exps.depth_first(:for) do |e|
-      # e = [:for, var, enumerable, body]
+      # e = [:for, var, enumerable, [:do, exp1, exp2, ...]]
       var = e[1]
       enumerable = e[2]
       body = e[3]
 
-      # Transform to: [:callm, enumerable, :each, [[:lambda, [var], body]]]
+      # Extract expressions from [:do, ...] block
+      # For single expression, use it directly; for multiple, keep as array
+      # Lambda second element is the parameter list, third+ are body expressions
+      if body.is_a?(Array) && body[0] == :do
+        # Body is [:do, exp1, exp2, ...], extract expressions
+        body_exps = body[1..-1]
+      else
+        body_exps = [body]
+      end
+
+      # Transform to: [:callm, enumerable, :each, [], lambda_node]
       # This creates: enumerable.each { |var| body }
+      # Note: blocks are passed as a 5th element to :callm, not in the args array
       # Create lambda with position from original for statement
-      lambda_node = E[e.position, :lambda, [var], body]
+      # Lambda body must be an ARRAY of expressions (matching parser's :proc structure)
+      # e.g., [:lambda, [:i], [exp1, exp2, ...]]
+      lambda_node = E[e.position, :lambda, [var], body_exps]
 
       e[0] = :callm
       e[1] = enumerable
       e[2] = :each
-      e[3] = [lambda_node]
+      e[3] = []  # Empty args array
+      e[4] = lambda_node  # Block passed separately
 
       :skip  # Don't reprocess the transformed node
     end
