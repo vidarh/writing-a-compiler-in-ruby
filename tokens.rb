@@ -438,11 +438,15 @@ module Tokens
             when ?q
               # %q{} - single-quoted string
               return [content, nil]
-            when ?w
-              # %w{} - array of words
+            when ?w, ?W
+              # %w{} - array of words (no interpolation)
+              # %W{} - array of words (with interpolation, but not supported yet - treat as %w)
+              # TODO: Implement proper interpolation support for %W{}
               return [[:array, *content.split], nil]
-            when ?i
-              # %i{} - array of symbols
+            when ?i, ?I
+              # %i{} - array of symbols (no interpolation)
+              # %I{} - array of symbols (with interpolation, but not supported yet - treat as %i)
+              # TODO: Implement proper interpolation support for %I{}
               # Must prefix with : so transform.rb recognizes them as symbols
               symbols = content.split.map { |word| (":#{word}").to_sym }
               return [[:array, *symbols], nil]
