@@ -1,0 +1,18 @@
+DEBUG: Starting run_rubyspec for ./spec
+Running all specs in ./spec...
+================================
+
+
+================================
+Summary:
+  Total spec files: 0
+  Passed: 0
+  Failed: 0
+  Crashed (no test output): 0
+  Failed to compile: 0
+
+Individual Test Cases:
+  Total tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
