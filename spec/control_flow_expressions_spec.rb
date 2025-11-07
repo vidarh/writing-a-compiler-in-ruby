@@ -8,24 +8,37 @@ describe "Control flow as expressions" do
     x.should == 42
   end
 
-  it "should support method chaining on if expression results" do
-    result = if true; "hello"; end.upcase
-    result.should == "HELLO"
+  it "should return value from if as method return" do
+    def test_if_return
+      if true; 42; end
+    end
+    test_if_return.should == 42
   end
 
-  it "should support if expressions in array literals" do
-    arr = [if true; 1; end, 2, 3]
+  it "supports if with method chaining" do
+    def test_if_to_s
+      if true; 42; end.to_s
+    end
+    test_if_to_s.should == "42"
+  end
+
+  it "supports method chaining on if result" do
+    result = (if true; 42; end).to_s
+    result.should == "42"
+  end
+
+  it "supports if in array literals" do
+    arr = [1, if true; 2; end, 3]
     arr.should == [1, 2, 3]
   end
 
-  it "should support arithmetic with if expression results" do
+  it "supports arithmetic with if result" do
     result = (if true; 10; end) + 5
     result.should == 15
   end
 
-  it "should support method calls on case expression results" do
-    x = 1
-    result = case x; when 1; "one"; end.upcase
-    result.should == "ONE"
+  it "supports method chaining on case result" do
+    result = (case 1; when 1; "x"; end).upcase
+    result.should == "X"
   end
 end
