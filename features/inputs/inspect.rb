@@ -1,1 +1,0 @@
-puts Object.new.inspect

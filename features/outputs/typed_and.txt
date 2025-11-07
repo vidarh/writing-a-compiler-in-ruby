@@ -1,3 +1,0 @@
-OK: a && b == false
-OK: a || b == true
-OK: b && a == false

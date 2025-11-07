@@ -103,17 +103,22 @@ This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler 
 - `make selftest` - Compile and run the self-test suite
 - `make selftest-mri` - Run self-test under MRI Ruby (for validation)
 - `make selftest-c` - Self-host test (compile with compiled compiler)
-- `make rspec` - Run RSpec tests (unit tests for compiler components)
-- `make features` - Run Cucumber feature tests (integration tests)
-- `make tests` - Run all tests (rspec + features + selftest)
+- `make rubyspec-integer` - Run integer specs (rubyspec/core/integer/)
+- `make rubyspec-language` - Run language specs (rubyspec/language/)
+- `make spec` - Run custom test cases (spec/ directory)
 
-**RSpec Test Types:**
-- Unit tests (`spec/*.rb`) - Test individual compiler components (e.g., `spec/compiler.rb`, `spec/function.rb`)
-- Compilation tests - Tests that compile Ruby code and verify output (e.g., `spec/ivar.rb`, `spec/global_vars.rb`)
-  - Use `CompilationHelper` module for reusable compile-and-run functionality
-  - Automatically use Docker for 32-bit assembly and execution
-  - Example: `output = compile_and_run(ruby_code_string)`
-  - Good for testing language features that may fail if compiler can't compile the test itself
+**Test Hierarchy:**
+1. **selftest** - Self-hosting validation (MUST PASS before committing)
+2. **selftest-c** - Self-compilation validation (MUST PASS before committing)
+3. **rubyspec** - Comprehensive Ruby compatibility tests
+4. **spec/** - Reduced test cases and compiler unit tests
+
+**Using spec/ for Development:**
+- Create minimal test cases when investigating bugs
+- Put tests that use compiler classes directly (not via compiled code)
+- Write reduced reproductions that deviate from rubyspec format
+- Delete test files once bug is fixed and covered by rubyspec
+- Example: `spec/ternary_bug_minimal.rb` for investigating specific bugs
 
 ### Docker Environment
 - `make buildc` - Build Docker development environment
@@ -200,14 +205,15 @@ This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler 
 - `lib/core/` - Ruby standard library reimplementation
 - `out/` - Generated binaries and assembly output
 - `test/` - Minimal self-hosted test framework
-- `spec/` - RSpec tests
-  - `compilation_helper.rb` - Helper module for compilation tests (provides `compile_and_run`)
-  - Individual spec files test specific components or features
-- `features/` - Cucumber behavior tests
+- `spec/` - Reduced test cases and compiler unit tests (for development)
+- `rubyspec/` - Comprehensive Ruby compatibility test suite (do not edit)
 - `mybin/` - Utility scripts
 - `docs/` - Architecture documentation and development notes
-  - `ARCHITECTURE.md` - Detailed architectural documentation
-  - `TODO.md` - Development roadmap and planned improvements
+  - `TODO.md` - Outstanding tasks
+  - `KNOWN_ISSUES.md` - Current bugs and limitations
+  - `WORK_STATUS.md` - Journaling space for ongoing work
+  - `ARCHITECTURE.md` - System architecture
+  - `DEBUGGING_GUIDE.md` - Debugging techniques
 
 ### Self-Hosting Process
 The goal is a three-stage bootstrap:

@@ -77,11 +77,14 @@ cli:
 bundle:
 	${DR} bundle install
 
-rspec:
-	bundle exec rspec --format=doc ./spec/*.rb
+.PHONY: rubyspec-integer
+rubyspec-integer:
+	./run_rubyspec rubyspec/core/integer/ 2>&1 | tee docs/rubyspec_integer.txt
 
-.PHONY: features
-features:
-	${DR} /bin/bash -l -c 'cd features; bundle exec cucumber -r. -e inputs -e outputs *.feature'
+.PHONY: rubyspec-language
+rubyspec-language:
+	./run_rubyspec rubyspec/language/ 2>&1 | tee docs/rubyspec_language.txt
 
-tests: rspec features selftest
+.PHONY: spec
+spec:
+	./run_rubyspec ./spec 2>&1 | tee docs/spec.txt
