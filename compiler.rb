@@ -95,13 +95,6 @@ class Compiler
       filename = pos.filename if pos.respond_to?(:filename)
       line = pos.lineno if pos.respond_to?(:lineno)
       column = pos.col if pos.respond_to?(:col)
-    elsif @lastpos
-      # @lastpos format: "line X, col Y in filename"
-      if @lastpos =~ /line (\d+), col (\d+) in (.+)/
-        line = $1.to_i
-        column = $2.to_i
-        filename = $3
-      end
     end
 
     raise CompilerError.new(error_message, filename, line, column)
