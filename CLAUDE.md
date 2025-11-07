@@ -114,11 +114,33 @@ This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler 
 4. **spec/** - Reduced test cases and compiler unit tests
 
 **Using spec/ for Development:**
-- Create minimal test cases when investigating bugs
-- Put tests that use compiler classes directly (not via compiled code)
-- Write reduced reproductions that deviate from rubyspec format
-- Delete test files once bug is fixed and covered by rubyspec
-- Example: `spec/ternary_bug_minimal.rb` for investigating specific bugs
+
+**CRITICAL**: All tests in spec/ **MUST** use mspec format (describe/it/.should) because `make spec` runs `./run_rubyspec ./spec`.
+
+Tests are NOT plain Ruby scripts - they must be mspec-compatible.
+
+**When to use spec/**:
+- Create minimal **mspec tests** reproducing specific bugs
+- Write tests using compiler classes directly (via mspec framework)
+- Add tests for features not covered by rubyspec (using mspec format)
+- Create reduced test cases when investigating issues (mspec format)
+
+**Required format**:
+```ruby
+require_relative '../rubyspec/spec_helper'
+
+describe "Feature" do
+  it "behavior" do
+    result.should == expected
+  end
+end
+```
+
+**Guidelines**:
+- Name files with `_spec.rb` suffix
+- Reference KNOWN_ISSUES.md issue numbers in comments
+- Delete/move to rubyspec/ once bug is fixed
+- See spec/README.md for full guidelines and examples
 
 ### Docker Environment
 - `make buildc` - Build Docker development environment

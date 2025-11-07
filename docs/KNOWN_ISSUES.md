@@ -15,31 +15,13 @@ if true; 42; end.to_s       # ✗ Parse error
 
 **Solution**: Architectural parser redesign - move all control flow through shunting yard. Complex.
 
-**Test**: spec/control_flow_expressions.rb
+**Test**: spec/control_flow_expressions_spec.rb
 
 **Details**: See control_flow_as_expressions.md for full architectural analysis.
 
 ---
 
-## 2. Ternary Operator Bug
-
-**Problem**: When condition is a variable that's `false`, returns `false` instead of else value. Literal `false` works correctly.
-
-```ruby
-false ? "WRONG" : "CORRECT"          # ✓ Works - returns "CORRECT"
-var = false
-var ? "WRONG" : "CORRECT"            # ✗ Bug - returns false
-```
-
-**Workaround**: Use if/else instead of ternary operator.
-
-**Test**: spec/ternary_operator_bug.rb - reproduces bug consistently
-
-**Discovered**: During selftest-c debugging (compile_class.rb:40).
-
----
-
-## 3. Top-Level Blocks/Lambdas
+## 2. Top-Level Blocks/Lambdas
 
 **Problem**: Blocks and lambdas at top-level fail with "undefined method" for parameters.
 
@@ -78,21 +60,22 @@ var ? "WRONG" : "CORRECT"            # ✗ Bug - returns false
 
 ---
 
-## 6. Lambda .() Call Syntax Not Supported
+## 6. Lambda .() and [] Call Syntax Not Supported
 
-**Problem**: The `.()` syntax for calling lambdas/procs is not implemented.
+**Problem**: The `.()` and `[]` syntax for calling lambdas/procs are not implemented.
 
 ```ruby
 l = lambda { 42 }
 l.call        # ✓ Works
-l.()          # ✗ Parse error - not supported
+l.()          # ✗ Compilation error: "Missing value in expression"
+l[]           # ✗ Runtime error: "undefined method '[]' for Proc"
 ```
 
-**Impact**: Blocks lambda_spec and other specs using this syntax
+**Impact**: Blocks lambda_spec and other specs using these syntax forms
 
-**Workaround**: Use `.call` instead of `.()`
+**Workaround**: Use `.call` instead of `.()` or `[]`
 
-**Test**: spec/lambda_call_syntax.rb
+**Test**: spec/lambda_call_syntax_spec.rb
 
 ---
 
