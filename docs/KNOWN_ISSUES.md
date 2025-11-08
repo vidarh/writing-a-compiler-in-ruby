@@ -36,32 +36,46 @@ if true; 42; end.to_s       # ✗ Parse error
 
 ---
 
-## 3. Module include Not Implemented
+## 3. Module include - IMPLEMENTED (with limitations)
 
-**Problem**: The `include` keyword is not implemented. Modules cannot be included in classes.
+**Status**: ✅ PARTIALLY FIXED (2025-11-08)
 
+**Problem**: The `include` keyword was not implemented. Modules could not be included in classes.
+
+**Solution**: Implemented runtime vtable copying via `__include_module(klass, mod)` function.
+
+**How it works**:
+1. During class definition, `include ModuleName` calls `__include_module(self, ModuleName)`
+2. At runtime, `__include_module` loops through module's vtable (slots 6 to __vtable_size)
+3. For each slot, if class slot is uninitialized (points to __base_vtable method_missing thunk), copy module's slot
+4. This preserves class methods and supports multiple includes (first defined wins)
+
+**Now works**:
 ```ruby
-module Kernel
-  def puts(s); end
+module TestModule
+  def test_method
+    42
+  end
 end
 
-class Object
-  include Kernel  # ✗ Does nothing - include not implemented
+class TestClass
+  include TestModule  # ✓ Works - methods copied at runtime
 end
+
+obj = TestClass.new
+obj.test_method  # ✓ Returns 42
 ```
 
-**Workaround**: Manually duplicate methods from modules into classes. See lib/core/object.rb where Kernel methods are manually copied.
+**Limitations**:
+- **Ordering issue**: If a class includes a module that's defined later in the file, include silently fails (module constant is still 0/null)
+  - Example: Integer includes Comparable, but Comparable is defined after Integer in compilation order
+  - Workaround: `__include_module` checks if mod==0 and returns early to prevent crash
+  - Proper fix: Dependency analysis and reordering of class initialization
+- Transitive includes work (if module A includes module B, and class C includes A, C gets methods from both)
+- No support for `prepend` or `extend`
+- No `included` callback support
 
-**Impact**:
-- Code duplication required (Kernel methods in both Kernel and Object)
-- Cannot use Ruby's mixin pattern
-- Would enable major cleanups if fixed
-
-**Solution**: Implement include as either:
-1. Compile-time method copying from module to class
-2. Runtime method lookup chain traversal
-
-**Priority**: High - would enable significant code cleanup
+**Impact**: Code duplication still needed in some cases due to ordering issue, but basic include works
 
 ---
 
@@ -89,22 +103,35 @@ end
 
 ---
 
-## 6. Lambda .() Call Syntax Not Supported
+## 6. Lambda .() Call Syntax - RESOLVED
 
-**Problem**: The `.()` syntax for calling lambdas/procs is not implemented.
+**Status**: ✅ FIXED (2025-11-08)
 
+**Problem**: The `.()` syntax for calling lambdas/procs was not implemented.
+
+**Solution**: Modified `tokens.rb` line 741-743 to detect when `.` is followed by `(` and insert `:call` as the method name. This handles `.()` at the tokenizer level, before it reaches the shunting yard.
+
+**How it works**:
+```ruby
+# In tokens.rb, after seeing . (callm operator):
+if !res && @s.peek == ?(
+  res = :call  # Insert :call as method name when .() detected
+end
+```
+
+**Now works**:
 ```ruby
 l = lambda { 42 }
 l.call        # ✓ Works
-l[]           # ✓ Works (as of 2025-11-08)
-l.()          # ✗ Compilation error: "Missing value in expression"
+l[]           # ✓ Works
+l.()          # ✓ Works (as of 2025-11-08)
+l.(21)        # ✓ Works with arguments
+l.(40, 2)     # ✓ Works with multiple arguments
 ```
 
-**Impact**: Blocks lambda_spec and other specs using .() syntax
+**Tests**: spec/lambda_dot_paren_spec.rb (3 tests pass)
 
-**Workaround**: Use `.call` or `[]` instead of `.()`
-
-**Test**: spec/lambda_call_syntax_spec.rb (all tests pass - .() not testable due to compilation failure)
+**Note**: Proc.new crashes (pre-existing bug unrelated to .() implementation - also crashes with .call)
 
 ---
 

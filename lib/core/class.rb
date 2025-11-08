@@ -52,16 +52,45 @@
 #```
 #
 %s(defun __set_vtable (vtable off ptr)
-   (let (p) 
-    (assign p (index vtable 4)) 
-    (while (sexp p) 
-       (do 
+   (let (p)
+    (assign p (index vtable 4))
+    (while (sexp p)
+       (do
           (if (eq (index p off) (index vtable off)) (__set_vtable p off ptr))
           (assign p (index p 5))
        )
     )
   (assign (index vtable off) ptr)
 ))
+
+# __include_module
+#
+# Copy methods from a module to a class.
+# Only copies vtable slots that are still uninitialized
+# (pointing to method_missing thunks in __base_vtable).
+#
+# This ensures that:
+# - Methods defined in the class are not overwritten
+# - Multiple includes work correctly (first defined wins)
+#
+%s(defun __include_module (klass mod)
+   (let (i)
+    # Skip if module is not yet initialized (0/null)
+    # This can happen if a class tries to include a module that's defined later
+    (if (eq mod 0) (return 0))
+
+    (assign i 6)  # Skip the initial instance vars (slots 0-5)
+    (while (lt i __vtable_size)
+       (do
+          # Only copy if class slot is still uninitialized
+          (if (eq (index klass i) (index __base_vtable i))
+             (assign (index klass i) (index mod i))
+          )
+          (assign i (add i 1))
+       )
+    )
+   )
+)
 
 
 %s(defun __minarg (name minargs actual) (do

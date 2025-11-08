@@ -15,20 +15,6 @@ class Object
     # Default. Empty on purpose
   end
 
-  # Raise an exception
-  # Simplified version - just handles string messages for now
-  # FIXME: This should be in Kernel, but include doesn't work properly yet
-  def raise(msg_or_exc)
-    # Handle both String messages and Exception objects
-    if msg_or_exc.is_a?(StandardError)
-      exc = msg_or_exc
-    else
-      exc = RuntimeError.new(msg_or_exc)
-    end
-    $__exception_runtime.raise(exc)
-    # Never returns
-  end
-
   def class
     @__class__
   end
@@ -144,11 +130,6 @@ class Object
   end
 
   # FIXME: Belongs in Kernel
-  def exit(code)
-    %s(exit (callm code __get_raw))
-  end
-
-  # FIXME: Belongs in Kernel
   def puts *str
     na = str.length
     if na == 0
@@ -175,14 +156,6 @@ class Object
     nil
   end
 
-  # FIXME: Belongs in Kernel
-  # Infinite loop - executes block repeatedly until break
-  def loop
-    while true
-      yield
-    end
-  end
-
   def print *str
     na = str.length
     
@@ -198,17 +171,6 @@ class Object
         %s(printf "%s" raw)
       end
       i = i + 1
-    end
-  end
-
-  # FIXME: Belongs in Kernel
-  def Array(arg)
-    if arg.respond_to?(:to_ary)
-      arg.to_ary
-    elsif arg.respond_to?(:to_a)
-      arg.to_a
-    else
-      [arg]
     end
   end
 
