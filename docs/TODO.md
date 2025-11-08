@@ -2,13 +2,15 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-08)
+## Test Status (2025-11-08 - Updated)
 
-**Integer Specs**: 67 files, 30 passed (45%), 34 failed, 3 crashed. 593 tests, 373 passed (62%)
-**Language Specs**: 79 files, 2 passed (2%), 10 failed, 7 crashed, **60 compile failures (76%)**
-**Custom Specs**: 4 files, 2 passed, 1 failed, 1 compile fail. 14 tests, 9 passed, 5 failed (64%)
+**Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
+**Language Specs**: 66 files, 2 passed (3%), 3 failed, 5 crashed, **56 compile failures (85%)**
+  - Passing: and_spec.rb (10/10), not_spec.rb (10/10)
+  - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval)
+**Custom Specs**: 5 files, 3 passed, 1 failed, 1 compile fail. 17 tests, 12 passed, 5 failed (71%)
 
-**Critical**: 60 language spec compilation failures block most progress.
+**Critical**: 56 language spec compilation failures block most progress (mostly due to control flow as expressions).
 
 ## High Priority (Compilation Failures - Simplest First)
 
