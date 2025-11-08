@@ -13,6 +13,7 @@
 ## High Priority (Compilation Failures - Simplest First)
 
 - [x] Add lambda [] call syntax support - COMPLETED
+- [ ] Fix `include` support - currently broken, methods must be manually duplicated in Object - would enable major cleanups
 - [ ] Add lambda .() call syntax support (KNOWN_ISSUES #6) - blocks lambda_spec - requires parser changes
 - [ ] Fix control flow as expressions (KNOWN_ISSUES #1, spec/control_flow_expressions_spec.rb) - **PRIMARY BLOCKER** - affects ~40+ language specs
 - [ ] Fix toplevel constant paths (`class ::Foo`) (KNOWN_ISSUES #4) - reverted feature
@@ -25,7 +26,8 @@
 ## Medium Priority (Runtime Failures - Lower Impact)
 
 - [ ] Fix integer spec runtime failures (mostly Float comparisons, type errors)
-- [ ] Fix remaining 10 language spec runtime failures (loop, match, numbers, regexp, source_encoding)
+- [ ] Fix remaining language spec runtime failures (match, numbers, regexp, source_encoding)
+- [ ] Debug loop_spec crash (loop method implemented but spec crashes - may be redo/next/control flow issue)
 
 ## Low Priority (Complex / Lower Payoff)
 

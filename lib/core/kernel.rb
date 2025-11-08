@@ -16,4 +16,11 @@ class Kernel
   def fail(exception_or_msg = nil)
     raise(exception_or_msg)
   end
+
+  # Infinite loop - executes block repeatedly until break
+  def loop
+    while true
+      yield
+    end
+  end
 end

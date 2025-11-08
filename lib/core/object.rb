@@ -175,6 +175,14 @@ class Object
     nil
   end
 
+  # FIXME: Belongs in Kernel
+  # Infinite loop - executes block repeatedly until break
+  def loop
+    while true
+      yield
+    end
+  end
+
   def print *str
     na = str.length
     
