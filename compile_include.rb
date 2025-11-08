@@ -49,10 +49,10 @@ class Compiler
     # 2. Call __include_module at runtime to copy vtable entries
     #    This runtime function loops through all vtable slots and copies
     #    from the module to the class if the class slot is uninitialized.
+    #    (Note: __include_module has built-in null check, so safe to call even if module not yet initialized)
 
     # Generate runtime call: __include_module(self, ModuleName)
     # where self is the class being defined, and ModuleName is the module constant
-    # Note: incl is a symbol, so we need to use it directly as a constant reference
     compile_eval_arg(scope, [:sexp, [:call, :__include_module, [:self, incl.to_sym]]])
 
     # FIXME:

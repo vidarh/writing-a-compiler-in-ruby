@@ -222,12 +222,30 @@ class Class
     end
   end
 
-  # WORKAROUND: Stub for Class#include? to prevent crashes
-  # This should check if a module is included in the class hierarchy
-  # For now, just return false to prevent hangs/crashes
+  # Check if a module is included by checking if module's methods are in class vtable
+  # This is an approximation - it checks if the methods match, not if include was actually called
+  # But it's good enough for most specs and avoids bootstrap issues
   def include?(mod)
-    # FIXME: Should actually check the module hierarchy
-    false
+    # Handle null module
+    %s(if (eq mod 0) (return false))
+
+    # Check if at least one method from the module is present in this class
+    # by comparing vtable slots
+    %s(let (i found)
+      (assign i 6)  # Start after instance variable slots
+      (assign found 0)
+      (while (and (eq found 0) (lt i __vtable_size)) (do
+        # If module has a method (not __base_vtable) and class has same method
+        (if (and
+              (ne (index mod i) (index __base_vtable i))
+              (eq (index self i) (index mod i)))
+          (assign found 1)
+        )
+        (assign i (add i 1))
+      ))
+      # Convert 0/1 to false/true
+      (if (eq found 1) (return true) (return false))
+    )
   end
 
 end
