@@ -4,20 +4,20 @@ Running all specs in ./spec...
 
 [33m[COMPILE FAIL] ./spec/control_flow_expressions_spec.rb
 [31m[FAIL] ./spec/float_spec.rb (P:0 F:5 S:0 T:5)
-[31m[FAIL] ./spec/lambda_call_syntax_spec.rb (P:2 F:4 S:0 T:6)
+[32m[PASS] ./spec/lambda_call_syntax_spec.rb (P:4 F:0 S:0 T:4)
 [32m[PASS] ./spec/ternary_operator_spec.rb (P:5 F:0 S:0 T:5)
 
 ================================
 Summary:
   Total spec files: 4
-  Passed: 1
-  Failed: 2
+  Passed: 2
+  Failed: 1
   Crashed (no test output): 0
   Failed to compile: 1
 
 Individual Test Cases:
-  Total tests: 16
-  Passed: 7
-  Failed: 9
+  Total tests: 14
+  Passed: 9
+  Failed: 5
   Skipped: 0
-  Pass rate: 43%
+  Pass rate: 64%

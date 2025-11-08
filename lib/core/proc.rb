@@ -31,6 +31,10 @@ class Proc
     # WARNING: Do not do extra stuff here. If this is a 'proc'/bare block
     # code after the %s(call ...) above will not get executed.
   end
+
+  def [] *__copysplat
+    %s(call @addr (@s @closure @env (splat __copysplat)))
+  end
 end
 
 %s(defun __new_proc (addr env self arity closure)
