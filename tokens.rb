@@ -119,8 +119,9 @@ module Tokens
             tmp << s.get
           end
         else
-          # Regular number starting with 0
-          while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
+          # Octal number starting with 0
+          radix = 8
+          while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
             tmp << s.get
           end
         end
@@ -179,6 +180,12 @@ module Tokens
               digit_value = 0
             elsif s == ?1
               digit_value = 1
+            else
+              break
+            end
+          elsif radix == 8
+            if (?0..?7).member?(s)
+              digit_value = s.ord - ?0.ord
             else
               break
             end
