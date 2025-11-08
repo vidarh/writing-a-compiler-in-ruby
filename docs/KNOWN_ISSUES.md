@@ -60,22 +60,22 @@ if true; 42; end.to_s       # ✗ Parse error
 
 ---
 
-## 6. Lambda .() and [] Call Syntax Not Supported
+## 6. Lambda .() Call Syntax Not Supported
 
-**Problem**: The `.()` and `[]` syntax for calling lambdas/procs are not implemented.
+**Problem**: The `.()` syntax for calling lambdas/procs is not implemented.
 
 ```ruby
 l = lambda { 42 }
 l.call        # ✓ Works
+l[]           # ✓ Works (as of 2025-11-08)
 l.()          # ✗ Compilation error: "Missing value in expression"
-l[]           # ✗ Runtime error: "undefined method '[]' for Proc"
 ```
 
-**Impact**: Blocks lambda_spec and other specs using these syntax forms
+**Impact**: Blocks lambda_spec and other specs using .() syntax
 
-**Workaround**: Use `.call` instead of `.()` or `[]`
+**Workaround**: Use `.call` or `[]` instead of `.()`
 
-**Test**: spec/lambda_call_syntax_spec.rb
+**Test**: spec/lambda_call_syntax_spec.rb (all tests pass - .() not testable due to compilation failure)
 
 ---
 
