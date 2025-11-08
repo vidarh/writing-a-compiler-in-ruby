@@ -2,18 +2,18 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-07)
+## Test Status (2025-11-08)
 
 **Integer Specs**: 67 files, 30 passed (45%), 34 failed, 3 crashed. 593 tests, 373 passed (62%)
 **Language Specs**: 79 files, 2 passed (2%), 10 failed, 7 crashed, **60 compile failures (76%)**
+**Custom Specs**: 4 files, 1 passed, 2 failed, 1 compile fail. 16 tests, 7 passed, 9 failed (43%)
 
 **Critical**: 60 language spec compilation failures block most progress.
 
 ## High Priority (Compilation Failures - Simplest First)
 
-- [ ] Fix ternary operator bug - variable condition returns `false` instead of else value (KNOWN_ISSUES #2, spec/ternary_operator_bug.rb)
-- [ ] Add lambda .() call syntax support (KNOWN_ISSUES #6, spec/lambda_call_syntax.rb) - blocks lambda_spec
-- [ ] Fix control flow as expressions (KNOWN_ISSUES #1) - **PRIMARY BLOCKER** - affects ~40+ language specs
+- [ ] Add lambda .() and [] call syntax support (KNOWN_ISSUES #6, spec/lambda_call_syntax_spec.rb) - blocks lambda_spec
+- [ ] Fix control flow as expressions (KNOWN_ISSUES #1, spec/control_flow_expressions_spec.rb) - **PRIMARY BLOCKER** - affects ~40+ language specs
 - [ ] Fix toplevel constant paths (`class ::Foo`) (KNOWN_ISSUES #4) - reverted feature
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
