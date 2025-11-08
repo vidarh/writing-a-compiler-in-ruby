@@ -36,6 +36,35 @@ if true; 42; end.to_s       # ✗ Parse error
 
 ---
 
+## 3. Module include Not Implemented
+
+**Problem**: The `include` keyword is not implemented. Modules cannot be included in classes.
+
+```ruby
+module Kernel
+  def puts(s); end
+end
+
+class Object
+  include Kernel  # ✗ Does nothing - include not implemented
+end
+```
+
+**Workaround**: Manually duplicate methods from modules into classes. See lib/core/object.rb where Kernel methods are manually copied.
+
+**Impact**:
+- Code duplication required (Kernel methods in both Kernel and Object)
+- Cannot use Ruby's mixin pattern
+- Would enable major cleanups if fixed
+
+**Solution**: Implement include as either:
+1. Compile-time method copying from module to class
+2. Runtime method lookup chain traversal
+
+**Priority**: High - would enable significant code cleanup
+
+---
+
 ## 4. Toplevel Constant Paths
 
 **Problem**: `class ::Foo` syntax causes selftest-c to segfault.
