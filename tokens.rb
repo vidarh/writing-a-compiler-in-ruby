@@ -737,6 +737,10 @@ module Tokens
         @lastop = false
         @lastpos = @s.position
         res = Methodname.expect(@s)
+        # Support .() syntax for lambda/proc calls - insert :call as method name
+        if !res && @s.peek == ?(
+          res = :call
+        end
         res = [res,nil] if res
       else
         # FIXME: This rule should likely cover more
