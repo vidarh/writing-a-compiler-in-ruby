@@ -147,3 +147,33 @@ l.(40, 2)     # ✓ Works with multiple arguments
 **Root Cause**: Float is not fully implemented - no floating-point arithmetic
 
 **Priority**: Medium - affects many integer spec failures but not blockers
+
+---
+
+## 8. Bignum Modulo Precision Loss
+
+**Problem**: Modulo operation loses precision for very large bignum values.
+
+**Example**:
+```ruby
+9999 % 99              # => 0 ✓ (correct)
+9999**99 % 99          # => 95 ✗ (wrong - should be 0)
+```
+
+**Root Cause**: The modulo operation uses `a % b = a - (a/b)*b` for bignum values. Either division or multiplication is losing precision for very large numbers (9999**99).
+
+**Impact**:
+- gcd_spec.rb: 10/12 passing (2 bignum failures)
+- lcm_spec.rb: Similar failures with large numbers
+- Any bignum arithmetic with very large values may have precision issues
+
+**Investigation**:
+- `9999**99 / 99` appears to work
+- `(9999**99 / 99) * 99` ≠ 9999**99` (off by 95)
+- Could be division rounding error or multiplication overflow
+- Requires deep debugging of bignum limb arithmetic
+
+**Test Case**: See test_modulo_bug.rb (created during investigation)
+
+**Priority**: Medium - affects edge cases with very large numbers only
+
