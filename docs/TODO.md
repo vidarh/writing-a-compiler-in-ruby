@@ -27,6 +27,7 @@
 
 ## Medium Priority (Runtime Failures - Lower Impact)
 
+- [ ] Implement Array#max - needed for cleaner Integer#size implementation (see spec/array_max_integer_size_spec.rb)
 - [ ] Fix integer spec runtime failures (mostly Float comparisons, type errors)
 - [ ] Fix remaining language spec runtime failures (match, numbers, regexp, source_encoding)
 - [ ] Debug loop_spec crash (loop method implemented but spec crashes - may be redo/next/control flow issue)

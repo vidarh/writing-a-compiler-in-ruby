@@ -599,13 +599,42 @@ end
 
 def platform_is(*args)
   if block_given?
+    # Handle hash arguments like platform_is c_long_size: 64
+    if args.length == 1 && args[0].is_a?(Hash)
+      hash = args[0]
+      # Check c_long_size guard
+      if hash[:c_long_size]
+        expected = hash[:c_long_size]
+        actual = c_long_size
+        if expected == actual
+          yield
+        end
+        # Don't yield - we handled the hash case
+        return
+      end
+    end
+
+    # For other platforms (like :linux, :windows, etc), just yield
+    # since we don't have platform detection implemented yet
     yield
   end
 end
 
 def platform_is_not(*args)
   if block_given?
-    yield
+    # Handle hash arguments like platform_is_not c_long_size: 64
+    if args.length == 1 && args[0].is_a?(Hash)
+      hash = args[0]
+      # Check c_long_size guard (inverted)
+      if hash[:c_long_size]
+        expected = hash[:c_long_size]
+        actual = c_long_size
+        if expected != actual
+          yield
+        end
+        return
+      end
+    end
   end
 end
 

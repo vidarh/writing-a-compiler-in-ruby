@@ -2,23 +2,7 @@ DEBUG: Starting run_rubyspec for ./spec
 Running all specs in ./spec...
 ================================
 
+[31m[FAIL] ./spec/array_max_integer_size_spec.rb (P:0 F:6 S:0 T:6)
 [33m[COMPILE FAIL] ./spec/control_flow_expressions_spec.rb
 [31m[FAIL] ./spec/float_spec.rb (P:0 F:5 S:0 T:5)
-[32m[PASS] ./spec/lambda_call_syntax_spec.rb (P:4 F:0 S:0 T:4)
-[32m[PASS] ./spec/lambda_dot_paren_spec.rb (P:3 F:0 S:0 T:3)
-[32m[PASS] ./spec/ternary_operator_spec.rb (P:5 F:0 S:0 T:5)
-
-================================
-Summary:
-  Total spec files: 5
-  Passed: 3
-  Failed: 1
-  Crashed (no test output): 0
-  Failed to compile: 1
-
-Individual Test Cases:
-  Total tests: 17
-  Passed: 12
-  Failed: 5
-  Skipped: 0
-  Pass rate: 70%
+[31m[FAIL] ./spec/hash_literal_with_block_spec.rb (P:1 F:2 S:0 T:3)

@@ -177,3 +177,38 @@ l.(40, 2)     # ✓ Works with multiple arguments
 
 **Priority**: Medium - affects edge cases with very large numbers only
 
+---
+
+## 5. Hash Literals as Arguments with Blocks
+
+**Problem**: Passing a hash literal as an argument to a method that also accepts a block causes a runtime error.
+
+```ruby
+def test(*args)
+  yield
+  args[0][:key]
+end
+
+test({:key => 42}) do   # ✗ Runtime error
+  puts "block"
+end
+```
+
+**Error**: `undefined method 'pair' for Object`
+
+**Root Cause**: Hash construction appears to have issues when combined with block passing. The hash literal compiles successfully but accessing it at runtime fails.
+
+**Impact**:
+- platform_is/platform_is_not guards don't work with c_long_size parameters
+- Any hash literal passed to a method with a block will fail at runtime
+- Workaround: Preprocessor strips hash arguments in run_rubyspec
+
+**Workaround**:
+- `run_rubyspec` script preprocesses specs to convert problematic patterns
+- `platform_is c_long_size: 64 do` → `if false # SKIPPED: 64-bit test`
+- Create hash in variable first, then pass variable (may work)
+
+**Test**: `spec/hash_literal_with_block_spec.rb`
+
+**Priority**: Medium - affects testing infrastructure, workarounds in place
+

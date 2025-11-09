@@ -29,36 +29,78 @@ After completing any task:
 3. Update this file with current status
 4. Move completed details to git commit message
 
-## Session 2025-11-09 (Continuation - Finding Simple Fixes)
+## Session 2025-11-09 (Continuation - Integer#size Implementation) ✅ COMPLETED
 
-**Goal**: Find and fix simple spec failures ("fix one" issue)
+**GOAL**: Implement Integer#size to pass rubyspec/core/integer/size_spec.rb
+**STATUS**: ✅ Complete - spec fully passes (2 passed, 0 failed)
 
-**Work Attempted**:
+**Implementation**:
+```ruby
+def size
+  result = (self.bit_length + 7) / 8
+  if result < 4
+    4
+  else
+    result
+  end
+end
+```
 
-1. **Investigated simple fixes**
-   - Searched for specs with only 1-2 failures
-   - Found integer_spec.rb already passing (3/3) due to Class#include? from previous session ✓
-   - Attempted size_spec.rb (P:1 F:2 S:0 T:3)
+**Work Completed**:
 
-2. **Attempted Integer#size implementation** ⚠️ REVERTED
-   - **Problem**: Method returned constant 4, should calculate actual byte size for bignums
-   - **Challenge**: S-expression limitations (shl doesn't work as expected, sar is for fixnum untagging only)
-   - **Complications**: Had to mix s-expressions and Ruby code, hit various compiler bugs
-   - **Result**: Fixnum path worked, bignum path segfaulted - too complex for "simple fix"
-   - **Action**: Reverted changes, documented lessons learned about s-expression limitations
+1. **Integer#size implementation** ✅
+   - Used `bit_length` method to calculate bytes needed
+   - Formula: `(bit_length + 7) / 8` rounds up to nearest byte
+   - Minimum size: 4 bytes (32-bit platform)
+   - Works for both fixnums and bignums
 
-3. **Bignum modulo precision loss** (documented in previous session)
-   - KNOWN_ISSUES #8: `9999**99 % 99` returns 95 instead of 0
-   - Too complex for simple fix - requires deep bignum arithmetic debugging
+2. **Created spec for failed Array#max approach** ✅
+   - `spec/array_max_integer_size_spec.rb` - documents that `[4, x].max` approach failed
+   - Reason: Array#max not implemented
+   - Added task to TODO.md for future Array#max implementation
 
-**Outcome**:
-- Validated that Class#include? fix from previous session works (integer_spec.rb passing)
-- Learned that s-expression-heavy implementations are too fragile for quick fixes
-- Need to find specs that can be fixed with pure Ruby code or simple method additions
+3. **Discovered and fixed platform_is guard bug** ✅
+   - **Problem**: `platform_is c_long_size: 64` tests ran on 32-bit, causing failures
+   - **Root Cause**: Hash literals passed to methods with blocks cause runtime error "undefined method 'pair'"
+   - **Solution**: Modified `run_rubyspec` preprocessor to convert `platform_is c_long_size: 64` → `if false`
+   - **Result**: 64-bit tests now skipped on 32-bit platform
 
-**Next Steps**:
-- Look for specs that fail due to missing simple methods (not arithmetic/s-expression issues)
-- Consider specs that only need stub implementations
+4. **Documented hash literal + block bug** ✅
+   - Created `spec/hash_literal_with_block_spec.rb` - demonstrates the bug
+   - Added KNOWN_ISSUES #5: Hash literals as arguments with blocks
+   - Error: "undefined method 'pair' for Object" when accessing hash
+   - Impact: Prevents using hash arguments in platform guards
+
+5. **Documentation updates** ✅
+   - Added CRITICAL RULE to CLAUDE.md: Never delete failing specs
+   - Updated KNOWN_ISSUES.md with hash literal bug (#5)
+   - Updated TODO.md with Array#max task
+   - Files created: 3 specs documenting bugs for future fixes
+
+**Test Results**:
+- Integer#size spec: 2 passed, 0 failed, 0 skipped ✅
+- Custom specs: 3 new failing specs documenting bugs (expected to fail)
+
+**Files Modified**:
+- lib/core/integer.rb: Implemented size method (lines 3766-3773)
+- run_rubyspec: Added preprocessing for platform_is c_long_size guards
+- rubyspec_helper.rb: Attempted platform_is implementation (doesn't work due to hash bug)
+- CLAUDE.md: Added CRITICAL RULE about never deleting failing specs
+- docs/KNOWN_ISSUES.md: Added issue #5 (hash literals with blocks)
+- docs/TODO.md: Added Array#max task
+
+**Specs Created**:
+- spec/array_max_integer_size_spec.rb - Documents Array#max not implemented
+- spec/ternary_operator_bug_spec.rb - Documents ternary returning false
+- spec/hash_literal_with_block_spec.rb - Documents hash + block runtime error
+
+**Key Discoveries**:
+- Hash literals can be passed to methods with blocks (compiles fine)
+- But accessing the hash at runtime fails with "undefined method 'pair'"
+- This is why platform guards had to be preprocessed out
+- Ternary operator has a bug (returns false in some cases)
+
+**Outcome**: ✅ Integer#size COMPLETE and passing all tests
 
 ## Session 2025-11-08 (Continued from previous context)
 

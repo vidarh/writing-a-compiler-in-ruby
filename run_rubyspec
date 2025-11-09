@@ -86,6 +86,8 @@ run_single_spec() {
                     sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
                     sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
                     sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
+                    sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
+                    sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
                     sed 's/platform_is[^d]*do/platform_is do/g' | \
                     sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
                     >> "$TEMP_SPEC"
@@ -110,6 +112,8 @@ run_single_spec() {
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
         sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
         sed 's/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g' | \
+        sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
+        sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
         sed 's/platform_is[^d]*do/platform_is do/g' | \
         sed 's/platform_is_not[^d]*do/platform_is_not do/g' | \
         sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
@@ -335,6 +339,8 @@ elif [ -f "$TARGET" ]; then
                     sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
                     sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
                     sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
+                    sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
+                    sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
                     sed 's/platform_is[^d]*do/platform_is do/g' | \
                     sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
                     >> "$TEMP_SPEC"
@@ -359,6 +365,8 @@ elif [ -f "$TARGET" ]; then
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
         sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
         sed 's/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g' | \
+        sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
+        sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
         sed 's/platform_is[^d]*do/platform_is do/g' | \
         sed 's/platform_is_not[^d]*do/platform_is_not do/g' | \
         sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \

@@ -3764,7 +3764,12 @@ class Integer < Numeric
   end
 
   def size
-    4
+    result = (self.bit_length + 7) / 8
+    if result < 4
+      4
+    else
+      result
+    end
   end
 
   def ** *args

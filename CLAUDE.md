@@ -87,6 +87,35 @@ When creating documentation:
 2. Update any references to the moved files
 3. Commit the cleanup
 
+## CRITICAL RULE: NEVER Delete Failing Specs
+
+**NEVER delete failing spec files from the `spec/` directory.**
+
+Failing specs document bugs that need to be fixed:
+- ✅ Failing specs are valuable - they prove bugs exist
+- ✅ Keep failing specs to track what needs fixing
+- ✅ Add comments to failing specs explaining the bug
+- ❌ **NEVER** delete a spec just because it fails
+- ❌ **NEVER** remove tests to make builds "cleaner"
+- ❌ **NEVER** hide failures by deleting evidence
+
+**Why this rule exists:**
+- Failing specs are bug reports written as code
+- They provide reproducible test cases for fixing issues
+- They prevent regressions when bugs are eventually fixed
+- They document known limitations and workarounds
+
+**What to do with failing specs:**
+1. Document the bug in `docs/KNOWN_ISSUES.md`
+2. Add reference to the KNOWN_ISSUES entry in spec comments
+3. Keep the spec file in `spec/` directory
+4. Fix the underlying compiler bug when possible
+
+**Examples of valuable failing specs:**
+- `spec/array_max_integer_size_spec.rb` - Documents Array#max not implemented (needed for [4, x].max approach)
+- `spec/ternary_operator_bug_spec.rb` - Documents ternary returning false instead of else-branch value
+- `spec/hash_literal_with_block_spec.rb` - Documents "undefined method 'pair'" error with hash args + blocks
+
 ## Project Overview
 
 This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler is designed to bootstrap itself - compile its own source code to native machine code. The project is experimental and self-hosting is achieved with various workarounds for missing functionality.
