@@ -10,21 +10,26 @@ describe "Integer#size" do
     c.size.should == 4
   end
 
-  it "returns byte count for small bignums" do
-    # 256 = 2^8 (needs 2 bytes: values 0-255 fit in 1 byte, 256 needs 2)
-    val = 256
-    val.size.should == 2
-  end
-
-  it "returns byte count for medium bignums" do
-    # 256^2 = 65536 (needs 3 bytes)
-    val = 256 * 256
-    val.size.should == 3
-  end
-
-  it "returns byte count for larger bignums" do
-    # 2^30 = 1073741824 (needs 4 bytes)
+  it "returns 4 bytes minimum for bignums just over fixnum range" do
+    # On 32-bit: fixnum range is -2^29 to 2^29-1
+    # 2^30 = 1073741824 > fixnum_max, so this is a bignum
+    # Needs 4 bytes (minimum size on 32-bit)
     val = 2 ** 30
     val.size.should == 4
+  end
+
+  it "returns correct byte count for various bignum sizes" do
+    # Test different sizes to ensure formula works correctly
+    (256 ** 5).size.should == 6   # 5 bytes of 256 + 1 more
+    (256 ** 7).size.should == 8
+    (256 ** 8).size.should == 9
+    (256 ** 10).size.should == 11
+    (256 ** 15).size.should == 16
+  end
+
+  it "handles edge cases correctly" do
+    # Value one less than next power of 256
+    (256 ** 10 - 1).size.should == 10
+    (256 ** 8 - 1).size.should == 8
   end
 end
