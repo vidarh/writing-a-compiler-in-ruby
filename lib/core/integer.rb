@@ -3487,6 +3487,14 @@ class Integer < Numeric
     (self % 2) != 0
   end
 
+  def positive?
+    self > 0
+  end
+
+  def negative?
+    self < 0
+  end
+
   # Utility methods
   def to_i
     self
