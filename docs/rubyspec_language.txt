@@ -4,7 +4,7 @@ Running all specs in rubyspec/language/...
 
 [33m[COMPILE FAIL] rubyspec/language/alias_spec.rb
 [32m[PASS] rubyspec/language/and_spec.rb (P:10 F:0 S:0 T:10)
-[33m[COMPILE FAIL] rubyspec/language/array_spec.rb
+[34m[CRASH] rubyspec/language/array_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/assignments_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/BEGIN_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/block_spec.rb
@@ -63,36 +63,3 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/regexp/repetition_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/regexp_spec.rb
 [31m[FAIL] rubyspec/language/regexp/subexpression_call_spec.rb (P:0 F:10 S:0 T:10)
-[33m[COMPILE FAIL] rubyspec/language/rescue_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/retry_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/return_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/safe_navigator_spec.rb
-[34m[CRASH] rubyspec/language/safe_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/send_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/singleton_class_spec.rb
-[31m[FAIL] rubyspec/language/source_encoding_spec.rb (P:0 F:12 S:0 T:12)
-[33m[COMPILE FAIL] rubyspec/language/string_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/super_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/symbol_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/throw_spec.rb
-[34m[CRASH] rubyspec/language/undef_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/unless_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/until_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/variables_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/while_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/yield_spec.rb
-
-================================
-Summary:
-  Total spec files: 79
-  Passed: 2
-  Failed: 9
-  Crashed (no test output): 8
-  Failed to compile: 60
-
-Individual Test Cases:
-  Total tests: 124
-  Passed: 27
-  Failed: 96
-  Skipped: 1
-  Pass rate: 21%

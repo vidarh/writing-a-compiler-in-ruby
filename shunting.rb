@@ -112,6 +112,11 @@ module OpPrec
           src.unget(token)
           reduce(ostack)
           return :break
+        elsif op.sym == :break && !ostack.empty? && ostack.last.type == :infix
+          # break as right operand of infix operator: "x or break"
+          # Push break without arguments as a value
+          @out.value([:break])
+          return :infix_or_postfix
         end
       end
 
