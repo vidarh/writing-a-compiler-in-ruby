@@ -184,6 +184,7 @@ module OpPrec
         oper_call_right(leftv, o, rightv)
       elsif la and leftv[0] == :callm and o.sym == :call
         block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
+        to_block = ra && rightv[0] == :to_block
         comma = ra && rightv[0] == :comma
         # FIXME: @bug - the following evaluates to false in compiler
         # but not yet been able to reproduce exact conditions.
@@ -192,14 +193,18 @@ module OpPrec
         if !args
           if block
             args = flatten(rightv)
+          elsif to_block
+            # &block parameter forwarding: [:to_block, block_var]
+            # Wrap it in an array to be added as the last argument
+            args = E[rightv]
           else
             args = rightv
           end
         end
 
-        args = E[args] if !comma && !block && args.is_a?(Array)
+        args = E[args] if !comma && !block && !to_block && args.is_a?(Array)
         args = E[args]
-        if block
+        if block || to_block
           @vstack << leftv.concat(*args)
         else
           @vstack << leftv + args
@@ -240,6 +245,10 @@ module OpPrec
         end
       elsif ra and rightv[0] == :comma and o.sym == :return
         @vstack << E[o.sym, leftv, [:array]+flatten(rightv)].compact
+      elsif ra and rightv[0] == :to_block and o.sym == :comma
+        # Handle comma followed by &block forwarding
+        # [:comma, x, [:to_block, b]] should stay as [:comma, x, [:to_block, b]]
+        @vstack << E[o.sym, leftv, rightv].compact
       elsif ra and rightv[0] == :comma and o.sym != :comma
         @vstack << E[o.sym, leftv, flatten(rightv)].compact
       elsif ra and rightv[0] == :flatten
@@ -279,7 +288,24 @@ module OpPrec
           elements = E[lv, rightv].compact.map { |e| convert_ternalt_to_pair(e) }
           @vstack << E[:hash] + elements
         else
-          @vstack << E[o.sym, lv, rightv].compact
+          result = E[o.sym, lv, rightv].compact
+          # Special handling for &block forwarding without parentheses:
+          # When :to_block is created and the vstack already has a :call expression,
+          # merge it into the call's arguments instead of pushing separately.
+          # This handles cases like: foo m, *a, &b
+          # Also handle the case where vstack has | (block parameters)
+          if result.is_a?(Array) && result[0] == :to_block
+            if @vstack.length > 0 && @vstack.last.is_a?(Array)
+              last_op = @vstack.last[0]
+              if last_op == :call || last_op == :|
+                expr = @vstack.pop
+                # Append to_block to the expression's arguments
+                @vstack << expr + [result]
+                return
+              end
+            end
+          end
+          @vstack << result
         end
       end
       return
