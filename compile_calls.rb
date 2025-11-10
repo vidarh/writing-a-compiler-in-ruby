@@ -209,7 +209,15 @@ class Compiler
     return compile_super(scope, args,block) if func == :super
     return compile_callm(scope,:self, func, args,block) if fargs and fargs[0] == :possible_callm || fargs[0] == :global
 
-    args = [args] if !args.is_a?(Array)
+    # Wrap single argument in array if needed
+    # When there's a block, parser passes args unwrapped: [:call, func, arg, block]
+    # When there's no block, parser wraps args: [:call, func, [args...]]
+    if !args.is_a?(Array)
+      args = [args]
+    elsif block && args[0].is_a?(Symbol)
+      # With block, single AST node arg (like [:hash, ...]) needs wrapping
+      args = [args]
+    end
     compile_args(scope, func, args) do
       scope
       func
