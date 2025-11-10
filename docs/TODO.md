@@ -59,7 +59,9 @@ Multiple types of failures blocking language specs:
 5. **String interpolation edge cases**:
    - Unusual delimiters like `%$hey #{expr}$` fail to parse
    - Affects: string_spec.rb
-   - Issue: Parser doesn't handle all string delimiter variants
+   - Root cause: Percent literals after identifiers not recognized (`puts %{hello}` fails)
+   - Context check `@first || prev_lastop` too restrictive - needs to recognize percent literals as arguments
+   - Priority: Low - requires deep tokenizer state machine refactoring
 
 6. **Complex method definitions**:
    - Parse errors on edge cases like `def foo(x = (def foo; "hello"; end;1));x;end`
