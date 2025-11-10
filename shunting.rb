@@ -86,7 +86,9 @@ module OpPrec
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
       #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}"
       #STDERR.puts "   vstack=#{@out.vstack.inspect}"
-      if opstate == :prefix && ostack.length == 0
+      # When if/while/rescue appear in prefix position, parse as statement UNLESS
+      # they're appearing after a prefix operator (which would make them modifiers)
+      if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
         if op.sym == :if_mod
           #STDERR.puts "   if expression"
           @out.value(@parser.parse_if_body(:if))
@@ -219,7 +221,7 @@ module OpPrec
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
           # Also handle break statement which can appear in boolean expressions (e.g., "x or break")
-          if keyword && [:until, :for, :unless, :begin].include?(token)
+          if keyword && [:until, :for, :unless, :begin, :lambda].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
@@ -227,6 +229,7 @@ module OpPrec
               when :until then :parse_until
               when :for then :parse_for
               when :begin then :parse_begin
+              when :lambda then :parse_lambda
             end
             result = @parser.send(parser_method)
             @out.value(result)

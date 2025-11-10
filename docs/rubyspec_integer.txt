@@ -19,7 +19,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/constants_spec.rb (P:0 F:0 S:2 T:2)
 [32m[PASS] rubyspec/core/integer/denominator_spec.rb (P:1 F:0 S:0 T:1)
 [32m[PASS] rubyspec/core/integer/digits_spec.rb (P:9 F:0 S:0 T:9)
-[31m[FAIL] rubyspec/core/integer/divide_spec.rb (P:10 F:8 S:0 T:18)
+[34m[CRASH] rubyspec/core/integer/divide_spec.rb
 [31m[FAIL] rubyspec/core/integer/divmod_spec.rb (P:5 F:8 S:0 T:13)
 [31m[FAIL] rubyspec/core/integer/div_spec.rb (P:10 F:9 S:0 T:19)
 [31m[FAIL] rubyspec/core/integer/downto_spec.rb (P:4 F:5 S:0 T:9)
@@ -34,7 +34,7 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/gcd_spec.rb (P:10 F:2 S:0 T:12)
 [31m[FAIL] rubyspec/core/integer/gte_spec.rb (P:2 F:3 S:0 T:5)
 [31m[FAIL] rubyspec/core/integer/gt_spec.rb (P:2 F:3 S:0 T:5)
-[31m[FAIL] rubyspec/core/integer/integer_spec.rb (P:2 F:1 S:0 T:3)
+[32m[PASS] rubyspec/core/integer/integer_spec.rb (P:3 F:0 S:0 T:3)
 [31m[FAIL] rubyspec/core/integer/lcm_spec.rb (P:9 F:2 S:0 T:11)
 [31m[FAIL] rubyspec/core/integer/left_shift_spec.rb (P:30 F:8 S:0 T:38)
 [31m[FAIL] rubyspec/core/integer/lte_spec.rb (P:5 F:2 S:0 T:7)
@@ -55,10 +55,10 @@ Running all specs in rubyspec/core/integer/...
 [31m[FAIL] rubyspec/core/integer/remainder_spec.rb (P:2 F:5 S:0 T:7)
 [31m[FAIL] rubyspec/core/integer/right_shift_spec.rb (P:28 F:12 S:0 T:40)
 [34m[CRASH] rubyspec/core/integer/round_spec.rb
-[31m[FAIL] rubyspec/core/integer/size_spec.rb (P:1 F:2 S:0 T:3)
-[31m[FAIL] rubyspec/core/integer/sqrt_spec.rb (P:4 F:3 S:0 T:7)
+[32m[PASS] rubyspec/core/integer/size_spec.rb (P:2 F:0 S:0 T:2)
+[34m[CRASH] rubyspec/core/integer/sqrt_spec.rb
 [32m[PASS] rubyspec/core/integer/succ_spec.rb (P:6 F:0 S:0 T:6)
-[34m[CRASH] rubyspec/core/integer/times_spec.rb
+[33m[COMPILE FAIL] rubyspec/core/integer/times_spec.rb
 [31m[FAIL] rubyspec/core/integer/to_f_spec.rb (P:0 F:3 S:0 T:3)
 [32m[PASS] rubyspec/core/integer/to_int_spec.rb (P:1 F:0 S:0 T:1)
 [32m[PASS] rubyspec/core/integer/to_i_spec.rb (P:1 F:0 S:0 T:1)
@@ -73,14 +73,14 @@ Running all specs in rubyspec/core/integer/...
 ================================
 Summary:
   Total spec files: 67
-  Passed: 30
-  Failed: 34
-  Crashed (no test output): 3
-  Failed to compile: 0
+  Passed: 32
+  Failed: 30
+  Crashed (no test output): 4
+  Failed to compile: 1
 
 Individual Test Cases:
-  Total tests: 593
-  Passed: 373
-  Failed: 213
+  Total tests: 567
+  Passed: 361
+  Failed: 199
   Skipped: 7
-  Pass rate: 62%
+  Pass rate: 63%

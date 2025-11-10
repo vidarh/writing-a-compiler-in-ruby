@@ -2,22 +2,24 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-08 - Updated)
+## Test Status (2025-11-10 - Updated)
 
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
 **Language Specs**: 66 files, 2 passed (3%), 3 failed, 5 crashed, **56 compile failures (85%)**
   - Passing: and_spec.rb (10/10), not_spec.rb (10/10)
   - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval)
-**Custom Specs**: 5 files, 3 passed, 1 failed, 1 compile fail. 17 tests, 12 passed, 5 failed (71%)
+**Custom Specs (spec/)**: 9 files, 4 passed, 5 failed, 0 compile fail. 42 tests, 26 passed, 16 failed (61%)
+  - Passing: integer_size_spec.rb, lambda_call_syntax_spec.rb, lambda_dot_paren_spec.rb, ternary_operator_spec.rb, control_flow_expressions_spec.rb
+  - Failing: array_max_integer_size_spec.rb (needs Array#max), float_spec.rb (needs Float), hash_literal_with_block_spec.rb (undefined method 'pair'), ternary_operator_bug_spec.rb (1 failure)
 
-**Critical**: 56 language spec compilation failures block most progress (mostly due to control flow as expressions).
+**Critical**: 56 language spec compilation failures still block most progress.
 
 ## High Priority (Compilation Failures - Simplest First)
 
 - [x] Add lambda [] call syntax support - COMPLETED
 - [x] Add lambda .() call syntax support - COMPLETED (2025-11-08) - tokens.rb detects .() and inserts :call method name
 - [x] Fix `include` support - COMPLETED (2025-11-08) - basic include works, but ordering issues remain (see KNOWN_ISSUES #3)
-- [ ] Fix control flow as expressions (KNOWN_ISSUES #1, spec/control_flow_expressions_spec.rb) - **PRIMARY BLOCKER** - affects ~40+ language specs
+- [x] Fix control flow as expressions (KNOWN_ISSUES #1, spec/control_flow_expressions_spec.rb) - COMPLETED (2025-11-10) - if/while/unless/until now work as expressions
 - [ ] Fix toplevel constant paths (`class ::Foo`) (KNOWN_ISSUES #4) - reverted feature
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
@@ -27,7 +29,13 @@
 
 ## Medium Priority (Runtime Failures - Lower Impact)
 
-- [ ] Implement Array#max - needed for cleaner Integer#size implementation (see spec/array_max_integer_size_spec.rb)
+### Custom Spec Failures (spec/)
+- [ ] Implement Array#max - needed for spec/array_max_integer_size_spec.rb (6 failures)
+- [ ] Fix Float support - needed for spec/float_spec.rb (5 failures)
+- [ ] Fix hash literal with block - spec/hash_literal_with_block_spec.rb "undefined method 'pair'" (2 failures)
+- [ ] Fix ternary operator bug - spec/ternary_operator_bug_spec.rb (1 failure - returns false instead of else-branch value)
+
+### RubySpec Failures
 - [ ] Fix integer spec runtime failures (mostly Float comparisons, type errors)
 - [ ] Fix remaining language spec runtime failures (match, numbers, regexp, source_encoding)
 - [ ] Debug loop_spec crash (loop method implemented but spec crashes - may be redo/next/control flow issue)

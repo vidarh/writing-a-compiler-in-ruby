@@ -13,7 +13,6 @@ class TokenizerAdapter
     @parser    = parser
 
     @escape_tokens = {
-      :lambda => :parse_defexp,
       :stabby_lambda => :parse_stabby_lambda,
       :class => :parse_class,
       :module => :parse_module,

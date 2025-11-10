@@ -1,23 +1,64 @@
 # Known Issues
 
-## 1. Control Flow as Expressions (BLOCKER)
+## 1. super() Uses Object's Class Instead of Method's Defining Class (CRITICAL BUG)
 
-**Problem**: Control structures work as expression values in assignments (`x = if...`) but not in other contexts (method chaining, arithmetic, array literals).
+**Problem**: `super` incorrectly uses the object's class to find the superclass, rather than the defining class of the current method. This causes infinite recursion when a subclass calls a superclass method that uses `super`.
 
 ```ruby
-x = if true; 42; end        # ✓ Works
-if true; 42; end.to_s       # ✗ Parse error
+class A
+  def initialize(x)
+    puts "A#initialize: #{x}"
+  end
+end
+
+class B < A
+  def initialize(x)
+    puts "B#initialize: #{x}"
+    super(x)  # Should call A#initialize
+  end
+end
+
+class C < B
+  def initialize(x)
+    puts "C#initialize: #{x}"
+    super(x)  # Should call B#initialize
+  end
+end
+
+C.new("test")
+# Output:
+# C#initialize: test
+# B#initialize: test
+# B#initialize: test    <- BUG: super in B calls B again!
+# B#initialize: test
+# ... infinite recursion
 ```
 
-**Root Cause**: Control structures at statement level don't go through shunting yard, so operators after them have no left-hand value.
+**Root Cause**: The `super` implementation looks up the superclass using `obj.class.superclass` instead of using the defining class of the method where `super` appears.
 
-**Impact**: Blocks MANY language specs - primary cause of 60 compilation failures
+**Impact**: Any code using `super` in a class hierarchy deeper than 2 levels will infinite loop. Most standard library subclasses work around this by avoiding `super`.
 
-**Solution**: Architectural parser redesign - move all control flow through shunting yard. Complex.
+**Workaround**: Avoid calling `super()` in initialize methods. For Exception subclasses, override `message` and set the message directly without calling `super(message)`.
 
-**Test**: spec/control_flow_expressions_spec.rb
+**Test**: test_super_bug.rb
 
-**Details**: See control_flow_as_expressions.md for full architectural analysis.
+---
+
+## 2. Control Flow as Expressions - RESOLVED
+
+**Status**: ✅ FIXED (2025-11-10)
+
+**Solution**: Modified shunting.rb:89-110 to parse if/while/unless/until as statement expressions when in prefix position, unless appearing after a prefix operator (where they're modifiers). Also removed :lambda from tokenizeradapter.rb escape_tokens and added to shunting.rb non-operator keyword handling.
+
+**Changes**:
+- shunting.rb:91 - Changed condition from `opstate == :prefix && ostack.length == 0` to `opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)`
+- tokenizeradapter.rb:15-20 - Removed :lambda from @escape_tokens
+- shunting.rb:222,230 - Added :lambda to statement keyword list
+- operators.rb:81-87 - Added unless_mod and until_mod operators with right_pri=1
+
+**Test**: spec/control_flow_expressions_spec.rb - now passing
+
+**Note**: Still doesn't support method chaining on control flow results (e.g., `if true; 42; end.to_s`) - requires more complex architectural changes.
 
 ---
 

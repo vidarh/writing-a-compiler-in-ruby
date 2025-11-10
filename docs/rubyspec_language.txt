@@ -29,7 +29,7 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/keyword_arguments_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/lambda_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/line_spec.rb
-[31m[FAIL] rubyspec/language/loop_spec.rb (P:0 F:14 S:0 T:14)
+[34m[CRASH] rubyspec/language/loop_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/magic_comment_spec.rb
 [31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [33m[COMPILE FAIL] rubyspec/language/metaclass_spec.rb
@@ -38,7 +38,7 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/next_spec.rb
 [32m[PASS] rubyspec/language/not_spec.rb (P:10 F:0 S:0 T:10)
 [33m[COMPILE FAIL] rubyspec/language/numbered_parameters_spec.rb
-[31m[FAIL] rubyspec/language/numbers_spec.rb (P:4 F:18 S:0 T:22)
+[31m[FAIL] rubyspec/language/numbers_spec.rb (P:5 F:17 S:0 T:22)
 [33m[COMPILE FAIL] rubyspec/language/optional_assignments_spec.rb
 [34m[CRASH] rubyspec/language/order_spec.rb
 [34m[CRASH] rubyspec/language/or_spec.rb
@@ -86,13 +86,13 @@ Running all specs in rubyspec/language/...
 Summary:
   Total spec files: 79
   Passed: 2
-  Failed: 10
-  Crashed (no test output): 7
+  Failed: 9
+  Crashed (no test output): 8
   Failed to compile: 60
 
 Individual Test Cases:
-  Total tests: 138
-  Passed: 26
-  Failed: 111
+  Total tests: 124
+  Passed: 27
+  Failed: 96
   Skipped: 1
-  Pass rate: 18%
+  Pass rate: 21%
