@@ -434,6 +434,34 @@ class String
     true
   end
 
+  def include?(substring)
+    return true if substring.length == 0
+    return false if substring.length > length
+
+    my_len = length
+    sub_len = substring.length
+    max_start = my_len - sub_len
+
+    # Try each possible starting position
+    pos = 0
+    while pos <= max_start
+      # Check if substring matches at this position
+      match = true
+      i = 0
+      while i < sub_len
+        if self[pos + i] != substring[i]
+          match = false
+          break
+        end
+        i += 1
+      end
+      return true if match
+      pos += 1
+    end
+
+    false
+  end
+
   def length
     # FIXME: yes, we should not assume C-strings
     # FIXME: Also, this is not nice if @buffer == -
