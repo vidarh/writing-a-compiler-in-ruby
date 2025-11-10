@@ -376,6 +376,38 @@ class String
     buf
   end
 
+  def upcase
+    result = ""
+    i = 0
+    l = length
+    while i < l
+      c = self[i].ord
+      # Convert lowercase (a-z: 97-122) to uppercase (A-Z: 65-90)
+      if c >= 97 && c <= 122
+        c = c - 32
+      end
+      result << c.chr
+      i += 1
+    end
+    result
+  end
+
+  def downcase
+    result = ""
+    i = 0
+    l = length
+    while i < l
+      c = self[i].ord
+      # Convert uppercase (A-Z: 65-90) to lowercase (a-z: 97-122)
+      if c >= 65 && c <= 90
+        c = c + 32
+      end
+      result << c.chr
+      i += 1
+    end
+    result
+  end
+
   def length
     # FIXME: yes, we should not assume C-strings
     # FIXME: Also, this is not nice if @buffer == -
