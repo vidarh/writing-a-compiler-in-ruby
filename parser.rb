@@ -43,7 +43,7 @@ class Parser < ParserBase
   PIPE="|"
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
-  def parse_arglist
+  def parse_arglist(extra_stop_tokens = [])
     # Check for **, *, or & prefix
     prefix = nil
     if literal(ASTERISK)
@@ -76,18 +76,22 @@ class Parser < ParserBase
     default = nil
     is_keyword_arg = false
 
+    # Build stop tokens list for default value parsing
+    stop_tokens = [COMMA] + extra_stop_tokens
+
     # Check for keyword argument syntax: name: or name: value
     if literal(":")
       is_keyword_arg = true
       nolfws
       # Check if there's a default value after the colon
-      # Peek to see if next token is not comma/close paren
-      if @scanner.peek != "," && @scanner.peek != ")"
-        default = @shunting.parse([COMMA])
+      # Peek to see if next token is not comma/close paren/pipe
+      peek_char = @scanner.peek
+      if peek_char != "," && peek_char != ")" && peek_char != "|"
+        default = @shunting.parse(stop_tokens)
       end
     elsif literal("=")
       nolfws
-      default = @shunting.parse([COMMA])
+      default = @shunting.parse(stop_tokens)
     end
 
     if prefix == "**"
@@ -111,7 +115,7 @@ class Parser < ParserBase
     nolfws
     literal(COMMA) or return args
     ws
-    more = parse_arglist or expected("argument")
+    more = parse_arglist(extra_stop_tokens) or expected("argument")
     return args + more
   end
 
@@ -513,16 +517,9 @@ class Parser < ParserBase
     args = []
     if literal(PIPE)
       ws
-      # FIXME:
-      # This is a workaround, as
-      # "begin ... end while ...." does not
-      # yet work correctly.
-      while name = parse_name
-        args << name
-        ws
-        break if !literal(COMMA)
-        ws
-      end
+      # Use parse_arglist to support default values, splats, and block parameters
+      # Pass [PIPE] as extra stop token so default values stop at the closing |
+      args = parse_arglist([PIPE]) || []
       ws
       literal(PIPE)
     end

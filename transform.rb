@@ -55,12 +55,24 @@ class Compiler
         # FIXME: Putting this inline further down appears to break.
         len = args.length
 
+        # Handle args that might already have default values from parser
+        # Parser returns either symbols or [name, :default, value] tuples
+        normalized_args = args.collect do |a|
+          if a.is_a?(Array) && a[1] == :default
+            # Already in [name, :default, value] format
+            a
+          else
+            # Simple symbol - wrap it with default :nil
+            [a, :default, :nil]
+          end
+        end
+
         e.replace(
           E[:do,
             [:assign, [:index, :__env__,0], [:stackframe]],
             [:assign, :__tmp_proc,
               [:defun, "__lambda_#{@e.get_local[1..-1]}",
-                [:self,:__closure__,:__env__]+args.collect{|a| [a, :default, :nil] },
+                [:self,:__closure__,:__env__] + normalized_args,
                 body
               ]
             ],
