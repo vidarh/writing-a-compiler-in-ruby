@@ -31,6 +31,12 @@
 
 ### Custom Spec Failures (spec/)
 - [x] Implement Array#max - COMPLETED (2025-11-10) - spec/array_max_integer_size_spec.rb now passing
+- [x] Implement Array#min - COMPLETED (2025-11-10)
+- [x] Implement String#upcase, #downcase - COMPLETED (2025-11-10)
+- [x] Implement String#start_with?, #end_with? - COMPLETED (2025-11-10)
+- [x] Implement String#include? - COMPLETED (2025-11-10)
+- [x] Implement String#strip, #lstrip, #rstrip - COMPLETED (2025-11-10)
+- [x] Implement Array#any?, #all?, #none? - COMPLETED (2025-11-10)
 - [ ] Fix Float support - needed for spec/float_spec.rb (5 failures)
 - [ ] Fix hash literal with block - spec/hash_literal_with_block_spec.rb "undefined method 'pair'" (2 failures) - complex parser bug
 - [x] Fix ternary operator bug - spec/ternary_operator_bug_spec.rb - COMPLETED (2025-11-10) - fixed compile_if to save results to %eax
