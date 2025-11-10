@@ -248,38 +248,45 @@ end
 
 ---
 
-## 9. Block Parameter Forwarding
+## 9. Block Parameter Forwarding - RESOLVED
 
-**Problem**: Using `&block` parameter forwarding in method calls causes infinite recursion during compilation (stack overflow).
+**Status**: ✅ FIXED (2025-11-10)
+
+**Problem**: Using `&block` parameter forwarding in method calls without parentheses caused "Expression did not reduce to single value" error.
 
 ```ruby
 def foo(*a, &b)
-  bar(*a, &b)  # ✗ SystemStackError: stack level too deep
+  bar *a, &b     # ✗ Parse error (was broken)
+  bar(*a, &b)    # ✓ Always worked (with parentheses)
 end
 ```
 
-**Error**: `SystemStackError: stack level too deep` in `regalloc.rb` during compilation
+**Error**: `Expression did not reduce to single value (2 values on stack)`
 
-**Root Cause**: The parser generates `[:to_block, b]` AST nodes for `&b` syntax. When `compile_callm` extracts the block parameter and prepends it to args, the compilation of that parameter triggers a chain that treats `:to_block` as a function call, leading to infinite recursion:
-1. `compile_callm` extracts `block = :b` from `[:to_block, :b]` and prepends to args
-2. `compile_args` tries to compile `:b` as an argument
-3. Depending on scope context, this may trigger method call compilation
-4. This leads back to `compile_callm` in an infinite loop
+**Root Cause**: When parsing `foo m, *a, &b` (without parentheses), the shunting yard parser created `[:call, ...]` and `[:to_block, b]` as separate expressions on the value stack. The `:to_block` wasn't being incorporated into the method call's arguments.
 
-The block parameter mapping (`:b` → `:__closure__`) exists in Function#get_arg but the compilation context doesn't properly use it.
+**Solution**: Modified `treeoutput.rb` lines 292-308 to detect when `:to_block` is created and the value stack already has a `:call` or `:|` (block parameters) expression. The `:to_block` is now merged into that expression's arguments instead of being pushed separately.
 
-**Impact**:
-- block_spec.rb fails to compile (infinite loop, not parse error)
-- Any method that forwards blocks using `&block` syntax causes compiler to hang
-- Likely affects multiple language specs
+**Changes**:
+- treeoutput.rb:297-306 - Added special handling to merge :to_block into :call or :| expressions
 
-**Workaround**:
-- Don't use `&block` parameter forwarding
-- Use `yield` directly or pass blocks explicitly without `&` syntax
+**Now works**:
+```ruby
+def foo(*a, &b)
+  bar *a, &b      # ✓ Now works
+  bar(*a, &b)     # ✓ Still works
+end
 
-**Test**: rubyspec/language/block_spec.rb
+# Also works inside blocks:
+foo do |*a, &b|
+  bar *a, &b     # ✓ Now works
+end
+```
 
-**Priority**: High - common Ruby pattern, blocks many specs, causes compiler hang
+**Tests**:
+- make selftest - passes (0 failures)
+- make selftest-c - passes (0 failures)
+- spec/block_parameter_forwarding_spec.rb (2/2 tests pass)
 
 ---
 
@@ -389,7 +396,41 @@ end
 
 ---
 
-## 14. Bignum Multiplication by Negative Fixnum - RESOLVED
+## 14. Block Parameters with Default Values
+
+**Problem**: Block parameters with default values fail to parse.
+
+```ruby
+foo { |a=5, b=4, c=3| [a, b, c] }  # ✗ Parse error
+```
+
+**Error**: `Missing value in expression / op: {assign/2 pri=7}`
+
+**Root Cause**: The parser doesn't properly handle the assignment syntax within block parameter lists. When it encounters `|a=5, b=4, c=3|`, it tries to parse the `=` as assignment operators but fails to construct a valid expression tree.
+
+**Impact**:
+- block_spec.rb fails to compile at line 100
+- Optional block parameters cannot be used
+- Affects code that needs default values for block parameters
+
+**Workaround**:
+- Use conditional assignment inside the block:
+  ```ruby
+  foo { |a, b, c|
+    a ||= 5
+    b ||= 4
+    c ||= 3
+    [a, b, c]
+  }
+  ```
+
+**Test**: rubyspec/language/block_spec.rb (line 100)
+
+**Priority**: Medium - less common pattern, workaround exists
+
+---
+
+## 15. Bignum Multiplication by Negative Fixnum - RESOLVED
 
 **Status**: ✅ FIXED (2025-11-10)
 

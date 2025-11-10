@@ -33,11 +33,10 @@ Multiple types of failures blocking language specs:
    - Fixed by group_pairs() in treeoutput.rb
    - array_spec.rb now compiles (but crashes at runtime - see Medium Priority)
 
-2. **Block parameter forwarding** (e.g. `method(*a, &b)`):
-   - Error: "Expression did not reduce to single value (2 values on stack)"
-   - Affects: block_spec.rb, likely others
-   - Issue: Compiler doesn't handle `&block` parameter forwarding in method calls
-   - Root cause: `&block` syntax generates two values on the value stack instead of one
+2. **Block parameter forwarding** (e.g. `method(*a, &b)`) - COMPLETED (2025-11-10)
+   - Fixed by merging :to_block into :call/:| expressions in treeoutput.rb
+   - `foo m, *a, &b` now parses correctly (without parentheses)
+   - block_spec.rb now compiles further (hits issue #8 with optional block params)
 
 3. **Operator precedence issues** - COMPLETED (2025-11-10)
    - Fixed by recognizing `:a=` as a valid symbol in sym.rb
@@ -62,7 +61,13 @@ Multiple types of failures blocking language specs:
    - `alias` keyword not implemented
    - Affects: alias_spec.rb
 
-Priority: Address block parameter forwarding (#2) next as it likely affects multiple specs
+8. **Block parameters with default values** (e.g. `{ |a=5, b=4| }`):
+   - Error: "Missing value in expression / op: {assign/2 pri=7}"
+   - Affects: block_spec.rb (line 100)
+   - Issue: Parser doesn't handle assignment syntax in block parameter lists
+   - Priority: Medium - less common pattern, workaround exists
+
+Priority: Address break with splat (#4) or string interpolation edge cases (#5) next
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
 
