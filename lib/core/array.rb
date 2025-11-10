@@ -578,6 +578,26 @@ class Array
     end
   end
 
+  # Returns the object in the array with the maximum value
+  # Uses <=> for comparison
+  def max
+    return nil if self.empty?
+
+    max_val = self[0]
+    i = 1
+    s = self.size
+
+    while i < s
+      el = self[i]
+      if (el <=> max_val) > 0
+        max_val = el
+      end
+      i += 1
+    end
+
+    max_val
+  end
+
 
   # Returns a new array that is a one-dimensional flattening of this array (recursively).
   # That is, for every element that is an array, extract its elements into the new array.
