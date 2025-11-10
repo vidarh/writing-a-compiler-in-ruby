@@ -408,6 +408,32 @@ class String
     result
   end
 
+  def start_with?(prefix)
+    prefix_len = prefix.length
+    return false if prefix_len > length
+
+    i = 0
+    while i < prefix_len
+      return false if self[i] != prefix[i]
+      i += 1
+    end
+    true
+  end
+
+  def end_with?(suffix)
+    suffix_len = suffix.length
+    my_len = length
+    return false if suffix_len > my_len
+
+    offset = my_len - suffix_len
+    i = 0
+    while i < suffix_len
+      return false if self[offset + i] != suffix[i]
+      i += 1
+    end
+    true
+  end
+
   def length
     # FIXME: yes, we should not assume C-strings
     # FIXME: Also, this is not nice if @buffer == -
