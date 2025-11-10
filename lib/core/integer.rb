@@ -804,16 +804,25 @@ class Integer < Numeric
     my_limbs = @limbs
     limbs_len = my_limbs.length
 
+    # Get absolute value and sign of fixnum multiplier
+    if fixnum_val < 0
+      multiplier = 0 - fixnum_val
+      multiplier_sign = -1
+    else
+      multiplier = fixnum_val
+      multiplier_sign = 1
+    end
+
     result_limbs = []
     carry = 0
     i = 0
 
-    # Multiply each limb by fixnum with carry propagation
+    # Multiply each limb by fixnum magnitude with carry propagation
     while __less_than(i, limbs_len) != 0
       limb = my_limbs[i]
 
-      # Multiply limb by fixnum with carry
-      mul_result = __multiply_limb_by_fixnum_with_carry(limb, fixnum_val, carry)
+      # Multiply limb by fixnum magnitude with carry
+      mul_result = __multiply_limb_by_fixnum_with_carry(limb, multiplier, carry)
       result_limb = mul_result[0]
       carry = mul_result[1]
 
@@ -835,9 +844,9 @@ class Integer < Numeric
       end
     end
 
-    # Determine result sign: same if fixnum is positive, opposite if negative
-    # For now, assume fixnum is positive (will handle negative later)
-    result_sign = my_sign
+    # Determine result sign: multiply signs (XOR logic)
+    # Result is negative if exactly one operand is negative
+    result_sign = my_sign * multiplier_sign
 
     # Special case: if result is zero, return fixnum 0
     # This handles cases like 0 * heap_integer or heap_integer * 0
