@@ -202,3 +202,10 @@ class Object
     nil
   end
 end
+
+# BasicObject is the root of the Ruby class hierarchy in real Ruby.
+# For this compiler, we define it as an alias/stub that just inherits from Object.
+# This allows specs that reference BasicObject to work.
+class BasicObject < Object
+  # Intentionally minimal - just inherits everything from Object
+end
