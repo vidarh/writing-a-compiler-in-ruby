@@ -20,6 +20,45 @@ The specs define correct Ruby behavior. If they fail:
 - ✅ Fix operator implementations (like `<<`, `**`, etc.)
 - ❌ **NEVER** modify the spec itself
 
+## CRITICAL RULE: NEVER Add Special-Case Handling for Operators
+
+**NEVER add special-case handling for individual operators in the parser or shunting yard.**
+
+The shunting yard algorithm is designed to handle all operators generically based on:
+- Precedence (priority)
+- Associativity (left/right)
+- Arity (number of operands)
+- Type (prefix/infix/postfix)
+
+If an operator requires special handling, it means there's a bug in the operator definition or the algorithm:
+- ❌ **NEVER** add `if op.sym == :break` checks in shunting.rb
+- ❌ **NEVER** add special cases for specific operators in oper() method
+- ❌ **NEVER** work around operator issues with context-specific hacks
+- ✅ Fix the operator definition in operators.rb (precedence, arity, type)
+- ✅ Fix bugs in the reduce() logic
+- ✅ Ensure operator definitions match their semantic behavior
+
+**Example of WRONG approach:**
+```ruby
+elsif op.sym == :break && !ostack.empty? && ostack.last.type == :infix
+  # Special handling for break - THIS IS WRONG
+  @out.value([:break])
+  return :infix_or_postfix
+end
+```
+
+**Example of CORRECT approach:**
+```ruby
+# Fix the operator definition:
+"break" => Oper.new(22, :break, :prefix, 1, 0),  # Arity=1, not 2!
+```
+
+**Why this rule exists:**
+- Special cases indicate fundamental misunderstanding of the operator
+- They create maintenance burden and hide the real bug
+- The algorithm is designed to be generic - trust it
+- Operators should be defined correctly, not worked around
+
 ## CRITICAL RULE: Never Revert Without Saving
 
 **NEVER revert code changes during investigation without first saving them.**
