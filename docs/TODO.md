@@ -14,7 +14,7 @@
 **Custom Specs (spec/)**: 13 files, **11 passed**, 1 failed, 1 crashed. 45 tests, **40 passed (88%)**
   - Passing: 11 specs including hash_literal_with_block, ternary_operator, control_flow_expressions
   - Failing: float_spec.rb (Float not implemented - 5 tests)
-  - Crashing: break_with_splat_spec.rb (crashes in mspec framework, but standalone test works)
+  - Crashing: break_with_splat_spec.rb (crashes in mspec framework due to top-level block transformation issue - see KNOWN_ISSUES #2; works fine inside methods)
 
 **Progress**:
 - Bignum multiplication fix COMPLETED! Selftest now fully passes
