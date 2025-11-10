@@ -9,6 +9,13 @@ module Tokens
       return nil if s.peek != ?:
       s.get
       buf = Atom.expect(s)
+
+      # If we got an atom (like 'a'), check if it's followed by '=' to form a setter symbol (like ':a=')
+      if buf && s.peek == ?=
+        s.get  # consume '='
+        buf = "#{buf}=".to_sym
+      end
+
       bs = ":#{buf.to_s}"
       return bs.to_sym if buf
 

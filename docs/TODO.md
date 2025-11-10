@@ -2,17 +2,19 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-10 - Updated)
+## Test Status (2025-11-10 - Latest Update)
 
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 66 files, 2 passed (3%), 3 failed, 5 crashed, **56 compile failures (85%)**
+**Language Specs**: 79 files, 2 passed (3%), 9 failed, 9 crashed, **59 compile failures (75%)**
   - Passing: and_spec.rb (10/10), not_spec.rb (10/10)
-  - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval)
-**Custom Specs (spec/)**: 9 files, 6 passed, 3 failed, 0 compile fail. 39 tests, 30 passed, 9 failed (76%)
-  - Passing: integer_size_spec.rb, lambda_call_syntax_spec.rb, lambda_dot_paren_spec.rb, ternary_operator_spec.rb, control_flow_expressions_spec.rb, ternary_operator_bug_spec.rb, array_max_integer_size_spec.rb
-  - Failing: float_spec.rb (needs Float), hash_literal_with_block_spec.rb (undefined method 'pair')
+  - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval), 6 regexp specs (need Regexp support)
+  - Crashes: array_spec.rb (fixed implicit hash, now crashes at runtime), loop_spec.rb, or_spec.rb, redo_spec.rb, + 5 others
+  - Individual tests: 27/124 passed (21% pass rate)
+**Custom Specs (spec/)**: 9 files, **8 passed**, 1 failed, 0 compile fail. 37 tests, **32 passed (86%)**
+  - Passing: All except float_spec.rb
+  - Failing: float_spec.rb (needs Float - 5 tests)
 
-**Critical**: 56 language spec compilation failures still block most progress.
+**Progress**: Implicit hash in arrays FIXED, hash with blocks FIXED. Custom spec pass rate improved from 76% to 86%!
 
 ## High Priority (Compilation Failures - Simplest First)
 
@@ -24,26 +26,46 @@
 
 ### Language Spec Compilation Failures (Investigation 2025-11-10)
 
-Multiple types of failures blocking 56 language specs:
+Multiple types of failures blocking language specs:
 
-1. **Implicit hash in array literals** (e.g. `["foo" => :bar]`):
-   - Error: "Literal Hash must contain key value pairs only"
-   - Affects: array_spec.rb, likely others
-   - Issue: Parser doesn't recognize hash pairs inside array should form a hash object
+1. **Implicit hash in array literals** - COMPLETED (2025-11-10)
+   - Fixed by group_pairs() in treeoutput.rb
+   - array_spec.rb now compiles (but crashes at runtime - see Medium Priority)
 
 2. **Block parameter forwarding** (e.g. `method(*a, &b)`):
    - Error: "Expression did not reduce to single value (2 values on stack)"
-   - Affects: block_spec.rb
+   - Affects: block_spec.rb, likely others
    - Issue: Compiler doesn't handle `&block` parameter forwarding in method calls
+   - Root cause: `&block` syntax generates two values on the value stack instead of one
 
-3. **Complex method definitions**:
-   - Parse errors on edge cases like methods with def-in-default-arg
+3. **Operator precedence issues** - COMPLETED (2025-11-10)
+   - Fixed by recognizing `:a=` as a valid symbol in sym.rb
+   - `{:a==>1}` now parses correctly as `{:a= => 1}`
+
+4. **Break with splat** (e.g. `break *[1,2]`):
+   - Error: "Expression did not reduce to single value"
+   - Affects: break_spec.rb
+   - Issue: Similar to block forwarding - splat in break generates multiple stack values
+
+5. **String interpolation edge cases**:
+   - Unusual delimiters like `%$hey #{expr}$` fail to parse
+   - Affects: string_spec.rb
+   - Issue: Parser doesn't handle all string delimiter variants
+
+6. **Complex method definitions**:
+   - Parse errors on edge cases like `def foo(x = (def foo; "hello"; end;1));x;end`
    - Affects: def_spec.rb
+   - Low priority - very unusual edge case
 
-Priority: Address implicit hash in arrays first as it likely affects most specs
+7. **Missing alias keyword**:
+   - `alias` keyword not implemented
+   - Affects: alias_spec.rb
+
+Priority: Address block parameter forwarding (#2) next as it likely affects multiple specs
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
 
+- [ ] Fix array_spec.rb runtime crash - now compiles after implicit hash fix, but segfaults at runtime
 - [ ] Fix Float-related crashes: fdiv_spec, round_spec, times_spec (KNOWN_ISSUES #7)
 - [ ] Investigate 7 language spec crashes: class_variable, encoding, order, safe, syntax_error, undef, variables
 

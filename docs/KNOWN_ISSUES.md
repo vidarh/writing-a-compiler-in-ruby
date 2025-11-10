@@ -220,36 +220,170 @@ l.(40, 2)     # ✓ Works with multiple arguments
 
 ---
 
-## 5. Hash Literals as Arguments with Blocks
+## 5. Hash Literals as Arguments with Blocks - RESOLVED
 
-**Problem**: Passing a hash literal as an argument to a method that also accepts a block causes a runtime error.
+**Status**: ✅ FIXED (2025-11-10)
 
+**Problem**: Passing a hash literal as an argument to a method that also accepts a block caused "undefined method 'pair'" runtime error.
+
+**Solution**: Fixed argument wrapping in `compile_calls.rb` (both `compile_call` and `compile_callm`). When a block is present, AST nodes like `[:hash, ...]`, `[:array, ...]`, `[:proc, ...]` now get wrapped in an array to prevent flattening that exposed `:pair` symbols as method calls.
+
+**Changes**:
+- compile_calls.rb:212-221 - Added AST node wrapping in `compile_call`
+- compile_calls.rb:322-330 - Added AST node wrapping in `compile_callm`
+
+**Now works**:
 ```ruby
 def test(*args)
   yield
   args[0][:key]
 end
 
-test({:key => 42}) do   # ✗ Runtime error
+test({:key => 42}) do   # ✓ Works
   puts "block"
 end
 ```
 
-**Error**: `undefined method 'pair' for Object`
+**Test**: `spec/hash_literal_with_block_spec.rb` - now passing (2/2 tests)
 
-**Root Cause**: Hash construction appears to have issues when combined with block passing. The hash literal compiles successfully but accessing it at runtime fails.
+---
+
+## 9. Block Parameter Forwarding
+
+**Problem**: Using `&block` parameter forwarding in method calls causes infinite recursion during compilation (stack overflow).
+
+```ruby
+def foo(*a, &b)
+  bar(*a, &b)  # ✗ SystemStackError: stack level too deep
+end
+```
+
+**Error**: `SystemStackError: stack level too deep` in `regalloc.rb` during compilation
+
+**Root Cause**: The parser generates `[:to_block, b]` AST nodes for `&b` syntax. When `compile_callm` extracts the block parameter and prepends it to args, the compilation of that parameter triggers a chain that treats `:to_block` as a function call, leading to infinite recursion:
+1. `compile_callm` extracts `block = :b` from `[:to_block, :b]` and prepends to args
+2. `compile_args` tries to compile `:b` as an argument
+3. Depending on scope context, this may trigger method call compilation
+4. This leads back to `compile_callm` in an infinite loop
+
+The block parameter mapping (`:b` → `:__closure__`) exists in Function#get_arg but the compilation context doesn't properly use it.
 
 **Impact**:
-- platform_is/platform_is_not guards don't work with c_long_size parameters
-- Any hash literal passed to a method with a block will fail at runtime
-- Workaround: Preprocessor strips hash arguments in run_rubyspec
+- block_spec.rb fails to compile (infinite loop, not parse error)
+- Any method that forwards blocks using `&block` syntax causes compiler to hang
+- Likely affects multiple language specs
 
 **Workaround**:
-- `run_rubyspec` script preprocesses specs to convert problematic patterns
-- `platform_is c_long_size: 64 do` → `if false # SKIPPED: 64-bit test`
-- Create hash in variable first, then pass variable (may work)
+- Don't use `&block` parameter forwarding
+- Use `yield` directly or pass blocks explicitly without `&` syntax
 
-**Test**: `spec/hash_literal_with_block_spec.rb`
+**Test**: rubyspec/language/block_spec.rb
 
-**Priority**: Medium - affects testing infrastructure, workarounds in place
+**Priority**: High - common Ruby pattern, blocks many specs, causes compiler hang
+
+---
+
+## 10. Operator Precedence: => vs == - RESOLVED
+
+**Status**: ✅ FIXED (2025-11-10)
+
+**Problem**: Hash literals like `{:a==>1}` failed to parse because `:a=` wasn't recognized as a valid symbol.
+
+```ruby
+{:a => 1}     # ✓ Works
+{:a==>1}      # ✓ Now works (was parse error)
+```
+
+**Root Cause**: The symbol parser (`sym.rb`) would parse `:a` and stop, not recognizing that `=` can be part of a symbol name (setter methods like `:a=`). The tokenizer would then see `==>` and tokenize it as `==` followed by `>`.
+
+**Solution**: Modified `Sym.expect` in `sym.rb` (lines 13-17) to check if an atom is followed by `=` and include it in the symbol name. Now `:a=` is correctly recognized as a single symbol token, leaving `=>` as the hash pair operator.
+
+**Changes**:
+- sym.rb:13-17 - Added check for `=` after atom to form setter symbol
+
+**Test**: rubyspec/language/hash_spec.rb
+
+**Note**: This fix also correctly handles other setter symbols like `:foo=`, `:bar=`, etc.
+
+---
+
+## 11. Break with Splat
+
+**Problem**: Using splat operator with break statement causes compilation failure.
+
+```ruby
+loop do
+  break *[1, 2]  # ✗ Compilation error
+end
+```
+
+**Error**: `Expression did not reduce to single value`
+
+**Root Cause**: Similar to block parameter forwarding - the splat operator in break context generates multiple values on the value stack.
+
+**Impact**:
+- break_spec.rb likely fails
+- Edge case - break with splat is uncommon
+
+**Workaround**: Use `break [1, 2]` without splat
+
+**Test**: rubyspec/language/break_spec.rb
+
+**Priority**: Low - uncommon pattern
+
+---
+
+## 12. String Interpolation Edge Cases
+
+**Problem**: String interpolation with unusual delimiters fails to parse.
+
+```ruby
+"hey #{expr}"     # ✓ Works
+%Q{hey #{expr}}   # ✓ Works (likely)
+%$hey #{expr}$    # ✗ Parse error
+```
+
+**Root Cause**: Parser doesn't handle all string delimiter variants supported by MRI Ruby. The tokenizer may not recognize certain % delimiter combinations.
+
+**Impact**:
+- string_spec.rb fails to compile
+- Very uncommon - most code uses standard delimiters
+- Low priority edge case
+
+**Workaround**: Use standard string delimiters (`"`, `'`, `%Q{}`, etc.)
+
+**Test**: rubyspec/language/string_spec.rb
+
+**Priority**: Very Low - extremely uncommon syntax
+
+---
+
+## 13. Alias Keyword Not Implemented
+
+**Problem**: The `alias` keyword is not implemented.
+
+```ruby
+def foo
+  "hello"
+end
+
+alias bar foo  # ✗ Not implemented
+```
+
+**Root Cause**: Keyword not recognized by parser, feature not implemented.
+
+**Impact**:
+- alias_spec.rb fails to compile
+- Workaround: Define method that calls original method
+
+**Workaround**:
+```ruby
+def bar
+  foo
+end
+```
+
+**Test**: rubyspec/language/alias_spec.rb
+
+**Priority**: Medium - common feature, but workarounds exist
 
