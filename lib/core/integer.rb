@@ -4276,6 +4276,17 @@ class Integer < Numeric
       return ""
     end
 
+    # Range check - valid range is 0..0x10FFFF for Unicode
+    # For ASCII/binary, valid range is 0..255
+    if self < 0
+      raise RangeError.new("#{self} out of char range")
+    end
+
+    # For now, limit to valid Unicode range
+    if self > 0x10FFFF
+      raise RangeError.new("#{self} out of char range")
+    end
+
     # FIXME: Encoding parameter is ignored for now
     %s(let (buf raw_val)
          (assign raw_val (callm self __get_raw))
