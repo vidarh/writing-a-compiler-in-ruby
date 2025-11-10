@@ -314,29 +314,34 @@ end
 
 ---
 
-## 11. Break with Splat
+## 11. Break with Splat - PARTIALLY RESOLVED
+
+**Status**: ✅ PARSER FIXED, ❌ CODE GENERATION PENDING (2025-11-10)
 
 **Problem**: Using splat operator with break statement causes compilation failure.
 
 ```ruby
 loop do
-  break *[1, 2]  # ✗ Compilation error
+  break *[1, 2]  # ✗ Compilation error (was parse error, now code generation error)
 end
 ```
 
-**Error**: `Expression did not reduce to single value`
+**Parser Fix Applied** (2025-11-10):
+- Modified `shunting.rb` lines 61-67 to prevent premature reduction of prefix operators
+- Added check: Don't reduce prefix operators when a higher-precedence prefix operator follows
+- Example: `break` (pri 22) should NOT be reduced when `*` (pri 8) arrives
+- The parser now correctly generates: `[:break, [:splat, [:array, 1, 2]]]`
+- Tests: make selftest (✓ passes), make selftest-c (✓ passes)
 
-**Root Cause**: Similar to block parameter forwarding - the splat operator in break context generates multiple values on the value stack.
+**Remaining Issue**: Code generation for `:splat` expression
+- Added stub `compile_splat` method in compiler.rb
+- Error: `WHAT? "e" / nil` in emitter.rb when compiling the splat node
+- Need to investigate how `:splat` nodes should be compiled in break/return/next context
+- In Ruby, `break *[1, 2]` returns `[1, 2]` (array), not splatted elements
 
-**Impact**:
-- break_spec.rb likely fails
-- Edge case - break with splat is uncommon
+**Test**: spec/break_with_splat_spec.rb (created, compilation fails at code gen)
 
-**Workaround**: Use `break [1, 2]` without splat
-
-**Test**: rubyspec/language/break_spec.rb
-
-**Priority**: Low - uncommon pattern
+**Priority**: Medium - parser fixed, code generation needs investigation
 
 ---
 

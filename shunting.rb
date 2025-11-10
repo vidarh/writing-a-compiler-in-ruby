@@ -53,12 +53,18 @@ module OpPrec
       # As a special rule only :rp's are allowed to reduce past an :lp. This is a bit of a hack - since we recurse for :lp's
       # then don't strictly need to go on the stack at all - they could be pushed on after the shunt returns. May
       # do that later.
+      #
+      # For PREFIX operators: Don't reduce them when a higher-precedence (lower pri) prefix operator comes next.
+      # Example: "break *[1, 2]" - break (pri 22) should NOT be reduced when * (pri 8) arrives.
+      # The higher-precedence operator should be processed first, then the lower-precedence one consumes it.
 
       while  !ostack.empty? &&
              (ostack.last.right_pri > pri ||
                (ostack.last.right_pri == pri && op.assoc == :left) ||
                ostack.last.type == :postfix) &&
-             ((op && op.type == :rp) || ostack.last.type != :lp)
+             ((op && op.type == :rp) || ostack.last.type != :lp) &&
+             # Don't reduce prefix operators when a higher-precedence prefix operator follows
+             !(ostack.last.type == :prefix && op && op.type == :prefix && pri < ostack.last.pri)
         o = ostack.pop
         @out.oper(o) if o.sym
       end
@@ -84,8 +90,8 @@ module OpPrec
     end
 
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
-      #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}"
-      #STDERR.puts "   vstack=#{@out.vstack.inspect}"
+      #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}" if ENV['DEBUG_PARSER']
+      #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
       # When if/while/rescue appear in prefix position, parse as statement UNLESS
       # they're appearing after a prefix operator (which would make them modifiers)
       if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
@@ -255,8 +261,16 @@ module OpPrec
       if opstate == :prefix && (ostack.size && ostack.last && ostack.last.type == :prefix)
         # This is an error unless the top of the @ostack has minarity == 0,
         # which means it's ok for it to be provided with no argument
+        # HOWEVER: respect operator precedence. If the incoming operator has
+        # higher precedence (lower priority number), let it be reduced first.
+        # Example: "break *[1, 2]" - * (pri 8) should be reduced before break (pri 22)
         if ostack.last.minarity == 0
-          @out.value(nil)
+          # Only close with nil if incoming operator has lower/equal precedence
+          if op && op.pri < ostack.last.pri
+            # Incoming operator has higher precedence - don't close yet
+          else
+            @out.value(nil)
+          end
         else
           scanner = @tokenizer.scanner
           token_info = token.respond_to?(:position) ? token.position.short : token.inspect

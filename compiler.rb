@@ -1063,4 +1063,10 @@ class Compiler
     output_constants
     @e.flush
   end
+
+  def compile_splat(scope, expr)
+    # In break/return/next context, *array simply evaluates to the array itself
+    # Example: break *[1, 2] returns [1, 2]
+    compile_eval_arg(scope, expr)
+  end
 end
