@@ -22,6 +22,26 @@
 - [x] Fix control flow as expressions (KNOWN_ISSUES #1, spec/control_flow_expressions_spec.rb) - COMPLETED (2025-11-10) - if/while/unless/until now work as expressions
 - [ ] Fix toplevel constant paths (`class ::Foo`) (KNOWN_ISSUES #4) - reverted feature
 
+### Language Spec Compilation Failures (Investigation 2025-11-10)
+
+Multiple types of failures blocking 56 language specs:
+
+1. **Implicit hash in array literals** (e.g. `["foo" => :bar]`):
+   - Error: "Literal Hash must contain key value pairs only"
+   - Affects: array_spec.rb, likely others
+   - Issue: Parser doesn't recognize hash pairs inside array should form a hash object
+
+2. **Block parameter forwarding** (e.g. `method(*a, &b)`):
+   - Error: "Expression did not reduce to single value (2 values on stack)"
+   - Affects: block_spec.rb
+   - Issue: Compiler doesn't handle `&block` parameter forwarding in method calls
+
+3. **Complex method definitions**:
+   - Parse errors on edge cases like methods with def-in-default-arg
+   - Affects: def_spec.rb
+
+Priority: Address implicit hash in arrays first as it likely affects most specs
+
 ## Medium Priority (Crashes - Fix After Compile Issues)
 
 - [ ] Fix Float-related crashes: fdiv_spec, round_spec, times_spec (KNOWN_ISSUES #7)
