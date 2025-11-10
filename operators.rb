@@ -78,6 +78,18 @@ Operators = {
 
   "=>"        => Oper.new(  5, :pair,     :infix),
 
+  "if"        => Oper.new(2, :if_mod,   :infix, 2, 2, :right, 1),
+
+  "while"     => Oper.new(2, :while_mod,   :infix, 2, 2, :right, 1),
+
+  "rescue"    => Oper.new(2, :rescue_mod, :infix, 2, 2, :right, 1),
+#    :infix_or_postfix => 
+#    :prefix => Oper.new(1, :while, 1, 0)
+#  },
+
+  "break" => Oper.new(22, :break, :prefix, 2, 0),
+  "next"  => Oper.new(22, :next,  :prefix, 2, 0),
+  
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND
   "&"         => {
     :infix_or_postfix => Oper.new( 11, :"&",      :infix, 2, 2, :left),

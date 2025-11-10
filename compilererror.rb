@@ -9,7 +9,8 @@ class CompilerError < StandardError
   # Usage: CompilerError.new(message, position)
   #    or: CompilerError.new(message, filename, line, column, block_start_line)
   def initialize(message, filename_or_pos = nil, line = nil, column = nil, block_start_line = nil)
-    super(message)
+    #super(message)
+    @message = message
 
     # Check if second parameter is a Position object
     if filename_or_pos.respond_to?(:filename) && filename_or_pos.respond_to?(:lineno)
@@ -99,7 +100,7 @@ class CompilerError < StandardError
 
   # Override message to automatically include source context
   def message
-    base_message = super
+    base_message = @message
     if @filename && @line
       # Format location: filename:line or filename:line:col (copy-pasteable to editors)
       location = "#{@filename}:#{@line}"

@@ -6,6 +6,8 @@ module OpPrec
   class TreeOutput
     include AST
 
+    attr_reader :vstack
+
     def initialize
       reset
     end
@@ -44,6 +46,7 @@ module OpPrec
         else
           r = [rightv]
         end
+
         if la and leftv[0] == :callm and leftv[2] == :[]
           #
           # Ruby Array syntax and += etc. is all syntactic sugar:
@@ -114,6 +117,27 @@ module OpPrec
 
       # Debug option: Output the tree without rewriting.
       return @vstack << E[o.sym, leftv, rightv] if @@dont_rewrite
+
+      if o.sym == :if_mod
+        o = Oper.new(2, :if, :prefix, 1, 0)
+        l = rightv
+        rightv = leftv
+        leftv  = l
+      end
+
+      if o.sym == :while_mod
+        o = Oper.new(2, :while, :prefix, 1, 0)
+        l = rightv
+        rightv = leftv
+        leftv  = l
+      end
+
+      if o.sym == :rescue_mod
+        o = Oper.new(2, :rescue, :prefix, 1, 0)
+        l = rightv
+        rightv = leftv
+        leftv  = l
+      end
 
       # Rewrite rules to simplify the tree
       if ra and rightv[0] == :call and o.sym == :callm

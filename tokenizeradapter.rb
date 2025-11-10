@@ -57,6 +57,3 @@ class TokenizerAdapter
     @tokenizer.scanner
   end
 end
-
-
-

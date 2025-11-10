@@ -215,7 +215,11 @@ class Parser < ParserBase
     nolfws; literal(SEMICOLON); nolfws; keyword(:do)
     nolfws;
     exps = parse_opt_defexp
+    #STDERR.puts "exiting while:"
+    #STDERR.puts @scanner.position.inspect
     keyword(:end) or expected("expression or 'end' for open 'while' block")
+    #STDERR.puts @scanner.position.inspect
+    #STDERR.puts exps.inspect
     return E[pos, :while, cond, [:do]+exps]
   end
 
@@ -336,30 +340,9 @@ class Parser < ParserBase
       end
       exp = parse_defexp
       break if !exp
-      # Check if parse_defexp consumed a rescue modifier
-      # Rescue modifiers have structure: [:rescue, rval, lval] (3 elements)
-      # Proper rescue clauses have: [:rescue, class, name, body] (4 elements)
-      if exp.is_a?(Array) && exp[0] == :rescue && exp.size == 3
-        # This is a malformed rescue from modifier syntax
-        # exp[1] is the first body expression, exp[2] is nil
-        # Need to parse the rest of the rescue body
-        rescue_body = [exp[1]]
-        # Continue parsing expressions until we hit 'end'
-        loop do
-          ws
-          break if keyword(:end)
-          e = parse_defexp
-          break if !e
-          rescue_body << e
-        end
-        rescue_ = E[exp.position, :rescue, nil, nil, rescue_body]
-        # Don't break - we need to continue to consume 'end'
-        return E[pos, :block, [], exps, rescue_]
-      elsif exp.is_a?(Array) && exp[0] == :rescue && exp.size == 4
-        # Proper rescue clause
-        rescue_ = exp
-        break
-      end
+      # Note: Rescue modifiers are now properly handled by the shunting yard
+      # and are rewritten in treeoutput.rb, so they appear as normal :rescue nodes.
+      # We just treat them as regular expressions here.
       exps << exp
     end
     # If we don't have rescue yet, try to parse it (it's optional)
@@ -473,14 +456,6 @@ class Parser < ParserBase
     return E[pos, :lambda, *block[1..-1]]
   end
 
-  def parse_break
-    pos = position
-    return nil if !keyword(:break)
-    exps = parse_subexp
-    return E[pos, :break, exps] if exps
-    return E[pos, :break]
-  end
-
   def parse_next
     pos = position
     return nil if !keyword(:next)
@@ -495,7 +470,10 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_class || parse_module || parse_sexp || parse_while || parse_until || parse_for || parse_begin || parse_if_unless || parse_break || parse_next || parse_lambda || parse_subexp || parse_case || parse_require_relative || parse_require
+    ret = parse_class || parse_module || parse_sexp ||
+          parse_until || parse_for ||
+          parse_begin || parse_lambda ||
+          parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
     # FIXME: @bug this below is needed for MRI, but not for the selfhosted compiler...
@@ -504,16 +482,16 @@ class Parser < ParserBase
       ret = E[pos].concat(ret)
     end
     nolfws
-    if sym = expect(:if, :while, :rescue)
-      # FIXME: This is likely the wrong way to go in some situations involving blocks
-      # that have different semantics - parser may need a way of distinguishing them
-      # from "normal" :if/:while
-      ws
-      cond = parse_condition or expected("condition for '#{sym.to_s}' statement modifier")
-      nolfws; literal(SEMICOLON)
-      ret = E[pos, sym.to_sym, cond, ret]
-    end
-    #ws; literal(";"); ws
+    #if sym = expect(:if, :while, :rescue)
+    #  # FIXME: This is likely the wrong way to go in some situations involving blocks
+    #  # that have different semantics - parser may need a way of distinguishing them
+    #  # from "normal" :if/:while
+    #  ws
+    #  cond = parse_condition or expected("condition for '#{sym.to_s}' statement modifier")
+    #  nolfws; literal(SEMICOLON)
+    #  ret = E[pos, sym.to_sym, cond, ret]
+    #end
+    ws; literal(";"); ws
     return ret
   end
 
@@ -614,6 +592,7 @@ class Parser < ParserBase
 
     # Parse method body - parse_block_exps will naturally stop at keywords like rescue/ensure/end
     exps = parse_block_exps
+    #STDERR.puts exps.inspect
 
     # Parse optional rescue clause (similar to parse_begin)
     rescue_ = nil
@@ -643,6 +622,7 @@ class Parser < ParserBase
     end
 
     ws
+    #STDERR.puts @scanner.position.inspect
     keyword(:end) or expected("expression or 'end' for open def '#{name.to_s}'")
 
     # If we have rescue or ensure, wrap exps in a :block node

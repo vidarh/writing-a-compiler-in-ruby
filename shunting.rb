@@ -54,7 +54,11 @@ module OpPrec
       # then don't strictly need to go on the stack at all - they could be pushed on after the shunt returns. May
       # do that later.
 
-      while  !ostack.empty? && (ostack.last.right_pri > pri || (ostack.last.right_pri == pri && op.assoc == :left) || ostack.last.type == :postfix) && ((op && op.type == :rp) || ostack.last.type != :lp)
+      while  !ostack.empty? &&
+             (ostack.last.right_pri > pri ||
+               (ostack.last.right_pri == pri && op.assoc == :left) ||
+               ostack.last.type == :postfix) &&
+             ((op && op.type == :rp) || ostack.last.type != :lp)
         o = ostack.pop
         @out.oper(o) if o.sym
       end
@@ -80,6 +84,28 @@ module OpPrec
     end
 
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
+      #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}"
+      #STDERR.puts "   vstack=#{@out.vstack.inspect}"
+      if opstate == :prefix && ostack.length == 0
+        if op.sym == :if_mod
+          #STDERR.puts "   if expression"
+          @out.value(@parser.parse_if_body(:if))
+          return :prefix
+        elsif op.sym == :while_mod
+          #STDERR.puts "   while expression"
+          src.unget(token)
+          @out.value(@parser.parse_while)
+          return :prefix
+        elsif op.sym == :rescue_mod && ostack.length == 0
+          #STDERR.puts "   rescue clause (not modifier)"
+          # Unlike if/while, rescue in prefix position signals end of begin block body
+          # Only break if ostack is empty (we're at statement level)
+          # Otherwise, parse as expression
+          src.unget(token)
+          reduce(ostack)
+          return :break
+        end
+      end
 
       if op.sym == :hash_or_block || op.sym == :block
         # Don't treat { as block argument if there was a newline before current token
@@ -158,9 +184,13 @@ module OpPrec
         token = t
 
         # Normally we stop when encountering a keyword, but it's ok to encounter
-        # one as the second operand for an infix operator
+        # one as the second operand for an infix operator.
+        # Also, keywords that have operator mappings (like if/while/rescue) should
+        # be treated as operators, not as keywords that stop parsing.
+        # However, we need to check that the operator mapping exists for the current opstate.
+        has_op_for_state = op && (op.is_a?(Hash) ? op[opstate] : true)
         if @inhibit.include?(token) or
-          keyword &&
+          keyword && !has_op_for_state &&
           (opstate != :prefix ||
            !ostack.last ||
            ostack.last.type != :infix ||
@@ -189,16 +219,14 @@ module OpPrec
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
           # Also handle break statement which can appear in boolean expressions (e.g., "x or break")
-          if keyword && [:while, :until, :for, :if, :unless, :begin, :break].include?(token)
+          if keyword && [:until, :for, :unless, :begin].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
-              when :if, :unless then :parse_if_unless
-              when :while then :parse_while
+              when :unless then :parse_if_unless
               when :until then :parse_until
               when :for then :parse_for
               when :begin then :parse_begin
-              when :break then :parse_break
             end
             result = @parser.send(parser_method)
             @out.value(result)
