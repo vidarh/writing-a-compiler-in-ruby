@@ -87,8 +87,8 @@ Operators = {
 #    :prefix => Oper.new(1, :while, 1, 0)
 #  },
 
-  "break" => Oper.new(22, :break, :prefix, 2, 0),
-  "next"  => Oper.new(22, :next,  :prefix, 2, 0),
+  "break" => Oper.new(22, :break, :prefix, 1, 0),
+  "next"  => Oper.new(22, :next,  :prefix, 1, 0),
   
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND
   "&"         => {
