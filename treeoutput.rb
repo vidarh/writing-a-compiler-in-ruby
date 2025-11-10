@@ -34,6 +34,46 @@ module OpPrec
       return E[r[1]] + flatten(r[2])
     end
 
+    # Convert :ternalt to :pair for symbol shorthand syntax (foo: value)
+    def convert_ternalt_to_pair(elem)
+      if elem.is_a?(Array) && elem[0] == :ternalt
+        # foo: 42 becomes [:ternalt, foo, 42] but should be [:pair, :foo, 42]
+        # Convert symbol name to symbol literal
+        key_sym = elem[1].is_a?(Symbol) ? elem[1] : elem[1].to_sym
+        return E[:pair, E[:sexp, key_sym.inspect.to_sym], elem[2]]
+      end
+      elem
+    end
+
+    # Group consecutive :pair and :ternalt elements into a :hash
+    # Used to handle implicit hashes in arrays like ["foo" => :bar] and [foo: 42]
+    # :ternalt represents symbol shorthand (foo: value) which should become (:pair :foo value)
+    def group_pairs(elements)
+      result = []
+      pairs = []
+
+      elements.each do |elem|
+        elem = convert_ternalt_to_pair(elem)
+        if elem.is_a?(Array) && elem[0] == :pair
+          pairs << elem
+        else
+          # Non-pair element - flush any accumulated pairs as a hash
+          if !pairs.empty?
+            result << E[:hash] + pairs
+            pairs = []
+          end
+          result << elem
+        end
+      end
+
+      # Flush remaining pairs
+      if !pairs.empty?
+        result << E[:hash] + pairs
+      end
+
+      result
+    end
+
     def oper_incr(la, leftv, ra, rightv)
         # FIXME: This probably doesn't belong here, but rather in transform.rb
         #
@@ -188,7 +228,16 @@ module OpPrec
       elsif o.sym == :incr
         oper_incr(la,leftv,ra,rightv)
       elsif ra and rightv[0] == :comma and o.sym == :array || o.sym == :hash
-        @vstack << E[o.sym, leftv].compact + flatten(rightv)
+        if o.sym == :array
+          # Group any implicit hash pairs in the array
+          elements = E[leftv].compact + flatten(rightv)
+          @vstack << E[:array] + group_pairs(elements)
+        else
+          # Convert :ternalt to :pair for symbol shorthand in hashes
+          elements = E[leftv].compact + flatten(rightv)
+          elements = elements.map { |e| convert_ternalt_to_pair(e) }
+          @vstack << E[o.sym] + elements
+        end
       elsif ra and rightv[0] == :comma and o.sym == :return
         @vstack << E[o.sym, leftv, [:array]+flatten(rightv)].compact
       elsif ra and rightv[0] == :comma and o.sym != :comma
@@ -221,7 +270,17 @@ module OpPrec
             lv = [:destruct] + lv
         end
 
-        @vstack << E[o.sym, lv, rightv].compact
+        # Handle implicit hash in array for single element or non-comma case
+        if o.sym == :array
+          elements = E[lv, rightv].compact
+          @vstack << E[:array] + group_pairs(elements)
+        elsif o.sym == :hash
+          # Convert :ternalt to :pair for symbol shorthand in single-element hashes
+          elements = E[lv, rightv].compact.map { |e| convert_ternalt_to_pair(e) }
+          @vstack << E[:hash] + elements
+        else
+          @vstack << E[o.sym, lv, rightv].compact
+        end
       end
       return
     end
