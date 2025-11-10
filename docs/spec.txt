@@ -3,7 +3,7 @@ Running all specs in ./spec...
 ================================
 
 [32m[PASS] ./spec/array_max_integer_size_spec.rb (P:3 F:0 S:0 T:3)
-[31m[FAIL] ./spec/control_flow_expressions_spec.rb (P:6 F:2 S:0 T:8)
+[32m[PASS] ./spec/control_flow_expressions_spec.rb (P:7 F:0 S:0 T:7)
 [31m[FAIL] ./spec/float_spec.rb (P:0 F:5 S:0 T:5)
 [31m[FAIL] ./spec/hash_literal_with_block_spec.rb (P:1 F:2 S:0 T:3)
 [32m[PASS] ./spec/integer_size_spec.rb (P:4 F:0 S:0 T:4)
@@ -15,14 +15,14 @@ Running all specs in ./spec...
 ================================
 Summary:
   Total spec files: 9
-  Passed: 6
-  Failed: 3
+  Passed: 7
+  Failed: 2
   Crashed (no test output): 0
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 39
-  Passed: 30
-  Failed: 9
+  Total tests: 38
+  Passed: 31
+  Failed: 7
   Skipped: 0
-  Pass rate: 76%
+  Pass rate: 81%
