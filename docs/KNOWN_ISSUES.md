@@ -64,12 +64,18 @@ C.new("test")
 
 ## 2. Top-Level Blocks/Lambdas
 
-**Problem**: Blocks and lambdas at top-level fail with "undefined method" for parameters.
+**Problem**: Blocks and lambdas at top-level fail with "undefined method 'lambda'" or "undefined reference to '__env__'".
 
 ```ruby
-[1,2,3].each { |i| puts i }  # ✗ Fails at top-level
-                              # ✓ Works inside methods
+lambda { 42 }               # ✗ "undefined method 'lambda'" at top-level
+[1,2,3].each { |i| puts i } # ✗ Fails at top-level
+                            # ✓ Works inside methods
 ```
+
+**Root Cause**: The `rewrite_lambda()` function in transform.rb is only called from `rewrite_let_env()`, which only processes `:defm` nodes (method definitions). Top-level code is not inside a `:defm`, so:
+1. Top-level `:lambda` nodes never get transformed into `:defun` + `__new_proc` calls
+2. Without transformation, compiler tries to compile `:lambda` as a method call to non-existent `lambda` method
+3. Even if manually transformed, top-level lacks `__env__`, `__tmp_proc`, and `__closure__` variables that lambdas require
 
 **Workaround**: Wrap all test code in methods. RubySpecs already do this.
 
@@ -217,6 +223,64 @@ l.(40, 2)     # ✓ Works with multiple arguments
 **Test Case**: See test_modulo_bug.rb (created during investigation)
 
 **Priority**: Medium - affects edge cases with very large numbers only
+
+---
+
+## 9. Block Parameters with Default Values - PARTIALLY IMPLEMENTED
+
+**Status**: 🟡 PARTIALLY FIXED (2025-11-10)
+
+**Problem**: Block parameters with default values like `{ |a=5| puts a }` fail to parse or execute correctly.
+
+**What Works**:
+- ✅ Parser correctly handles syntax: `{ |a=5| }` parses to `[[:a, :default, 5]]`
+- ✅ Transform phase preserves default values when creating lambdas
+- ✅ Code compiles without errors inside methods
+
+**What Doesn't Work**:
+- ❌ Runtime: Block parameters receive wrong values (get entire array instead of elements)
+- ❌ Top-level: Blocks at top-level don't get transformed (see Issue #2)
+- ❌ Default values not applied correctly - parameters always receive nil or wrong values
+
+**Example**:
+```ruby
+def test
+  [1, 2].each { |a=99| puts a }
+end
+test
+# Output: [1, 2]  [1, 2]  <- Bug: prints array twice instead of 1, 2
+```
+
+**Implementation Status**:
+1. ✅ `parser.rb`: Modified `parse_arglist()` to accept `extra_stop_tokens` parameter
+2. ✅ `parser.rb`: Updated `parse_block()` to pass `[PIPE]` as stop token
+3. ✅ `transform.rb`: Fixed `rewrite_lambda()` to handle `[name, :default, value]` format
+4. ❌ `output_functions.rb`: Needs fix to `output_default_args()` for lambda argument positions
+
+**Root Cause**:
+The `output_default_args()` function checks `if numargs < 1 + xindex` to determine if a default should be used. However, for lambdas:
+- Function signature: `(self, __closure__, __env__, user_arg0, user_arg1, ...)`
+- `numargs` includes ALL arguments (implicit + user)
+- For first user arg at position 3, need `numargs >= 4`, not `numargs >= 1`
+- Current check always fails, so default is never used and wrong argument is accessed
+
+**Attempted Fix**: Tried calculating actual argument position:
+```ruby
+actual_position = func.args.index { |a| a.name == arg.name }
+compile_if(fscope, [:lt, :numargs, actual_position + 1], ...)
+```
+But this broke regular method default parameters and caused selftest-c to fail.
+
+**Challenge**: Need to distinguish lambdas (3 implicit args) from methods (2 implicit args) to calculate correct `numargs` threshold. Function class doesn't track which arguments are implicit.
+
+**Workaround**: Don't use default values on block parameters. Use explicit nil checks instead:
+```ruby
+[1, 2].each { |a| a = 99 if a.nil?; puts a }
+```
+
+**Priority**: Low - uncommon pattern, workaround exists
+
+**Test Files**: test_block_default_params.rb, test_block_default_in_method.rb, test_each_simple.rb
 
 ---
 

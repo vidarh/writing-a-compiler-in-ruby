@@ -11,11 +11,19 @@
   - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval), 6 regexp specs (need Regexp support)
   - Crashes: array_spec.rb (fixed implicit hash, now crashes at runtime), loop_spec.rb, or_spec.rb, redo_spec.rb, + 5 others
   - Individual tests: 27/124 passed (21% pass rate)
-**Custom Specs (spec/)**: 11 files, **10 passed**, 1 failed, 0 compile fail. 44 tests, **39 passed (88%)**
-  - Passing: All except float_spec.rb
+**Custom Specs (spec/)**: 13 files, **11 passed**, 1 failed, 1 crashed. 45 tests, **40 passed (88%)**
+  - Passing: 11 specs including hash_literal_with_block, ternary_operator, control_flow_expressions
   - Failing: float_spec.rb (Float not implemented - 5 tests)
+  - Crashing: break_with_splat_spec.rb (crashes in mspec framework, but standalone test works)
 
-**Progress**: Bignum multiplication fix COMPLETED! Selftest now fully passes. Custom spec pass rate: 88%.
+**Progress**:
+- Bignum multiplication fix COMPLETED! Selftest now fully passes
+- Implicit hash in arrays FIXED - array literals with hash pairs now compile
+- Block parameter forwarding FIXED - `foo *a, &b` works without parentheses
+- Break with splat FIXED - `break *[1,2]` works correctly
+- Hash literals with blocks FIXED - argument wrapping corrected
+- Custom spec pass rate: 88% (40/45 tests passing)
+- **Known limitation**: Multiple specs crash at runtime in mspec framework (not feature bugs)
 
 ## High Priority (Compilation Failures - Simplest First)
 
@@ -58,21 +66,23 @@ Multiple types of failures blocking language specs:
    - Affects: def_spec.rb
    - Low priority - very unusual edge case
 
-7. **Missing alias keyword**:
-   - `alias` keyword not implemented
-   - Affects: alias_spec.rb
+7. **Missing alias keyword** - COMPLETED (2025-11-10):
+   - ✅ Implemented in tokens.rb, parser.rb, compiler.rb, compile_class.rb
+   - ✅ Parses `alias new_name old_name` and creates vtable entries
+   - ✅ Tests: selftest (✓), selftest-c (✓), test_alias.rb (✓)
+   - Note: alias_spec.rb still fails with "Module not found" (spec dependencies issue, not alias bug)
 
-8. **Block parameters with default values** (e.g. `{ |a=5, b=4| }`):
-   - Error: "Missing value in expression / op: {assign/2 pri=7}"
-   - Affects: block_spec.rb (line 100)
-   - Issue: Parser doesn't handle assignment syntax in block parameter lists
-   - Priority: Medium - less common pattern, workaround exists
+8. **Block parameters with default values** (e.g. `{ |a=5, b=4| }`) - PARTIALLY FIXED (2025-11-10):
+   - ✅ Parser now handles syntax correctly
+   - ✅ Transform phase preserves default values
+   - ❌ Runtime execution broken - see KNOWN_ISSUES.md #9 for details
+   - Priority: Low - uncommon pattern, workaround exists (use nil checks)
 
 Priority: Focus on remaining high-impact compilation failures or runtime crashes (array_spec.rb)
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
 
-- [ ] Fix array_spec.rb runtime crash - now compiles after implicit hash fix, but segfaults at runtime
+- [ ] Fix array_spec.rb runtime crash - now compiles after implicit hash fix, but segfaults at runtime in __lambda_L290 during array creation code (stack corruption, likely invalid size calculation)
 - [ ] Fix Float-related crashes: fdiv_spec, round_spec, times_spec (KNOWN_ISSUES #7)
 - [ ] Investigate 7 language spec crashes: class_variable, encoding, order, safe, syntax_error, undef, variables
 
@@ -87,7 +97,7 @@ Priority: Focus on remaining high-impact compilation failures or runtime crashes
 - [x] Implement String#strip, #lstrip, #rstrip - COMPLETED (2025-11-10)
 - [x] Implement Array#any?, #all?, #none? - COMPLETED (2025-11-10)
 - [ ] Fix Float support - needed for spec/float_spec.rb (5 failures)
-- [ ] Fix hash literal with block - spec/hash_literal_with_block_spec.rb "undefined method 'pair'" (2 failures) - complex parser bug
+- [x] Fix hash literal with block - spec/hash_literal_with_block_spec.rb - COMPLETED (2025-11-10) - fixed argument wrapping in compile_calls.rb
 - [x] Fix ternary operator bug - spec/ternary_operator_bug_spec.rb - COMPLETED (2025-11-10) - fixed compile_if to save results to %eax
 
 ### RubySpec Failures
