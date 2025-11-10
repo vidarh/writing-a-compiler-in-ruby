@@ -42,11 +42,11 @@ Multiple types of failures blocking language specs:
    - Fixed by recognizing `:a=` as a valid symbol in sym.rb
    - `{:a==>1}` now parses correctly as `{:a= => 1}`
 
-4. **Break with splat** (e.g. `break *[1,2]`) - PARTIALLY COMPLETED (2025-11-10):
+4. **Break with splat** (e.g. `break *[1,2]`) - COMPLETED (2025-11-10):
    - ✅ Parser fixed: Modified shunting.rb to prevent premature reduction of prefix operators
-   - ❌ Code generation pending: Need to implement compile_splat properly
-   - Affects: break_spec.rb (now fails at code generation, not parsing)
-   - See KNOWN_ISSUES.md #11 for details
+   - ✅ Code generation fixed: Implemented compile_splat method in compiler.rb
+   - Tests: selftest (✓), selftest-c (✓), standalone test (✓)
+   - See KNOWN_ISSUES.md #11 for full implementation details
 
 5. **String interpolation edge cases**:
    - Unusual delimiters like `%$hey #{expr}$` fail to parse

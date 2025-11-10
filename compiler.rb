@@ -1067,6 +1067,8 @@ class Compiler
   def compile_splat(scope, expr)
     # In break/return/next context, *array simply evaluates to the array itself
     # Example: break *[1, 2] returns [1, 2]
+    # Evaluate the expression and return it as a subexpression (result in %eax)
     compile_eval_arg(scope, expr)
+    return Value.new([:subexpr], :object)
   end
 end
