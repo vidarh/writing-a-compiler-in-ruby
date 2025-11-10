@@ -618,6 +618,42 @@ class Array
     min_val
   end
 
+  # Returns true if any element matches the given block (or is truthy if no block given)
+  def any?
+    i = 0
+    s = self.size
+    while i < s
+      el = self[i]
+      return true if yield(el)
+      i += 1
+    end
+    false
+  end
+
+  # Returns true if all elements match the given block (or are truthy if no block given)
+  def all?
+    i = 0
+    s = self.size
+    while i < s
+      el = self[i]
+      return false if !yield(el)
+      i += 1
+    end
+    true
+  end
+
+  # Returns true if no elements match the given block (or are truthy if no block given)
+  def none?
+    i = 0
+    s = self.size
+    while i < s
+      el = self[i]
+      return false if yield(el)
+      i += 1
+    end
+    true
+  end
+
 
   # Returns a new array that is a one-dimensional flattening of this array (recursively).
   # That is, for every element that is an array, extract its elements into the new array.
