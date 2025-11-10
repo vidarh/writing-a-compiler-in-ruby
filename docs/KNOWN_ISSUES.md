@@ -387,3 +387,39 @@ end
 
 **Priority**: Medium - common feature, but workarounds exist
 
+---
+
+## 14. Bignum Multiplication by Negative Fixnum - RESOLVED
+
+**Status**: ✅ FIXED (2025-11-10)
+
+**Problem**: Multiplying heap integers (Bignums) by negative fixnums produced corrupted results.
+
+```ruby
+1073741824 * (-1)  # ✗ Returned 9903520314283042198119251968 (wrong)
+                   # ✓ Now returns -1073741824 (correct)
+```
+
+**Root Cause**: The `__multiply_heap_by_fixnum` method in `lib/core/integer.rb` line 840 set `result_sign = my_sign` without checking if the fixnum multiplier was negative. The comment even noted "For now, assume fixnum is positive (will handle negative later)" but the negative case was never implemented.
+
+**Impact**:
+- Integer literal parsing failed: `-1073741824` was corrupted during tokenization
+- Selftest failure: "Parse large negative integer" test failed
+- Any Bignum × negative fixnum operation was broken
+
+**Solution**: Modified `__multiply_heap_by_fixnum` (lines 802-849) to:
+1. Extract absolute value and sign of fixnum multiplier
+2. Multiply limbs by fixnum magnitude (not signed value)
+3. Compute result sign as `my_sign * multiplier_sign` (XOR logic)
+4. Pattern matches `__divide_heap_by_fixnum` implementation
+
+**Changes**:
+- lib/core/integer.rb:807-814 - Added sign extraction for fixnum
+- lib/core/integer.rb:825 - Changed to multiply by `multiplier` (absolute value)
+- lib/core/integer.rb:849 - Changed to `result_sign = my_sign * multiplier_sign`
+
+**Tests**:
+- spec/bignum_multiply_negative_one_spec.rb (4/4 tests pass)
+- make selftest - all tests pass (0 failures)
+- make selftest-c - all tests pass (0 failures)
+

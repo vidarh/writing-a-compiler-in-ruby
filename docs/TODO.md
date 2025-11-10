@@ -4,17 +4,17 @@
 
 ## Test Status (2025-11-10 - Latest Update)
 
+**Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
 **Language Specs**: 79 files, 2 passed (3%), 9 failed, 9 crashed, **59 compile failures (75%)**
   - Passing: and_spec.rb (10/10), not_spec.rb (10/10)
   - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval), 6 regexp specs (need Regexp support)
   - Crashes: array_spec.rb (fixed implicit hash, now crashes at runtime), loop_spec.rb, or_spec.rb, redo_spec.rb, + 5 others
   - Individual tests: 27/124 passed (21% pass rate)
-**Custom Specs (spec/)**: 9 files, **8 passed**, 1 failed, 0 compile fail. 37 tests, **32 passed (86%)**
-  - Passing: All except float_spec.rb
-  - Failing: float_spec.rb (needs Float - 5 tests)
+**Custom Specs (spec/)**: 10 files, **10 passed**, 0 failed, 0 compile fail. 41 tests, **41 passed (100%)**
+  - All specs passing!
 
-**Progress**: Implicit hash in arrays FIXED, hash with blocks FIXED. Custom spec pass rate improved from 76% to 86%!
+**Progress**: Bignum multiplication fix COMPLETED! Selftest now fully passes. Custom spec pass rate: 100%!
 
 ## High Priority (Compilation Failures - Simplest First)
 
