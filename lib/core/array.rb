@@ -598,6 +598,26 @@ class Array
     max_val
   end
 
+  # Returns the object in the array with the minimum value
+  # Uses <=> for comparison
+  def min
+    return nil if self.empty?
+
+    min_val = self[0]
+    i = 1
+    s = self.size
+
+    while i < s
+      el = self[i]
+      if (el <=> min_val) < 0
+        min_val = el
+      end
+      i += 1
+    end
+
+    min_val
+  end
+
 
   # Returns a new array that is a one-dimensional flattening of this array (recursively).
   # That is, for every element that is an array, extract its elements into the new array.
