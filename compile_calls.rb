@@ -212,9 +212,10 @@ class Compiler
     # Wrap single argument in array if needed
     # When there's a block, parser passes args unwrapped: [:call, func, arg, block]
     # When there's no block, parser wraps args: [:call, func, [args...]]
+    # Only wrap if it's an AST node (not a symbol/constant name)
     if !args.is_a?(Array)
       args = [args]
-    elsif block && args[0].is_a?(Symbol)
+    elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) && [:hash, :array, :proc, :block, :lambda].include?(args[0])
       # With block, single AST node arg (like [:hash, ...]) needs wrapping
       args = [args]
     end
@@ -319,8 +320,15 @@ class Compiler
 
     stackfence do
       args ||= []
-      args = [args] if !args.is_a?(Array) # FIXME: It's probably better to make the parser consistently pass an array
-
+      # Wrap single argument in array if needed
+      # Same issue as compile_call - parser generates inconsistent structures with blocks
+      # Only wrap if it's an AST node (not a symbol/constant name)
+      if !args.is_a?(Array)
+        args = [args]
+      elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) && [:hash, :array, :proc, :block, :lambda].include?(args[0])
+        # With block, single AST node arg (like [:hash, ...]) needs wrapping
+        args = [args]
+      end
 
       if args.last.kind_of?(Array) && args.last[0] == :to_block
         block = args.last[1]
