@@ -8,9 +8,9 @@
 **Language Specs**: 66 files, 2 passed (3%), 3 failed, 5 crashed, **56 compile failures (85%)**
   - Passing: and_spec.rb (10/10), not_spec.rb (10/10)
   - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval)
-**Custom Specs (spec/)**: 9 files, 4 passed, 5 failed, 0 compile fail. 42 tests, 26 passed, 16 failed (61%)
-  - Passing: integer_size_spec.rb, lambda_call_syntax_spec.rb, lambda_dot_paren_spec.rb, ternary_operator_spec.rb, control_flow_expressions_spec.rb
-  - Failing: array_max_integer_size_spec.rb (needs Array#max), float_spec.rb (needs Float), hash_literal_with_block_spec.rb (undefined method 'pair'), ternary_operator_bug_spec.rb (1 failure)
+**Custom Specs (spec/)**: 9 files, 5 passed, 4 failed, 0 compile fail. 42 tests, 27 passed, 15 failed (64%)
+  - Passing: integer_size_spec.rb, lambda_call_syntax_spec.rb, lambda_dot_paren_spec.rb, ternary_operator_spec.rb, control_flow_expressions_spec.rb, ternary_operator_bug_spec.rb
+  - Failing: array_max_integer_size_spec.rb (needs Array#max), float_spec.rb (needs Float), hash_literal_with_block_spec.rb (undefined method 'pair')
 
 **Critical**: 56 language spec compilation failures still block most progress.
 
@@ -33,7 +33,7 @@
 - [ ] Implement Array#max - needed for spec/array_max_integer_size_spec.rb (6 failures)
 - [ ] Fix Float support - needed for spec/float_spec.rb (5 failures)
 - [ ] Fix hash literal with block - spec/hash_literal_with_block_spec.rb "undefined method 'pair'" (2 failures)
-- [ ] Fix ternary operator bug - spec/ternary_operator_bug_spec.rb (1 failure - returns false instead of else-branch value)
+- [x] Fix ternary operator bug - spec/ternary_operator_bug_spec.rb - COMPLETED (2025-11-10) - fixed compile_if to save results to %eax
 
 ### RubySpec Failures
 - [ ] Fix integer spec runtime failures (mostly Float comparisons, type errors)

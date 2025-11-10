@@ -107,6 +107,7 @@ class Compiler
 
     @e.comment("then: #{if_arm.inspect}")
     ifret = compile_eval_arg(scope, if_arm)
+    @e.save_result(ifret)  # Save then-branch result to %eax
 
     l_end_if_arm = @e.get_local + "_endif"
     @e.evict_all
@@ -116,7 +117,10 @@ class Compiler
     @e.evict_all
     # FIXME: Workaround for missing initialisation of local vars
     elseret = nil
-    elseret = compile_eval_arg(scope, else_arm) if else_arm
+    if else_arm
+      elseret = compile_eval_arg(scope, else_arm)
+      @e.save_result(elseret)  # Save else-branch result to %eax
+    end
     @e.evict_all
     @e.local(l_end_if_arm) if else_arm
 
