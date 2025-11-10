@@ -58,4 +58,34 @@ class Hash
     a
   end
 
+  def values
+    a = []
+    each do |k,v|
+      a << v
+    end
+    a
+  end
+
+  def has_key?(key)
+    pos = _find_slot(key)
+    @data[pos] ? true : false
+  end
+
+  # Alias for has_key?
+  def key?(key)
+    has_key?(key)
+  end
+
+  def has_value?(value)
+    each do |k,v|
+      return true if v == value
+    end
+    false
+  end
+
+  # Alias for has_value?
+  def value?(value)
+    has_value?(value)
+  end
+
 end
