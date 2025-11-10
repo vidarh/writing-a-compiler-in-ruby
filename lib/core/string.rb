@@ -594,6 +594,44 @@ class String
     ary
   end
 
+  # Remove leading whitespace (space, tab, newline, carriage return)
+  # Returns a new string
+  def lstrip
+    i = 0
+    len = length
+    while i < len
+      c = self[i]
+      # Space (32), tab (9), newline (10), carriage return (13)
+      break if c != 32 && c != 9 && c != 10 && c != 13
+      i += 1
+    end
+    return "" if i >= len
+    self[i..-1]
+  end
+
+  # Remove trailing whitespace (space, tab, newline, carriage return)
+  # Returns a new string
+  def rstrip
+    len = length
+    return "" if len == 0
+
+    i = len - 1
+    while i >= 0
+      c = self[i]
+      # Space (32), tab (9), newline (10), carriage return (13)
+      break if c != 32 && c != 9 && c != 10 && c != 13
+      i -= 1
+    end
+    return "" if i < 0
+    self[0..i]
+  end
+
+  # Remove leading and trailing whitespace
+  # Returns a new string
+  def strip
+    lstrip.rstrip
+  end
+
   # Remove trailing newline characters (\n, \r, \r\n)
   # Returns a new string
   def chomp(separator = "\n")
