@@ -671,6 +671,16 @@ class Parser < ParserBase
     return E[pos, type.to_sym, name, superclass || :Object, exps]
   end
 
+  # alias ::= "alias" ws* new_name ws* old_name
+  def parse_alias
+    pos = position
+    keyword(:alias) or return
+    ws
+    new_name = expect(Atom) or expected("new method name")
+    ws
+    old_name = expect(Atom) or expected("old method name")
+    return E[pos, :alias, new_name, old_name]
+  end
 
   # Returns the include paths relative to a given filename.
   def rel_include_paths(filename)
@@ -790,7 +800,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_class || parse_module || parse_def || parse_defexp || literal("protected")
+    ret = parse_class || parse_module || parse_def || parse_alias || parse_defexp || literal("protected")
     if ret.is_a?(Array)
       ret = E[pos].concat(ret)
     elsif ret.respond_to?(:position) && !ret.position

@@ -42,6 +42,27 @@ class Compiler
     compile_class(scope,name, *exps)
   end
 
+  # Compiles method aliasing: alias new_name old_name
+  # Creates a new vtable entry that points to the same implementation as the old method
+  def compile_alias(scope, new_name, old_name)
+    class_scope = scope.class_scope
+
+    # Look up the old method in the vtable
+    old_entry = class_scope.vtable[old_name]
+    if !old_entry
+      error("Cannot alias undefined method '#{old_name}'")
+    end
+
+    # Register the new name with the same function pointer as the old name
+    class_scope.set_vtable_entry(new_name, old_entry.realname, old_entry.function)
+    new_entry = class_scope.vtable[new_name]
+
+    # Update the vtable at runtime
+    compile_eval_arg(scope, [:sexp, [:call, :__set_vtable, [:self, new_entry.offset, old_entry.realname.to_sym]]])
+
+    return Value.new([:subexpr])
+  end
+
   def mk_new_class_object(*args)
     [:sexp, [:call, :__new_class_object, args]]
   end

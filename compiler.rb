@@ -46,7 +46,7 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :stackframe, :stackpointer, :deref, :include, :addr,
-                   :protected, :array, :splat, :mod, :or_assign, :break, :next,
+                   :protected, :array, :splat, :mod, :or_assign, :break, :next, :alias,
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline, # See `inline.rb`
                    :bitand, :bitor, :bitxor, # Bitwise operators
@@ -934,6 +934,10 @@ class Compiler
     exp.depth_first(:defm) do |defun|
       @vtableoffsets.alloc_offset(defun[1])
       # Don't skip - we need to find nested :defm nodes (e.g., methods defined in eigenclasses inside methods)
+    end
+
+    exp.depth_first(:alias) do |aliasnode|
+      @vtableoffsets.alloc_offset(aliasnode[1])  # Allocate offset for new_name
     end
 
     @vtableoffsets.vtable.each do |name, off|
