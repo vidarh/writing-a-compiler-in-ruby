@@ -11,10 +11,11 @@
   - Failing: comment_spec.rb (needs eval), match_spec.rb (needs Regexp#=~), numbers_spec.rb (needs eval), 6 regexp specs (need Regexp support)
   - Crashes: array_spec.rb (fixed implicit hash, now crashes at runtime), loop_spec.rb, or_spec.rb, redo_spec.rb, + 5 others
   - Individual tests: 27/124 passed (21% pass rate)
-**Custom Specs (spec/)**: 10 files, **10 passed**, 0 failed, 0 compile fail. 41 tests, **41 passed (100%)**
-  - All specs passing!
+**Custom Specs (spec/)**: 11 files, **10 passed**, 1 failed, 0 compile fail. 44 tests, **39 passed (88%)**
+  - Passing: All except float_spec.rb
+  - Failing: float_spec.rb (Float not implemented - 5 tests)
 
-**Progress**: Bignum multiplication fix COMPLETED! Selftest now fully passes. Custom spec pass rate: 100%!
+**Progress**: Bignum multiplication fix COMPLETED! Selftest now fully passes. Custom spec pass rate: 88%.
 
 ## High Priority (Compilation Failures - Simplest First)
 
