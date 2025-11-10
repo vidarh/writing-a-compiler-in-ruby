@@ -68,7 +68,7 @@ Multiple types of failures blocking language specs:
    - Issue: Parser doesn't handle assignment syntax in block parameter lists
    - Priority: Medium - less common pattern, workaround exists
 
-Priority: Address break with splat (#4) or string interpolation edge cases (#5) next
+Priority: Focus on remaining high-impact compilation failures or runtime crashes (array_spec.rb)
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
 
