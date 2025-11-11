@@ -543,3 +543,90 @@ foo { |a=5, b=4, c=3| [a, b, c] }  # ✗ Parse error
 - make selftest - all tests pass (0 failures)
 - make selftest-c - all tests pass (0 failures)
 
+
+---
+
+## 16. Nil ClassScope in Nested Classes/Closures
+
+**Problem**: Classes defined inside closures or other unusual scoping contexts fail compilation with `undefined method 'name' for nil:NilClass` at compile_class.rb:155.
+
+**Error**:
+```
+/app/compile_class.rb:155:in `compile_class': undefined method `name' for nil:NilClass (NoMethodError)
+```
+
+**Root Cause**: The transform phase's `build_class_scopes()` (transform.rb:674-680) creates ClassScope objects and adds them to `@classes` hash and scope chain. However, when classes are defined in certain contexts (e.g., inside let blocks, closures, or nested deeply), the transform phase may not properly register the ClassScope, leaving `scope.find_constant(name)` returning nil.
+
+**Affects**: 
+- rubyspec/language/break_spec.rb (module BreakSpecs with nested class Driver)
+- Multiple other language specs with nested class definitions
+
+**Investigation Needed**: 
+1. Determine exact contexts where ClassScope creation fails
+2. Check if transform phase processes all class definitions
+3. May need to handle class definitions in closures differently
+
+**Workaround**: Avoid defining classes inside closures or complex scoping contexts.
+
+**Priority**: High - blocks multiple language specs
+
+---
+
+## 17. Splat in Assignment LHS Not Supported
+
+**Problem**: Destructuring assignments with splat on the left-hand side are not implemented.
+
+**Error**:
+```
+Expected an argument on left hand side of assignment - got subexpr, 
+(left: [:splat, :c], right: [:callm, :__destruct, :[], [[:sexp, 5]]])
+```
+
+**Example**:
+```ruby
+# Not supported:
+*a = [1, 2, 3]        # Error
+a, *b = [1, 2, 3]     # Error  
+a, *b, c = [1, 2, 3]  # Error
+```
+
+**Root Cause**: The destructuring rewrite in transform.rb handles simple assignments but doesn't implement splat collection logic.
+
+**Affects**:
+- rubyspec/language/next_spec.rb
+- Likely other assignment/destructuring specs
+
+**Implementation Needed**:
+1. Detect splat in destructuring assignment LHS
+2. Generate code to collect remaining elements into array
+3. Handle splat in various positions (beginning, middle, end)
+
+**Workaround**: Manually slice arrays instead of using splat syntax.
+
+**Priority**: Medium - affects fewer specs than nil ClassScope issue
+
+---
+
+## 18. Unclosed Block/Hash on Operator Stack
+
+**Problem**: Parser leaves blocks or hashes unclosed on the operator stack, resulting in "Syntax error [{/0 pri=99}]" at end of expression.
+
+**Error**:
+```
+/app/rubyspec_temp_return_spec.rb:410:5: Syntax error. [{/0 pri=99}]
+```
+
+**Root Cause**: The `{` operator for blocks/hashes is pushed onto operator stack but not properly reduced/closed in certain contexts. The shunting yard leaves it on the stack at end of parsing.
+
+**Affects**:
+- rubyspec/language/return_spec.rb
+- Many other specs with complex block/hash usage
+
+**Investigation Needed**:
+1. Identify contexts where `{` is not properly closed
+2. Check if it's block vs hash disambiguation issue  
+3. Review reduce logic for :hash_or_block operator
+
+**Priority**: High - affects many language specs
+
+---
