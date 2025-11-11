@@ -6,23 +6,34 @@
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, 2 passed (3%), 9 failed, 9 crashed, **59 compile failures (75%)** - PARTIALLY FIXED
+**Language Specs**: 79 files, 2 passed (3%), 11 failed, 12 crashed, **54 compile failures (68%)** - IMPROVED
 **Custom Specs (spec/)**: 13 files, **11 passed**, 1 failed, 1 crashed. 45 tests, **40 passed (88%)**
 
-**Recent Fixes**:
-- Fixed heredoc followed by method chain (e.g., `foo(<<-END).bar`) - was causing "Syntax error [{/0 pri=99}]"
-- Fixed keywords in parentheses (e.g., `(def foo; end; 42)`) - was causing unclosed parenthesis errors
+**Recent Fixes (Session Summary)**:
+- Fixed heredoc followed by method chain tokens.rb line 689-690
+- Fixed keywords in parentheses shunting.rb line 201-204
+- Fixed heredoc after method names tokens.rb line 578 - **Major impact: 60→54 compile failures (-10%)**
+- Added ScratchPad stub for test framework
+- **Result**: if_spec.rb now compiles and runs (11/13 tests pass)
 
 ## High Priority (Language Spec Compilation Failures)
 
 Focus on rubyspec/language/ compile failures blocking 59/79 specs:
 
-### Critical Blockers (Affecting Multiple Specs)
-- [ ] **nil ClassScope in compile_class.rb:155** - Affects: break_spec, multiple others. Error: `undefined method 'name' for nil:NilClass`
-- [ ] **Splat in assignment LHS** - Affects: next_spec. Error: "Expected an argument on left hand side of assignment"
-- [ ] **Unclosed block/hash on operator stack** - Affects: return_spec, many others. Error: "Syntax error [{/0 pri=99}]"
-- [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. See KNOWN_ISSUES (tokenizer refactor needed)
-- [ ] **Complex method definition edge cases** - Affects: def_spec. Low priority (unusual patterns)
+### Critical Blockers (Remaining 54 COMPILE FAIL specs)
+
+**Quick Wins (Likely Simple Fixes)**:
+- [ ] **For loop with global/instance variables** - Affects: for_spec. Error: "Expected: 'in' keyword" on `for @$spec_var in arr`
+- [ ] **Missing dependency stubs** - Affects: file_spec, line_spec, return_spec. Need File/rubygems stubs
+
+**High Priority (Affecting Multiple Specs)**:
+- [ ] **nil ClassScope** - Affects: break_spec, singleton_class_spec (2 specs). See KNOWN_ISSUES #16
+- [ ] **Splat in assignment LHS** - Affects: next_spec, assignments_spec. See KNOWN_ISSUES #17
+- [ ] **Hash spread operator `**`** - Affects: hash_spec, keyword_arguments_spec. Context-sensitive parsing needed
+
+**Medium Priority**:
+- [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
+- [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed
 
 ### Control Flow Specs
 - [ ] **break_spec.rb** - COMPILE FAIL (nil ClassScope error)
