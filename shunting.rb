@@ -199,9 +199,13 @@ module OpPrec
         # Additionally, keywords can appear as expressions inside parentheses (e.g., "(def foo; end; 42)")
         has_op_for_state = op && (op.is_a?(Hash) ? op[opstate] : true)
         in_parens = lp_on_entry && ostack.first && ostack.first.type == :lp && ostack.first.sym == nil
+        # Check if this keyword has a special handler that will process it
+        has_special_handler = keyword && [:until, :for, :unless, :begin, :lambda, :def].include?(token)
+
         if @inhibit.include?(token) or
           keyword && !has_op_for_state &&
           !in_parens &&
+          !has_special_handler &&
           (opstate != :prefix ||
            !ostack.last ||
            ostack.last.type != :infix ||
