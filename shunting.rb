@@ -196,9 +196,12 @@ module OpPrec
         # Also, keywords that have operator mappings (like if/while/rescue) should
         # be treated as operators, not as keywords that stop parsing.
         # However, we need to check that the operator mapping exists for the current opstate.
+        # Additionally, keywords can appear as expressions inside parentheses (e.g., "(def foo; end; 42)")
         has_op_for_state = op && (op.is_a?(Hash) ? op[opstate] : true)
+        in_parens = lp_on_entry && ostack.first && ostack.first.type == :lp && ostack.first.sym == nil
         if @inhibit.include?(token) or
           keyword && !has_op_for_state &&
+          !in_parens &&
           (opstate != :prefix ||
            !ostack.last ||
            ostack.last.type != :infix ||
@@ -227,7 +230,7 @@ module OpPrec
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
           # Also handle break statement which can appear in boolean expressions (e.g., "x or break")
-          if keyword && [:until, :for, :unless, :begin, :lambda].include?(token)
+          if keyword && [:until, :for, :unless, :begin, :lambda, :def].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
@@ -236,6 +239,7 @@ module OpPrec
               when :for then :parse_for
               when :begin then :parse_begin
               when :lambda then :parse_lambda
+              when :def then :parse_def
             end
             result = @parser.send(parser_method)
             @out.value(result)
