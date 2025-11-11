@@ -16,3 +16,4 @@ debug_*
 rubyspec_temp*
 rubyspec/*
 !rubyspec/simple_tests/
+tmp/*

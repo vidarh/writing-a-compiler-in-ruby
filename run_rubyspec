@@ -19,7 +19,7 @@ echo "DEBUG: Starting run_rubyspec for $TARGET" >&2
 run_single_spec() {
     local SPEC_FILE="$1"
     local SPEC_NAME=$(basename "$SPEC_FILE" .rb)
-    local TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
+    local TEMP_SPEC="tmp/rubyspec_temp_${SPEC_NAME}.rb"
     local VERBOSE="${2:-0}"
 
     # Replace the spec_helper require with our own
