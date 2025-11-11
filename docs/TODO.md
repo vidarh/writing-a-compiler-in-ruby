@@ -80,12 +80,21 @@ Multiple types of failures blocking language specs:
    - ❌ Runtime execution broken - see KNOWN_ISSUES.md #9 for details
    - Priority: Low - uncommon pattern, workaround exists (use nil checks)
 
+9. **Break/next operator arity bug** - FIXED (2025-11-10):
+   - ✅ Fixed incorrect arity definition in operators.rb (was arity=2, should be arity=1)
+   - ✅ Break and next are unary prefix operators, not binary operators
+   - ✅ No special-case handling needed - shunting yard algorithm works correctly with proper arity
+   - ✅ Tests: selftest (✓), selftest-c (✓), test_or_break.rb (✓)
+   - ✅ times_spec.rb now COMPILES (still crashes at runtime - separate issue)
+   - Note: This was initially "fixed" with a special-case hack, which was correctly identified as wrong and reverted
+
 Priority: Focus on remaining high-impact compilation failures or runtime crashes (array_spec.rb)
 
 ## Medium Priority (Crashes - Fix After Compile Issues)
 
 - [ ] Fix array_spec.rb runtime crash - compiles successfully, but segfaults at runtime with severe stack corruption (ESP=0xa64a84cc, EBP=0xffffd3d0). Crash occurs in __lambda_L290 at rubyspec_helper.rb:664 during mocking framework execution. GDB shows "Cannot access memory" at crash point, indicating corrupted instruction pointer. Root cause unknown - may be related to mspec framework internals or compiler-generated code for complex nested lambdas.
-- [ ] Fix Float-related crashes: fdiv_spec, round_spec, times_spec (KNOWN_ISSUES #7)
+- [ ] Fix times_spec.rb runtime crash - NOW COMPILES (as of 2025-11-10), segfaults at runtime. Compilation fixed by correcting break/next operator arity.
+- [ ] Fix Float-related crashes: fdiv_spec, round_spec (KNOWN_ISSUES #7)
 - [ ] Investigate 7 language spec crashes: class_variable, encoding, order, safe, syntax_error, undef, variables
 
 ## Medium Priority (Runtime Failures - Lower Impact)
