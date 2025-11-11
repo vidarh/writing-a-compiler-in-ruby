@@ -626,10 +626,12 @@ a, *b, c = [1, 2, 3]  # Error
 **Remaining Issues**: Some specs still fail, but with different errors (progress made)
 
 **Affects**:
-- return_spec.rb - now progresses past line 410, fails later on different issue
-- if_spec.rb - now compiles to link stage
-- case_spec.rb - progresses past line 258, fails on different issue
-- while_spec.rb - still investigating
+- return_spec.rb - progresses past line 410, now fails on "Unable to open '$spec_filename'" (dependency issue)
+- if_spec.rb - progresses to link stage, fails on missing ScratchPad (test framework dependency)
+- case_spec.rb - progresses past line 258, now fails on parse error "'end' for open 'case'" (different bug)
+- while_spec.rb - still fails with compilation errors
+
+**Note**: "Progresses to link stage" means parser and compiler work, but linker fails due to missing test dependencies - this is progress but not a complete fix.
 
 **Priority**: Medium - major blockers removed, remaining cases need individual investigation
 
