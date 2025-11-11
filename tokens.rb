@@ -609,9 +609,10 @@ module Tokens
                 end
               end
 
-              # Now read until end of line (there might be more code on this line)
+              # Save the rest of the line (there might be more code after the heredoc marker)
+              rest_of_line = ""
               while @s.peek && @s.peek != ?\n
-                @s.get
+                rest_of_line << @s.get.chr
               end
               @s.get if @s.peek == ?\n  # consume newline
 
@@ -684,6 +685,9 @@ module Tokens
                 end
                 body = result_lines.join("\n")
               end
+
+              # Put back the rest of the line so it can be parsed
+              @s.unget(rest_of_line) if rest_of_line && !rest_of_line.empty?
 
               # Return the heredoc body as a string token
               return [body, nil]
