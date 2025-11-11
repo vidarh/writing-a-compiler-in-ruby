@@ -11,6 +11,26 @@ $spec_method = nil
 $before_each_blocks = []
 $after_each_blocks = []
 
+# Minimal stub for mspec framework class needed by specs
+class ScratchPad
+  def self.record(value)
+    @recorded = value
+  end
+
+  def self.recorded
+    @recorded
+  end
+
+  def self.clear
+    @recorded = nil
+  end
+
+  def self.<<(value)
+    @recorded = [] if @recorded == nil
+    @recorded << value
+  end
+end
+
 # Tolerance for floating point comparisons
 TOLERANCE = 0.00001
 

@@ -574,8 +574,8 @@ module Tokens
           buf = first + second
 
           # Check for heredoc: << or <<- or <<~
-          # Only treat as heredoc if previous token was an operator (like =, ,, etc.)
-          if buf == "<<" && (@first || prev_lastop)
+          # Always check for heredoc pattern - will fall back to << operator if not heredoc
+          if buf == "<<"
             # Peek ahead to see if this is a heredoc
             squiggly = false
             dash = false
