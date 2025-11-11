@@ -2,12 +2,16 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-10 - Latest Update)
+## Test Status (2025-11-11 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, 2 passed (3%), 9 failed, 9 crashed, **59 compile failures (75%)**
+**Language Specs**: 79 files, 2 passed (3%), 9 failed, 9 crashed, **59 compile failures (75%)** - PARTIALLY FIXED
 **Custom Specs (spec/)**: 13 files, **11 passed**, 1 failed, 1 crashed. 45 tests, **40 passed (88%)**
+
+**Recent Fixes**:
+- Fixed heredoc followed by method chain (e.g., `foo(<<-END).bar`) - was causing "Syntax error [{/0 pri=99}]"
+- Fixed keywords in parentheses (e.g., `(def foo; end; 42)`) - was causing unclosed parenthesis errors
 
 ## High Priority (Language Spec Compilation Failures)
 

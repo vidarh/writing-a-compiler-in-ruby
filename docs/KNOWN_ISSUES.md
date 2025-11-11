@@ -607,26 +607,30 @@ a, *b, c = [1, 2, 3]  # Error
 
 ---
 
-## 18. Unclosed Block/Hash on Operator Stack
+## 18. Unclosed Block/Hash on Operator Stack - PARTIALLY FIXED
 
-**Problem**: Parser leaves blocks or hashes unclosed on the operator stack, resulting in "Syntax error [{/0 pri=99}]" at end of expression.
+**Problem**: Parser left `{` unclosed causing "Syntax error [{/0 pri=99}]"
 
-**Error**:
-```
-/app/rubyspec_temp_return_spec.rb:410:5: Syntax error. [{/0 pri=99}]
-```
+**Status**: Two major root causes have been FIXED:
 
-**Root Cause**: The `{` operator for blocks/hashes is pushed onto operator stack but not properly reduced/closed in certain contexts. The shunting yard leaves it on the stack at end of parsing.
+1. ✅ **FIXED** - Heredoc followed by method chain (tokens.rb)
+   - **Issue**: `foo(<<-END).bar` would discard `.bar` after heredoc marker
+   - **Fix**: Save and restore rest-of-line after heredoc using scanner.unget()
+   - **Example**: `ruby_exe(<<-CODE).should == "result"` now compiles
+
+2. ✅ **FIXED** - Keywords in parentheses (shunting.rb)
+   - **Issue**: `(def foo; end; 42)` would break on `def`, leaving `(` unclosed
+   - **Fix**: Allow keywords inside parentheses context
+   - **Example**: `case (def foo; end; value) when ...` now compiles
+
+**Remaining Issues**: Some specs still fail, but with different errors (progress made)
 
 **Affects**:
-- rubyspec/language/return_spec.rb
-- Many other specs with complex block/hash usage
+- return_spec.rb - now progresses past line 410, fails later on different issue
+- if_spec.rb - now compiles to link stage
+- case_spec.rb - progresses past line 258, fails on different issue
+- while_spec.rb - still investigating
 
-**Investigation Needed**:
-1. Identify contexts where `{` is not properly closed
-2. Check if it's block vs hash disambiguation issue  
-3. Review reduce logic for :hash_or_block operator
-
-**Priority**: High - affects many language specs
+**Priority**: Medium - major blockers removed, remaining cases need individual investigation
 
 ---
