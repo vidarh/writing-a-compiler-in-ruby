@@ -10,6 +10,11 @@
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-12)**:
+- **✅ Fixed parenthesized break/next/return** - Control flow keywords now work inside parentheses
+  - Added check in shunting.rb:162-165 to provide nil value to prefix operators before closing paren
+  - Result: `a ||= (break)`, `a = (next)`, `a = (return)` all compile successfully
+  - Note: `break if condition` in assignment still fails (documented in KNOWN_ISSUES #2)
+  - Test: spec/or_assign_paren_expr_spec.rb now compiles
 - **✅ Fixed until end.should without parens** - All four control flow keywords now work with end.should
   - Removed parse_until from parse_defexp (parser.rb:488)
   - Deleted dead code: parse_while, parse_until, parse_if_unless functions
@@ -33,7 +38,8 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 **Quick Wins (Likely Simple Fixes)**:
 - [ ] **unless_spec runtime crashes** - Compiles but passes 5/6 tests, investigate 1 failure
 - [x] **until end.should without parens** - ✅ FIXED - Removed parse_until from parse_defexp (parser.rb:488)
-- [ ] **||= with parenthesized multi-line expression** - Blocks while_spec. See KNOWN_ISSUES #2, spec/or_assign_paren_expr_spec.rb
+- [x] **Parenthesized break/next/return** - ✅ FIXED - Added nil value check before closing paren (shunting.rb:162-165)
+  - Note: `break if condition` in assignment still fails (separate bug, see KNOWN_ISSUES #2)
 - [ ] **For loop with global/instance variables** - Affects: for_spec. Error: "Expected: 'in' keyword" on `for @$spec_var in arr`
 
 **High Priority (Affecting Multiple Specs)**:

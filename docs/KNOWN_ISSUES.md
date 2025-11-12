@@ -69,27 +69,33 @@ C.new("test")
 
 ---
 
-## 2. Or-Assign with Parenthesized Multi-line Expression
+## 2. Parenthesized Control Flow - PARTIALLY RESOLVED
 
-**Status**: ⚠️ PARSER BUG
+**Status**: ✅ PARTIALLY FIXED (2025-11-12)
 
-**Problem**: Using `||=` with a parenthesized multi-line expression containing control flow fails to parse.
-
+**Fixed**: Parenthesized `break`/`next`/`return` without arguments now work:
 ```ruby
-a = [nil, nil]
-a[1] ||= (
-  break if c
-  c = false
-)  # Error: "Missing value in expression / op: {or_assign/2 pri=7}"
+a ||= (break)   # ✓ Works now
+a = (next)      # ✓ Works now
 ```
 
-**Error**: "Missing value in expression / op: {or_assign/2 pri=7} / vstack: [] / rightv: [:if, ...]"
+**Fix**: Added check in shunting.rb:162-165 to provide nil value to prefix operators with minarity=0 before closing parenthesis.
 
-**Test**: spec/or_assign_paren_expr_spec.rb
+**Remaining Issue**: `break`/`next`/`return` with `if` modifier in assignment consumes tokens outside scope:
+```ruby
+result = break if condition  # ✗ Consumes `result` variable name
+a ||= break if c             # ✗ Consumes `a` variable name
+```
 
-**Affects**: while_spec.rb (complex test case with `a[1] ||= (break if c; ...)`)
+**Error**: "Missing value in expression / op: {assign/2 pri=7} / vstack: [] / rightv: [:break, :result]"
 
-**Priority**: HIGH - blocks while_spec
+**Root Cause**: When `break` (prefix operator, pri=22) is followed by `if` (infix operator, pri=2), the shunting yard algorithm doesn't correctly handle the modifier if pattern. The `break` consumes tokens that should be outside its scope.
+
+**Test**: spec/break_if_modifier_spec.rb, spec/or_assign_paren_expr_spec.rb (compiles, runtime segfault)
+
+**Affects**: while_spec.rb, until_spec.rb (test cases with `break if` patterns)
+
+**Priority**: MEDIUM - workaround exists (use explicit if/end instead of modifier if)
 
 ---
 

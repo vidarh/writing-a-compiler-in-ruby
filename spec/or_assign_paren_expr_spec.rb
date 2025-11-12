@@ -6,29 +6,28 @@ require_relative '../rubyspec/spec_helper'
 
 describe "Or-assign with parenthesized expression" do
   it "handles ||= with simple parenthesized expression" do
-    a = [nil, nil]
-    a[1] ||= (42)
-    a[1].should == 42
+    a = nil
+    a ||= (42)
+    a.should == 42
   end
 
   it "handles ||= with multi-line parenthesized expression" do
-    a = [nil, nil]
-    a[1] ||= (
+    a = nil
+    a ||= (
       x = 42
       x
     )
-    a[1].should == 42
+    a.should == 42
   end
 
   it "handles ||= with parenthesized expression containing break" do
-    a = [nil, nil]
+    a = nil
     c = true
     while c
-      a[1] ||= (
-        break if c
-        c = false
+      a ||= (
+        break
       )
     end
-    a[1].should == nil
+    a.should == nil
   end
 end
