@@ -6,28 +6,30 @@
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, 2 passed (3%), 13 failed, 12 crashed, **52 compile failures (66%)** - IMPROVED
-**Custom Specs (spec/)**: 13 files, **11 passed**, 1 failed, 1 crashed. 45 tests, **40 passed (88%)**
+**Language Specs**: 79 files, 2 passed (3%), 13 failed, 13 crashed, **51 compile failures (65%)** - IMPROVED
+**Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-12)**:
-- **Fixed nil ClassScope bug** - Classes in lambda scopes now compile (compile_class.rb lines 155-173)
-  - Added on-demand ClassScope creation with proper scope chain walking
-  - Result: break_spec.rb, line_spec.rb, file_spec.rb now compile (60→52 compile failures, -13%)
-- **Added Thread stub** - lib/core/stubs.rb lines 46-48
-- **Cleaned up rubygems.rb** - Minimal stub with just LoadError
-- **Created regression tests** - spec/class_in_lambda_spec.rb (6 test cases)
-- **Note**: Classes-in-lambdas compile but segfault at runtime (see KNOWN_ISSUES #3)
+- **Fixed while end.should chaining** - while loops now support method chaining on end keyword
+  - Removed src.unget(token) in shunting.rb, created parse_while_body/parse_until_body
+  - Result: while end.should works (spec/while_end_no_paren_spec.rb passes)
+  - Note: until end.should without parens still fails (KNOWN_ISSUES #1)
+- **Created bug reproduction specs** - Isolated remaining parser bugs:
+  - spec/until_end_should_spec.rb - until without parens doesn't work
+  - spec/or_assign_paren_expr_spec.rb - ||= with complex paren expression fails
+- **Previous session**: nil ClassScope fix (52→51 compile failures total)
 
 ## High Priority (Language Spec Compilation Failures)
 
-Focus on rubyspec/language/ compile failures blocking 52/79 specs (66%):
+Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
-### Critical Blockers (Remaining 52 COMPILE FAIL specs)
+### Critical Blockers (Remaining 51 COMPILE FAIL specs)
 
 **Quick Wins (Likely Simple Fixes)**:
 - [ ] **unless_spec runtime crashes** - Compiles but passes 5/6 tests, investigate 1 failure
+- [ ] **until end.should without parens** - Blocks until_spec. See KNOWN_ISSUES #1, spec/until_end_should_spec.rb
+- [ ] **||= with parenthesized multi-line expression** - Blocks while_spec. See KNOWN_ISSUES #2, spec/or_assign_paren_expr_spec.rb
 - [ ] **For loop with global/instance variables** - Affects: for_spec. Error: "Expected: 'in' keyword" on `for @$spec_var in arr`
-- [ ] **while/until end.should chaining** - Parser errors, needs same treatment as if/unless (see KNOWN_ISSUES #2)
 
 **High Priority (Affecting Multiple Specs)**:
 - [x] **nil ClassScope** - ✅ FIXED (compile_class.rb) - break_spec, line_spec, file_spec now compile
@@ -74,10 +76,10 @@ Focus on rubyspec/language/ compile failures blocking 52/79 specs (66%):
 - [ ] **assignments_spec.rb** - COMPILE FAIL
 - [ ] **optional_assignments_spec.rb** - COMPILE FAIL
 - [ ] **case_spec.rb** - COMPILE FAIL
-- [ ] **if_spec.rb** - COMPILE FAIL
-- [ ] **unless_spec.rb** - COMPILE FAIL
-- [ ] **until_spec.rb** - COMPILE FAIL
-- [ ] **while_spec.rb** - COMPILE FAIL
+- [ ] **if_spec.rb** - CRASH (compiles, runtime crash)
+- [ ] **unless_spec.rb** - FAIL (compiles, 5/6 tests pass)
+- [ ] **until_spec.rb** - COMPILE FAIL (until end.should without parens - see KNOWN_ISSUES #1)
+- [ ] **while_spec.rb** - COMPILE FAIL (||= with paren expr - see KNOWN_ISSUES #2)
 - [ ] **for_spec.rb** - COMPILE FAIL
 - [ ] **constants_spec.rb** - COMPILE FAIL
 - [ ] **defined_spec.rb** - COMPILE FAIL

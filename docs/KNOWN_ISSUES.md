@@ -65,7 +65,7 @@ C.new("test")
   - Works: `(until i > 9; i += 1; end).should == nil` (with parens)
   - Fails: `until i > 9; i += 1; end.should == nil` (without parens)
   - Test: spec/until_end_should_spec.rb reproduces the bug
-  - **Priority**: MEDIUM - blocks until_spec, but workaround exists (use parens)
+  - **Priority**: HIGH - blocks until_spec
 - Method chaining on control flow results (e.g., `if true; 42; end.to_s`) - needs value wrapping
 
 ---
@@ -90,7 +90,7 @@ a[1] ||= (
 
 **Affects**: while_spec.rb (complex test case with `a[1] ||= (break if c; ...)`)
 
-**Priority**: MEDIUM - blocks while_spec, but uncommon pattern
+**Priority**: HIGH - blocks while_spec
 
 ---
 
