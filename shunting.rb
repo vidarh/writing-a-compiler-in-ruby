@@ -160,7 +160,9 @@ module OpPrec
         end
         @out.value(nil) if src.lasttoken and src.lasttoken[1] == COMMA
         # Before closing paren, check if there's a prefix operator with minarity=0 that needs a nil value
-        if !ostack.empty? && ostack.last.type == :prefix && ostack.last.minarity == 0
+        # Only for parentheses (), not for blocks {} or arrays []
+        if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
+           ostack.last.type == :prefix && ostack.last.minarity == 0
           @out.value(nil)
         end
         src.unget(token) if !lp_on_entry
