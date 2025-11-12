@@ -135,6 +135,7 @@ class Compiler
     return compile_exp(scope, a) if a.is_a?(Array)
     return get_arg(scope,:true, save) if a == true
     return get_arg(scope,:false, save) if a == false
+    return get_arg(scope,:nil, save) if a == nil
     return Value.new([:int, a]) if (a.is_a?(Integer))
 
     if a.is_a?(Float)
