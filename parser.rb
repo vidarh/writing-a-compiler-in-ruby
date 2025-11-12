@@ -214,6 +214,11 @@ class Parser < ParserBase
   def parse_while
     pos = position
     keyword(:while) or return
+    parse_while_body
+  end
+
+  def parse_while_body
+    pos = position
     ws
     cond = parse_condition or expected("condition for 'while' block")
     nolfws; literal(SEMICOLON); nolfws; keyword(:do)
@@ -230,6 +235,11 @@ class Parser < ParserBase
   def parse_until
     pos = position
     keyword(:until) or return
+    parse_until_body
+  end
+
+  def parse_until_body
+    pos = position
     ws
     cond = parse_condition or expected("condition for 'until' block")
     nolfws; literal(SEMICOLON); nolfws; keyword(:do)
