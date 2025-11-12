@@ -92,7 +92,7 @@ module OpPrec
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
       #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}" if ENV['DEBUG_PARSER']
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
-      # When if/unless/while/rescue appear in prefix position, parse as statement UNLESS
+      # When if/unless/while/until/rescue appear in prefix position, parse as statement UNLESS
       # they're appearing after a prefix operator (which would make them modifiers)
       if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
         if op.sym == :if_mod
@@ -107,6 +107,11 @@ module OpPrec
           #STDERR.puts "   while expression"
           src.unget(token)
           @out.value(@parser.parse_while)
+          return :prefix
+        elsif op.sym == :until_mod
+          #STDERR.puts "   until expression"
+          src.unget(token)
+          @out.value(@parser.parse_until)
           return :prefix
         elsif op.sym == :rescue_mod && ostack.length == 0
           #STDERR.puts "   rescue clause (not modifier)"
@@ -233,12 +238,11 @@ module OpPrec
         else
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
-          # Note: unless is now handled as an operator like if, not in this special case
-          if keyword && [:until, :for, :begin, :lambda, :def].include?(token)
+          # Note: unless and until are now handled as operators, not in this special case
+          if keyword && [:for, :begin, :lambda, :def].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
-              when :until then :parse_until
               when :for then :parse_for
               when :begin then :parse_begin
               when :lambda then :parse_lambda

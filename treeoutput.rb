@@ -175,6 +175,11 @@ module OpPrec
         l = rightv
         rightv = leftv
         leftv  = l
+      elsif o.sym == :until_mod
+        o = Oper.new(2, :until, :prefix, 1, 0)
+        l = rightv
+        rightv = leftv
+        leftv  = l
       end
 
       if o.sym == :rescue_mod

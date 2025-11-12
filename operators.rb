@@ -82,6 +82,7 @@ Operators = {
   "unless"    => Oper.new(2, :unless_mod, :infix, 2, 2, :right, 1),
 
   "while"     => Oper.new(2, :while_mod,   :infix, 2, 2, :right, 1),
+  "until"     => Oper.new(2, :until_mod,   :infix, 2, 2, :right, 1),
 
   "rescue"    => Oper.new(2, :rescue_mod, :infix, 2, 2, :right, 1),
 #    :infix_or_postfix => 
