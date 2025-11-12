@@ -81,6 +81,14 @@ lambda { 42 }               # ✗ "undefined method 'lambda'" at top-level
 
 **Impact**: Only affects top-level code, not actual program code.
 
+**Recent Findings (2025-11-12)**:
+- Classes defined inside lambdas at top-level now **compile successfully** (nil ClassScope bug fixed)
+- But programs with top-level lambdas **segfault at runtime**, even with classes in methods calling lambdas
+- The issue appears during initialization, before any lambda code executes
+- Likely cause: Missing environment setup for lambdas that depend on rewrites only happening inside `:defm`
+
+**Possible Solution**: Compile the entire main block as if it's a method body, then call it. This would trigger the necessary rewrites for lambda support.
+
 ---
 
 ## 3. Module include - IMPLEMENTED (with limitations)
