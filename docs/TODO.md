@@ -15,6 +15,11 @@
 - Fixed heredoc after method names tokens.rb line 578 - **Major impact: 60→54 compile failures (-10%)**
 - Added ScratchPad stub for test framework
 - **Result**: if_spec.rb now compiles and runs (11/13 tests pass)
+- **Added unless operator support** - unless now treated identically to if (operators.rb, shunting.rb, treeoutput.rb)
+- **Fixed class variable handling** in run_rubyspec (@@var was corrupted to @$spec_var)
+- **Result**: unless_spec.rb now compiles (moved from COMPILE FAIL to CRASH)
+- **Added until operator support** - until now treated identically to while (operators.rb, shunting.rb, treeoutput.rb)
+- **Surveyed compile failures** - delegation_spec now compiles (moved from COMPILE FAIL to CRASH/HANG)
 
 ## High Priority (Language Spec Compilation Failures)
 
