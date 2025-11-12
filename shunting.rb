@@ -105,11 +105,11 @@ module OpPrec
           return :prefix
         elsif op.sym == :while_mod
           #STDERR.puts "   while expression"
-          @out.value(@parser.parse_while_body)
+          @out.value(@parser.parse_while_until_body(:while))
           return :prefix
         elsif op.sym == :until_mod
           #STDERR.puts "   until expression"
-          @out.value(@parser.parse_until_body)
+          @out.value(@parser.parse_while_until_body(:until))
           return :prefix
         elsif op.sym == :rescue_mod && ostack.length == 0
           #STDERR.puts "   rescue clause (not modifier)"

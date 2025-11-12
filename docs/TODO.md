@@ -10,12 +10,17 @@
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-12)**:
+- **✅ Fixed until end.should without parens** - All four control flow keywords now work with end.should
+  - Removed parse_until from parse_defexp (parser.rb:488)
+  - Deleted dead code: parse_while, parse_until, parse_if_unless functions
+  - Refactored: Merged parse_while_body/parse_until_body → parse_while_until_body(type)
+  - Both while and until now work identically - only as operators, not as statements
+  - Result: if/unless/while/until all support end.should without parens (spec/all_control_flow_end_should_spec.rb)
 - **Fixed while end.should chaining** - while loops now support method chaining on end keyword
   - Removed src.unget(token) in shunting.rb, created parse_while_body/parse_until_body
   - Result: while end.should works (spec/while_end_no_paren_spec.rb passes)
-  - Note: until end.should without parens still fails (KNOWN_ISSUES #1)
 - **Created bug reproduction specs** - Isolated remaining parser bugs:
-  - spec/until_end_should_spec.rb - until without parens doesn't work
+  - spec/until_end_should_spec.rb - ✅ FIXED, now passes
   - spec/or_assign_paren_expr_spec.rb - ||= with complex paren expression fails
 - **Previous session**: nil ClassScope fix (52→51 compile failures total)
 
@@ -27,7 +32,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 **Quick Wins (Likely Simple Fixes)**:
 - [ ] **unless_spec runtime crashes** - Compiles but passes 5/6 tests, investigate 1 failure
-- [ ] **until end.should without parens** - Blocks until_spec. See KNOWN_ISSUES #1, spec/until_end_should_spec.rb
+- [x] **until end.should without parens** - ✅ FIXED - Removed parse_until from parse_defexp (parser.rb:488)
 - [ ] **||= with parenthesized multi-line expression** - Blocks while_spec. See KNOWN_ISSUES #2, spec/or_assign_paren_expr_spec.rb
 - [ ] **For loop with global/instance variables** - Affects: for_spec. Error: "Expected: 'in' keyword" on `for @$spec_var in arr`
 

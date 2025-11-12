@@ -60,12 +60,11 @@ C.new("test")
 
 **Remaining work**:
 - ✅ **while** `end.should` chaining - FIXED (spec/while_end_no_paren_spec.rb passes)
-- ❌ **until** `end.should` WITHOUT parentheses fails with "Missing value in expression"
-  - Affects: until_spec.rb (while_spec has different errors)
-  - Works: `(until i > 9; i += 1; end).should == nil` (with parens)
-  - Fails: `until i > 9; i += 1; end.should == nil` (without parens)
-  - Test: spec/until_end_should_spec.rb reproduces the bug
-  - **Priority**: HIGH - blocks until_spec
+- ✅ **until** `end.should` WITHOUT parentheses - FIXED (2025-11-12)
+  - **Fix**: Removed `parse_until` call from parse_defexp (parser.rb:488) and deleted dead code parse_while/parse_until
+  - Now `until` works exactly like `while` - only as operator, not as statement
+  - All four control flow keywords (if/unless/while/until) now support `end.should` without parens
+  - Test: spec/until_end_should_spec.rb, spec/all_control_flow_end_should_spec.rb
 - Method chaining on control flow results (e.g., `if true; 42; end.to_s`) - needs value wrapping
 
 ---

@@ -141,15 +141,9 @@ class Parser < ParserBase
   end
 
   # if_unless ::= ("if"|"unless") if_body
-  def parse_if_unless
-    pos = position
-    type = keyword(:if) || keyword(:unless) or return
-    parse_if_body(type.to_sym)
-  end
-
   # FIXME: Weird parser bug: If '"then' appears together in the comment
   # line before, it causes a parse failure
-  # if_body ::= ws* condition nolfws* ";"? nolfws* "then"? ws* 
+  # if_body ::= ws* condition nolfws* ";"? nolfws* "then"? ws*
   #             defexp* ws* ("elsif" if_body | ("else" defexp*)? "end") .
   def parse_if_body(type)
     pos = position
@@ -211,42 +205,15 @@ class Parser < ParserBase
 
 
   # while ::= "while" ws* condition "do"? defexp* "end"
-  def parse_while
-    pos = position
-    keyword(:while) or return
-    parse_while_body
-  end
-
-  def parse_while_body
+  def parse_while_until_body(type)
     pos = position
     ws
-    cond = parse_condition or expected("condition for 'while' block")
+    cond = parse_condition or expected("condition for '#{type.to_s}' block")
     nolfws; literal(SEMICOLON); nolfws; keyword(:do)
     nolfws;
     exps = parse_opt_defexp
-    #STDERR.puts "exiting while:"
-    #STDERR.puts @scanner.position.inspect
-    keyword(:end) or expected("expression or 'end' for open 'while' block")
-    #STDERR.puts @scanner.position.inspect
-    #STDERR.puts exps.inspect
-    return E[pos, :while, cond, [:do]+exps]
-  end
-
-  def parse_until
-    pos = position
-    keyword(:until) or return
-    parse_until_body
-  end
-
-  def parse_until_body
-    pos = position
-    ws
-    cond = parse_condition or expected("condition for 'until' block")
-    nolfws; literal(SEMICOLON); nolfws; keyword(:do)
-    nolfws;
-    exps = parse_opt_defexp
-    keyword(:end) or expected("expression or 'end' for open 'until' block")
-    return E[pos, :until, cond, [:do]+exps]
+    keyword(:end) or expected("expression or 'end' for open '#{type.to_s}' block")
+    return E[pos, type, cond, [:do]+exps]
   end
 
   # for ::= "for" ws+ lvalue ws+ "in" ws+ expr ws* (SEMICOLON | ws+ "do") ws* defexp* "end"
@@ -485,7 +452,7 @@ class Parser < ParserBase
     pos = position
     ws
     ret = parse_class || parse_module || parse_sexp ||
-          parse_until || parse_for ||
+          parse_for ||
           parse_begin || parse_lambda ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)

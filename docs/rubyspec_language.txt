@@ -1,3 +1,4 @@
+DEBUG: Starting run_rubyspec for rubyspec/language/
 Running all specs in rubyspec/language/...
 ================================
 
