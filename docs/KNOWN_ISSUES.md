@@ -58,7 +58,9 @@ C.new("test")
 
 **Test**: spec/control_flow_expressions_spec.rb - now passing
 
-**Note**: Still doesn't support method chaining on control flow results (e.g., `if true; 42; end.to_s`) - requires more complex architectural changes.
+**Remaining work**:
+- `while`/`until` loops need same treatment as `if`/`unless` to support `end.should` chaining
+- Method chaining on control flow results (e.g., `if true; 42; end.to_s`) - needs value wrapping
 
 ---
 
@@ -91,7 +93,48 @@ lambda { 42 }               # ✗ "undefined method 'lambda'" at top-level
 
 ---
 
-## 3. Module include - IMPLEMENTED (with limitations)
+## 3. Classes Defined in Lambdas - Runtime Segfault
+
+**Status**: ⚠️ PARTIALLY FIXED (2025-11-12)
+
+**Problem**: Classes defined inside lambda scopes now **compile successfully** (nil ClassScope bug fixed) but **segfault at runtime**.
+
+**Progress**:
+- ✅ Compilation: Fixed nil ClassScope error by creating ClassScope on-demand in compile_class.rb
+- ✅ Specs compile: break_spec.rb, line_spec.rb, file_spec.rb now compile (was blocked)
+- ❌ Runtime: Programs with classes-in-lambdas crash with segfault
+
+**Root Cause** (suspected):
+Classes defined in lambdas get incorrect `Object__` prefix in generated assembly. The scope-walking logic finds Object's ClassScope when it should use GlobalScope for top-level naming. This causes symbol mismatches at runtime.
+
+**Example**:
+```ruby
+l = lambda do
+  class Foo  # Should generate "Foo", generates "Object__Foo"
+    def test
+      42
+    end
+  end
+  Foo.new.test
+end
+l.call  # ✗ Segfault
+```
+
+**Investigation Status**:
+- Compilation generates both `Foo:` and `Object__Foo:` symbols
+- Code references `Object__Foo` but class is named `Foo`
+- Issue exists even when lambda is inside a method (not top-level lambda issue)
+- Affects all specs with classes-in-lambdas: spec/class_in_lambda_spec.rb
+
+**Test**: spec/class_in_lambda_spec.rb (compiles, crashes at runtime)
+
+**See**: docs/nil_classscope_investigation.md for detailed analysis
+
+**Priority**: High - blocks multiple rubyspec files that now compile
+
+---
+
+## 4. Module include - IMPLEMENTED (with limitations)
 
 **Status**: ✅ PARTIALLY FIXED (2025-11-08)
 
