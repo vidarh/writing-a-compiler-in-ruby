@@ -130,7 +130,7 @@ run_single_spec() {
         echo -n "Compiling $(basename $SPEC_FILE)... "
     fi
 
-    ./compile "$TEMP_SPEC" -I. < /dev/null > /dev/null 2>&1
+    ./compile "$TEMP_SPEC" -I. -I lib/core < /dev/null > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         # The binary name is based on the temp file name
@@ -380,7 +380,7 @@ elif [ -f "$TARGET" ]; then
     echo "print_spec_results" >> "$TEMP_SPEC"
 
     echo "Compiling $SPEC_FILE..."
-    COMPILE_OUTPUT=$(./compile "$TEMP_SPEC" -I. 2>&1)
+    COMPILE_OUTPUT=$(./compile "$TEMP_SPEC" -I. -I lib/core 2>&1)
 
     if [ $? -eq 0 ]; then
         echo "✓ Compilation successful"

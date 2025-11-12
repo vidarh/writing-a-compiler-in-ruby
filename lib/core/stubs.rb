@@ -37,7 +37,7 @@ E = 2
 )
 
 # FIXME
-LOAD_PATH=[]
+$LOAD_PATH=[]
 
 # FIXME: We'll pick something else for this; for now I just
 # need *something* to distinguish from MRI.
