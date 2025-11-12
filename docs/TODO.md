@@ -9,7 +9,11 @@
 **Language Specs**: 79 files, 2 passed (3%), 13 failed, 13 crashed, **51 compile failures (65%)** - IMPROVED
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
-**Recent Fixes (2025-11-12)**:
+**Recent Fixes (2025-11-12 Session 2)**:
+- **✅ Fixed regression in break with argument** - Narrowed nil-value fix to parentheses only
+  - Restricted fix to only apply to `()`, not blocks `{}` or arrays `[]` (shunting.rb:164)
+  - Result: break_spec.rb compiles again, both `(break)` and `{ break 1 }` work correctly
+  - Test: selftest passes, break_spec returns to CRASH (runtime) from COMPILE FAIL
 - **✅ Fixed for loop with method call targets** - For loops now accept lvalue expressions
   - Changed parser.rb:230,255 to use shunting yard parser with [:in, COMMA] inhibit
   - Allows `for obj.attr in array`, `for obj[i] in array` patterns
