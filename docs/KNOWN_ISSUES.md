@@ -59,7 +59,12 @@ C.new("test")
 **Test**: spec/control_flow_expressions_spec.rb - now passing
 
 **Remaining work**:
-- `while`/`until` loops need same treatment as `if`/`unless` to support `end.should` chaining
+- `while`/`until` loops have **infinite recursion bug** during compilation (stack level too deep in regalloc.rb:195)
+  - Affects: while_spec.rb, until_spec.rb
+  - Simple test case: `result = while i < 3; i += 1; end` causes SystemStackError
+  - Parser handles correctly: `--parsetree` shows correct AST
+  - Bug is in compilation phase, not parsing
+  - **Priority**: HIGH - this blocks 2 language specs
 - Method chaining on control flow results (e.g., `if true; 42; end.to_s`) - needs value wrapping
 
 ---
