@@ -152,6 +152,26 @@ class Compiler
       return compile_eigenclass(scope, name[-1], *exps)
     end
 
+    # If cscope is nil, the class hasn't been pre-registered (e.g., class defined in lambda)
+    # Create it on-demand and register it in both @classes and scope chain
+    # The parent scope determines the class naming:
+    # - At top-level or in lambda at top-level: use GlobalScope for "Foo"
+    # - Inside class Bar: use Bar's ClassScope for "Bar__Foo"
+    # Walk scope chain to find ClassScope, but if we hit GlobalScope first, use it
+    if !cscope
+      parent_scope = scope
+      while parent_scope && !parent_scope.is_a?(ClassScope) && parent_scope != @global_scope
+        parent_scope = parent_scope.next
+      end
+      parent_scope ||= @global_scope
+
+      cscope = ClassScope.new(parent_scope, name, @vtableoffsets, superc)
+      @classes[name.to_sym] = cscope
+      @global_scope.add_constant(name.to_sym, cscope)
+      # Also register in current scope so lookups work
+      scope.add_constant(name.to_sym) if scope != @global_scope
+    end
+
     @e.comment("=== class #{cscope.name} ===")
 
 
