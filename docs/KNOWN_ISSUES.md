@@ -59,17 +59,42 @@ C.new("test")
 **Test**: spec/control_flow_expressions_spec.rb - now passing
 
 **Remaining work**:
-- `while`/`until` loops with `end.should` chaining cause **parser errors** ("Missing value in expression")
-  - Affects: while_spec.rb, until_spec.rb
-  - Example: `while c; ...; end.should be_nil` (parser fails on `end.should`)
-  - **Note**: while/until code generation works correctly (spec/while_loop_spec.rb compiles)
-  - Parser fix needed for method chaining on while/until end keyword
-  - **Priority**: HIGH - blocks 2 language specs
+- ✅ **while** `end.should` chaining - FIXED (spec/while_end_no_paren_spec.rb passes)
+- ❌ **until** `end.should` WITHOUT parentheses fails with "Missing value in expression"
+  - Affects: until_spec.rb (while_spec has different errors)
+  - Works: `(until i > 9; i += 1; end).should == nil` (with parens)
+  - Fails: `until i > 9; i += 1; end.should == nil` (without parens)
+  - Test: spec/until_end_should_spec.rb reproduces the bug
+  - **Priority**: MEDIUM - blocks until_spec, but workaround exists (use parens)
 - Method chaining on control flow results (e.g., `if true; 42; end.to_s`) - needs value wrapping
 
 ---
 
-## 2. Top-Level Blocks/Lambdas
+## 2. Or-Assign with Parenthesized Multi-line Expression
+
+**Status**: ⚠️ PARSER BUG
+
+**Problem**: Using `||=` with a parenthesized multi-line expression containing control flow fails to parse.
+
+```ruby
+a = [nil, nil]
+a[1] ||= (
+  break if c
+  c = false
+)  # Error: "Missing value in expression / op: {or_assign/2 pri=7}"
+```
+
+**Error**: "Missing value in expression / op: {or_assign/2 pri=7} / vstack: [] / rightv: [:if, ...]"
+
+**Test**: spec/or_assign_paren_expr_spec.rb
+
+**Affects**: while_spec.rb (complex test case with `a[1] ||= (break if c; ...)`)
+
+**Priority**: MEDIUM - blocks while_spec, but uncommon pattern
+
+---
+
+## 3. Top-Level Blocks/Lambdas
 
 **Problem**: Blocks and lambdas at top-level fail with "undefined method 'lambda'" or "undefined reference to '__env__'".
 
