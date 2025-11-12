@@ -1,5 +1,10 @@
 require_relative '../rubyspec/spec_helper'
 
+# KNOWN ISSUE: These specs compile successfully but segfault at runtime
+# Root cause appears to be related to class naming/scoping - classes defined
+# in lambdas get Object__ prefix when they shouldn't, leading to runtime errors
+# See docs/nil_classscope_investigation.md and docs/KNOWN_ISSUES.md
+
 describe "Class definition inside lambda" do
   it "allows defining classes inside lambdas" do
     l = lambda do

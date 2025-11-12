@@ -43,3 +43,7 @@ $LOAD_PATH=[]
 # need *something* to distinguish from MRI.
 RUBY_ENGINE="vidarh/compiler"
 
+# Stub for Thread class (not implemented)
+class Thread
+end
+
