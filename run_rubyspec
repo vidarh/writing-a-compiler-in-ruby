@@ -273,7 +273,7 @@ elif [ -f "$TARGET" ]; then
     # Single file mode - show full output
     SPEC_FILE="$TARGET"
     SPEC_NAME=$(basename "$SPEC_FILE" .rb)
-    TEMP_SPEC="tmp/rubyspec_temp_${SPEC_NAME}.rb"
+    TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
 
     # Replace the spec_helper require with our own
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"

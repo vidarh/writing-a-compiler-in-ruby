@@ -55,6 +55,8 @@ class Oper
   end
 end
 
+
+
 # A hash of all operators within the language.
 # The keys are the actual identifiers for each operator.
 # The values are the operators themself (instances of the Oper class).

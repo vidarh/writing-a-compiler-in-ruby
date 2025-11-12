@@ -15,8 +15,6 @@
 - Fixed heredoc after method names tokens.rb line 578 - **Major impact: 60→54 compile failures (-10%)**
 - Added ScratchPad stub for test framework
 - **Result**: if_spec.rb now compiles and runs (11/13 tests pass)
-- **Note**: 5 other specs now compile but have runtime bugs (not parser wins)
-- Fixed `unless` inside `do` blocks shunting.rb line 202-208 - **unless_spec.rb now compiles**
 
 ## High Priority (Language Spec Compilation Failures)
 
@@ -24,17 +22,18 @@ Focus on rubyspec/language/ compile failures blocking 59/79 specs:
 
 ### Critical Blockers (Remaining 54 COMPILE FAIL specs)
 
-**Actual Error Patterns Found** (see docs/spec_status_investigation.md):
-- [x] **Expected 'end' for 'do'-block with unless** - FIXED for unless_spec. Still affects: execution_spec (backticks), predefined_spec (rescue in block)
-- [ ] **Missing value in expression** - Affects: until_spec, while_spec (complex expressions in parentheses)
-- [ ] **nil ClassScope** - Affects: break_spec, singleton_class_spec. See KNOWN_ISSUES #16
-- [ ] **For loop with global variables** - Affects: for_spec. Error on `for @$spec_var in arr`
-- [ ] **Splat in assignment LHS** - Affects: next_spec, assignments_spec. See KNOWN_ISSUES #17
-- [ ] **Hash spread operator `**`** - Affects: hash_spec, keyword_arguments_spec
+**Quick Wins (Likely Simple Fixes)**:
+- [ ] **For loop with global/instance variables** - Affects: for_spec. Error: "Expected: 'in' keyword" on `for @$spec_var in arr`
+- [ ] **Missing dependency stubs** - Affects: file_spec, line_spec, return_spec. Need File/rubygems stubs
 
-**Lower Priority**:
+**High Priority (Affecting Multiple Specs)**:
+- [ ] **nil ClassScope** - Affects: break_spec, singleton_class_spec (2 specs). See KNOWN_ISSUES #16
+- [ ] **Splat in assignment LHS** - Affects: next_spec, assignments_spec. See KNOWN_ISSUES #17
+- [ ] **Hash spread operator `**`** - Affects: hash_spec, keyword_arguments_spec. Context-sensitive parsing needed
+
+**Medium Priority**:
 - [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
-- [ ] **Missing dependency stubs** - Affects: file_spec, line_spec, return_spec
+- [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed
 
 ### Control Flow Specs
 - [ ] **break_spec.rb** - COMPILE FAIL (nil ClassScope error)
