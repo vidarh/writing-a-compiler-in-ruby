@@ -10,6 +10,11 @@
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-12)**:
+- **✅ Fixed for loop with method call targets** - For loops now accept lvalue expressions
+  - Changed parser.rb:230,255 to use shunting yard parser with [:in, COMMA] inhibit
+  - Allows `for obj.attr in array`, `for obj[i] in array` patterns
+  - Result: for_spec.rb compiles past line 143 (was failing with "Expected: 'in' keyword")
+  - Test: selftest passes, for loops with method calls parse correctly
 - **✅ Fixed parenthesized break/next/return** - Control flow keywords now work inside parentheses
   - Added check in shunting.rb:162-165 to provide nil value to prefix operators before closing paren
   - Result: `a ||= (break)`, `a = (next)`, `a = (return)` all compile successfully
@@ -40,7 +45,8 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [x] **until end.should without parens** - ✅ FIXED - Removed parse_until from parse_defexp (parser.rb:488)
 - [x] **Parenthesized break/next/return** - ✅ FIXED - Added nil value check before closing paren (shunting.rb:162-165)
   - Note: `break if condition` in assignment still fails (separate bug, see KNOWN_ISSUES #2)
-- [ ] **For loop with global/instance variables** - Affects: for_spec. Error: "Expected: 'in' keyword" on `for @$spec_var in arr`
+- [x] **For loop with method call targets** - ✅ FIXED - Use shunting yard parser for loop variables (parser.rb:230,255)
+  - Note: `for ... end.should` still fails (separate bug, similar to while end.should issue)
 
 **High Priority (Affecting Multiple Specs)**:
 - [x] **nil ClassScope** - ✅ FIXED (compile_class.rb) - break_spec, line_spec, file_spec now compile

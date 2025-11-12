@@ -222,9 +222,13 @@ class Parser < ParserBase
     pos = position
     keyword(:for) or return
     ws
-    # Parse loop variable(s) - can be single var or destructured (a, b, c)
+    # Parse loop variable(s) - can be single var, method call, or destructured (a, b, c)
+    # Use shunting yard parser with 'in' as inhibit to stop at 'in' keyword
+    # This allows "for obj.attr in array" and "for a, b in array"
     vars = []
-    vars << (parse_name or expected("variable name after 'for'"))
+    # Parse first variable/lvalue - could be simple name or complex expression like obj.attr
+    first_var = @shunting.parse([:in, COMMA])
+    vars << (first_var or expected("variable name or expression after 'for'"))
     ws
     while literal(",")
       ws
@@ -247,7 +251,9 @@ class Parser < ParserBase
           vars << name
         end
       else
-        vars << (parse_name or expected("variable name in for loop"))
+        # Parse next variable - could be name or complex expression
+        next_var = @shunting.parse([:in, COMMA])
+        vars << (next_var or expected("variable name or expression in for loop"))
       end
       ws
     end
