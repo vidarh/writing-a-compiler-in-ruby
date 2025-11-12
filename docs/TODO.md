@@ -6,8 +6,15 @@
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, 2 passed (3%), 13 failed, 13 crashed, **51 compile failures (65%)** - IMPROVED
+**Language Specs**: 79 files, **3 passed (4%)**, 12 failed, 13 crashed, **51 compile failures (65%)** - IMPROVED
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
+
+**Recent Fixes (2025-11-12 Session 3)**:
+- **✅ Fixed unless/if with nil else-arm** - Empty unless/if bodies now return nil correctly
+  - Added special case in get_arg (compiler.rb:138) to handle Ruby nil like true/false
+  - Was treating nil as string constant, generating label address instead of nil value
+  - Result: unless_spec.rb now **PASSES all 6/6 tests** (was 5/6)
+  - Test: selftest and selftest-c pass with 0 failures
 
 **Recent Fixes (2025-11-12 Session 2)**:
 - **✅ Fixed regression in break with argument** - Narrowed nil-value fix to parentheses only
@@ -45,7 +52,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 ### Critical Blockers (Remaining 51 COMPILE FAIL specs)
 
 **Quick Wins (Likely Simple Fixes)**:
-- [ ] **unless_spec runtime crashes** - Compiles but passes 5/6 tests, investigate 1 failure
+- [x] **unless_spec** - ✅ FIXED - Handle nil in get_arg (compiler.rb:138), now PASSES 6/6 tests
 - [x] **until end.should without parens** - ✅ FIXED - Removed parse_until from parse_defexp (parser.rb:488)
 - [x] **Parenthesized break/next/return** - ✅ FIXED - Added nil value check before closing paren (shunting.rb:162-165)
   - Note: `break if condition` in assignment still fails (separate bug, see KNOWN_ISSUES #2)
@@ -69,6 +76,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **return_spec.rb** - COMPILE FAIL (unclosed block error)
 - [ ] **redo_spec.rb** - CRASH (compiles, runtime crash)
 - [ ] **loop_spec.rb** - CRASH (compiles, runtime crash)
+- [x] **unless_spec.rb** - ✅ **PASSES 6/6** (was 5/6, fixed nil else-arm bug)
 
 ### Data Structure Specs
 - [ ] **array_spec.rb** - CRASH (compiles, runtime crash in mspec framework)
@@ -137,7 +145,7 @@ All regexp/ specs fail - Regexp not implemented. Low priority until core Regexp 
 - [ ] **Classes-in-lambdas segfault** - See KNOWN_ISSUES #3 - affects break_spec, line_spec, file_spec
 - [ ] **times_spec.rb** (core/integer) - NOW COMPILES, crashes at runtime
 - [ ] **or_spec.rb** (language) - NOW COMPILES, crashes at runtime
-- [ ] **unless_spec.rb** (language) - NOW COMPILES, 5/6 tests pass, 1 failure
+- [x] **unless_spec.rb** (language) - ✅ PASSES 6/6 tests (was 5/6, fixed nil else-arm bug)
 - [ ] **array_spec.rb** (language) - Severe stack corruption in mspec framework
 - [ ] **loop_spec.rb, redo_spec.rb** - Control flow crashes
 - [ ] **7 other language crashes** - class_variable, encoding, order, safe, syntax_error, undef, variables
