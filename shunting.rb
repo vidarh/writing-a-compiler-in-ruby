@@ -92,12 +92,16 @@ module OpPrec
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
       #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}" if ENV['DEBUG_PARSER']
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
-      # When if/while/rescue appear in prefix position, parse as statement UNLESS
+      # When if/unless/while/rescue appear in prefix position, parse as statement UNLESS
       # they're appearing after a prefix operator (which would make them modifiers)
       if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
         if op.sym == :if_mod
           #STDERR.puts "   if expression"
           @out.value(@parser.parse_if_body(:if))
+          return :prefix
+        elsif op.sym == :unless_mod
+          #STDERR.puts "   unless expression"
+          @out.value(@parser.parse_if_body(:unless))
           return :prefix
         elsif op.sym == :while_mod
           #STDERR.puts "   while expression"
@@ -229,12 +233,11 @@ module OpPrec
         else
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
-          # Also handle break statement which can appear in boolean expressions (e.g., "x or break")
-          if keyword && [:until, :for, :unless, :begin, :lambda, :def].include?(token)
+          # Note: unless is now handled as an operator like if, not in this special case
+          if keyword && [:until, :for, :begin, :lambda, :def].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
-              when :unless then :parse_if_unless
               when :until then :parse_until
               when :for then :parse_for
               when :begin then :parse_begin

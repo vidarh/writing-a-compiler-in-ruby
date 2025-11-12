@@ -79,6 +79,7 @@ Operators = {
   "=>"        => Oper.new(  5, :pair,     :infix),
 
   "if"        => Oper.new(2, :if_mod,   :infix, 2, 2, :right, 1),
+  "unless"    => Oper.new(2, :unless_mod, :infix, 2, 2, :right, 1),
 
   "while"     => Oper.new(2, :while_mod,   :infix, 2, 2, :right, 1),
 
