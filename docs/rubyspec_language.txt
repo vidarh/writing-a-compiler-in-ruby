@@ -1,0 +1,98 @@
+DEBUG: Starting run_rubyspec for rubyspec/language/
+Running all specs in rubyspec/language/...
+================================
+
+[33m[COMPILE FAIL] rubyspec/language/alias_spec.rb
+[32m[PASS] rubyspec/language/and_spec.rb (P:10 F:0 S:0 T:10)
+[34m[CRASH] rubyspec/language/array_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/assignments_spec.rb
+[34m[CRASH] rubyspec/language/BEGIN_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/block_spec.rb
+[34m[CRASH] rubyspec/language/break_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/case_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/class_spec.rb
+[34m[CRASH] rubyspec/language/class_variable_spec.rb
+[31m[FAIL] rubyspec/language/comment_spec.rb (P:0 F:1 S:0 T:1)
+[33m[COMPILE FAIL] rubyspec/language/constants_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/defined_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/def_spec.rb
+[34m[CRASH] rubyspec/language/delegation_spec.rb
+[34m[CRASH] rubyspec/language/encoding_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/END_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/ensure_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/execution_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/file_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/for_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/hash_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/heredoc_spec.rb
+[34m[CRASH] rubyspec/language/if_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/keyword_arguments_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/lambda_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/line_spec.rb
+[34m[CRASH] rubyspec/language/loop_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/magic_comment_spec.rb
+[34m[CRASH] rubyspec/language/match_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/metaclass_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/method_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/module_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/next_spec.rb
+[34m[CRASH] rubyspec/language/not_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/numbered_parameters_spec.rb
+[34m[CRASH] rubyspec/language/numbers_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/optional_assignments_spec.rb
+[34m[CRASH] rubyspec/language/order_spec.rb
+[34m[CRASH] rubyspec/language/or_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/pattern_matching_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/precedence_spec.rb
+[34m[CRASH] rubyspec/language/predefined/data_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/predefined_spec.rb
+[34m[CRASH] rubyspec/language/predefined/toplevel_binding_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/private_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/proc_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/range_spec.rb
+[34m[CRASH] rubyspec/language/redo_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp/anchors_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp/back-references_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp/character_classes_spec.rb
+[34m[CRASH] rubyspec/language/regexp/empty_checks_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp/encoding_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp/escapes_spec.rb
+[34m[CRASH] rubyspec/language/regexp/grouping_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp/interpolation_spec.rb
+[34m[CRASH] rubyspec/language/regexp/modifiers_spec.rb
+[34m[CRASH] rubyspec/language/regexp/repetition_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/regexp_spec.rb
+[34m[CRASH] rubyspec/language/regexp/subexpression_call_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/rescue_spec.rb
+[34m[CRASH] rubyspec/language/retry_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/return_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/safe_navigator_spec.rb
+[34m[CRASH] rubyspec/language/safe_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/send_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/singleton_class_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/source_encoding_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/string_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/super_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/symbol_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/throw_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/undef_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/unless_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/until_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/variables_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/while_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/yield_spec.rb
+
+================================
+Summary:
+  Total spec files: 79
+  Passed: 1
+  Failed: 1
+  Crashed (no test output): 23
+  Failed to compile: 54
+
+Individual Test Cases:
+  Total tests: 11
+  Passed: 10
+  Failed: 1
+  Skipped: 0
+  Pass rate: 90%
