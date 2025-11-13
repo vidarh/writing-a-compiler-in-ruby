@@ -722,3 +722,47 @@ a, *b, c = [1, 2, 3]  # Error
 **Priority**: Medium - major blockers removed, remaining cases need individual investigation
 
 ---
+
+## 19. If-Statement Without Else Returns Condition Value Instead of Nil
+
+**Problem**: When an if-statement has no else-branch and the condition is false, the expression returns the condition value instead of nil.
+
+```ruby
+result = if false then 123 end
+puts result.inspect  # Outputs: false (WRONG - should be nil)
+
+result = if true then 123 end
+puts result.inspect  # Outputs: 123 (correct)
+```
+
+**Root Cause**: In `compile_control.rb`, the `compile_if` function only generates the endif label and jump when `else_arm` is present. When there's no else-arm:
+- Line 114: `@e.jmp(l_end_if_arm) if else_arm` - No jump generated
+- Line 125: `@e.local(l_end_if_arm) if else_arm` - No endif label created
+- When condition is false, execution jumps to else label but has no code to load nil into %eax
+- The %eax register still contains the condition value (false)
+
+**Failed Fix Attempts**:
+1. Using `@e.load_address("nil")` - causes segfault during bootstrap initialization
+2. Using `compile_eval_arg(scope, :nil)` - causes segfault during bootstrap initialization
+3. Using `get_arg(scope, :nil)` followed by `@e.movl` - generates invalid assembly with literal `[:global, :nil]`
+
+**Why Fixes Fail**: The fix requires loading nil during the else-branch code generation. However, if-statements without else-arms occur during early bootstrap (e.g., Class initialization), and the nil global may not be properly initialized yet at that point. Any attempt to reference nil causes bootstrap failures.
+
+**Impact**: 
+- if_spec.rb fails 2/25 tests
+- Any code relying on `if condition; value; end` returning nil when condition is false will get the condition value instead
+
+**Workaround**: Always provide an explicit else-branch: `if condition; value; else; nil; end`
+
+**Solution Needed**: The fix requires either:
+1. Ensuring nil is initialized before any if-statements are compiled, or
+2. Using a different code generation strategy that doesn't reference the nil global, or  
+3. Deferring nil loading to a later stage after globals are set up
+
+**Priority**: Medium - Affects correctness but has simple workaround
+
+**Test File**: Created test_if_nil.rb during investigation (removed)
+
+**Files**: compile_control.rb:97-136 (compile_if function)
+
+---
