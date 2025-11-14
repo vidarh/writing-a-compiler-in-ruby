@@ -18,6 +18,7 @@
   - Removed begin from [:for, :lambda, :def] special keyword list (shunting.rb:250)
   - Fixed compile_rescue to accept optional else_body parameter (4th arg)
   - Result: `begin...end.inspect` and `x = begin...end.method` now work correctly
+  - **Bonus**: unless_spec.rb now PASSES (6/6 tests) - was compile failure before
   - Test: selftest and selftest-c pass with 0 failures
   - Commit: 1bdb613
 
