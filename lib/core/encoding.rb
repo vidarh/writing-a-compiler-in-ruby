@@ -3,6 +3,9 @@
 # minimal stubs to allow specs to compile
 
 class Encoding
+  class CompatibilityError < StandardError
+  end
+
   def initialize(name)
     @name = name
   end
