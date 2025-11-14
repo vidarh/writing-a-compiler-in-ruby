@@ -9,7 +9,18 @@
 **Language Specs**: 79 files, **1 passed (1%)**, 1 failed, 23 crashed, **54 compile failures (68%)** - baseline from Nov 12
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
-**Recent Fixes (2025-11-14)**:
+**Recent Fixes (2025-11-14 Session 4)**:
+- **✅ Fixed do...end rescue/else/ensure support** - do...end blocks now support rescue like begin...end
+  - Extracted parse_rescue_else_ensure() shared method for parsing rescue/else/ensure clauses
+  - Updated parse_begin_body() to use shared method
+  - Updated parse_block() to use shared method
+  - Result: `lambda do raise X; rescue X; 42 end` now compiles and works
+  - Test: spec/do_block_rescue_spec.rb compiles (runtime exceptions need work)
+  - Test: block_spec.rb advances from line 342 to line 70 (different bug: def inside do...end)
+  - Test: selftest passes with 0 failures
+  - Commit: a3eb8f7
+
+**Recent Fixes (2025-11-14 Session 3)**:
 - **✅ Fixed begin as prefix operator** - begin blocks now support method chaining like if/while/until
   - Added "begin" as operator in operators.rb (:begin_stmt, priority 2)
   - Handle :begin_stmt in shunting.rb prefix position by calling parse_begin_body
