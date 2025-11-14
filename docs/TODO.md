@@ -2,12 +2,24 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-12 - Latest Update)
+## Test Status (2025-11-14 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, **3 passed (4%)**, 12 failed, 13 crashed, **51 compile failures (65%)** - IMPROVED
+**Language Specs**: 79 files, **1 passed (1%)**, 1 failed, 23 crashed, **54 compile failures (68%)** - baseline from Nov 12
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
+
+**Recent Fixes (2025-11-14)**:
+- **✅ Fixed begin as prefix operator** - begin blocks now support method chaining like if/while/until
+  - Added "begin" as operator in operators.rb (:begin_stmt, priority 2)
+  - Handle :begin_stmt in shunting.rb prefix position by calling parse_begin_body
+  - Created parse_begin_body method (doesn't consume begin keyword, like parse_if_body)
+  - Removed parse_begin from parse_defexp chain (parser.rb:462)
+  - Removed begin from [:for, :lambda, :def] special keyword list (shunting.rb:250)
+  - Fixed compile_rescue to accept optional else_body parameter (4th arg)
+  - Result: `begin...end.inspect` and `x = begin...end.method` now work correctly
+  - Test: selftest and selftest-c pass with 0 failures
+  - Commit: 1bdb613
 
 **Recent Fixes (2025-11-12 Session 3)**:
 - **✅ Fixed unless/if with nil else-arm** - Empty unless/if bodies now return nil correctly
