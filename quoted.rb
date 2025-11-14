@@ -26,6 +26,36 @@ module Tokens
           return TAB
         when 'n'
           return LF
+        when 'M'
+          # Meta escape: \M-x or \M-\C-x or \M-\c-x
+          if s.peek == ?-
+            s.get  # consume the dash
+            # Check if it's \M-\C- or \M-\c-
+            if s.peek == CSI
+              s.get  # consume backslash
+              if s.peek == ?C || s.peek == ?c
+                s.get  # consume C or c
+                if s.peek == ?-
+                  s.get  # consume dash
+                  ch = s.get
+                  # Meta-Control: set both bit 7 and apply control
+                  return ((ch.ord & 0x1f) | 0x80).chr
+                end
+              end
+            else
+              # Just \M-x: set bit 7
+              ch = s.get
+              return (ch.ord | 0x80).chr
+            end
+          end
+        when 'C', 'c'
+          # Control escape: \C-x or \c-x
+          if s.peek == ?-
+            s.get  # consume the dash
+            ch = s.get
+            # Control: mask to lower 5 bits
+            return (ch.ord & 0x1f).chr
+          end
         else
           return e
         end

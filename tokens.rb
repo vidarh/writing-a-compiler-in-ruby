@@ -562,6 +562,36 @@ module Tokens
                 return [10, nil]  # LF
               when "r"
                 return [13, nil]  # CR
+              when "M"
+                # Meta escape: \M-x or \M-\C-x or \M-\c-x
+                if @s.peek == "-"
+                  @s.get  # consume the dash
+                  # Check if it's \M-\C- or \M-\c-
+                  if @s.peek == "\\"
+                    @s.get  # consume backslash
+                    ctrl_char = @s.get
+                    if ctrl_char == "C" || ctrl_char == "c"
+                      if @s.peek == "-"
+                        @s.get  # consume dash
+                        ch = @s.get
+                        # Meta-Control: set both bit 7 and apply control
+                        return [((ch[0].chr.ord & 0x1f) | 0x80), nil]
+                      end
+                    end
+                  else
+                    # Just \M-x: set bit 7
+                    ch = @s.get
+                    return [(ch[0].chr.ord | 0x80), nil]
+                  end
+                end
+              when "C", "c"
+                # Control escape: \C-x or \c-x
+                if @s.peek == "-"
+                  @s.get  # consume the dash
+                  ch = @s.get
+                  # Control: mask to lower 5 bits
+                  return [(ch[0].chr.ord & 0x1f), nil]
+                end
               else
                 # For other escapes, return the character itself
                 return [third[0].chr.ord, nil]
