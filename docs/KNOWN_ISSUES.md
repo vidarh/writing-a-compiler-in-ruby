@@ -766,3 +766,123 @@ puts result.inspect  # Outputs: 123 (correct)
 **Files**: compile_control.rb:97-136 (compile_if function)
 
 ---
+
+## 20. Require with Dynamic Path Not Supported
+
+**Problem**: The compiler processes `require` statements statically at compile-time. This means it cannot handle require with dynamic paths (e.g., paths from variables or expressions).
+
+```ruby
+# This fails:
+require $spec_filename
+# Error: "Unable to open '$spec_filename'"
+
+# The compiler treats '$spec_filename' as a literal string path
+# instead of evaluating the global variable
+```
+
+**Root Cause**: The compilation model is ahead-of-time (AOT), not JIT. When the compiler encounters a `require` statement, it immediately tries to open and parse the file at that path. Variable values aren't known at compile-time, so dynamic paths cannot be resolved.
+
+**Example**: In rubyspec/language/return_spec.rb line 612:
+```ruby
+require $spec_filename
+ScratchPad.recorded.should == ["before return"]
+```
+
+**Error Message**: `Unable to open '$spec_filename'`
+
+**Affects**:
+- return_spec.rb - Uses `require $spec_filename` pattern
+- Potentially other specs using dynamic require paths
+- Any code attempting to require files based on runtime values
+
+**Alternatives for Fixing**:
+
+1. **Better error message** (probably best first stage)
+   - Detect when require argument looks like a variable (starts with `$`, `@`, or is a method call)
+   - Emit clear error: "require with dynamic path not supported in AOT compilation"
+   - Priority: Low - improves user experience but doesn't enable new functionality
+
+2. **Warning at compile time, exception at runtime**
+   - Allow compilation to succeed with warning to STDERR
+   - Generate code that raises exception at runtime if path would be evaluated
+   - This would let specs compile but still isn't great
+   - Priority: Low - enables specs to compile but doesn't provide useful behavior
+
+3. **JIT support** (*massive* change)
+   - Add just-in-time compilation to dynamically load and compile files at runtime
+   - Fundamentally changes compilation model
+   - Priority: Very Low - architectural change, not worth the effort
+
+4. **Workaround in run_rubyspec** (option 1b)
+   - Recognize the `require $spec_filename` pattern specifically in run_rubyspec script
+   - Rewrite it to raise an exception instead
+   - This is a test-framework-specific hack, not a compiler fix
+   - Priority: Low - works around the immediate problem for specs
+
+**Priority**: Low - needs consideration of how to support it properly
+
+**Workaround**: Rewrite code to use static require paths, or modify the test runner to handle this pattern.
+
+**Files**:
+- driver.rb - Handles require statement processing
+- rubyspec/language/return_spec.rb:612 - Example of problematic code
+
+---
+
+## 21. Scope Resolution Operator `::` Parsed Incorrectly as Infix
+
+**Problem**: The scope resolution operator `::` when used as a prefix (for root namespace lookups) is incorrectly parsed as an infix operator.
+
+```ruby
+# This fails:
+puts ::Object.class
+# Error: "Unable to resolve: puts::Object statically (FIXME)"
+
+# Parser treats it as:
+puts :: Object.class  # Trying to do puts::Object
+
+# This also fails:
+x = defined?(::Object)
+# Error: "Missing value in expression"
+# Parser creates: [:deref, :defined?, :Object] instead of [:call, :defined?, [[:deref, :Object]]]
+```
+
+**Root Cause**: In operators.rb:170, `::` is defined as an infix operator with priority 100. The parser/shunting yard doesn't recognize when `::` should be treated as a prefix operator (unary) instead of infix (binary).
+
+When `::` appears in certain contexts (after `(`, `,`, `=`, keywords, at statement start, etc.), it should be treated as a prefix operator forming `[:deref, :ConstantName]`, not as an infix operator waiting for a left operand.
+
+**Error Messages**:
+- `Unable to resolve: puts::Object statically (FIXME)` - when ::appears after method name
+- `Missing value in expression` - when :: appears inside function call arguments
+
+**Example**: In rubyspec/language/class_spec.rb:176:
+```ruby
+Object.send(:remove_const, :A) if defined?(::A)
+# Fails because defined?(::A) parses as [:deref, :defined?, :A]
+```
+
+**Affects**:
+- class_spec.rb line 176 - `defined?(::A)` in if modifier
+- Any code using `::ConstantName` for root namespace lookups
+- Expressions like `puts ::Object`, `x = ::Array.new`, etc.
+
+**Implementation Needed**:
+1. Detect when `::` appears in prefix position (context-sensitive parsing)
+2. Treat `::` as prefix operator in these contexts:
+   - After `(`, `,`, `=`, `if`, `unless`, `while`, `until`, etc.
+   - At expression start
+   - After operators that expect a right operand
+3. Generate correct AST: `[:deref, :ConstantName]` for prefix, `[:deref, left, right]` for infix
+
+**Workaround**: Omit the `::` prefix and use relative constant lookup: `defined?(A)` instead of `defined?(::A)`.
+
+**Priority**: Medium - Affects rubyspec compatibility and prevents using explicit root namespace lookups
+
+**Files**:
+- operators.rb:170 - `::` operator definition
+- shunting.rb - Expression parser that needs context-sensitive handling
+- rubyspec/language/class_spec.rb:176 - Example of problematic code
+
+**Note**: This is different from issue #4 (Toplevel Constant Paths) which was about `class ::Foo` syntax. This issue is about using `::Foo` in general expressions.
+
+---
