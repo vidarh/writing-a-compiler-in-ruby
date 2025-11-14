@@ -119,6 +119,10 @@ module OpPrec
           src.unget(token)
           reduce(ostack)
           return :break
+        elsif op.sym == :begin_stmt
+          #STDERR.puts "   begin statement"
+          @out.value(@parser.parse_begin_body)
+          return :prefix
         end
       end
 
@@ -242,13 +246,12 @@ module OpPrec
         else
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
-          # Note: unless and until are now handled as operators, not in this special case
-          if keyword && [:for, :begin, :lambda, :def].include?(token)
+          # Note: unless, until, and begin are now handled as operators, not in this special case
+          if keyword && [:for, :lambda, :def].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
               when :for then :parse_for
-              when :begin then :parse_begin
               when :lambda then :parse_lambda
               when :def then :parse_def
             end

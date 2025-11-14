@@ -315,9 +315,10 @@ class Compiler
     return Value.new([:addr, clean_method_name(name)])
   end
 
-  def compile_rescue(scope, rval, lval)
+  def compile_rescue(scope, rval, lval, else_body = nil)
     # Note: rescue is now handled via compile_begin_rescue in compile_block
     # This method is kept for backwards compatibility but shouldn't be called
+    # The else_body parameter is accepted but ignored (handled in compile_block)
     compile_exp(scope,lval)
   end
 

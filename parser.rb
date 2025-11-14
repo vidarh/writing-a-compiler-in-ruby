@@ -297,6 +297,12 @@ class Parser < ParserBase
     pos = position
     keyword(:begin) or return
     ws
+    return parse_begin_body
+  end
+
+  def parse_begin_body
+    pos = position
+    ws
     # Parse expressions until we hit rescue or end
     # Problem: parse_defexp may consume 'rescue' as a statement modifier
     # If so, we'll get a :rescue node with wrong structure
@@ -459,7 +465,7 @@ class Parser < ParserBase
     ws
     ret = parse_class || parse_module || parse_sexp ||
           parse_for ||
-          parse_begin || parse_lambda ||
+          parse_lambda ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
