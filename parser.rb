@@ -115,6 +115,12 @@ class Parser < ParserBase
     nolfws
     literal(COMMA) or return args
     ws
+    # Check for trailing comma: if next char is a close delimiter, allow it
+    peek_char = @scanner.peek
+    if peek_char == ")" || peek_char == "|"
+      # Trailing comma is allowed, return current args
+      return args
+    end
     more = parse_arglist(extra_stop_tokens) or expected("argument")
     return args + more
   end

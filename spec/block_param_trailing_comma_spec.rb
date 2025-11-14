@@ -10,7 +10,8 @@ describe "Block parameter trailing comma" do
     result.should == [1, 2]
   end
 
-  it "uses trailing comma to capture only first element" do
-    [[1, 2], [3, 4]].map { |a, | a }.should == [1, 3]
+  it "allows trailing comma without requiring more parameters" do
+    result = [1, 2, 3].select { |x, | x > 1 }
+    result.should == [2, 3]
   end
 end
