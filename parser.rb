@@ -306,24 +306,18 @@ class Parser < ParserBase
     return parse_begin_body
   end
 
-  def parse_begin_body
+  # Shared method to parse rescue/else/ensure clauses
+  # Used by both begin...end and do...end blocks
+  # Returns [exps, rescue_, ensure_body]
+  def parse_rescue_else_ensure(exps = [])
     pos = position
-    ws
-    # Parse expressions until we hit rescue or end
-    # Problem: parse_defexp may consume 'rescue' as a statement modifier
-    # If so, we'll get a :rescue node with wrong structure
-    exps = []
     rescue_ = nil
+
+    # Parse expressions until we hit rescue or a terminator
     loop do
-      # Check for rescue keyword before parse_defexp
-      # We manually parse rescue inline to handle "rescue => e" syntax correctly
-      # For other keywords (else/ensure/end), we let parse_defexp naturally stop
-      # when it sees them (keywords cause shunting yard to exit)
       ws
       if keyword(:rescue)
         # Found rescue keyword - parse it properly
-        # Need to "put back" the rescue keyword for parse_rescue
-        # We do this by manually calling parse_rescue's body
         nolfws
         c = parse_name  # Optional exception class
         nolfws
@@ -339,11 +333,9 @@ class Parser < ParserBase
       end
       exp = parse_defexp
       break if !exp
-      # Note: Rescue modifiers are now properly handled by the shunting yard
-      # and are rewritten in treeoutput.rb, so they appear as normal :rescue nodes.
-      # We just treat them as regular expressions here.
       exps << exp
     end
+
     # If we don't have rescue yet, try to parse it (it's optional)
     if !rescue_
       rescue_ = parse_rescue
@@ -368,15 +360,20 @@ class Parser < ParserBase
       ensure_body = parse_opt_defexp
     end
 
-    ws
-    keyword(:end) or expected("'end' for open 'begin' block")
-
     # If we have an else clause, append it to the rescue clause
-    # rescue_ is [:rescue, class, name, body]
-    # We'll extend it to [:rescue, class, name, body, else_body]
     if else_body && rescue_
       rescue_ = E[rescue_.position, :rescue, rescue_[1], rescue_[2], rescue_[3], else_body]
     end
+
+    return [exps, rescue_, ensure_body]
+  end
+
+  def parse_begin_body
+    pos = position
+    ws
+    exps, rescue_, ensure_body = parse_rescue_else_ensure([])
+    ws
+    keyword(:end) or expected("'end' for open 'begin' block")
 
     # Return block with ensure as 5th element
     # [:block, args, exps, rescue_clause, ensure_body]
@@ -518,29 +515,15 @@ class Parser < ParserBase
       ws
       literal(PIPE)
     end
-    exps = parse_block_exps
+    # Use shared rescue/else/ensure parsing
+    exps, rescue_, ensure_body = parse_rescue_else_ensure([])
+
     ws
-
-    # Parse optional ensure clause for do..end blocks
-    # (brace blocks typically don't have ensure, but we allow it)
-    ensure_body = nil
-    if keyword(:ensure)
-      ws
-      ensure_body = parse_opt_defexp
-      ws
-    end
-
     literal(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
 
-    # Build proc node with ensure if present
-    if ensure_body
-      # [:proc, args, body, nil (rescue), ensure]
-      # The nil is for rescue compatibility with begin..end structure
-      return E[pos, :proc, args, exps, nil, ensure_body]
-    end
-
-    return E[pos, :proc ] if args.size == 0 and exps.size == 0
-    return E[pos, :proc, args, exps]
+    # Return proc node with rescue and ensure support
+    return E[pos, :proc] if args.size == 0 && exps.size == 0 && !rescue_ && !ensure_body
+    return E[pos, :proc, args, exps, rescue_, ensure_body]
   end
 
 
