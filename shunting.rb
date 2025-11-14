@@ -169,6 +169,13 @@ module OpPrec
            ostack.last.type == :prefix && ostack.last.minarity == 0
           @out.value(nil)
         end
+        # Handle endless ranges: if the last token was .. or ... (range operator) followed immediately by ),
+        # push nil as the missing right-hand value
+        if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
+           src.lasttoken && (src.lasttoken[0] == ".." || src.lasttoken[0] == "...") &&
+           (ostack.last.sym == :range || ostack.last.sym == :exclusive_range)
+          @out.value(nil)
+        end
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break

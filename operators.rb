@@ -169,8 +169,8 @@ Operators = {
   "#index#"   => Oper.new(100, :index,    :infix),
   "."         => Oper.new( 98, :callm,    :infix, 2,2,:left),
   "::"        => Oper.new(100, :deref,    :infix, 2,2,:left),
-  ".."        => Oper.new( 97, :range,    :infix), # FIXME: Check pri; less wrong than it was, but may still not be right
-  "..."       => Oper.new( 97, :exclusive_range, :infix), # Exclusive range
+  ".."        => Oper.new( 97, :range,    :infix, 2, 1), # Support endless ranges (1..) - minarity=1
+  "..."       => Oper.new( 97, :exclusive_range, :infix, 2, 1), # Exclusive endless ranges (1...) - minarity=1
 
 
   #### Parentheses ####
