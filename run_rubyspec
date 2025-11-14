@@ -111,7 +111,7 @@ run_single_spec() {
     cat "$SPEC_FILE" | grep -v "require_relative" | \
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
         sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
-        sed 's/@@/CLASS_VAR_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g' | \
+        sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
         sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
         sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
         sed 's/platform_is[^d]*do/platform_is do/g' | \
@@ -364,7 +364,7 @@ elif [ -f "$TARGET" ]; then
     cat "$SPEC_FILE" | grep -v "require_relative" | \
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
         sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
-        sed 's/@@/CLASS_VAR_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g' | \
+        sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
         sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
         sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
         sed 's/platform_is[^d]*do/platform_is do/g' | \
