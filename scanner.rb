@@ -138,12 +138,24 @@ class Scanner
   # Avoid initialization on every call. Hacky workaround.
   WS = [9,10,13,32,?#.ord,?;.ord]
   C = ?#
-  # ws ::= ([\t\b\r ] | '#' [~\n]* '\n')*
+  # ws ::= ([\t\b\r ] | '#' [~\n]* '\n' | '\\' '\n')*
   def ws
-    while (c = peek) && WS.member?(c.ord) do
-      get
-      if c == C
-        while (c = get) && c != LF do; end
+    while (c = peek) && (WS.member?(c.ord) || c == "\\")
+      if c == "\\"
+        # Check if it's line continuation: backslash followed by newline
+        get
+        if peek == LF
+          get  # consume the newline
+        else
+          # Not line continuation, put the backslash back
+          unget("\\")
+          break
+        end
+      else
+        get
+        if c == C
+          while (c = get) && c != LF do; end
+        end
       end
     end
   end
