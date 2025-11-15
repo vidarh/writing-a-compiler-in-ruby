@@ -722,44 +722,59 @@ klass.class  # Works
 
 ---
 
-## 24. Method Chaining Across Newlines Not Supported
+## 24. Method Chaining Across Newlines - RESOLVED ✓
+
+**Status**: ✅ RESOLVED (2025-11-15)
 
 **Problem**: Cannot chain method calls when the `.` operator starts a new line.
 
 ```ruby
-# This fails with "Missing value in expression"
+# This used to fail:
+foo()
+  .to_s  # Error: "Missing value in expression"
+
+# Now works! ✓
 foo()
   .to_s
 
-# This works
-foo().to_s
-
-# Workaround - put . at end of line
-foo().
-  to_s
+# Also works:
+[1, 2, 3]
+  .reverse
+  .first
 ```
 
-**Error**: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :to_s"
+**Resolution**: Implemented lookahead in scanner's nolfws() method
 
-**Root Cause**: Tokenizer treats newline as statement boundary even when next line starts with `.`. In Ruby, a line starting with `.` should continue the previous expression.
+**Changes Made**:
+1. **scanner.rb**: Modified `nolfws()` to check if newline is followed by `.`
+2. **scanner.rb**: Added `peek_past_newline_is_dot?()` helper method
+3. When `nolfws()` encounters a newline, it peeks ahead past horizontal whitespace
+4. If next character is `.`, treats newline as whitespace and continues
+5. If not `.`, stops at newline as before (preserves statement boundary behavior)
 
-**Affects**:
-- symbol_spec.rb:44 - `ruby_exe(...)\n  .should == ...`
-- Any code using multi-line method chains with `.` at line start
-- Common Ruby style for fluent interfaces
+**Implementation Details**:
+```ruby
+def nolfws
+  while (c = peek) && NOLFWS.member?(c.ord) do get; end
+  # Check if newline is followed by . (method chaining)
+  if peek == LF && peek_past_newline_is_dot?
+    get  # consume the newline
+    nolfws  # recursively skip more whitespace
+  end
+end
 
-**Implementation Needed**:
-1. In tokenizer, after seeing newline, peek ahead past whitespace
-2. If next non-whitespace character is `.`, treat newline as whitespace (continue expression)
-3. Otherwise, treat newline as statement boundary
+def peek_past_newline_is_dot?
+  # Save state, consume newline + spaces, check for ., restore state
+  # Returns true if next line starts with .
+end
+```
 
-**Workaround**: Put `.` at end of previous line instead of start of new line.
+**Test Results**:
+- ✅ selftest passes
+- ✅ selftest-c passes
+- ✅ spec/method_chain_newline_spec.rb: 3/3 tests pass
 
-**Priority**: Medium - Common Ruby idiom, but easy workaround
-
-**Files**:
-- tokens.rb:783-812 - Newline handling in tokenizer
-- This requires lookahead which may need refactoring
+**Note**: Only modified `nolfws()`, not `ws()`, to avoid interfering with comment handling
 
 ---
 
