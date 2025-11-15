@@ -782,7 +782,7 @@ end
 
 ---
 
-## 25. Rescue in do...end Blocks Not Supported
+## 25. Rescue in do...end Blocks - PARTIALLY FIXED
 
 **Problem**: Exception handling with rescue clauses inside lambda/proc blocks doesn't work. Exceptions propagate out instead of being caught.
 
@@ -794,18 +794,17 @@ rescue
   42
 end
 result.call  # ✗ Crashes with "Unhandled exception: error"
-
-# This works:
-result = begin
-  raise "error"
-rescue
-  42
-end  # ✓ Returns 42
 ```
 
-**Status**: Parser works correctly, compiler issue
+**Status**: 🟡 PARTIALLY FIXED (2025-11-15) - Blocked by issue #28
 
-**Root Cause**: Parser correctly creates `:proc` nodes with rescue clauses (parser.rb:516-539), but the compiler doesn't properly transform/compile them to set up exception handling. The `parse_block` method returns `E[pos, :proc, args, exps, rescue_, ensure_body]` with rescue clause, but the compiler doesn't generate the necessary exception handling code for these blocks.
+**Progress Made**:
+1. ✅ Fixed treeoutput.rb (line 271) to preserve rescue/ensure clauses when converting :proc to :lambda
+2. ✅ Fixed transform.rb (lines 50-51, 59-61) to wrap lambda body with rescue/ensure in :block nodes
+3. ✅ selftest passes with these changes
+4. ❌ Blocked by newly discovered bug: begin/rescue doesn't return rescue body values (see issue #28)
+
+**Blocking Issue**: Rescue clauses now flow through to compiler but begin/rescue returns nil instead of rescue body value. This affects ALL rescue usage, not just lambdas.
 
 **Affects**:
 - spec/do_block_rescue_spec.rb - Minimal test case
@@ -821,15 +820,56 @@ result = lambda do
     42
   end
 end
-result.call  # ✓ Works
+result.call  # ✓ Works (but returns nil due to issue #28)
 ```
 
-**Test Files**:
-- test_rescue_simple.rb - Proves begin/rescue works
-- test_rescue_in_do.rb - Proves lambda do...rescue doesn't work
-- spec/do_block_rescue_spec.rb - Minimal spec
+**Priority**: Medium - Partial progress made, full fix requires resolving issue #28
 
-**Priority**: Medium - Has workaround, but affects language spec compatibility
+---
+
+## 28. begin/rescue Returns nil Instead of Rescue Body Value
+
+**Problem**: Rescue clauses execute but return nil instead of the rescue body's value.
+
+```ruby
+result = begin
+  raise "error"
+rescue
+  42
+end
+puts result  # ✗ Prints "nil", should print "42"
+```
+
+**Status**: ❌ BUG - Discovered 2025-11-15
+
+**Root Cause**: In compiler.rb compile_begin_rescue (lines 738-743), the rescue body is compiled but its value in eax is overwritten by:
+1. `[:callm, :$__exception_runtime, :clear]` call (line 742)
+2. ensure clause execution if present (line 745)
+
+The method returns `Value.new([:subexpr])` expecting eax to hold the result, but eax was overwritten.
+
+**Affects**:
+- ALL begin/rescue blocks
+- Blocks issue #25 (rescue in lambdas)
+- Any code relying on rescue clause return values
+
+**Workaround**: Assign rescue value to variable before end of rescue block:
+```ruby
+result = nil
+begin
+  raise "error"
+rescue
+  result = 42
+end
+puts result  # ✓ Prints "42"
+```
+
+**Fix Required**: In compile_begin_rescue, preserve eax value across clear() and ensure clause:
+1. After rescue body (line 739): Save eax to local variable __result
+2. After clear() and ensure (lines 742-745): Restore __result to eax
+3. Same for normal completion path (lines 702-711)
+
+**Priority**: HIGH - Affects all rescue usage, blocks other fixes
 
 ---
 
