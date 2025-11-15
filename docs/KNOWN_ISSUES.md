@@ -886,3 +886,77 @@ Object.send(:remove_const, :A) if defined?(::A)
 **Note**: This is different from issue #4 (Toplevel Constant Paths) which was about `class ::Foo` syntax. This issue is about using `::Foo` in general expressions.
 
 ---
+
+## 22. Method Chaining After Class/Module Definitions Not Supported
+
+**Problem**: Cannot chain method calls after `class ... end` or `module ... end` expressions.
+
+```ruby
+# This fails with "Missing value in expression"
+class << true; self; end.class
+
+# Also fails
+class Foo; end.to_s
+
+# Workaround - assign to variable first
+klass = class << true; self; end
+klass.class  # Works
+```
+
+**Error**: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :class"
+
+**Root Cause**: `parse_class` returns directly without pushing the class definition as a value onto the shunting yard's value stack. Method chaining requires the left-hand side to be a value.
+
+**Affects**:
+- metaclass_spec.rb:185 - `class << true; self; end.should == TrueClass`
+- Any code trying to chain methods after class/module definitions
+
+**Implementation Needed**:
+1. Make `class ... end` and `module ... end` push values onto the value stack
+2. Either refactor to use shunting yard for class definitions, or
+3. Wrap class definition result in a value node after parsing
+
+**Workaround**: Assign class definition to a variable, then call methods on the variable.
+
+**Priority**: Low - Uncommon pattern, easy workaround
+
+**Files**:
+- parser.rb:640-659 - `parse_class` method
+- shunting.rb - Expression parser
+
+---
+
+## 23. Anonymous Splat in Parentheses Not Supported
+
+**Problem**: Anonymous splat assignment `* = value` works at statement level but fails inside parentheses.
+
+```ruby
+# This works
+* = 1
+
+# This fails with "Missing value in expression"
+(* = 1)
+```
+
+**Error**: "Missing value in expression / {splat/1 pri=8}"
+
+**Root Cause**: Inside parentheses, `*` is being treated as a prefix splat operator instead of recognizing it as part of an assignment pattern. The parser doesn't detect that `*` followed by `=` in this context is an anonymous splat assignment.
+
+**Affects**:
+- variables_spec.rb:410 - `(* = 1).should == 1`
+- Any code using anonymous splat in expression contexts
+
+**Implementation Needed**:
+1. Detect `* =` pattern inside parentheses as assignment, not splat operator
+2. Similar to how `a, b = 1, 2` is recognized as multiple assignment
+3. May require lookahead to check if `*` is followed by `=`
+
+**Workaround**: Use anonymous splat without parentheses.
+
+**Priority**: Low - Rare pattern, has simple workaround
+
+**Files**:
+- shunting.rb - Expression parser handling of `*` operator
+- operators.rb - Splat operator definition
+
+---
