@@ -338,34 +338,61 @@ But this broke regular method default parameters and caused selftest-c to fail.
 
 ---
 
-## 13. Alias Keyword Not Implemented
+## 13. Alias Keyword - PARTIALLY IMPLEMENTED
 
-**Problem**: The `alias` keyword is not implemented.
+**Status**: 🟡 PARTIALLY IMPLEMENTED (2025-11-15)
+
+**What Works**:
+- ✅ Inside classes: `alias new_name old_name` works correctly
+- ✅ Parser recognizes `alias` keyword
+- ✅ Compiler generates correct vtable entries
+
+**What Doesn't Work**:
+- ❌ Top-level: `alias` at top-level doesn't create global method aliases
+
+**Problem**: The `alias` keyword works inside classes but not at top-level.
 
 ```ruby
+# This works:
+class Foo
+  def original_method
+    42
+  end
+  alias new_method original_method  # ✓ Works
+end
+Foo.new.new_method  # => 42
+
+# This doesn't work:
 def foo
   "hello"
 end
-
-alias bar foo  # ✗ Not implemented
+alias bar foo  # ✗ Compiles but bar is undefined
+bar  # => "undefined method 'bar' for Object"
 ```
 
-**Root Cause**: Keyword not recognized by parser, feature not implemented.
+**Root Cause**: The `compile_alias` method (compile_class.rb:47-59) only handles class-scoped aliases. It requires a `class_scope` and updates the class vtable. Top-level methods are in Object's vtable but the top-level context doesn't have proper class_scope handling for alias.
 
 **Impact**:
-- alias_spec.rb fails to compile
-- Workaround: Define method that calls original method
+- alias_spec.rb fails at runtime (compiles successfully)
+- Top-level aliases not supported
+- Class-level aliases work fine
 
 **Workaround**:
 ```ruby
+# At top-level, define method that calls original:
 def bar
   foo
 end
+
+# Or use class scope:
+class Object
+  alias bar foo
+end
 ```
 
-**Test**: rubyspec/language/alias_spec.rb
+**Test**: Class aliases work; top-level aliases compile but fail at runtime
 
-**Priority**: Medium - common feature, but workarounds exist
+**Priority**: Low - Class aliases work (common case), top-level has workaround
 
 ---
 
