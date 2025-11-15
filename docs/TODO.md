@@ -10,13 +10,23 @@
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-15 Session 4)**:
+- **✅ Block parameter nested destructuring** - Supports |(a, b)| and |(a, b), c| syntax
+  - Added check for '(' at start of parse_arglist to detect destructuring
+  - Recursively parse nested parameters and wrap in [:destruct, ...] node
+  - Supports mixed patterns: |(a, b), c| parses as ((destruct a b) c)
+  - Result: [[1,2]].map { |(a, b)| a + b } now parses correctly
+  - Test: block_spec.rb advances from line 720 → 934 (214 line jump!)
+  - Note: Parser ready, compiler backend needs destructuring support
+  - Test: selftest passes with 0 failures
+  - Commit: cf7d37d, 01bed2f
+
 - **✅ Made lambda an operator for method chaining** - lambda now supports .call, .inspect, etc.
   - Added lambda as :lambda_stmt operator (prefix, priority 2, arity 0)
   - Added :lambda_stmt handling in shunting.rb to parse block after keyword
   - Removed lambda from special-case keyword list (now uses operator path)
   - Result: `lambda do...end.call` works, nested lambdas work
   - Test: spec/method_def_in_do_block_spec.rb - 2/2 tests PASS ✓
-  - Test: block_spec.rb advances from line 70 to line 679 (609 line jump!)
+  - Test: block_spec.rb advances from line 70 → 679 (609 line jump!)
   - Test: selftest passes with 0 failures
   - Commit: 74517b6
 
