@@ -7,7 +7,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/array_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/assignments_spec.rb
 [34m[CRASH] rubyspec/language/BEGIN_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/block_spec.rb
+[34m[CRASH] rubyspec/language/block_spec.rb
 [34m[CRASH] rubyspec/language/break_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/case_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/class_spec.rb
@@ -87,8 +87,8 @@ Summary:
   Total spec files: 79
   Passed: 3
   Failed: 12
-  Crashed (no test output): 16
-  Failed to compile: 48
+  Crashed (no test output): 17
+  Failed to compile: 47
 
 Individual Test Cases:
   Total tests: 184
