@@ -44,6 +44,17 @@ class Parser < ParserBase
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist(extra_stop_tokens = [])
+    # Check for nested destructuring: |(a, b)|
+    if literal("(")
+      ws
+      # Parse nested argument list
+      nested_args = parse_arglist([")"])
+      ws
+      literal(")") or expected("')' to close destructuring")
+      # Return as a :destruct node
+      return [[:destruct] + nested_args.flatten]
+    end
+
     # Check for **, *, or & prefix
     prefix = nil
     if literal(ASTERISK)
