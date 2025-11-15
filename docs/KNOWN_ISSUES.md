@@ -199,18 +199,6 @@ obj.test_method  # ✓ Returns 42
 
 ---
 
-## 5. Integer::MIN Literal
-
-**Problem**: Value `-1073741824` (exactly at fixnum boundary) corrupts during self-compilation, produces incorrect huge negative number.
-
-**Workaround**: Constant commented out in lib/core/integer_base.rb and lib/core/integer.rb.
-
-**Root Cause**: Unknown. Likely bug in literal parsing or emission for boundary values.
-
-**To Fix**: Debug tokens.rb (Tokens::Int.expect) or compiler constant emission.
-
----
-
 ## 6. Float Support Limited
 
 **Problem**: Float class exists but has minimal implementation (mostly stubs).
@@ -699,15 +687,15 @@ klass.class  # Works
 
 ---
 
-## 23. Anonymous Splat in Parentheses Not Supported
+## 23. Anonymous Splat Assignment Not Supported
 
-**Problem**: Anonymous splat assignment `* = value` works at statement level but fails inside parentheses.
+**Problem**: Anonymous splat assignment `* = value` is not supported at all (neither at statement level nor in parentheses).
 
 ```ruby
-# This works
+# This fails with "Missing value in expression"
 * = 1
 
-# This fails with "Missing value in expression"
+# This also fails
 (* = 1)
 ```
 
