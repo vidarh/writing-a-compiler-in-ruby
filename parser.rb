@@ -421,14 +421,10 @@ class Parser < ParserBase
     # Parse inline parameters: ->(x, y) { } or -> x, y { }
     args = []
     if literal("(")
-      # Parenthesized parameters: ->(x, y) { }
+      # Parenthesized parameters: ->(x, y, z=1, *rest, &block) { }
+      # Use parse_arglist to handle defaults, splats, blocks, etc.
       ws
-      while name = parse_name
-        args << name
-        ws
-        break if !literal(COMMA)
-        ws
-      end
+      args = parse_arglist([")"])  || []
       ws
       literal(")") or expected("')'")
       ws
@@ -442,7 +438,8 @@ class Parser < ParserBase
       elsif @scanner.peek != "{"
         # No block start yet, parse bare parameters using parse_arglist
         # This handles splat (*a), block (&b), keyword args, etc.
-        args = parse_arglist([]) || []
+        # Pass { and :do as stop tokens to prevent default values from consuming the lambda body
+        args = parse_arglist(["{", :do]) || []
       end
       ws
     end

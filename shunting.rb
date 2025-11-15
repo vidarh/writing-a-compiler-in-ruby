@@ -139,7 +139,8 @@ module OpPrec
       if op.sym == :hash_or_block || op.sym == :block
         # Don't treat { as block argument if there was a newline before current token
         # This fixes: -> { x }.a \n lambda { y } where lambda should NOT be block arg to .a
-        if (possible_func || (@ostack.last && @ostack.last.sym == :call) || @ostack.last == @opcallm) && !@tokenizer.newline_before_current
+        # Also don't treat { as block argument if it's in the inhibit list (e.g., stabby lambda params)
+        if (possible_func || (@ostack.last && @ostack.last.sym == :call) || @ostack.last == @opcallm) && !@tokenizer.newline_before_current && !@inhibit.include?(token)
           ocall = @ostack.last ? @ostack.last.sym == :call : false
           @out.value([]) if !ocall
           @out.value(parse_block(token))
