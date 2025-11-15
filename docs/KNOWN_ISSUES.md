@@ -960,3 +960,44 @@ klass.class  # Works
 - operators.rb - Splat operator definition
 
 ---
+
+## 24. Method Chaining Across Newlines Not Supported
+
+**Problem**: Cannot chain method calls when the `.` operator starts a new line.
+
+```ruby
+# This fails with "Missing value in expression"
+foo()
+  .to_s
+
+# This works
+foo().to_s
+
+# Workaround - put . at end of line
+foo().
+  to_s
+```
+
+**Error**: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :to_s"
+
+**Root Cause**: Tokenizer treats newline as statement boundary even when next line starts with `.`. In Ruby, a line starting with `.` should continue the previous expression.
+
+**Affects**:
+- symbol_spec.rb:44 - `ruby_exe(...)\n  .should == ...`
+- Any code using multi-line method chains with `.` at line start
+- Common Ruby style for fluent interfaces
+
+**Implementation Needed**:
+1. In tokenizer, after seeing newline, peek ahead past whitespace
+2. If next non-whitespace character is `.`, treat newline as whitespace (continue expression)
+3. Otherwise, treat newline as statement boundary
+
+**Workaround**: Put `.` at end of previous line instead of start of new line.
+
+**Priority**: Medium - Common Ruby idiom, but easy workaround
+
+**Files**:
+- tokens.rb:783-812 - Newline handling in tokenizer
+- This requires lookahead which may need refactoring
+
+---
