@@ -432,20 +432,16 @@ class Parser < ParserBase
       literal(")") or expected("')'")
       ws
     else
-      # Try to parse bare parameters: -> x, y { }
+      # Try to parse bare parameters: -> x, y { } or -> *a, b { }
       # Only parse parameters if we don't see { or do
       do_token = expect(:do)
       if do_token
         # Found 'do' - unget it for parse_block to consume
         @scanner.unget(do_token)
       elsif @scanner.peek != "{"
-        # No block start yet, parse bare parameters
-        while name = parse_name
-          args << name
-          ws
-          break if !literal(COMMA)
-          ws
-        end
+        # No block start yet, parse bare parameters using parse_arglist
+        # This handles splat (*a), block (&b), keyword args, etc.
+        args = parse_arglist([]) || []
       end
       ws
     end
