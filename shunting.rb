@@ -126,17 +126,28 @@ module OpPrec
           return :prefix
         elsif op.sym == :lambda_stmt
           #STDERR.puts "   lambda statement"
-          # Lambda keyword already consumed, just parse the block
+          # Lambda keyword already consumed, try to parse the block
           @parser.ws
-          block = @parser.parse_block or @parser.expected("do .. end block")
-          # Build lambda node: [:lambda, args, body, rescue, ensure]
-          result = Parser::E[@parser.position, :lambda, *block[1..-1]]
-          @out.value(result)
-          return :prefix
+          block = @parser.parse_block
+          if block
+            # Found a block - this is lambda do...end or lambda { }
+            # Build lambda node: [:lambda, args, body, rescue, ensure]
+            result = Parser::E[@parser.position, :lambda, *block[1..-1]]
+            @out.value(result)
+            return :prefix
+          else
+            # No block found - treat 'lambda' as a method name/call
+            # Push :lambda as a value and mark as possible function
+            @out.value(:lambda)
+            possible_func = true
+            opstate = :infix_or_postfix
+            # Set op to nil to skip further operator processing
+            op = nil
+          end
         end
       end
 
-      if op.sym == :hash_or_block || op.sym == :block
+      if op && (op.sym == :hash_or_block || op.sym == :block)
         # Don't treat { as block argument if there was a newline before current token
         # This fixes: -> { x }.a \n lambda { y } where lambda should NOT be block arg to .a
         # Also don't treat { as block argument if it's in the inhibit list (e.g., stabby lambda params)
@@ -156,9 +167,9 @@ module OpPrec
                                       scanner ? scanner.lineno : nil,
                                       scanner ? scanner.col : nil)
         end
-      elsif op.sym == :quoted_exp
+      elsif op && op.sym == :quoted_exp
         @out.value(parse_quoted_exp)
-      elsif op.type == :rp
+      elsif op && op.type == :rp
         # Handle empty parentheses/arrays/hashes
         if lastlp
           # Check if it's () vs [] vs {}
@@ -190,7 +201,7 @@ module OpPrec
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break
-      elsif op.type == :lp
+      elsif op && op.type == :lp
         reduce(ostack, op)
         opstate = shunt_subexpr([op], src, possible_func)
         ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
@@ -203,7 +214,7 @@ module OpPrec
         # So we need to know if there's whitespace, and we then higher up need to know if
         # if's a method. Fuck the Ruby grammar
         reduce(@ostack, @opcall2) if @ostack[-1].nil? || @ostack[-1].sym != :call
-      else
+      elsif op
         reduce(ostack, op)
         opstate = :prefix
         @ostack << op
