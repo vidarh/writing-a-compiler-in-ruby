@@ -6,10 +6,28 @@
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, **1 passed (1%)**, 1 failed, 23 crashed, **54 compile failures (68%)** - baseline from Nov 12
+**Language Specs**: 79 files, **1 passed (1%)**, 1 failed, **24 crashed**, **53 compile failures (67%)**
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-15 Session 4)**:
+- **✅ Anonymous block forwarding** - Supports bare & in parameter lists (Ruby 3.1+)
+  - Allow & without name: def foo(&); end, proc { |&| }
+  - Added AMP to allowed prefixes without names (parser.rb:86)
+  - Enables block forwarding without naming the block parameter
+  - Test: block_spec.rb now **COMPILES** (was COMPILE FAIL)
+  - Test: selftest passes with 0 failures
+  - Commit: 5e8f9fb
+
+- **✅ Fixed nested destructuring with special parameters**
+  - Fixed destructuring to preserve nested structure (parser.rb:55)
+  - Removed .flatten that was breaking |(a, b)| parsing
+  - Fixed transform.rb to not add defaults to :rest/:block/:keyrest/:key/:keyreq/:destruct
+  - Root cause: transform.rb was wrapping ALL args with [:default, :nil], even [:args, :rest]
+  - This created invalid [[:args, :rest], :default, :nil] that function.rb rejected
+  - Test: block_spec.rb now COMPILES
+  - Test: selftest passes with 0 failures
+  - Commit: 5e8f9fb
+
 - **✅ Block parameter nested destructuring** - Supports |(a, b)| and |(a, b), c| syntax
   - Added check for '(' at start of parse_arglist to detect destructuring
   - Recursively parse nested parameters and wrap in [:destruct, ...] node
@@ -99,7 +117,7 @@
 
 Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
-### Critical Blockers (Remaining 51 COMPILE FAIL specs)
+### Critical Blockers (Remaining 53 COMPILE FAIL specs)
 
 **Quick Wins (Likely Simple Fixes)**:
 - [x] **unless_spec** - ✅ FIXED - Handle nil in get_arg (compiler.rb:138), now PASSES 6/6 tests
@@ -142,7 +160,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 ### Method/Block Specs
 - [ ] **method_spec.rb** - COMPILE FAIL
-- [ ] **block_spec.rb** - COMPILE FAIL
+- [ ] **block_spec.rb** - CRASH (compiles, runtime segfault - likely KNOWN_ISSUES #3)
 - [ ] **proc_spec.rb** - COMPILE FAIL
 - [ ] **lambda_spec.rb** - COMPILE FAIL
 - [ ] **yield_spec.rb** - COMPILE FAIL
