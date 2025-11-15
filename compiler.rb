@@ -706,8 +706,18 @@ class Compiler
       # Execute else clause if present (only runs when NO exception was raised)
       compile_do(lscope, *else_body) if else_body
 
+      # Save result before ensure clause (ensure might overwrite eax)
+      if ensure_body
+        @e.pushl(:eax)
+      end
+
       # Execute ensure clause if present (always runs on normal completion)
       compile_do(lscope, *ensure_body) if ensure_body
+
+      # Restore result after ensure clause
+      if ensure_body
+        @e.popl(:eax)
+      end
 
       @e.jmp(after_label)
 
@@ -726,11 +736,27 @@ class Compiler
       # Compile rescue body
       compile_do(lscope, *rescue_body) if rescue_body
 
+      # Save result before clear (clear overwrites eax with its return value)
+      @e.pushl(:eax)
+
       # Clear exception from singleton
       compile_eval_arg(lscope, [:callm, :$__exception_runtime, :clear])
 
+      # Restore result after clear
+      @e.popl(:eax)
+
+      # Save result again if ensure clause present (ensure might overwrite eax)
+      if ensure_body
+        @e.pushl(:eax)
+      end
+
       # Execute ensure clause if present (always runs even after rescue)
       compile_do(lscope, *ensure_body) if ensure_body
+
+      # Restore result after ensure clause
+      if ensure_body
+        @e.popl(:eax)
+      end
 
       # Jump to after label (rescue completed normally)
       @e.jmp(after_label)
