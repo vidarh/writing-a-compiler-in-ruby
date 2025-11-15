@@ -9,6 +9,35 @@
 **Language Specs**: 79 files, **3 passed (4%)**, 12 failed, **17 crashed**, **47 compile failures (59%)**
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
+**Recent Fixes (2025-11-15 Session 6 continuation)**:
+- **✅ Multi-line lambda in it_behaves_like** - Fixed run_rubyspec sed rewrite
+  - Changed it_behaves_like sed regex to not add `)` when line ends with `{`
+  - Pattern: `s/^\([[:space:]]*\)it_behaves_like \(.*[^{]\)$/\1it_behaves_like(\2)/`
+  - Multi-line lambdas like `it_behaves_like :foo, -> x {` no longer broken
+  - Previous: `it_behaves_like(:foo, -> x {)` - broken syntax
+  - Fixed: `it_behaves_like :foo, -> x {` - closing `)` added after `}`
+  - Result: predefined_spec.rb line 794 parse error FIXED
+  - Test: selftest passes with 0 failures
+  - Commit: 8b7e079
+
+- **✅ Hash symbol with => operator** - Fixed {:b=>true} parsing
+  - Check if `=` is followed by `>` before consuming it as part of symbol (sym.rb:17-19)
+  - Previous: `:b=>true` parsed as `[:callm, :b=, :>, true]` (setter symbol :b=, then > operator)
+  - Fixed: `:b=>true` parses as `[:pair, :b, true]` (hash pair)
+  - Setter symbols like `:foo=` still work correctly
+  - Result: yield_spec.rb now **COMPILES** (was COMPILE FAIL with "Literal Hash must contain key value pairs")
+  - Test: selftest passes with 0 failures
+  - Commit: 86c8469
+
+- **✅ Alias statement in blocks** - alias now works in do...end blocks
+  - Added parse_alias to parse_defexp alternatives (parser.rb:482)
+  - parse_exp calls parse_alias (line 790) for top-level statements
+  - parse_defexp (used by blocks) was missing parse_alias
+  - Result: `do; alias new_name old_name; end` now parses correctly
+  - Test: alias_spec.rb parse error FIXED (now compile error - needs alias implementation)
+  - Test: selftest passes with 0 failures
+  - Commit: 7f878a3
+
 **Recent Fixes (2025-11-15 Session 5)**:
 - **✅ Lambda keyword without block in expression** - Supports lambda { lambda } syntax
   - Check if block present after :lambda_stmt operator (shunting.rb:131-145)
