@@ -1001,3 +1001,125 @@ foo().
 - This requires lookahead which may need refactoring
 
 ---
+
+## 25. Rescue in do...end Blocks Not Supported
+
+**Problem**: Exception handling with rescue clauses inside lambda/proc blocks doesn't work. Exceptions propagate out instead of being caught.
+
+```ruby
+# This fails:
+result = lambda do
+  raise "error"
+rescue
+  42
+end
+result.call  # ✗ Crashes with "Unhandled exception: error"
+
+# This works:
+result = begin
+  raise "error"
+rescue
+  42
+end  # ✓ Returns 42
+```
+
+**Status**: Parser works correctly, compiler issue
+
+**Root Cause**: Parser correctly creates `:proc` nodes with rescue clauses (parser.rb:516-539), but the compiler doesn't properly transform/compile them to set up exception handling. The `parse_block` method returns `E[pos, :proc, args, exps, rescue_, ensure_body]` with rescue clause, but the compiler doesn't generate the necessary exception handling code for these blocks.
+
+**Affects**:
+- spec/do_block_rescue_spec.rb - Minimal test case
+- rubyspec/language/block_spec.rb:342 - "supports rescue inside do...end block"
+- Any code using rescue clauses inside lambda/proc blocks
+
+**Workaround**: Use begin/rescue/end instead of inline rescue in blocks:
+```ruby
+result = lambda do
+  begin
+    raise "error"
+  rescue
+    42
+  end
+end
+result.call  # ✓ Works
+```
+
+**Test Files**:
+- test_rescue_simple.rb - Proves begin/rescue works
+- test_rescue_in_do.rb - Proves lambda do...rescue doesn't work
+- spec/do_block_rescue_spec.rb - Minimal spec
+
+**Priority**: Medium - Has workaround, but affects language spec compatibility
+
+---
+
+## 26. Hash Spread Operator (**) Not Supported
+
+**Problem**: The hash spread operator `**` (also called kwsplat) is parsed as exponentiation operator instead of hash spread, causing parse errors.
+
+```ruby
+# This fails:
+h = {b: 2, c: 3}
+{**h, a: 1}  # ✗ Parse error: "Missing value in expression / op: {**/2 pri=21}"
+
+# Expected behavior (MRI Ruby):
+{**h, a: 1}  # => {:b=>2, :c=>3, :a=>1}
+```
+
+**Status**: Parser bug - `**` needs context-sensitive handling
+
+**Root Cause**: The `**` operator is defined in operators.rb as an infix exponentiation operator (priority 21). Inside hash literals, `**expr` should be treated as a PREFIX hash spread operator, not as infix exponentiation.
+
+**Current Parse Tree** (WRONG):
+```ruby
+result = {**h, a: 1}
+# Parses as: [:hash, [:**, :result, :h], [:pair, :a, 1]]
+# The ** operator consumed :result from OUTSIDE the hash as left operand!
+```
+
+**Expected Parse Tree** (CORRECT):
+```ruby
+result = {**h, a: 1}
+# Should parse as: [:assign, :result, [:hash, [:kwsplat, :h], [:pair, :a, 1]]]
+# The ** should be prefix operator creating [:kwsplat, :h] node
+```
+
+**Technical Details**:
+1. `**` appears inside hash literal `{...}`
+2. Parser calls `shunt_subexpr([HASH],src)` to parse hash contents (shunting.rb:161)
+3. `shunt_subexpr` creates new operator stack but SHARES the value stack with outer expression
+4. The `**` operator (infix) grabs values from outer expression's value stack
+5. This causes `**` to consume `:result` variable from outside the hash
+
+**Affects**:
+- rubyspec/language/hash_spec.rb:163 - Hash spread expansion
+- rubyspec/language/keyword_arguments_spec.rb - Keyword argument splatting
+- Any code using `{**hash}` syntax for hash spreading
+
+**Workaround**: Manually merge hashes instead of using spread operator:
+```ruby
+# Instead of: {**h1, **h2, a: 1}
+# Use:
+result = h1.dup
+h2.each { |k, v| result[k] = v }
+result[:a] = 1
+```
+
+**Implementation Needed**:
+1. **Context-sensitive parsing**: Detect when `**` appears in hash literal context
+2. **Treat as prefix operator**: Inside `{...}`, `**expr` should parse as `[:kwsplat, expr]`
+3. **Isolate value stack**: Hash literals may need their own value stack context to prevent operators from reaching outside
+4. **Compiler support**: Implement `compile_kwsplat` to handle hash spreading at runtime
+
+**Alternative Approaches**:
+- Add `**` as both infix (exponentiation) and prefix (kwsplat) operator with context detection
+- Create separate `:kwsplat` operator that's only valid in hash contexts
+- Modify `shunt_subexpr` to create isolated value stack for hash literals
+
+**Test Files**:
+- test_hash_spread.rb - Minimal reproduction
+- spec/hash_spread_spec.rb - Comprehensive test cases
+
+**Priority**: High - Blocks hash_spec.rb and keyword_arguments_spec.rb, common Ruby pattern
+
+---

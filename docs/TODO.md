@@ -194,10 +194,11 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [x] **nil ClassScope** - ✅ FIXED (compile_class.rb) - break_spec, line_spec, file_spec now compile
 - [ ] **Classes-in-lambdas runtime segfault** - Compiles but crashes (see KNOWN_ISSUES #3) - blocks break_spec runtime
 - [ ] **Splat in assignment LHS** - Affects: next_spec, assignments_spec. See KNOWN_ISSUES #17
-- [ ] **Hash spread operator `**`** - Affects: hash_spec, keyword_arguments_spec. Context-sensitive parsing needed
+- [ ] **Hash spread operator `**`** - Affects: hash_spec, keyword_arguments_spec. See KNOWN_ISSUES #26. Parser treats ** as exponentiation, needs context-sensitive handling
 - [ ] **Fixture loading** - file_spec, line_spec link failures (CodeLoadingSpecs fixtures need File methods)
 
 **Medium Priority**:
+- [ ] **Rescue in do...end blocks** - Affects: block_spec. See KNOWN_ISSUES #25. Parser works, compiler doesn't handle :proc with rescue
 - [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
 - [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed
 

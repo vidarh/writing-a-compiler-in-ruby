@@ -1,4 +1,4 @@
-require_relative '../rubyspec/spec_helper'
+require_relative '../rubyspec_helper'
 
 # rescue inside do...end blocks
 # See: rubyspec/language/block_spec.rb:342
