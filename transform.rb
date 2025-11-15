@@ -61,8 +61,11 @@ class Compiler
           if a.is_a?(Array) && a[1] == :default
             # Already in [name, :default, value] format
             a
-          elsif a.is_a?(Array) && [:rest, :block, :keyrest, :key, :keyreq, :destruct].include?(a[1])
-            # Special parameter types (splat, block, destructure, etc.) - don't add default
+          elsif a.is_a?(Array) && [:rest, :block, :keyrest, :key, :keyreq].include?(a[1])
+            # Special parameter types (splat, block, keyword args, etc.) - don't add default
+            a
+          elsif a.is_a?(Array) && a[0] == :destruct
+            # Destructuring parameters [:destruct, :a, :b] - don't add default
             a
           else
             # Simple symbol - wrap it with default :nil
