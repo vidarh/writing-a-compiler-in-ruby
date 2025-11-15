@@ -331,7 +331,7 @@ class Parser < ParserBase
         rescue_ = E[pos, :rescue, c, name, body]
         break
       end
-      exp = parse_defexp
+      exp = parse_exp
       break if !exp
       exps << exp
     end
