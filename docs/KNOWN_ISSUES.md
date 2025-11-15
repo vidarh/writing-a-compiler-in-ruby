@@ -992,6 +992,66 @@ e[2] = [:do,
 
 **Note**: One test fails because Range#== returns the Range object instead of a boolean true/false. This is a separate bug in lib/core/range.rb, not related to this fix
 
+**CRITICAL**: See issue #30 - for loops compile but fail at runtime with "undefined method" errors for loop variables
+
+---
+
+## 30. for Loops Fail at Runtime - Loop Variables Not Recognized
+
+**Status**: CRITICAL BUG - for loops compile but don't execute
+
+**Problem**: The `for` loop transformation creates `:proc` nodes that don't properly set up block parameters. When the loop body tries to reference the loop variable, it fails with "undefined method" error.
+
+```ruby
+for i in [1, 2, 3]
+  puts i
+end
+# ✗ Unhandled exception: undefined method 'i' for Object
+```
+
+**Root Cause**: The `rewrite_for()` method in transform.rb creates `:proc` nodes directly:
+```ruby
+proc_node = E[e.position, :proc, [var], body_exps, nil, nil]
+```
+
+These proc nodes bypass the normal `rewrite_lambda()` transformation that sets up proper parameter handling and closure environments. When the proc is executed, the parameter `var` isn't available as a local variable in the block scope.
+
+**Impact**:
+- ALL for loops fail at runtime (not just method call targets like `for obj.attr`)
+- for_spec.rb cannot run any tests
+- This is a regression from issue #27 which made for loops compile and chain methods but broke runtime execution
+
+**Affects**:
+- rubyspec/language/for_spec.rb - compiles but crashes immediately
+- Any code using for loops
+
+**Workaround**: Use `.each` with explicit blocks instead of for loops:
+```ruby
+# Instead of: for i in [1,2,3]; puts i; end
+[1,2,3].each { |i| puts i }
+```
+
+**Technical Details**:
+The transformation converts:
+```ruby
+for x in array; body; end
+```
+
+To:
+```ruby
+(__for_tmp = array; __for_tmp.each { |x| body }; __for_tmp)
+```
+
+But the block `{ |x| body }` is created as a raw `:proc` node that doesn't go through the lambda rewriting phase. This means:
+1. The parameter `x` isn't added to the function's argument list properly
+2. The closure environment isn't set up
+3. Variable lookups for `x` fail and fall through to method_missing
+
+**Potential Fix**:
+The `:proc` nodes created in `rewrite_for` need to be marked so they go through `rewrite_lambda()` transformation, OR the transformation needs to manually create the proper closure environment and parameter setup that `rewrite_lambda()` would create.
+
+**Priority**: CRITICAL - Blocks all for loop usage
+
 ---
 
 ## 29. Long Method Names Cause Assembly Comment Header Crashes - RESOLVED ✓
