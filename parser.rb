@@ -51,8 +51,8 @@ class Parser < ParserBase
       nested_args = parse_arglist([")"])
       ws
       literal(")") or expected("')' to close destructuring")
-      # Build destruct node
-      args = [[:destruct] + nested_args.flatten]
+      # Build destruct node - keep nested structure, don't flatten
+      args = [[:destruct] + nested_args]
       # Check if there are more parameters after the destructuring
       nolfws
       if literal(COMMA)
@@ -82,7 +82,8 @@ class Parser < ParserBase
     if !(name = parse_name)
       # Allow bare splat (e.g., def foo(*); end) - use special name :_
       # Also allow bare keyword splat (e.g., def foo(**); end)
-      if prefix == ASTERISK || prefix == "**"
+      # Also allow bare block (e.g., def foo(&); end) - anonymous block forwarding (Ruby 3.1+)
+      if prefix == ASTERISK || prefix == "**" || prefix == AMP
         name = :_
       elsif prefix
         expected("argument name following '#{prefix}'")
