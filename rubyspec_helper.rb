@@ -31,6 +31,18 @@ class ScratchPad
   end
 end
 
+# Stub for SpecEvaluate - used in some specs to annotate test context
+# Just provides a settable desc attribute
+class SpecEvaluate
+  def self.desc=(value)
+    @desc = value
+  end
+
+  def self.desc
+    @desc
+  end
+end
+
 # Tolerance for floating point comparisons
 TOLERANCE = 0.00001
 
