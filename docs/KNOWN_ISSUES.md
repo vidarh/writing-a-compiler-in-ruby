@@ -885,62 +885,34 @@ result[:a] = 1
 
 ---
 
-## 27. Method Chaining on for...end Loops Not Supported
+## 27. Method Chaining on for...end Loops - RESOLVED ✓
+
+**Status**: ✅ RESOLVED (2025-11-15)
 
 **Problem**: Cannot chain methods after `for...end` loops. The `for` keyword is parsed as a statement, not as an expression that returns a value.
 
 ```ruby
-# This fails:
+# This used to fail:
 for i in 1..3; end.class
 # Error: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :class"
 
-# Expected behavior (MRI Ruby):
-for i in 1..3; end.class  # => Range
+# Now works (matches MRI Ruby):
+for i in 1..3; end.class  # => Range ✓
+(for i in [:a, :b]; end).length  # => 2 ✓
 ```
 
-**Status**: Parser limitation - `for` needs operator-based parsing like `while`/`until`
+**Resolution**: Implemented operator-based parsing for `for` loops (similar to while/until)
 
-**Root Cause**: The `for` keyword is parsed by `parse_for` method in parser.rb (line 247), which is called from `parse_defexp` as a statement-level parser. It directly returns the `:for` AST node without going through the shunting yard expression parser.
+**Changes Made**:
+1. **operators.rb**: Added `for` as `:for_stmt` operator with precedence 2
+2. **parser.rb**: Created `parse_for_body()` method that doesn't consume 'for' keyword
+3. **shunting.rb**: Added handler for `:for_stmt` in `oper()` method
+4. **parser.rb**: Removed `parse_for` from `parse_defexp` chain
+5. **transform.rb**: Modified `rewrite_for()` to return enumerable instead of nil
+   - Transforms `for x in arr; body; end` to `(tmp = arr; tmp.each { |x| body }; tmp)`
+   - This matches MRI Ruby semantics where for loops return the enumerable
 
-This means the `end` keyword is consumed by `parse_for`, and the parser doesn't recognize that the entire `for...end` construct should be a value that can have methods chained onto it.
-
-**Comparison to Fixed Constructs**:
-
-In contrast, `while`/`until`/`if`/`unless` were fixed to support method chaining (see KNOWN_ISSUES #2):
-- They are defined as operators in operators.rb (`:while_mod`, `:until_mod`, etc.)
-- When appearing in prefix position, shunting.rb calls `parse_while_until_body(:while)`
-- This returns the loop as a value, enabling method chaining
-
-**Example of Working Code**:
-```ruby
-# These work because while/until are operators:
-while false; end.class  # => NilClass ✓
-until true; end.class   # => NilClass ✓
-if true; 42; end.class  # => Integer ✓
-
-# This fails because for is a statement:
-for i in 1..3; end.class  # ✗ Parse error
-```
-
-**Affects**:
-- rubyspec/language/for_spec.rb:261 - "returns expr"
-- Any code using `for...end` in expression contexts
-- Assignment: `result = for i in array; end`
-
-**Workaround**: Assign the for loop result to a variable, then call methods:
-```ruby
-# Instead of: for i in 1..3; end.class
-result = for i in 1..3; end
-result.class
-```
-
-**Implementation Needed**:
-1. **Add `for` operator**: Define in operators.rb as `:for_stmt` operator (similar to `:while_mod`)
-2. **Handle in shunting yard**: Add case in shunting.rb when `:for_stmt` appears in prefix position
-3. **Create parse_for_body**: Method that doesn't consume `for` keyword, returns `:for` AST node as value
-4. **Remove from parse_defexp**: Remove `parse_for` call from statement parser chain
-
-**Pattern to Follow** (from while/until fix):
+**Implementation Details**:
 ```ruby
 # operators.rb:
 "for" => Oper.new(2, :for_stmt, :infix, 2, 2, :right, 1),
@@ -949,12 +921,23 @@ result.class
 elsif op.sym == :for_stmt
   @out.value(@parser.parse_for_body())
   return :prefix
+
+# transform.rb (rewrite_for):
+# for x in array; body; end => (tmp = array; tmp.each { |x| body }; tmp)
+e[0] = :let
+e[1] = [:__for_tmp]
+e[2] = [:do,
+  [:assign, :__for_tmp, enumerable],
+  [:callm, :__for_tmp, :each, [], proc_node],
+  :__for_tmp
+]
 ```
 
-**Test Files**:
-- test_for_should2.rb - Minimal reproduction
-- spec/for_end_method_chain_spec.rb - Comprehensive test cases
+**Test Results**:
+- ✅ selftest-c passes (self-compilation verified)
+- ✅ spec/for_end_method_chain_spec.rb: 2/3 tests pass (1 fails due to unrelated Range#== bug)
+- ✅ Method chaining works: `(for i in 1..3; end).class` => Range
 
-**Priority**: Medium - Has simple workaround, but blocks for_spec.rb and is inconsistent with while/until/if behavior
+**Note**: One test fails because Range#== returns the Range object instead of a boolean true/false. This is a separate bug in lib/core/range.rb, not related to this fix
 
 ---
