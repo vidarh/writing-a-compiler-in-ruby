@@ -993,3 +993,76 @@ e[2] = [:do,
 **Note**: One test fails because Range#== returns the Range object instead of a boolean true/false. This is a separate bug in lib/core/range.rb, not related to this fix
 
 ---
+
+## 29. Long Method Names Cause Assembly Comment Header Crashes - RESOLVED ✓
+
+**Status**: ✅ RESOLVED (2025-11-15)
+
+**Problem**: Method names longer than ~70 characters caused compilation to fail with "negative argument (ArgumentError)" in emitter.rb:614.
+
+```ruby
+class Container
+  def explicit_return_in_rescue_and_explicit_return_in_ensure
+    # ... code ...
+  end
+end
+# ✗ Compilation failed: emitter.rb:614:in `*': negative argument (ArgumentError)
+```
+
+**Root Cause**: The `func()` method in emitter.rb generates a centered comment header for each function:
+
+```ruby
+lspc = (70 - name.length) / 2
+rspc = 70 - name.length - lspc
+emit("#{"#"*lspc} #{name} #{"#"*rspc}")
+```
+
+When the method name (including class prefix like `__method_Container_explicit_return...`) exceeds 70 characters, `lspc` becomes negative, causing `"#"*lspc` to raise ArgumentError.
+
+**Resolution**: Truncate long names in comments while preserving readable labels for short names
+
+**Changes Made** (emitter.rb:611-623):
+```ruby
+# Truncate long names for the comment header to avoid negative lspc
+# Keep names under 60 chars to leave room for padding
+display_name = name.to_s
+if display_name.length > 60
+  # Truncate and add hash suffix for uniqueness
+  hash_suffix = display_name.hash.abs.to_s(16)[0..7]
+  display_name = display_name[0..50] + "..." + hash_suffix
+end
+
+lspc = (70 - display_name.length) / 2
+rspc = 70 - display_name.length - lspc
+
+emit("#{"#"*lspc} #{display_name} #{"#"*rspc}")
+```
+
+**Implementation Details**:
+- Short names (≤60 chars): Used as-is in comment headers for readability
+- Long names (>60 chars): Truncated to 50 chars + "..." + 8-char hash suffix
+- Hash suffix ensures uniqueness when multiple long names truncate to same prefix
+- Actual assembly label (used in stabs/export/label) remains full name - only comment is truncated
+
+**Example Output**:
+```assembly
+#### __method_Container_explicit_return_in_rescue_and_ex...131635f2 ####
+
+.stabs "__method_Container_explicit_return_in_rescue_and_explicit_return_in_ensure:F(0,0)",36,0,0,__method_Container_explicit_return_in_rescue_and_explicit_return_in_ensure
+.globl __method_Container_explicit_return_in_rescue_and_explicit_return_in_ensure
+```
+
+**Test Results**:
+- ✅ test_long_method_name.rb: Now compiles successfully
+- ✅ rubyspec/language/ensure_spec.rb: Now compiles (was COMPILE FAIL)
+- ✅ selftest: Passes with 0 failures
+- ✅ selftest-c: Passes with 0 failures
+
+**Affects**:
+- rubyspec/language/ensure_spec.rb (now compiles, was blocked by this bug)
+- Any spec files with methods having long descriptive names
+- Particularly affects specs with ensure/rescue that use explicit method names
+
+**Priority**: Medium - Fixes compilation failure for ensure_spec.rb and any code with long method names
+
+---

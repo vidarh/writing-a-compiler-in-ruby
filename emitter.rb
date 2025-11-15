@@ -608,10 +608,19 @@ class Emitter
     emit("")
     emit("")
 
-    lspc = (70 - name.length) / 2
-    rspc = 70 - name.length - lspc
-    
-    emit("#{"#"*lspc} #{name} #{"#"*rspc}")
+    # Truncate long names for the comment header to avoid negative lspc
+    # Keep names under 60 chars to leave room for padding
+    display_name = name.to_s
+    if display_name.length > 60
+      # Truncate and add hash suffix for uniqueness
+      hash_suffix = display_name.hash.abs.to_s(16)[0..7]
+      display_name = display_name[0..50] + "..." + hash_suffix
+    end
+
+    lspc = (70 - display_name.length) / 2
+    rspc = 70 - display_name.length - lspc
+
+    emit("#{"#"*lspc} #{display_name} #{"#"*rspc}")
     emit("")
 
 

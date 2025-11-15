@@ -78,7 +78,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **for_spec.rb** - COMPILE FAIL
 - [ ] **constants_spec.rb** - COMPILE FAIL
 - [ ] **defined_spec.rb** - COMPILE FAIL
-- [ ] **ensure_spec.rb** - COMPILE FAIL
+- [x] **ensure_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed long method name bug) - runtime crash
 - [ ] **rescue_spec.rb** - COMPILE FAIL
 - [ ] **retry_spec.rb** - COMPILE FAIL
 - [ ] **throw_spec.rb** - COMPILE FAIL
