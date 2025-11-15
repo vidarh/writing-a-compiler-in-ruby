@@ -2,12 +2,31 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-14 - Latest Update)
+## Test Status (2025-11-15 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, **1 passed (1%)**, 1 failed, **24 crashed**, **53 compile failures (67%)**
+**Language Specs**: 79 files, **3 passed (4%)**, 12 failed, **17 crashed**, **47 compile failures (59%)**
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
+
+**Recent Fixes (2025-11-15 Session 5)**:
+- **✅ Stabby lambda with default parameters** - Supports -> a=1 { a } syntax
+  - Pass ["{", :do] as stop tokens when parsing stabby lambda bare parameters (parser.rb:442)
+  - Check inhibit list before treating { as block argument (shunting.rb:143)
+  - Prevents default values from consuming lambda body as block argument
+  - Result: `-> a=foo() { a }` now parses correctly, not `foo() { a }`
+  - Test: proc_spec.rb now **COMPILES** (was COMPILE FAIL, now CRASH)
+  - Test: selftest passes with 0 failures
+  - Commits: 0c887d1, 7483a07
+
+- **✅ Proc parameter destructuring detection** - Fixed [:destruct, ...] parameter handling
+  - Fixed transform.rb to check a[0] == :destruct, not a[1] (transform.rb:67-69)
+  - Destructuring has form [:destruct, :a, :b] with :destruct at index 0
+  - Other special params have form [:name, :rest] with type at index 1
+  - Result: proc { |(a, b)| a + b } now compiles without "Arg.name must be Symbol" error
+  - Test: proc_spec.rb now COMPILES (was COMPILE FAIL)
+  - Test: selftest passes with 0 failures
+  - Commit: 0c887d1
 
 **Recent Fixes (2025-11-15 Session 4)**:
 - **✅ Anonymous block forwarding** - Supports bare & in parameter lists (Ruby 3.1+)
@@ -161,7 +180,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 ### Method/Block Specs
 - [ ] **method_spec.rb** - COMPILE FAIL
 - [ ] **block_spec.rb** - CRASH (compiles, runtime segfault - likely KNOWN_ISSUES #3)
-- [ ] **proc_spec.rb** - COMPILE FAIL
+- [x] **proc_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed destructuring detection) - runtime segfault
 - [ ] **lambda_spec.rb** - COMPILE FAIL
 - [ ] **yield_spec.rb** - COMPILE FAIL
 - [ ] **delegation_spec.rb** - COMPILE FAIL
