@@ -648,21 +648,25 @@ Object.send(:remove_const, :A) if defined?(::A)
 - ✅ Module definitions: `module Bar; end.class` returns `Module`
 
 **What Doesn't Work**:
-- ❌ Singleton class definitions: `class << obj; self; end.class` fails with parse error
+- ❌ Singleton class in statement position: `class << obj; self; end.class` fails with parse error
+- ✅ **Workaround works**: `result = (class << obj; self; end).class` - using assignment or parentheses
 
 **Problem**: Cannot chain method calls after singleton class (`class << obj`) expressions.
 
 ```ruby
-# This fails with "Missing value in expression"
-class << true; self; end.class
+# This fails in statement position:
+class << true; self; end.class  # ✗ Parse error
 
 # These work:
-class Foo; end.class    # ✓ Returns Class
-module Bar; end.class   # ✓ Returns Module
+class Foo; end.class              # ✓ Returns Class
+module Bar; end.class             # ✓ Returns Module
+result = (class << true; self; end).class  # ✓ Returns Class (with assignment)
 
-# Workaround - assign to variable first
+# Workarounds:
 klass = class << true; self; end
-klass.class  # Works
+klass.class  # ✓ Works
+
+(class << true; self; end).class  # ✓ Works with parentheses
 ```
 
 **Error**: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :class"
