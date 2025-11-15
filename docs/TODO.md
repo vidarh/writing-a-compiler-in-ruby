@@ -9,6 +9,19 @@
 **Language Specs**: 79 files, **3 passed (4%)**, 12 failed, **17 crashed**, **47 compile failures (59%)**
 **Custom Specs (spec/)**: 36 files, **22 passed (61%)**, 4 failed, 5 crashed, 5 compile failures. 79 tests, 62 passed (78%)
 
+**Recent Fixes (2025-11-15 Session 7)**:
+- **✅ for...end method chaining** - For loops now support method chaining like while/until
+  - Added "for" as :for_stmt operator in operators.rb (precedence 2)
+  - Created parse_for_body() method that doesn't consume 'for' keyword
+  - Added handler for :for_stmt in shunting.rb oper() method
+  - Removed parse_for from parse_defexp chain
+  - Modified rewrite_for() in transform.rb to return enumerable instead of nil
+  - Transforms: `for x in arr; body; end` → `(tmp = arr; tmp.each { |x| body }; tmp)`
+  - Result: `(for i in 1..3; end).class` => Range, method chaining works
+  - Test: spec/for_end_method_chain_spec.rb - 2/3 tests pass (1 fails due to Range#== bug)
+  - Test: selftest-c passes with 0 failures
+  - Commits: d32ad49, a7a621f
+
 **Recent Fixes (2025-11-15 Session 6 continuation)**:
 - **✅ Multi-line lambda in it_behaves_like** - Fixed run_rubyspec sed rewrite
   - Changed it_behaves_like sed regex to not add `)` when line ends with `{`
@@ -198,7 +211,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **Fixture loading** - file_spec, line_spec link failures (CodeLoadingSpecs fixtures need File methods)
 
 **Medium Priority**:
-- [ ] **for...end method chaining** - Affects: for_spec. See KNOWN_ISSUES #27. Needs operator-based parsing like while/until
+- [x] **for...end method chaining** - ✅ FIXED - Added operator-based parsing, method chaining works
 - [ ] **Rescue in do...end blocks** - Affects: block_spec. See KNOWN_ISSUES #25. Parser works, compiler doesn't handle :proc with rescue
 - [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
 - [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed
