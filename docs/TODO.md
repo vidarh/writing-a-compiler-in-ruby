@@ -9,14 +9,30 @@
 **Language Specs**: 79 files, **1 passed (1%)**, 1 failed, 23 crashed, **54 compile failures (68%)** - baseline from Nov 12
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
-**Recent Fixes (2025-11-14 Session 4)**:
+**Recent Fixes (2025-11-15 Session 4)**:
+- **✅ Made lambda an operator for method chaining** - lambda now supports .call, .inspect, etc.
+  - Added lambda as :lambda_stmt operator (prefix, priority 2, arity 0)
+  - Added :lambda_stmt handling in shunting.rb to parse block after keyword
+  - Removed lambda from special-case keyword list (now uses operator path)
+  - Result: `lambda do...end.call` works, nested lambdas work
+  - Test: spec/method_def_in_do_block_spec.rb - 2/2 tests PASS ✓
+  - Test: block_spec.rb advances from line 70 to line 679 (609 line jump!)
+  - Test: selftest passes with 0 failures
+  - Commit: 74517b6
+
+- **✅ Fixed method definitions inside do...end blocks** - def now allowed in block bodies
+  - Added parse_def to parse_defexp alternatives
+  - Allows method definitions inside lambda/proc blocks
+  - Test: `lambda do; def helper; 42; end; helper; end` now works
+  - Commit: 406e819
+
 - **✅ Fixed do...end rescue/else/ensure support** - do...end blocks now support rescue like begin...end
   - Extracted parse_rescue_else_ensure() shared method for parsing rescue/else/ensure clauses
   - Updated parse_begin_body() to use shared method
   - Updated parse_block() to use shared method
-  - Result: `lambda do raise X; rescue X; 42 end` now compiles and works
+  - Changed parse_rescue_else_ensure to call parse_defexp (uses shunting yard for expressions)
+  - Result: `lambda do raise X; rescue X; 42 end` now compiles
   - Test: spec/do_block_rescue_spec.rb compiles (runtime exceptions need work)
-  - Test: block_spec.rb advances from line 342 to line 70 (different bug: def inside do...end)
   - Test: selftest passes with 0 failures
   - Commit: a3eb8f7
 
