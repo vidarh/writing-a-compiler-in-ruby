@@ -46,12 +46,12 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 ### Data Structure Specs
 - [ ] **array_spec.rb** - CRASH (compiles, runtime crash in mspec framework)
-- [ ] **hash_spec.rb** - COMPILE FAIL
-- [ ] **range_spec.rb** - COMPILE FAIL
+- [ ] **hash_spec.rb** - COMPILE FAIL (hash spread operator ** - see KNOWN_ISSUES #26)
+- [x] **range_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed by long method name fix) - runtime segfault
 
 ### Class/Module Specs
-- [ ] **class_spec.rb** - COMPILE FAIL
-- [ ] **module_spec.rb** - COMPILE FAIL
+- [ ] **class_spec.rb** - COMPILE FAIL (nested class `class Foo::Bar`, defined?(::A) issues)
+- [ ] **module_spec.rb** - COMPILE FAIL (nested module `module Foo::Bar`)
 - [ ] **metaclass_spec.rb** - COMPILE FAIL (eigenclass/singleton class)
 - [ ] **singleton_class_spec.rb** - COMPILE FAIL
 - [ ] **class_variable_spec.rb** - CRASH
@@ -76,10 +76,10 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **until_spec.rb** - COMPILE FAIL (until end.should without parens - see KNOWN_ISSUES #1)
 - [ ] **while_spec.rb** - COMPILE FAIL (||= with paren expr - see KNOWN_ISSUES #2)
 - [ ] **for_spec.rb** - COMPILE FAIL
-- [ ] **constants_spec.rb** - COMPILE FAIL
-- [ ] **defined_spec.rb** - COMPILE FAIL
+- [ ] **constants_spec.rb** - COMPILE FAIL (nested class `class Foo::Bar`)
+- [ ] **defined_spec.rb** - COMPILE FAIL (self::Constant static resolution issue)
 - [x] **ensure_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed long method name bug) - runtime crash
-- [ ] **rescue_spec.rb** - COMPILE FAIL
+- [ ] **rescue_spec.rb** - COMPILE FAIL (safe navigation in rescue clause `rescue => self&.var`)
 - [ ] **retry_spec.rb** - COMPILE FAIL
 - [ ] **throw_spec.rb** - COMPILE FAIL
 - [ ] **variables_spec.rb** - COMPILE FAIL
