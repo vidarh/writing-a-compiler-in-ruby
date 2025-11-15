@@ -10,6 +10,21 @@
 **Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
 
 **Recent Fixes (2025-11-15 Session 5)**:
+- **✅ Lambda keyword without block in expression** - Supports lambda { lambda } syntax
+  - Check if block present after :lambda_stmt operator (shunting.rb:131-145)
+  - If no block: treat 'lambda' as method call, push :lambda value, set op = nil
+  - Added null checks for op throughout shunting.rb (lines 150, 170, 172, 204, 217)
+  - Result: `lambda { lambda }` now parses correctly - inner lambda is method call
+  - Test: lambda_spec.rb now **COMPILES** (was COMPILE FAIL)
+  - Test: selftest passes with 0 failures
+  - Commit: ee0b734
+
+- **✅ SpecEvaluate stub** - Fixed linker errors in lambda_spec, method_spec
+  - Added SpecEvaluate class with desc attribute to rubyspec_helper.rb
+  - Some specs use SpecEvaluate.desc to annotate test context
+  - Result: lambda_spec.rb now links successfully (no undefined reference errors)
+  - Commit: 71c496a
+
 - **✅ Stabby lambda with default parameters** - Supports -> a=1 { a } syntax
   - Pass ["{", :do] as stop tokens when parsing stabby lambda bare parameters (parser.rb:442)
   - Check inhibit list before treating { as block argument (shunting.rb:143)
@@ -181,7 +196,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **method_spec.rb** - COMPILE FAIL
 - [ ] **block_spec.rb** - CRASH (compiles, runtime segfault - likely KNOWN_ISSUES #3)
 - [x] **proc_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed destructuring detection) - runtime segfault
-- [ ] **lambda_spec.rb** - COMPILE FAIL
+- [x] **lambda_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed lambda without block + SpecEvaluate stub)
 - [ ] **yield_spec.rb** - COMPILE FAIL
 - [ ] **delegation_spec.rb** - COMPILE FAIL
 - [ ] **keyword_arguments_spec.rb** - COMPILE FAIL
