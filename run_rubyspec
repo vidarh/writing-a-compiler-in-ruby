@@ -99,6 +99,7 @@ run_single_spec() {
     # Filter out require_relative lines and append the spec content
     # WORKAROUND: Add parentheses to describe/it_behaves_like calls to avoid compiler bug
     # Bug: calling func without parens when func has default param + &block causes segfault
+    # NOTE: Skip adding closing paren if line ends with { (multi-line lambda - closing paren goes after })
     # WORKAROUND: Rewrite instance variables to global variables since instance_eval is not implemented
     # This allows 'before :each' blocks to work by using globals instead of instance vars
     # WORKAROUND: Strip hash/range arguments from platform_is/platform_is_not/ruby_bug (2025-10-17 session 12)
@@ -110,7 +111,7 @@ run_single_spec() {
     # TODO: Remove these hacks when compiler properly handles literals
     cat "$SPEC_FILE" | grep -v "require_relative" | \
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
-        sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
+        sed 's/^\([[:space:]]*\)it_behaves_like \(.*[^{]\)$/\1it_behaves_like(\2)/' | \
         sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
         sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
         sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
@@ -352,6 +353,7 @@ elif [ -f "$TARGET" ]; then
     # Filter out require_relative lines and append the spec content
     # WORKAROUND: Add parentheses to describe/it_behaves_like calls to avoid compiler bug
     # Bug: calling func without parens when func has default param + &block causes segfault
+    # NOTE: Skip adding closing paren if line ends with { (multi-line lambda - closing paren goes after })
     # WORKAROUND: Rewrite instance variables to global variables since instance_eval is not implemented
     # This allows 'before :each' blocks to work by using globals instead of instance vars
     # WORKAROUND: Strip hash/range arguments from platform_is/platform_is_not/ruby_bug (2025-10-17 session 12)
@@ -363,7 +365,7 @@ elif [ -f "$TARGET" ]; then
     # TODO: Remove these hacks when compiler properly handles literals
     cat "$SPEC_FILE" | grep -v "require_relative" | \
         sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
-        sed 's/^\([[:space:]]*\)it_behaves_like \(.*\)$/\1it_behaves_like(\2)/' | \
+        sed 's/^\([[:space:]]*\)it_behaves_like \(.*[^{]\)$/\1it_behaves_like(\2)/' | \
         sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
         sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
         sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
