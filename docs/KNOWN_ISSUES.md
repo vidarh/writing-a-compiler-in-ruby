@@ -624,16 +624,26 @@ Object.send(:remove_const, :A) if defined?(::A)
 
 ---
 
-## 22. Method Chaining After Class/Module Definitions Not Supported
+## 22. Method Chaining After Singleton Class Definitions Not Supported
 
-**Problem**: Cannot chain method calls after `class ... end` or `module ... end` expressions.
+**Status**: 🟡 PARTIALLY FIXED (2025-11-15)
+
+**What Works**:
+- ✅ Regular class definitions: `class Foo; end.class` returns `Class`
+- ✅ Module definitions: `module Bar; end.class` returns `Module`
+
+**What Doesn't Work**:
+- ❌ Singleton class definitions: `class << obj; self; end.class` fails with parse error
+
+**Problem**: Cannot chain method calls after singleton class (`class << obj`) expressions.
 
 ```ruby
 # This fails with "Missing value in expression"
 class << true; self; end.class
 
-# Also fails
-class Foo; end.to_s
+# These work:
+class Foo; end.class    # ✓ Returns Class
+module Bar; end.class   # ✓ Returns Module
 
 # Workaround - assign to variable first
 klass = class << true; self; end
@@ -642,23 +652,22 @@ klass.class  # Works
 
 **Error**: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :class"
 
-**Root Cause**: `parse_class` returns directly without pushing the class definition as a value onto the shunting yard's value stack. Method chaining requires the left-hand side to be a value.
+**Root Cause**: Regular `class` and `module` now work (likely fixed when class became an expression). Singleton class (`class <<`) still has the old behavior where it doesn't push a value onto the value stack.
 
 **Affects**:
 - metaclass_spec.rb:185 - `class << true; self; end.should == TrueClass`
-- Any code trying to chain methods after class/module definitions
+- Any code trying to chain methods after singleton class definitions
 
 **Implementation Needed**:
-1. Make `class ... end` and `module ... end` push values onto the value stack
-2. Either refactor to use shunting yard for class definitions, or
-3. Wrap class definition result in a value node after parsing
+1. Make `class << obj ... end` push value onto the value stack (like regular class now does)
+2. Update singleton class parser to match regular class behavior
 
-**Workaround**: Assign class definition to a variable, then call methods on the variable.
+**Workaround**: Assign singleton class to a variable, then call methods on the variable.
 
-**Priority**: Low - Uncommon pattern, easy workaround
+**Priority**: Low - Uncommon pattern, easy workaround, regular class/module already work
 
 **Files**:
-- parser.rb:640-659 - `parse_class` method
+- parser.rb - Singleton class parser
 - shunting.rb - Expression parser
 
 ---
