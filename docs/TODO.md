@@ -198,6 +198,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **Fixture loading** - file_spec, line_spec link failures (CodeLoadingSpecs fixtures need File methods)
 
 **Medium Priority**:
+- [ ] **for...end method chaining** - Affects: for_spec. See KNOWN_ISSUES #27. Needs operator-based parsing like while/until
 - [ ] **Rescue in do...end blocks** - Affects: block_spec. See KNOWN_ISSUES #25. Parser works, compiler doesn't handle :proc with rescue
 - [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
 - [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed

@@ -1123,3 +1123,77 @@ result[:a] = 1
 **Priority**: High - Blocks hash_spec.rb and keyword_arguments_spec.rb, common Ruby pattern
 
 ---
+
+## 27. Method Chaining on for...end Loops Not Supported
+
+**Problem**: Cannot chain methods after `for...end` loops. The `for` keyword is parsed as a statement, not as an expression that returns a value.
+
+```ruby
+# This fails:
+for i in 1..3; end.class
+# Error: "Missing value in expression / op: {callm/2 pri=98} / vstack: [] / rightv: :class"
+
+# Expected behavior (MRI Ruby):
+for i in 1..3; end.class  # => Range
+```
+
+**Status**: Parser limitation - `for` needs operator-based parsing like `while`/`until`
+
+**Root Cause**: The `for` keyword is parsed by `parse_for` method in parser.rb (line 247), which is called from `parse_defexp` as a statement-level parser. It directly returns the `:for` AST node without going through the shunting yard expression parser.
+
+This means the `end` keyword is consumed by `parse_for`, and the parser doesn't recognize that the entire `for...end` construct should be a value that can have methods chained onto it.
+
+**Comparison to Fixed Constructs**:
+
+In contrast, `while`/`until`/`if`/`unless` were fixed to support method chaining (see KNOWN_ISSUES #2):
+- They are defined as operators in operators.rb (`:while_mod`, `:until_mod`, etc.)
+- When appearing in prefix position, shunting.rb calls `parse_while_until_body(:while)`
+- This returns the loop as a value, enabling method chaining
+
+**Example of Working Code**:
+```ruby
+# These work because while/until are operators:
+while false; end.class  # => NilClass ✓
+until true; end.class   # => NilClass ✓
+if true; 42; end.class  # => Integer ✓
+
+# This fails because for is a statement:
+for i in 1..3; end.class  # ✗ Parse error
+```
+
+**Affects**:
+- rubyspec/language/for_spec.rb:261 - "returns expr"
+- Any code using `for...end` in expression contexts
+- Assignment: `result = for i in array; end`
+
+**Workaround**: Assign the for loop result to a variable, then call methods:
+```ruby
+# Instead of: for i in 1..3; end.class
+result = for i in 1..3; end
+result.class
+```
+
+**Implementation Needed**:
+1. **Add `for` operator**: Define in operators.rb as `:for_stmt` operator (similar to `:while_mod`)
+2. **Handle in shunting yard**: Add case in shunting.rb when `:for_stmt` appears in prefix position
+3. **Create parse_for_body**: Method that doesn't consume `for` keyword, returns `:for` AST node as value
+4. **Remove from parse_defexp**: Remove `parse_for` call from statement parser chain
+
+**Pattern to Follow** (from while/until fix):
+```ruby
+# operators.rb:
+"for" => Oper.new(2, :for_stmt, :infix, 2, 2, :right, 1),
+
+# shunting.rb:
+elsif op.sym == :for_stmt
+  @out.value(@parser.parse_for_body())
+  return :prefix
+```
+
+**Test Files**:
+- test_for_should2.rb - Minimal reproduction
+- spec/for_end_method_chain_spec.rb - Comprehensive test cases
+
+**Priority**: Medium - Has simple workaround, but blocks for_spec.rb and is inconsistent with while/until/if behavior
+
+---
