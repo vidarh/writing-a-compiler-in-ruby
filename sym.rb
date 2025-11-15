@@ -11,9 +11,16 @@ module Tokens
       buf = Atom.expect(s)
 
       # If we got an atom (like 'a'), check if it's followed by '=' to form a setter symbol (like ':a=')
+      # BUT: don't consume '=' if it's part of '=>' (hash rocket)
       if buf && s.peek == ?=
         s.get  # consume '='
-        buf = "#{buf}=".to_sym
+        if s.peek == ?>
+          # This is '=>' (hash rocket), not a setter symbol - unget the '='
+          s.unget("=")
+        else
+          # This is a setter symbol like ':a='
+          buf = "#{buf}=".to_sym
+        end
       end
 
       bs = ":#{buf.to_s}"
