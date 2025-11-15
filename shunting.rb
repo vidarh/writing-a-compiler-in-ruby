@@ -2,6 +2,7 @@
 require 'compilererror'
 require 'pp'
 require 'treeoutput'
+require 'ast'
 
 require 'tokenizeradapter'
 
@@ -122,6 +123,15 @@ module OpPrec
         elsif op.sym == :begin_stmt
           #STDERR.puts "   begin statement"
           @out.value(@parser.parse_begin_body)
+          return :prefix
+        elsif op.sym == :lambda_stmt
+          #STDERR.puts "   lambda statement"
+          # Lambda keyword already consumed, just parse the block
+          @parser.ws
+          block = @parser.parse_block or @parser.expected("do .. end block")
+          # Build lambda node: [:lambda, args, body, rescue, ensure]
+          result = Parser::E[@parser.position, :lambda, *block[1..-1]]
+          @out.value(result)
           return :prefix
         end
       end
@@ -253,13 +263,12 @@ module OpPrec
         else
           # Check if this is a statement-level keyword that needs special parsing
           # These keywords can appear as expressions (e.g., "a = while true; break; end")
-          # Note: unless, until, and begin are now handled as operators, not in this special case
-          if keyword && [:for, :lambda, :def].include?(token)
+          # Note: unless, until, begin, and lambda are now handled as operators, not in this special case
+          if keyword && [:for, :def].include?(token)
             # Unget the keyword and call the appropriate parser method
             src.unget(token)
             parser_method = case token
               when :for then :parse_for
-              when :lambda then :parse_lambda
               when :def then :parse_def
             end
             result = @parser.send(parser_method)
