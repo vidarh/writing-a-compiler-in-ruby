@@ -7,7 +7,7 @@
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
 **Language Specs**: 79 files, **3 passed (4%)**, 12 failed, **17 crashed**, **47 compile failures (59%)**
-**Custom Specs (spec/)**: 36 files, **22 passed (61%)**, 4 failed, 5 crashed, 5 compile failures. 79 tests, 62 passed (78%)
+**Custom Specs (spec/)**: 36 files, **24 passed (67%)**, 4 failed, 5 crashed, 3 compile failures. 82 tests, 68 passed (82%)
 
 ## High Priority (Language Spec Compilation Failures)
 
@@ -32,7 +32,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 **Medium Priority**:
 - [x] **for...end method chaining** - ✅ FIXED - Added operator-based parsing, method chaining works
-- [ ] **Rescue in do...end blocks** - Affects: block_spec. See KNOWN_ISSUES #25. Parser works, compiler doesn't handle :proc with rescue
+- [x] **Rescue in do...end blocks** - ✅ FIXED - Issues #25 and #28 resolved. spec/do_block_rescue_spec.rb passes 2/2
 - [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
 - [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed
 
