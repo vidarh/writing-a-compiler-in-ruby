@@ -47,9 +47,18 @@ class Compiler
         seen = true
         args = e[1] || E[]
         body = e[2] || nil
+        rescue_clause = e[3]  # May be nil
+        ensure_clause = e[4]  # May be nil
 
         if e[0] == :proc && body
           body = rewrite_proc_return(body)
+        end
+
+        # If there's a rescue or ensure clause, wrap the body in a block node
+        # This mirrors how begin/rescue/ensure works
+        # Block structure: [:block, args, body, rescue_clause, ensure_clause]
+        if rescue_clause || ensure_clause
+          body = E[:block, E[], body, rescue_clause, ensure_clause]
         end
 
         # FIXME: Putting this inline further down appears to break.

@@ -266,7 +266,9 @@ module OpPrec
         # This allows lambda to work like a method call while generating proper lambda nodes
         if o.sym == :call && leftv == :lambda && rightv[2].is_a?(Array) && rightv[2][0] == :proc
           proc_node = rightv[2]
-          @vstack << E[:lambda, proc_node[1], proc_node[2]]
+          # Preserve rescue and ensure clauses from proc node
+          # proc_node is [:proc, args, exps, rescue_, ensure_body]
+          @vstack << E[:lambda, proc_node[1], proc_node[2], proc_node[3], proc_node[4]]
         else
           @vstack << E[o.sym, leftv] + flatten(rightv[1..-1])
         end
