@@ -331,7 +331,7 @@ class Parser < ParserBase
         rescue_ = E[pos, :rescue, c, name, body]
         break
       end
-      exp = parse_exp
+      exp = parse_defexp
       break if !exp
       exps << exp
     end
@@ -466,9 +466,8 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_class || parse_module || parse_sexp ||
+    ret = parse_class || parse_module || parse_def || parse_sexp ||
           parse_for ||
-          parse_lambda ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
