@@ -51,8 +51,16 @@ class Parser < ParserBase
       nested_args = parse_arglist([")"])
       ws
       literal(")") or expected("')' to close destructuring")
-      # Return as a :destruct node
-      return [[:destruct] + nested_args.flatten]
+      # Build destruct node
+      args = [[:destruct] + nested_args.flatten]
+      # Check if there are more parameters after the destructuring
+      nolfws
+      if literal(COMMA)
+        ws
+        more = parse_arglist(extra_stop_tokens) or expected("argument")
+        return args + more
+      end
+      return args
     end
 
     # Check for **, *, or & prefix
