@@ -165,5 +165,41 @@ class Scanner
 
   def nolfws
     while (c = peek) && NOLFWS.member?(c.ord) do get; end
+    # Check if we stopped at a newline that's followed by . (method chaining)
+    # If so, skip the newline and continue as if it were whitespace
+    if peek == LF && peek_past_newline_is_dot?
+      get  # consume the newline
+      nolfws  # recursively skip more whitespace
+    end
+  end
+
+  # Helper: Check if there's a . at the start of the next line (after newline + spaces)
+  def peek_past_newline_is_dot?
+    return false unless peek == LF
+
+    # Save state
+    saved_pos = @position
+    saved_lineno = @lineno
+    saved_col = @col
+
+    # Collect characters we consume
+    consumed = []
+
+    consumed << get  # consume newline
+
+    # Skip horizontal whitespace only
+    while (c = peek) && [9, 32].member?(c.ord)
+      consumed << get
+    end
+
+    # Check for .
+    result = (peek == ?.)
+
+    # Restore position by ungetting in reverse
+    consumed.reverse.each { |ch| unget(ch) }
+    @lineno = saved_lineno
+    @col = saved_col
+
+    result
   end
 end

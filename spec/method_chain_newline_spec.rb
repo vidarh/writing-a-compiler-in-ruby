@@ -1,20 +1,23 @@
 require_relative '../rubyspec_helper'
 
-# Issue #24 in KNOWN_ISSUES.md
-# Method chaining across newlines not supported
-# Error: "Missing value in expression / op: {callm/2 pri=98} / vstack: []"
-# Affects: symbol_spec.rb:44
-
 describe "Method chaining across newlines" do
-  it "allows chaining when . starts new line" do
-    # Minimal reproduction:
-    # foo()
-    #   .to_s
-    def foo
-      42
-    end
-
-    foo()
+  it "allows . at start of line" do
+    def foo; 42; end
+    result = foo()
       .to_s
+    result.should == "42"
+  end
+
+  it "allows multiple chained methods across newlines" do
+    result = [1, 2, 3]
+      .reverse
+      .first
+    result.should == 3
+  end
+
+  it "works with parentheses" do
+    result = (42)
+      .to_s
+    result.should == "42"
   end
 end
