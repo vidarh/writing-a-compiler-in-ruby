@@ -27,10 +27,10 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/heredoc_spec.rb
 [34m[CRASH] rubyspec/language/if_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/keyword_arguments_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/lambda_spec.rb
+[34m[CRASH] rubyspec/language/lambda_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/line_spec.rb
 [34m[CRASH] rubyspec/language/loop_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/magic_comment_spec.rb
+[34m[CRASH] rubyspec/language/magic_comment_spec.rb
 [31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [33m[COMPILE FAIL] rubyspec/language/metaclass_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/method_spec.rb
@@ -48,7 +48,7 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/predefined_spec.rb
 [31m[FAIL] rubyspec/language/predefined/toplevel_binding_spec.rb (P:0 F:10 S:0 T:10)
 [33m[COMPILE FAIL] rubyspec/language/private_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/proc_spec.rb
+[34m[CRASH] rubyspec/language/proc_spec.rb
 [34m[CRASH] rubyspec/language/range_spec.rb
 [34m[CRASH] rubyspec/language/redo_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/regexp/anchors_spec.rb
@@ -80,15 +80,15 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/until_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/variables_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/while_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/yield_spec.rb
+[34m[CRASH] rubyspec/language/yield_spec.rb
 
 ================================
 Summary:
   Total spec files: 79
   Passed: 3
   Failed: 12
-  Crashed (no test output): 17
-  Failed to compile: 47
+  Crashed (no test output): 21
+  Failed to compile: 43
 
 Individual Test Cases:
   Total tests: 184
