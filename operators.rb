@@ -91,8 +91,8 @@ Operators = {
 #    :prefix => Oper.new(1, :while, 1, 0)
 #  },
 
-  "break" => Oper.new(22, :break, :prefix, 1, 0),
-  "next"  => Oper.new(22, :next,  :prefix, 1, 0),
+  "break" => Oper.new(22, :break, :prefix, 1, 0, :right, 3),
+  "next"  => Oper.new(22, :next,  :prefix, 1, 0, :right, 3),
   
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND
   "&"         => {
@@ -110,7 +110,7 @@ Operators = {
   "+="        => Oper.new(  7, :incr,     :infix, 2, 2, :right, 5),
 
   "?"         => Oper.new(  6, :ternif,   :infix),
-  "return"    => Oper.new(  6, :return,   :prefix,1,0),
+  "return"    => Oper.new(  6, :return,   :prefix,1,0, :right, 3),
 
   ":"         => Oper.new(  7, :ternalt,  :infix),
   "&&"        => Oper.new(  7, :and,      :infix),

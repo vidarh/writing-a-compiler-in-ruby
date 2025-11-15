@@ -1,4 +1,4 @@
-require_relative '../rubyspec/spec_helper'
+require_relative '../rubyspec_helper'
 
 # Anonymous splat assignment - Ruby 2.7+ feature
 # See: rubyspec/language/variables_spec.rb:410
