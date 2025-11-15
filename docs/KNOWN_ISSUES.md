@@ -782,54 +782,51 @@ end
 
 ---
 
-## 25. Rescue in do...end Blocks - PARTIALLY FIXED
+## 25. Rescue in do...end Blocks - RESOLVED ✓
 
-**Problem**: Exception handling with rescue clauses inside lambda/proc blocks doesn't work. Exceptions propagate out instead of being caught.
+**Status**: ✅ RESOLVED (2025-11-15)
+
+**Problem**: Exception handling with rescue clauses inside lambda/proc blocks didn't work. Exceptions propagated out instead of being caught.
 
 ```ruby
-# This fails:
 result = lambda do
   raise "error"
 rescue
   42
 end
-result.call  # ✗ Crashes with "Unhandled exception: error"
+result.call  # Now ✓ Returns 42
 ```
 
-**Status**: 🟡 PARTIALLY FIXED (2025-11-15) - Blocked by issue #28
+**Resolution**: Fixed in combination with issue #28
 
-**Progress Made**:
-1. ✅ Fixed treeoutput.rb (line 271) to preserve rescue/ensure clauses when converting :proc to :lambda
-2. ✅ Fixed transform.rb (lines 50-51, 59-61) to wrap lambda body with rescue/ensure in :block nodes
-3. ✅ selftest passes with these changes
-4. ❌ Blocked by newly discovered bug: begin/rescue doesn't return rescue body values (see issue #28)
+**Changes Made**:
+1. **treeoutput.rb** (line 271): Preserve rescue/ensure clauses when converting :proc to :lambda
+   - Changed from `E[:lambda, proc_node[1], proc_node[2]]`
+   - Changed to `E[:lambda, proc_node[1], proc_node[2], proc_node[3], proc_node[4]]`
 
-**Blocking Issue**: Rescue clauses now flow through to compiler but begin/rescue returns nil instead of rescue body value. This affects ALL rescue usage, not just lambdas.
+2. **transform.rb** (lines 50-51, 59-61): Wrap lambda body with rescue/ensure in :block nodes
+   - Extract rescue_clause (e[3]) and ensure_clause (e[4])
+   - Wrap body: `E[:block, E[], body, rescue_clause, ensure_clause]` when rescue/ensure present
+
+3. **compiler.rb** (lines 709-759): Preserve eax across clear() and ensure (see issue #28)
+
+**Test Results**:
+- ✅ spec/do_block_rescue_spec.rb: 2/2 tests pass (was 0/2, FAIL status)
+- ✅ selftest passes
+- ✅ begin/rescue now returns rescue body values
 
 **Affects**:
-- spec/do_block_rescue_spec.rb - Minimal test case
-- rubyspec/language/block_spec.rb:342 - "supports rescue inside do...end block"
-- Any code using rescue clauses inside lambda/proc blocks
-
-**Workaround**: Use begin/rescue/end instead of inline rescue in blocks:
-```ruby
-result = lambda do
-  begin
-    raise "error"
-  rescue
-    42
-  end
-end
-result.call  # ✓ Works (but returns nil due to issue #28)
-```
-
-**Priority**: Medium - Partial progress made, full fix requires resolving issue #28
+- spec/do_block_rescue_spec.rb - Now passing
+- rubyspec/language/block_spec.rb:342 - Should now work
+- All code using rescue clauses inside lambda/proc blocks
 
 ---
 
-## 28. begin/rescue Returns nil Instead of Rescue Body Value
+## 28. begin/rescue Returns nil Instead of Rescue Body Value - RESOLVED ✓
 
-**Problem**: Rescue clauses execute but return nil instead of the rescue body's value.
+**Status**: ✅ RESOLVED (2025-11-15)
+
+**Problem**: Rescue clauses executed but returned nil instead of the rescue body's value.
 
 ```ruby
 result = begin
@@ -837,39 +834,35 @@ result = begin
 rescue
   42
 end
-puts result  # ✗ Prints "nil", should print "42"
+puts result  # Now ✓ Prints "42" (was nil)
 ```
 
-**Status**: ❌ BUG - Discovered 2025-11-15
+**Resolution**: Preserve eax across clear() and ensure clause using stack push/pop
 
-**Root Cause**: In compiler.rb compile_begin_rescue (lines 738-743), the rescue body is compiled but its value in eax is overwritten by:
-1. `[:callm, :$__exception_runtime, :clear]` call (line 742)
-2. ensure clause execution if present (line 745)
+**Root Cause**: In compiler.rb compile_begin_rescue, the rescue body value in eax was overwritten by:
+1. `[:callm, :$__exception_runtime, :clear]` call
+2. ensure clause execution if present
 
-The method returns `Value.new([:subexpr])` expecting eax to hold the result, but eax was overwritten.
+**Changes Made** (compiler.rb):
+1. **Lines 709-720** (normal completion path):
+   - `pushl %eax` before ensure clause
+   - `popl %eax` after ensure clause
+
+2. **Lines 739-759** (rescue path):
+   - `pushl %eax` before clear() call
+   - `popl %eax` after clear()
+   - `pushl %eax` again before ensure (if present)
+   - `popl %eax` after ensure
+
+**Test Results**:
+- ✅ test_tiny_begin2.rb: Returns 42 (was nil)
+- ✅ spec/do_block_rescue_spec.rb: 2/2 tests pass
+- ✅ selftest passes with 0 failures
 
 **Affects**:
-- ALL begin/rescue blocks
-- Blocks issue #25 (rescue in lambdas)
-- Any code relying on rescue clause return values
-
-**Workaround**: Assign rescue value to variable before end of rescue block:
-```ruby
-result = nil
-begin
-  raise "error"
-rescue
-  result = 42
-end
-puts result  # ✓ Prints "42"
-```
-
-**Fix Required**: In compile_begin_rescue, preserve eax value across clear() and ensure clause:
-1. After rescue body (line 739): Save eax to local variable __result
-2. After clear() and ensure (lines 742-745): Restore __result to eax
-3. Same for normal completion path (lines 702-711)
-
-**Priority**: HIGH - Affects all rescue usage, blocks other fixes
+- ALL begin/rescue blocks - now work correctly
+- Unblocked issue #25 (rescue in lambdas)
+- All code relying on rescue clause return values
 
 ---
 
