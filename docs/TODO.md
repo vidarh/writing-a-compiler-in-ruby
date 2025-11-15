@@ -7,7 +7,7 @@
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
 **Language Specs**: 79 files, **3 passed (4%)**, 12 failed, **17 crashed**, **47 compile failures (59%)**
-**Custom Specs (spec/)**: 16 files, **14 passed**, 2 failed. Tests document bugs with minimal reproductions.
+**Custom Specs (spec/)**: 36 files, **22 passed (61%)**, 4 failed, 5 crashed, 5 compile failures. 79 tests, 62 passed (78%)
 
 **Recent Fixes (2025-11-15 Session 6 continuation)**:
 - **✅ Multi-line lambda in it_behaves_like** - Fixed run_rubyspec sed rewrite
