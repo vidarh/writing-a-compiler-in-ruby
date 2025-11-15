@@ -299,6 +299,49 @@ class Parser < ParserBase
     return E[pos, :for, var, enumerable, [:do]+exps]
   end
 
+  # parse_for_body - like parse_for but doesn't consume 'for' keyword
+  # Used when 'for' is treated as operator in shunting yard
+  def parse_for_body
+    pos = position
+    ws
+    # Parse loop variable(s) - can be single var, method call, or destructured (a, b, c)
+    vars = []
+    # Parse first variable/lvalue
+    first_var = @shunting.parse([:in, COMMA])
+    vars << (first_var or expected("variable name or expression after 'for'"))
+    ws
+    while literal(",")
+      ws
+      if keyword(:in)
+        @scanner.unget("in")
+        break
+      end
+      if literal(ASTERISK)
+        ws
+        if keyword(:in)
+          @scanner.unget("in")
+          vars << :_
+        else
+          name = parse_name or expected("variable name or 'in' after splat in for loop")
+          vars << name
+        end
+      else
+        next_var = @shunting.parse([:in, COMMA])
+        vars << (next_var or expected("variable name or expression in for loop"))
+      end
+      ws
+    end
+    keyword(:in) or expected("'in' keyword after for loop variable")
+    ws
+    enumerable = parse_condition or expected("expression after 'in'")
+    nolfws; literal(SEMICOLON); nolfws; keyword(:do)
+    nolfws;
+    exps = parse_opt_defexp
+    keyword(:end) or expected("expression or 'end' for open 'for' block")
+    var = vars.length == 1 ? vars[0] : [:destruct] + vars
+    return E[pos, :for, var, enumerable, [:do]+exps]
+  end
+
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
   # Supports: rescue, rescue => e, rescue Error, rescue Error => e
   def parse_rescue
@@ -480,7 +523,6 @@ class Parser < ParserBase
     pos = position
     ws
     ret = parse_class || parse_module || parse_def || parse_alias || parse_sexp ||
-          parse_for ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos

@@ -722,8 +722,9 @@ class Compiler
     end
   end
 
-  # Transform for loops to .each iterators
-  # for x in array; body; end => array.each { |x| body }
+  # Transform for loops to .each iterators while returning the enumerable
+  # for x in array; body; end => (__for_tmp = array; __for_tmp.each { |x| body }; __for_tmp)
+  # This ensures the for loop returns the enumerable (Ruby semantics), not nil from .each
   def rewrite_for(exps)
     exps.depth_first(:for) do |e|
       # e = [:for, var, enumerable, [:do, exp1, exp2, ...]]
@@ -731,29 +732,24 @@ class Compiler
       enumerable = e[2]
       body = e[3]
 
-      # Extract expressions from [:do, ...] block
-      # For single expression, use it directly; for multiple, keep as array
-      # Lambda second element is the parameter list, third+ are body expressions
-      if body.is_a?(Array) && body[0] == :do
-        # Body is [:do, exp1, exp2, ...], extract expressions
-        body_exps = body[1..-1]
-      else
-        body_exps = [body]
-      end
+      # Create proc node for the block passed to .each
+      # Proc node format: [:proc, [params], [exps], rescue, ensure]
+      # Body is [:do, exp1, exp2, ...], convert to [exp1, exp2, ...]
+      body_exps = (body.is_a?(Array) && body[0] == :do) ? body[1..-1] : [body]
+      proc_node = E[e.position, :proc, [var], body_exps, nil, nil]
 
-      # Transform to: [:callm, enumerable, :each, [], lambda_node]
-      # This creates: enumerable.each { |var| body }
-      # Note: blocks are passed as a 5th element to :callm, not in the args array
-      # Create lambda with position from original for statement
-      # Lambda body must be an ARRAY of expressions (matching parser's :proc structure)
-      # e.g., [:lambda, [:i], [exp1, exp2, ...]]
-      lambda_node = E[e.position, :lambda, [var], body_exps]
-
-      e[0] = :callm
-      e[1] = enumerable
-      e[2] = :each
-      e[3] = []  # Empty args array
-      e[4] = lambda_node  # Block passed separately
+      # Modify e in-place to become [:let, [__for_tmp], [:do, assign, each_call, return_tmp]]
+      # This creates: (__for_tmp = enumerable; __for_tmp.each { |var| body }; __for_tmp)
+      # Using :let ensures __for_tmp is scoped to this expression
+      e[0] = :let
+      e[1] = [:__for_tmp]
+      e[2] = [:do,
+        [:assign, :__for_tmp, enumerable],
+        [:callm, :__for_tmp, :each, [], proc_node],
+        :__for_tmp
+      ]
+      # Remove old elements
+      e.slice!(3..-1) if e.length > 3
 
       :skip  # Don't reprocess the transformed node
     end

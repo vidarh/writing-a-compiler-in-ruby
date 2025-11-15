@@ -112,6 +112,10 @@ module OpPrec
           #STDERR.puts "   until expression"
           @out.value(@parser.parse_while_until_body(:until))
           return :prefix
+        elsif op.sym == :for_stmt
+          #STDERR.puts "   for expression"
+          @out.value(@parser.parse_for_body())
+          return :prefix
         elsif op.sym == :rescue_mod && ostack.length == 0
           #STDERR.puts "   rescue clause (not modifier)"
           # Unlike if/while, rescue in prefix position signals end of begin block body
