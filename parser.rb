@@ -479,7 +479,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_class || parse_module || parse_def || parse_sexp ||
+    ret = parse_class || parse_module || parse_def || parse_alias || parse_sexp ||
           parse_for ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
