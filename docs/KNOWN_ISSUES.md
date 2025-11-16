@@ -996,61 +996,78 @@ e[2] = [:do,
 
 ---
 
-## 30. for Loops Fail at Runtime - Loop Variables Not Recognized
+## 30. for Loops and Lambdas at Toplevel Don't Work
 
-**Status**: CRITICAL BUG - for loops compile but don't execute
+**Status**: LIMITATION - lambdas/procs/for loops only work inside methods
 
-**Problem**: The `for` loop transformation creates `:proc` nodes that don't properly set up block parameters. When the loop body tries to reference the loop variable, it fails with "undefined method" error.
+**Problem**: Lambdas, procs, and for loops fail at toplevel with "undefined method" errors for their parameters. They work correctly when defined inside methods.
 
 ```ruby
+# At toplevel - FAILS:
 for i in [1, 2, 3]
   puts i
 end
 # ✗ Unhandled exception: undefined method 'i' for Object
+
+x = lambda { |i| puts i }
+x.call(42)
+# ✗ Unhandled exception: undefined method 'i' for Object
+
+# Inside method - WORKS:
+def test
+  for i in [1, 2, 3]
+    puts i
+  end
+end
+test  # ✓ Prints 1, 2, 3
 ```
 
-**Root Cause**: The `rewrite_for()` method in transform.rb creates `:proc` nodes directly:
-```ruby
-proc_node = E[e.position, :proc, [var], body_exps, nil, nil]
-```
+**Root Cause**: The `rewrite_lambda()` transformation is only called from `rewrite_let_env()`, which processes `:defm` (method definition) nodes. Toplevel code is not inside a `:defm`, so lambdas/procs at toplevel never get the transformation that sets up:
+1. The `__env__` closure environment
+2. The `__closure__` parent scope reference
+3. Proper parameter binding in the generated `:defun`
 
-These proc nodes bypass the normal `rewrite_lambda()` transformation that sets up proper parameter handling and closure environments. When the proc is executed, the parameter `var` isn't available as a local variable in the block scope.
+Without this transformation, parameter references like `i` fall through to method_missing.
 
 **Impact**:
-- ALL for loops fail at runtime (not just method call targets like `for obj.attr`)
-- for_spec.rb cannot run any tests
-- This is a regression from issue #27 which made for loops compile and chain methods but broke runtime execution
+- for loops only work inside methods
+- Lambda/proc definitions only work inside methods
+- This affects both user-written lambdas and compiler-generated procs (like from `for` loops)
 
 **Affects**:
-- rubyspec/language/for_spec.rb - compiles but crashes immediately
-- Any code using for loops
+- rubyspec/language/for_spec.rb - many tests use toplevel for loops
+- Any toplevel lambda/proc/for loop usage
 
-**Workaround**: Use `.each` with explicit blocks instead of for loops:
+**Workaround**: Define lambdas and for loops inside methods:
 ```ruby
-# Instead of: for i in [1,2,3]; puts i; end
-[1,2,3].each { |i| puts i }
+def main
+  for i in [1,2,3]; puts i; end
+  x = lambda { |i| puts i }
+  x.call(42)
+end
+main
 ```
 
 **Technical Details**:
-The transformation converts:
+The `rewrite_lambda()` function transforms `:lambda` and `:proc` nodes into proper closures with environment setup:
 ```ruby
-for x in array; body; end
+[:proc, [params], body]
+=>
+[:do,
+  [:assign, [:index, :__env__, 0], [:stackframe]],
+  [:assign, :__tmp_proc, [:defun, "lambda_123", [:self, :__closure__, :__env__] + params, body]],
+  [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, arity, :__closure__]]]
+]
 ```
 
-To:
-```ruby
-(__for_tmp = array; __for_tmp.each { |x| body }; __for_tmp)
-```
-
-But the block `{ |x| body }` is created as a raw `:proc` node that doesn't go through the lambda rewriting phase. This means:
-1. The parameter `x` isn't added to the function's argument list properly
-2. The closure environment isn't set up
-3. Variable lookups for `x` fail and fall through to method_missing
+This transformation assumes `__env__` and `__closure__` are available, which they are inside methods (via `rewrite_let_env`), but not at toplevel.
 
 **Potential Fix**:
-The `:proc` nodes created in `rewrite_for` need to be marked so they go through `rewrite_lambda()` transformation, OR the transformation needs to manually create the proper closure environment and parameter setup that `rewrite_lambda()` would create.
+1. Wrap toplevel code in an implicit main method, OR
+2. Create a toplevel-specific version of `rewrite_lambda` that doesn't require `__env__`/`__closure__`, OR
+3. Initialize `__env__` and `__closure__` in the toplevel context before any lambda/proc usage
 
-**Priority**: CRITICAL - Blocks all for loop usage
+**Priority**: MEDIUM - Can be worked around by using methods
 
 ---
 
