@@ -1262,3 +1262,54 @@ Note: send_spec.rb still has other compilation issues (`:comma` in assignments),
 **Priority**: Medium - Fixes a class of transform crashes with rest parameters in closures
 
 ---
+
+## 33. Multi-Assignment with Method Calls on Left Side - NOT IMPLEMENTED
+
+**Status**: ❌ NOT IMPLEMENTED
+
+**Problem**: The compiler doesn't support multi-assignment (parallel assignment) when the left-hand side includes method calls, only when it's simple variables or destructuring.
+
+**Example**:
+```ruby
+a, self.foo = 3, value   # Fails: method call on left side
+a, b = 1, 2              # Works: simple variables
+```
+
+**Error**:
+```
+Expected an argument on left hand side of assignment - got subexpr,
+(left: [:comma, :a, [:callm, :self, :foo]], right: [[:sexp, 3], :value])
+```
+
+**Root Cause**:
+- The parser creates a `:comma` node for multi-assignment like `a, b = x, y`
+- The compiler's `compile_assign` expects left-hand side to be either:
+  - A simple symbol (`:a`)
+  - A destructuring pattern (`[:destruct, :a, :b]`)
+  - An index operation (`[:index, obj, key]`)
+  - An instance variable (`@foo`)
+- It doesn't handle `:comma` nodes which represent multiple targets including method calls
+- This is a complex feature requiring:
+  1. Evaluating the right-hand side values
+  2. Storing them temporarily
+  3. Assigning to each target (which might be variables OR method calls)
+  4. Handling the different target types appropriately
+
+**Workaround**: Use separate assignment statements:
+```ruby
+# Instead of:
+a, self.foo = 3, value
+
+# Use:
+tmp = [3, value]
+a = tmp[0]
+self.foo = tmp[1]
+```
+
+**Affects**:
+- send_spec.rb (compilation fails on this feature)
+- Any code using parallel assignment with setter method calls
+
+**Priority**: Low - Rare syntax, easy workaround
+
+---
