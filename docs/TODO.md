@@ -2,12 +2,12 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-15 - Latest Update)
+## Test Status (2025-11-16 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, **3 passed (4%)**, 12 failed, **17 crashed**, **47 compile failures (59%)**
-**Custom Specs (spec/)**: 36 files, **24 passed (67%)**, 4 failed, 5 crashed, 3 compile failures. 82 tests, 68 passed (82%)
+**Language Specs**: 79 files, **3 passed (4%)**, 14 failed, **21 crashed**, **41 compile failures (52%)**
+**Custom Specs (spec/)**: 37 files, **25 passed (68%)**, 4 failed, 5 crashed, 3 compile failures. 86 tests, 72 passed (84%)
 
 ## High Priority (Language Spec Compilation Failures)
 
@@ -26,10 +26,10 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 **High Priority (Affecting Multiple Specs)**:
 - [x] **nil ClassScope** - ✅ FIXED (compile_class.rb) - break_spec, line_spec, file_spec now compile
 - [x] **Hash spread operator `**`** - ✅ FIXED - Added context-sensitive `**` operator, Hash#merge, Hash#==. spec/hash_spread_spec.rb passes 3/3
-- [ ] **Regex literal tokenization** - CRITICAL: Affects case_spec, many other specs. See KNOWN_ISSUES #35. Parser treats `/pattern/` as division
+- [x] **Regex literal tokenization** - ✅ FIXED (tokens.rb:475-515) - Fixed division vs regex detection. spec/regex_tokenization_spec.rb passes 4/4. Reduced compile failures from 47 to 41
 - [ ] **Keyword argument shorthand `{a:}`** - CRITICAL: Affects hash_spec, method_spec. See KNOWN_ISSUES #36. Parser doesn't expand `{a:}` to `{a: a}`
 - [ ] **Classes-in-lambdas runtime segfault** - Compiles but crashes (see KNOWN_ISSUES #3) - blocks break_spec runtime
-- [ ] **Splat in assignment LHS** - Affects: next_spec, assignments_spec. See KNOWN_ISSUES #17
+- [x] **Splat in assignment LHS** - ✅ FIXED - Implemented in rewrite_destruct(). next_spec now compiles (runtime errors remain)
 - [ ] **Fixture loading** - file_spec, line_spec link failures (CodeLoadingSpecs fixtures need File methods)
 
 **Medium Priority**:
@@ -40,7 +40,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 ### Control Flow Specs
 - [x] **break_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - runtime segfault remains
-- [ ] **next_spec.rb** - COMPILE FAIL (splat assignment error)
+- [x] **next_spec.rb** - ✅ COMPILES (was splat assignment error, now fixed) - runtime errors remain
 - [ ] **return_spec.rb** - COMPILE FAIL (unclosed block error)
 - [ ] **redo_spec.rb** - CRASH (compiles, runtime crash)
 - [ ] **loop_spec.rb** - CRASH (compiles, runtime crash)
