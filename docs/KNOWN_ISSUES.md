@@ -1316,3 +1316,61 @@ self.foo = tmp[1]
 **Priority**: Low - Rare syntax, easy workaround
 
 ---
+
+## 34. Method Parameters Transformed to Environment Accesses in Closures
+
+**Status**: 🔴 UNRESOLVED - Complex issue requiring careful design
+
+**Problem**: When a method definition contains lambda closures in default parameter values that capture other parameters, the transform phase incorrectly renames the parameter names themselves to `[:index, :__env__, N]` expressions instead of only renaming references within the closure.
+
+**Error**:
+```
+/app/function.rb:12:in `initialize': Internal error: Arg.name must be Symbol; '[:index, :__env__, 4]'
+```
+
+**Example Code**:
+```ruby
+def foo(output = 'a', prc = -> n { output * n })
+  prc.call(5)
+end
+```
+
+**Root Cause**: The `rewrite_env_vars` function in transform.rb:352 handles `:lambda`, `:proc`, and `:defun` nodes specially to avoid rewriting parameter names. However, `:defm` (method definitions) are not in this list, so parameter names get renamed along with variable references when processing closures.
+
+**Investigation Findings**:
+1. Adding `:defm` to the special handling list (line 356) seems logical but causes regressions
+2. The issue is that default parameter values use `#paramname` references that need special handling
+3. The error "Expected lvar - #" indicates the parameter lookup mechanism breaks
+4. This is a complex interaction between:
+   - Variable renaming for closure capture (transform.rb)
+   - Method parameter processing (function.rb)
+   - Default parameter value handling (output_functions.rb)
+
+**Attempted Fix**: Adding `:defm` alongside `:lambda`/`:proc`/`:defun` in `rewrite_env_vars` causes:
+- Default parameter handling to break
+- `get_lvar_arg` failures when looking up `#param` references
+- Selftest failures with "Expected lvar - #" errors
+
+**Affects**:
+- def_spec.rb (compilation fails)
+- Any method with lambda closures in default parameters that capture other parameters
+
+**Workaround**: Don't use lambda closures in default parameters that capture other parameters. Use instance variables or separate the logic:
+```ruby
+# Instead of:
+def foo(output = 'a', prc = -> n { output * n })
+
+# Use:
+def foo(output = 'a', prc = nil)
+  prc ||= -> n { output * n }
+end
+```
+
+**Priority**: Medium - Affects advanced Ruby features, but workaround exists
+
+**Next Steps**: This requires deep analysis of the transform phase and how it interacts with method parameter handling. The fix likely requires:
+1. Understanding why default parameters need `#param` references
+2. How `:defm` differs from `:defun` in parameter handling
+3. Whether `:defm` should have special handling or if the issue is elsewhere
+
+---
