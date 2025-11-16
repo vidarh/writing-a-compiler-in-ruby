@@ -708,12 +708,28 @@ class Compiler
   #   (assign b (callm __destruct [] (1)))
   # ))
   #
+  # For splats (e.g. a, *b, c = [1,2,3,4]):
+  # - Before splat: assign from index 0, 1, ...
+  # - Splat: collect remaining elements minus those after it
+  # - After splat: assign from end using negative indices
+  #
   def rewrite_destruct(exps)
     exps.depth_first(:assign) do |e|
       l = e[1]
       if l.is_a?(Array) && l[0] == :destruct
         vars = l[1..-1]
         r = e[2]
+
+        # Find splat index if present
+        splat_idx = nil
+        splat_var = nil
+        vars.each_with_index do |v, i|
+          if v.is_a?(Array) && v[0] == :splat
+            splat_idx = i
+            splat_var = v[1]
+            break
+          end
+        end
 
         # FIXME: Are there instances where aliasing __destruct may
         # be a problem?
@@ -723,8 +739,56 @@ class Compiler
         # This handles cases like `x, y = nil` where nil.to_a returns []
         e[2] = [:do, [:assign, :__destruct, [:callm, r, :to_a, []]]]
         ex = e
-        vars.each_with_index do |v,i|
-          ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
+
+        if splat_idx
+          # Handle destructuring with splat
+          # Before splat: use positive indices
+          (0...splat_idx).each do |i|
+            ex[2] << [:assign, vars[i], [:callm,:__destruct,:[],[i]]]
+          end
+
+          # After splat: use negative indices from the end
+          after_splat = vars.length - splat_idx - 1
+          if after_splat > 0
+            (1..after_splat).each do |offset|
+              idx = splat_idx + offset
+              # Use negative index: -1 for last element, -2 for second-to-last, etc
+              neg_idx = -after_splat + offset - 1
+              ex[2] << [:assign, vars[idx], [:callm,:__destruct,:[],[neg_idx]]]
+            end
+          end
+
+          # Splat: collect remaining elements
+          # For a,*b,c,d: start_idx=1, end_idx=-2 (skip last 2)
+          # For a,b,*c: start_idx=2, end_idx=nil (to end)
+          # For *a,b,c: start_idx=0, end_idx=-2 (skip last 2)
+          start_idx = splat_idx
+          if after_splat > 0
+            # Use Array#[start, length] form: [start_idx..-after_splat-1]
+            # Rewrite as: __destruct[start_idx, [0, __destruct.length - start_idx - after_splat].max]
+            # This handles edge cases where array is too short
+            ex[2] << [:assign, splat_var,
+              [:callm, :__destruct, :[],
+                [start_idx,
+                 [:callm,
+                   [:callm, 0, :max,
+                     [[:callm,
+                       [:callm,
+                         [:callm, :__destruct, :length],
+                         :-, [start_idx]],
+                       :-, [after_splat]]]],
+                   :to_i]]]]
+          else
+            # No elements after splat, use range to end: __destruct[start_idx..-1]
+            ex[2] << [:assign, splat_var,
+              [:callm, :__destruct, :[],
+                [[:range, start_idx, -1]]]]
+          end
+        else
+          # No splat: simple destructuring
+          vars.each_with_index do |v,i|
+            ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
+          end
         end
       end
     end
