@@ -17,11 +17,21 @@ class GlobalScope < Scope
     @globals[:true]  = true
     @globals[:nil]   = true
 
-    # Special "built-in" globals with two-character names starting with $
-    # that we need to expand to something else.
+    # Special "built-in" globals with single-character or special names starting with $
+    # Map them to assembly-safe names. Some use Ruby standard aliases, others use
+    # compiler-specific descriptive names prefixed with __.
     @aliases = {
-      :"$:" => "LOAD_PATH",
-      :"$0" => "__D_0"
+      :"$:" => "LOAD_PATH",           # Load path array
+      :"$0" => "__D_0",                # Program name
+      :"$!" => "__exception_message",  # Last exception message (set by raise)
+      :"$@" => "__exception_backtrace",# Last exception backtrace
+      :"$/" => "__input_record_separator",  # Input record separator (default: "\n")
+      :"$\\" => "__output_record_separator", # Output record separator
+      :"$," => "__output_field_separator",   # Output field separator for print/puts
+      :"$;" => "__field_separator",    # Default separator for String#split
+      :"$." => "__input_line_number",  # Current input line number
+      :"$&" => "__last_match",         # String matched by last successful regex
+      :"$$" => "__process_id"          # Process ID of current Ruby process
     }
   end
 
@@ -44,17 +54,22 @@ class GlobalScope < Scope
   # Returns an argument within the global scope, if defined here.
   # Otherwise returns it as an address (<tt>:addr</tt>)
   def get_arg(a)
-    # Handle $:, $0 etc.
+    # Handle $:, $0, $!, $@ etc. - map to assembly-safe aliases
     s = @aliases[a]
-    return [:global, s] if s
+    if s
+      @globals[s.to_sym] = true  # Register the ALIAS in globals, not the original
+      return [:global, s]
+    end
 
     return [:arg, 1] if a == :__argv
     return [:arg, 0] if a == :__argc
 
     # Auto-register global variables (starting with $)
+    # Strip $ prefix to make assembly-safe
     if a && a.to_s[0] == ?$
-      @globals[a] = true
-      return [:global, a]
+      clean_name = a.to_s[1..-1]
+      @globals[clean_name.to_sym] = true
+      return [:global, clean_name]
     end
 
     return [:global, a] if @globals.member?(a)

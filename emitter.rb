@@ -170,10 +170,8 @@ class Emitter
     when :indirect8
       emit(:movb,source, "(%#{dest})")
     when :global
-      # Strip the $ prefix from global variable names for assembly
-      name = dest.to_s
-      name = name[1..-1] if name[0] == ?$
-      emit(:movl, source, name)
+      # Global variable names are already assembly-safe (from globalscope.rb)
+      emit(:movl, source, dest.to_s)
     when :lvar
       save_to_local_var(source, dest)
     when :ivar
@@ -241,10 +239,8 @@ class Emitter
 
 
   def load_global_var(aparam, reg = result_value)
-    # Strip the $ prefix from global variable names for assembly
-    name = aparam.to_s
-    name = name[1..-1] if name[0] == ?$
-    movl(name, reg)
+    # Global variable names are already assembly-safe (from globalscope.rb)
+    movl(aparam.to_s, reg)
     return reg
   end
 

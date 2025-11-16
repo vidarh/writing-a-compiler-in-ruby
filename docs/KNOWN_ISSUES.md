@@ -1143,3 +1143,74 @@ emit("#{"#"*lspc} #{display_name} #{"#"*rspc}")
 **Priority**: Medium - Fixes compilation failure for ensure_spec.rb and any code with long method names
 
 ---
+
+## 31. Special Global Variables Not Assembly-Safe - RESOLVED ✓
+
+**Status**: ✅ RESOLVED (2025-11-16)
+
+**Problem**: Global variables with special characters like `$!`, `$@`, `$/`, etc. caused assembly errors because they were emitted as invalid assembly labels.
+
+**Example**:
+```ruby
+puts $!.inspect   # Caused assembly error: invalid char '!' beginning operand
+```
+
+**Assembly Error**:
+```
+out/rubyspec_temp_throw_spec.s:144188: Error: invalid char '!' beginning operand 1 `!'
+out/rubyspec_temp_throw_spec.s:154871: Error: junk at end of line, first unrecognized character is `!'
+```
+
+The BSS section would define `!:` as a label (after stripping `$`), and code would reference it as `movl !, %eax`, both invalid assembly.
+
+**Root Cause**:
+- Special global variables like `$!` were having the `$` prefix stripped to create assembly labels
+- This left invalid characters like `!`, `@`, `/`, etc. in the assembly
+- No mapping existed to convert these to assembly-safe names
+
+**Resolution**: Added comprehensive alias mapping in globalscope.rb for all special globals:
+
+```ruby
+@aliases = {
+  :"$:" => "LOAD_PATH",                 # Load path array
+  :"$0" => "__D_0",                      # Program name
+  :"$!" => "__exception_message",        # Last exception (set by raise)
+  :"$@" => "__exception_backtrace",      # Last exception backtrace
+  :"$/" => "__input_record_separator",   # Input record separator
+  :"$\\" => "__output_record_separator", # Output record separator
+  :"$," => "__output_field_separator",   # Output field separator
+  :"$;" => "__field_separator",          # Default separator for split
+  :"$." => "__input_line_number",        # Current input line number
+  :"$&" => "__last_match",               # String matched by last regex
+  :"$$" => "__process_id"                # Process ID
+}
+```
+
+**Changes Made**:
+
+1. **globalscope.rb:23-35** - Extended `@aliases` hash with all special globals
+2. **globalscope.rb:56-73** - Modified `get_arg` to:
+   - Return aliased names for special globals
+   - Register aliases in `@globals` (not original symbols)
+   - Strip `$` prefix from regular globals and register clean names
+3. **lib/core/exception.rb:231-233** - Initialize `$!` to nil at startup to prevent segfaults
+
+**Files Modified**:
+- globalscope.rb - Alias mapping and clean name registration
+- lib/core/exception.rb - Initialize `$!` to nil
+
+**Test Results**:
+- ✅ throw_spec.rb: Now compiles successfully (was assembly error)
+- ✅ test_exception_global.rb: Compiles and runs, prints "nil"
+- ✅ Assembly uses `__exception_message` label instead of `!`
+- ✅ selftest: Passes with 0 failures
+- ✅ selftest-c: Passes with 0 failures
+
+**Affects**:
+- rubyspec/language/throw_spec.rb (now compiles, was blocked)
+- Any code using special global variables
+- Exception handling code using `$!`
+
+**Priority**: High - Enables compilation of code using Ruby's standard special globals
+
+---

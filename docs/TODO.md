@@ -80,8 +80,8 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **defined_spec.rb** - COMPILE FAIL (self::Constant static resolution issue)
 - [x] **ensure_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed long method name bug) - runtime crash
 - [ ] **rescue_spec.rb** - COMPILE FAIL (safe navigation in rescue clause `rescue => self&.var`)
-- [ ] **retry_spec.rb** - COMPILE FAIL
-- [ ] **throw_spec.rb** - COMPILE FAIL
+- [ ] **retry_spec.rb** - ✅ COMPILES (was COMPILE FAIL) - FAILED (retry not implemented)
+- [x] **throw_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed special global $!) - FAILED (catch/throw not implemented)
 - [ ] **variables_spec.rb** - COMPILE FAIL
 - [ ] **private_spec.rb** - COMPILE FAIL
 - [ ] **send_spec.rb** - COMPILE FAIL

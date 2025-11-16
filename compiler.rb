@@ -213,9 +213,8 @@ class Compiler
     end
 
     # FIXME: Temporary workaround to add bss entries for "missing" globals
+    # Global names are already assembly-safe (aliases applied, $ prefix stripped by globalscope.rb)
     vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq - ["__roots_start","__roots_end"]
-    # Strip $ prefix from global variable names for assembly
-    vars = vars.collect{|v| v[0] == ?$ ? v[1..-1] : v}
     @e.bss    do
       #@e.bsslong("__stack_top")
       @e.label("__roots_start")
