@@ -25,6 +25,7 @@ class GlobalScope < Scope
       :"$0" => "__D_0",                # Program name
       :"$!" => "__exception_message",  # Last exception message (set by raise)
       :"$@" => "__exception_backtrace",# Last exception backtrace
+      :"$?" => "__child_status",       # Status of last executed child process
       :"$/" => "__input_record_separator",  # Input record separator (default: "\n")
       :"$\\" => "__output_record_separator", # Output record separator
       :"$," => "__output_field_separator",   # Output field separator for print/puts

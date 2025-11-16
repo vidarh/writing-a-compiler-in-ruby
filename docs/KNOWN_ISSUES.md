@@ -1176,6 +1176,7 @@ The BSS section would define `!:` as a label (after stripping `$`), and code wou
   :"$0" => "__D_0",                      # Program name
   :"$!" => "__exception_message",        # Last exception (set by raise)
   :"$@" => "__exception_backtrace",      # Last exception backtrace
+  :"$?" => "__child_status",             # Status of last child process
   :"$/" => "__input_record_separator",   # Input record separator
   :"$\\" => "__output_record_separator", # Output record separator
   :"$," => "__output_field_separator",   # Output field separator
@@ -1201,8 +1202,10 @@ The BSS section would define `!:` as a label (after stripping `$`), and code wou
 
 **Test Results**:
 - ✅ throw_spec.rb: Now compiles successfully (was assembly error)
+- ✅ END_spec.rb: Now compiles successfully (was assembly error from $?)
 - ✅ test_exception_global.rb: Compiles and runs, prints "nil"
 - ✅ Assembly uses `__exception_message` label instead of `!`
+- ✅ Assembly uses `__child_status` label instead of `?`
 - ✅ selftest: Passes with 0 failures
 - ✅ selftest-c: Passes with 0 failures
 

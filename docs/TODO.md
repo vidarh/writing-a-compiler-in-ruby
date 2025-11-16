@@ -92,7 +92,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 ### Infrastructure/Meta Specs
 - [ ] **BEGIN_spec.rb** - COMPILE FAIL
-- [ ] **END_spec.rb** - COMPILE FAIL
+- [x] **END_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed $? special global) - FAILED (END blocks not implemented)
 - [ ] **execution_spec.rb** - COMPILE FAIL
 - [x] **file_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - link failure (fixture loading)
 - [x] **line_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - link failure (fixture loading)
