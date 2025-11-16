@@ -57,12 +57,12 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **class_variable_spec.rb** - CRASH
 
 ### Method/Block Specs
-- [ ] **method_spec.rb** - COMPILE FAIL
+- [ ] **method_spec.rb** - COMPILE FAIL (keyword arg without value: `call(a:)`)
 - [ ] **block_spec.rb** - CRASH (compiles, runtime segfault - likely KNOWN_ISSUES #3)
 - [x] **proc_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed destructuring detection) - runtime segfault
 - [x] **lambda_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed lambda without block + SpecEvaluate stub)
-- [ ] **yield_spec.rb** - COMPILE FAIL
-- [ ] **delegation_spec.rb** - COMPILE FAIL
+- [x] **yield_spec.rb** - ✅ COMPILES (now compiles with special globals fix)
+- [x] **delegation_spec.rb** - ✅ COMPILES (now compiles with special globals fix)
 - [ ] **keyword_arguments_spec.rb** - COMPILE FAIL
 - [ ] **super_spec.rb** - COMPILE FAIL (infinite recursion issue - see KNOWN_ISSUES)
 
