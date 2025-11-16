@@ -91,12 +91,12 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **numbered_parameters_spec.rb** - COMPILE FAIL (Ruby 2.7+ feature)
 
 ### Infrastructure/Meta Specs
-- [ ] **BEGIN_spec.rb** - COMPILE FAIL
+- [x] **BEGIN_spec.rb** - ✅ COMPILES (now compiles with special globals fix) - CRASH (BEGIN blocks not implemented)
 - [x] **END_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed $? special global) - FAILED (END blocks not implemented)
 - [ ] **execution_spec.rb** - COMPILE FAIL
 - [x] **file_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - link failure (fixture loading)
 - [x] **line_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - link failure (fixture loading)
-- [ ] **magic_comment_spec.rb** - COMPILE FAIL
+- [x] **magic_comment_spec.rb** - ✅ COMPILES (now compiles with special globals fix) - CRASH (shared not implemented)
 - [ ] **predefined_spec.rb** - COMPILE FAIL
 - [ ] **encoding_spec.rb** - CRASH
 - [ ] **order_spec.rb** - CRASH
