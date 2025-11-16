@@ -1214,3 +1214,51 @@ The BSS section would define `!:` as a label (after stripping `$`), and code wou
 **Priority**: High - Enables compilation of code using Ruby's standard special globals
 
 ---
+
+## 32. Rest Parameters After Variable Renaming - RESOLVED ✓
+
+**Status**: ✅ RESOLVED (2025-11-16)
+
+**Problem**: In `transform.rb`, the code assumed rest parameters (`*args`) were always Symbols, causing crashes when they became indexed environment accesses after variable renaming.
+
+**Error**:
+```
+transform.rb:526:in `block in rewrite_let_env': undefined method `to_sym' for [:index, :__env__, 10]:AST::Expr
+```
+
+**Root Cause**:
+- `rewrite_lambda` processes lambdas/procs and can rename variables to `[:index, :__env__, N]` for closure access
+- Later, `rewrite_let_env` processes rest parameters with `rest.to_sym`, assuming `rest` is a Symbol
+- But after variable renaming, `rest` might be an AST expression like `[:index, :__env__, 10]`
+- This caused a NoMethodError when trying to call `.to_sym` on an Array
+
+**Resolution**: Modified transform.rb:525-540 to handle rest parameters that might be either Symbols or indexed expressions:
+
+```ruby
+if rest && rest != :__copysplat
+  # rest might be a symbol or an indexed env access [:index, :__env__, N]
+  # after variable renaming. Extract the symbol if needed.
+  rest_sym = rest.is_a?(Symbol) ? rest : rest
+  rest_target = rest  # Use original rest as assignment target
+
+  vars << rest_sym if rest_sym.is_a?(Symbol)
+  rest_func =
+    [E[:sexp,
+     [:assign, rest_target, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
+    ]]
+end
+```
+
+**Changes Made**:
+- **transform.rb:525-540** - Check if rest is a Symbol before using, use rest directly as assignment target
+
+**Test Results**:
+- ✅ Fixed the `.to_sym` error in send_spec.rb compilation
+- ✅ selftest: 0 failures
+- ✅ selftest-c: 0 failures
+
+Note: send_spec.rb still has other compilation issues (`:comma` in assignments), but this fix resolves the rest parameter crash.
+
+**Priority**: Medium - Fixes a class of transform crashes with rest parameters in closures
+
+---

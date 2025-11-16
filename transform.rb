@@ -523,12 +523,17 @@ class Compiler
       end
 
       if rest && rest != :__copysplat
-        vars << rest.to_sym
+        # rest might be a symbol or an indexed env access [:index, :__env__, N]
+        # after variable renaming. Extract the symbol if needed.
+        rest_sym = rest.is_a?(Symbol) ? rest : rest
+        rest_target = rest  # Use original rest as assignment target
+
+        vars << rest_sym if rest_sym.is_a?(Symbol)
         # FIXME: @bug Removing the E[] below causes segmentation fault
         rest_func =
           [E[:sexp,
            # Corrected to take into account statically provided arguments.
-           [:assign, rest.to_sym, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
+           [:assign, rest_target, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
           ]]
       else
         rest_func = nil
