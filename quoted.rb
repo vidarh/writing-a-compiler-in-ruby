@@ -137,7 +137,9 @@ module Tokens
     end
 
     def self.expect(s,&block)
-      q = s.expect('"') || s.expect("'") || s.expect("%") or return nil
+      backtick = false
+      q = s.expect('"') || s.expect("'") || s.expect("`") || s.expect("%") or return nil
+      backtick = true if q == "`"
 
       # Handle "special" quoted syntaxes. Currently we only handle generalized quoted
       # strings, no backticks, regexps etc.. Examples:
@@ -187,6 +189,8 @@ module Tokens
 
       r = dquoted ? expect_dquoted(s,q,&block) : expect_squoted(s,q)
       r = [:array].concat(r.split(" ")) if words
+      # Convert backtick strings to system() calls
+      r = [:call, :system, r] if backtick
       r
     end
   end

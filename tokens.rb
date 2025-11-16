@@ -362,7 +362,7 @@ module Tokens
       first = nil
 
       case @s.peek
-      when ?",?'
+      when ?`,?",?'
         return [get_quoted_exp, nil]
       when DIGITS
         return [Number.expect(@s, prev_lastop), nil]
