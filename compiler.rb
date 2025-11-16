@@ -359,15 +359,42 @@ class Compiler
   end
 
   def compile_hash(scope, *args)
+    # Separate hash_splat elements from regular pairs
+    splats = []
     pairs = []
-    args.collect do |pair|
-      if !pair.is_a?(Array) || pair[0] != :pair
-        error("Literal Hash must contain key value pairs only",scope,args)
+
+    args.each do |elem|
+      if elem.is_a?(Array) && elem[0] == :hash_splat
+        splats << elem[1]
+      elsif elem.is_a?(Array) && elem[0] == :pair
+        pairs << elem[1]
+        pairs << elem[2]
+      else
+        error("Literal Hash must contain key value pairs or hash splat only",scope,args)
       end
-      pairs << pair[1]
-      pairs << pair[2]
     end
-    compile_callm(scope, :Hash, :[], pairs)
+
+    # If no splats, use the simple Hash[] approach
+    if splats.empty?
+      return compile_callm(scope, :Hash, :[], pairs)
+    end
+
+    # Build a nested s-expression for merging splats and pairs
+    # Start with the first splat
+    result_expr = splats.shift
+
+    # Merge remaining splats
+    splats.each do |splat_expr|
+      result_expr = [:callm, result_expr, :merge, [splat_expr]]
+    end
+
+    # If there are literal pairs, merge them too
+    unless pairs.empty?
+      literal_hash_expr = [:callm, :Hash, :[], pairs]
+      result_expr = [:callm, result_expr, :merge, [literal_hash_expr]]
+    end
+
+    compile_exp(scope, result_expr)
   end
 
   # FIXME: Compiler @bug: This method was a self-recursive

@@ -1,0 +1,32 @@
+Running all specs in rubyspec/language/...
+================================
+
+[33m[COMPILE FAIL] rubyspec/language/alias_spec.rb
+[32m[PASS] rubyspec/language/and_spec.rb (P:10 F:0 S:0 T:10)
+[34m[CRASH] rubyspec/language/array_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/assignments_spec.rb
+[34m[CRASH] rubyspec/language/BEGIN_spec.rb
+[34m[CRASH] rubyspec/language/block_spec.rb
+[34m[CRASH] rubyspec/language/break_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/case_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/class_spec.rb
+[34m[CRASH] rubyspec/language/class_variable_spec.rb
+[31m[FAIL] rubyspec/language/comment_spec.rb (P:0 F:1 S:0 T:1)
+[33m[COMPILE FAIL] rubyspec/language/constants_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/defined_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/def_spec.rb
+[34m[CRASH] rubyspec/language/delegation_spec.rb
+[34m[CRASH] rubyspec/language/encoding_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/END_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/ensure_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/execution_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/file_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/for_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/hash_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/heredoc_spec.rb
+[34m[CRASH] rubyspec/language/if_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/keyword_arguments_spec.rb
+[34m[CRASH] rubyspec/language/lambda_spec.rb
+[33m[COMPILE FAIL] rubyspec/language/line_spec.rb
+[34m[CRASH] rubyspec/language/loop_spec.rb
+[34m[CRASH] rubyspec/language/magic_comment_spec.rb

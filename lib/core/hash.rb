@@ -294,4 +294,25 @@ class Hash
     value
   end
 
+  def merge(other)
+    result = Hash[]
+    each do |k, v|
+      result[k] = v
+    end
+    other.each do |k, v|
+      result[k] = v
+    end
+    result
+  end
+
+  def ==(other)
+    return false if !other.is_a?(Hash)
+    return false if size != other.size
+    each do |k, v|
+      return false if !other.member?(k)
+      return false if other[k] != v
+    end
+    true
+  end
+
 end

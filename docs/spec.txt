@@ -3,4 +3,6 @@ Running all specs in ./spec...
 ================================
 
 [32m[PASS] ./spec/all_control_flow_end_should_spec.rb (P:4 F:0 S:0 T:4)
+[33m[COMPILE FAIL] ./spec/anonymous_splat_parens_spec.rb
 [33m[COMPILE FAIL] ./spec/anonymous_splat_spec.rb
+[32m[PASS] ./spec/array_max_integer_size_spec.rb (P:3 F:0 S:0 T:3)

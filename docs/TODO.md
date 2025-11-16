@@ -25,9 +25,11 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 **High Priority (Affecting Multiple Specs)**:
 - [x] **nil ClassScope** - ✅ FIXED (compile_class.rb) - break_spec, line_spec, file_spec now compile
+- [x] **Hash spread operator `**`** - ✅ FIXED - Added context-sensitive `**` operator, Hash#merge, Hash#==. spec/hash_spread_spec.rb passes 3/3
+- [ ] **Regex literal tokenization** - CRITICAL: Affects case_spec, many other specs. See KNOWN_ISSUES #35. Parser treats `/pattern/` as division
+- [ ] **Keyword argument shorthand `{a:}`** - CRITICAL: Affects hash_spec, method_spec. See KNOWN_ISSUES #36. Parser doesn't expand `{a:}` to `{a: a}`
 - [ ] **Classes-in-lambdas runtime segfault** - Compiles but crashes (see KNOWN_ISSUES #3) - blocks break_spec runtime
 - [ ] **Splat in assignment LHS** - Affects: next_spec, assignments_spec. See KNOWN_ISSUES #17
-- [ ] **Hash spread operator `**`** - Affects: hash_spec, keyword_arguments_spec. See KNOWN_ISSUES #26. Parser treats ** as exponentiation, needs context-sensitive handling
 - [ ] **Fixture loading** - file_spec, line_spec link failures (CodeLoadingSpecs fixtures need File methods)
 
 **Medium Priority**:
@@ -46,7 +48,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 
 ### Data Structure Specs
 - [ ] **array_spec.rb** - CRASH (compiles, runtime crash in mspec framework)
-- [ ] **hash_spec.rb** - COMPILE FAIL (hash spread operator ** - see KNOWN_ISSUES #26)
+- [ ] **hash_spec.rb** - COMPILE FAIL (keyword arg shorthand `{a:}` - see KNOWN_ISSUES #36)
 - [x] **range_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed by long method name fix) - runtime segfault
 
 ### Class/Module Specs
@@ -57,20 +59,20 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **class_variable_spec.rb** - CRASH
 
 ### Method/Block Specs
-- [ ] **method_spec.rb** - COMPILE FAIL (keyword arg without value: `call(a:)`)
+- [ ] **method_spec.rb** - COMPILE FAIL (keyword arg shorthand `call(a:)` - see KNOWN_ISSUES #36)
 - [ ] **block_spec.rb** - CRASH (compiles, runtime segfault - likely KNOWN_ISSUES #3)
 - [x] **proc_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed destructuring detection) - runtime segfault
 - [x] **lambda_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed lambda without block + SpecEvaluate stub)
 - [x] **yield_spec.rb** - ✅ COMPILES (now compiles with special globals fix)
 - [x] **delegation_spec.rb** - ✅ COMPILES (now compiles with special globals fix)
-- [ ] **keyword_arguments_spec.rb** - COMPILE FAIL
+- [ ] **keyword_arguments_spec.rb** - COMPILE FAIL (likely keyword arg shorthand - see KNOWN_ISSUES #36)
 - [ ] **super_spec.rb** - COMPILE FAIL (infinite recursion issue - see KNOWN_ISSUES)
 
 ### Other Specs
 - [ ] **alias_spec.rb** - COMPILE FAIL (Module not found - dependency issue, not alias bug)
 - [ ] **assignments_spec.rb** - COMPILE FAIL
 - [ ] **optional_assignments_spec.rb** - COMPILE FAIL
-- [ ] **case_spec.rb** - COMPILE FAIL
+- [ ] **case_spec.rb** - COMPILE FAIL (regex literal `/pattern/` parsed as division - see KNOWN_ISSUES #35)
 - [ ] **if_spec.rb** - CRASH (compiles, runtime crash)
 - [ ] **unless_spec.rb** - FAIL (compiles, 5/6 tests pass)
 - [ ] **until_spec.rb** - COMPILE FAIL (until end.should without parens - see KNOWN_ISSUES #1)

@@ -157,7 +157,10 @@ Operators = {
     :infix_or_postfix => Oper.new( 20, :"*",   :infix, 2, 2, :left),
     :prefix           => Oper.new( 8, :splat, :prefix)
   },
-  "**"        => Oper.new( 21, :"**",   :infix, 2, 2, :right), # Power/exponentiation (right-associative)
+  "**"        => {
+    :infix_or_postfix => Oper.new( 21, :"**",   :infix, 2, 2, :right), # Power/exponentiation (right-associative)
+    :prefix           => Oper.new( 8, :hash_splat, :prefix) # Hash spread operator
+  },
 
   # "Fake" operator for function calls
   "#call#"    => Oper.new( 99, :call,     :prefix,2,1),

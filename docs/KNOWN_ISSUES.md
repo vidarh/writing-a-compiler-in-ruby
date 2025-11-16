@@ -1374,3 +1374,85 @@ end
 3. Whether `:defm` should have special handling or if the issue is elsewhere
 
 ---
+
+## 35. Regex Literal Tokenization Not Implemented (HIGH PRIORITY)
+
+**Problem**: The tokenizer does not recognize regex literals (`/pattern/`), causing them to be parsed as division operations instead.
+
+**Example**:
+```ruby
+# This fails to parse:
+x = (raise if 2+2 == 3; /a/)
+
+# Parses as division: [:/, [:+, 2, 2], [:/, 3, :a]]
+# Should parse as: (if (2+2 == 3) raise else /a/)
+```
+
+**Impact**:
+- case_spec.rb fails: `when (raise if 2+2 == 3; /a/)`
+- Any code using regex literals in expressions fails to parse
+- Blocks rubyspec/language/case_spec.rb and other specs using regexes
+
+**Root Cause**: The tokenizer in tokens.rb does not have logic to distinguish `/` as regex delimiter vs division operator. This requires context-sensitive tokenization:
+- After operators, keywords, commas, opening parens: `/` starts a regex
+- After identifiers, closing parens, literals: `/` is division
+
+**Affected Files**:
+- rubyspec/language/case_spec.rb (line 392)
+- Any spec or code using regex literals
+
+**Priority**: HIGH - Regex is a fundamental Ruby feature, many specs use it
+
+**Next Steps**:
+1. Add regex tokenization to tokens.rb (look for `/` after specific tokens)
+2. Handle regex flags (i, m, x, etc.)
+3. Handle regex interpolation `#{...}` inside regexes
+4. Add compile-time regex support (or stub for runtime failure with clear message)
+
+**Note**: Full regex implementation is not required - tokenization alone will allow specs to compile (they will fail at runtime with "Regexp not implemented" which is acceptable).
+
+---
+
+## 36. Keyword Argument Shorthand Not Supported (HIGH PRIORITY)
+
+**Problem**: Ruby 3.1+ keyword argument shorthand `{a:}` meaning `{a: a}` is not supported in the parser.
+
+**Example**:
+```ruby
+a, b, c = 1, 2, 3
+
+# This syntax is not supported:
+h = {a:}              # Should mean {a: a}
+h = {a:, b:, c:}      # Should mean {a: a, b: b, c: c}
+
+# Same for method calls:
+call(a:)              # Should mean call(a: a)
+```
+
+**Impact**:
+- hash_spec.rb fails at line 307: `h = {a:}`
+- method_spec.rb fails at line 1454: `arr, h = call(a:)`
+- Modern Ruby specs using this syntax fail to compile
+
+**Root Cause**: The parser expects a value after `:` in hash/keyword argument syntax. The shorthand where the key name is also used as the variable name is not recognized.
+
+**Parse Error**:
+```
+Missing value in expression / op: {assign/2 pri=7} / vstack: [] / rightv: [:hash, [:pair, [:sexp, :":h"], :a]]
+```
+
+**Affected Files**:
+- rubyspec/language/hash_spec.rb (line 307)
+- rubyspec/language/method_spec.rb (line 1454)
+
+**Priority**: HIGH - This is common modern Ruby syntax, many specs use it
+
+**Next Steps**:
+1. Modify parser/shunting yard to detect `:` followed by `,` or `}` or `)`
+2. When detected, duplicate the key as the value: `{a:}` → `{a: a}`
+3. Handle in both hash literals and method call arguments
+4. Test with multiple shorthands: `{a:, b:, c:}`
+
+**Workaround**: Rewrite using explicit values: `{a: a}` instead of `{a:}`
+
+---
