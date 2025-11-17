@@ -63,6 +63,24 @@
   (assign (index vtable off) ptr)
 ))
 
+# __alias_method_runtime
+#
+# Runtime alias implementation - copies function pointer from old to new offset.
+# vtable: the class vtable
+# new_off: offset for the new alias name
+# old_off: offset for the existing method
+#
+# Simply copies vtable[old_off] to vtable[new_off]. If the old method doesn't
+# exist (points to method_missing), the alias will also point to method_missing,
+# which will fail at runtime when called (correct Ruby behavior).
+#
+%s(defun __alias_method_runtime (vtable new_off old_off)
+  (let (ptr)
+    (assign ptr (index vtable old_off))
+    (__set_vtable vtable new_off ptr)
+  )
+)
+
 # __include_module
 #
 # Copy methods from a module to a class.
@@ -246,6 +264,13 @@ class Class
       # Convert 0/1 to false/true
       (if (eq found 1) (return true) (return false))
     )
+  end
+
+  # Include a module into this class
+  # Calls __include_module to copy vtable entries
+  def include(mod)
+    %s(printf "Class#include: self=%p, mod=%p\n" self mod)
+    %s(__include_module self mod)
   end
 
 end

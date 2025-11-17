@@ -90,18 +90,14 @@ class Compiler
 
     class_scope = scope.class_scope
 
-    # Look up the old method in the vtable (search superclass chain)
-    old_entry = find_method_in_vtable_chain(class_scope, old_name)
-    if !old_entry
-      error("Cannot alias undefined method '#{old_name}'")
-    end
+    # Ensure both old and new method names have vtable entries
+    # add_vtable_entry allocates an offset if one doesn't exist
+    old_entry = class_scope.add_vtable_entry(old_name)
+    new_entry = class_scope.add_vtable_entry(new_name)
 
-    # Register the new name with the same function pointer as the old name
-    class_scope.set_vtable_entry(new_name, old_entry.realname, old_entry.function)
-    new_entry = class_scope.vtable[new_name]
-
-    # Update the vtable at runtime
-    compile_eval_arg(scope, [:sexp, [:call, :__set_vtable, [:self, new_entry.offset, old_entry.realname.to_sym]]])
+    # Generate runtime code to copy the function pointer from old to new offset
+    # This uses __alias_method_runtime which just does: vtable[new_off] = vtable[old_off]
+    compile_eval_arg(scope, [:sexp, [:call, :__alias_method_runtime, [:self, new_entry.offset, old_entry.offset]]])
 
     return Value.new([:subexpr])
   end

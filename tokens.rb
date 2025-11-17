@@ -384,10 +384,36 @@ module Tokens
         return [buf, nil]
       when ?%
         # Handle percent literals or modulo operator
-        # Context check: @first || prev_lastop means we're after an operator or at statement start
-        # In that context, % starts a percent literal; otherwise it's modulo
         # Note: %s(...) for s-expressions is handled by SEXParser before tokenization
-        if @first || prev_lastop
+        #
+        # Heuristic to distinguish percent literals from modulo:
+        # 1. After an operator or at statement start: always percent literal
+        # 2. Followed by letter + non-alnum (like %Q{): always percent literal
+        # 3. Followed by non-alnum that's not space (like %{): percent literal if after operator/start
+        # 4. Otherwise: modulo operator
+        #
+        # This handles both:
+        # - Standard cases: x = %Q{...} (at statement start)
+        # - Argument cases: eval %Q{...} (after identifier, but followed by Q{)
+        is_percent_literal = @first || prev_lastop
+
+        # Additional heuristic: peek ahead to detect %Q{ pattern
+        # If we see %[A-Za-z][non-alnum], it's definitely a percent literal
+        if !is_percent_literal
+          # Consume % to peek at what follows
+          pct = @s.get
+          if pct
+            next_char = @s.peek
+            if next_char && ALPHA.member?(next_char)
+              # This is %[letter]... which is almost always a percent literal
+              is_percent_literal = true
+            end
+            # Put % back
+            @s.unget(pct)
+          end
+        end
+
+        if is_percent_literal
           @s.get  # consume '%'
 
           # Check for type character
