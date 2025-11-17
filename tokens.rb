@@ -492,6 +492,11 @@ module Tokens
               # Build the AST node directly: [:call, :system, [string]]
               # TODO: Support interpolation like backticks do
               return [[:call, :system, [content]], nil]
+            when ?r
+              # %r{} - regexp literal
+              # For now, convert to Regexp.new(string) call without interpolation or modifiers
+              # TODO: Support interpolation and modifiers (i, m, x, o)
+              return [[:call, [:const, :Regexp], :new, [content]], nil]
             else
               # Unknown type - treat as modulo
               @s.unget(type.chr) if type

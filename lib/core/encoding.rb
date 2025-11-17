@@ -28,6 +28,8 @@ class Encoding
   CESU_8  = Encoding.new("CESU_8")
   EUC_JP  = Encoding.new("EUC_JP")
   Big5 = Encoding.new("Big5")
+  ISO_8859_1 = Encoding.new("ISO-8859-1")
+  ISO_8859_16 = Encoding.new("ISO-8859-16")
 
   # Class methods
   def self.default_internal
@@ -72,4 +74,12 @@ class Encoding
       Encoding.new(name)
     end
   end
+end
+
+# __ENCODING__ pseudo-variable
+# Returns the encoding of the current source file
+# FIXME: This is a stub that always returns US_ASCII
+# In a real implementation, this would track the actual source file encoding
+def __ENCODING__
+  Encoding::US_ASCII
 end
