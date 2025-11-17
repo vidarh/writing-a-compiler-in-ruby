@@ -687,6 +687,14 @@ class Parser < ParserBase
     if name == "<<"
       ob = parse_subexp
       name = [:eigen, ob]
+    elsif name
+      # Check for namespaced class name (e.g., Foo::Bar::Baz)
+      # Build up [:deref, :Foo, :Bar, :Baz] for class Foo::Bar::Baz
+      while literal('::')
+        ws
+        next_part = expect(Atom) or expected("class name after ::")
+        name = [:deref, name, next_part]
+      end
     end
     ws
     # FIXME: Workaround for initialization error

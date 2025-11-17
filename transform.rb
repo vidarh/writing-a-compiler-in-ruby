@@ -691,14 +691,50 @@ class Compiler
     superclass = e[2]
     superc = @classes[superclass.to_sym]
     name = e[1]
-    if name.is_a?(Array) && name[0] == :eigen
+
+    # Handle namespaced class names like [:deref, :Foo, :Bar]
+    # For class Foo::Bar, we need to find Foo's scope and create Bar within it
+    if name.is_a?(Array) && name[0] == :deref
+      # Extract parent and child from [:deref, parent, child]
+      # For Foo::Bar::Baz, this will be nested: [:deref, [:deref, :Foo, :Bar], :Baz]
+      parent_name = name[1]
+      child_name = name[2]
+
+      # Recursively resolve parent scope
+      if parent_name.is_a?(Array) && parent_name[0] == :deref
+        # Nested namespace - need to resolve recursively
+        # For now, convert to fully qualified name
+        parts = []
+        n = name
+        while n.is_a?(Array) && n[0] == :deref
+          parts.unshift(n[2])
+          n = n[1]
+        end
+        parts.unshift(n) if n.is_a?(Symbol)
+
+        # Build fully qualified name: Foo__Bar__Baz
+        qualified_name = parts.join("__").to_sym
+        name = qualified_name
+        # Find the parent scope (everything except last part)
+        parent_qualified = parts[0..-2].join("__").to_sym
+        parent_scope = @classes[parent_qualified] || @global_scope
+      else
+        # Simple case: parent is a direct symbol like :Foo
+        parent_scope = @classes[parent_name] || @global_scope
+        # Fully qualified name is Parent__Child
+        name = "#{parent_name}__#{child_name}".to_sym
+      end
+
+      scope = parent_scope
+    elsif name.is_a?(Array) && name[0] == :eigen
       name = clean_method_name(name.to_s)
     end
+
     cscope = @classes[name.to_sym]
     cscope = ClassScope.new(scope, name, @vtableoffsets, superc) if !cscope
     @classes[cscope.name.to_sym] =  cscope
     @global_scope.add_constant(cscope.name.to_sym,cscope)
-    scope.add_constant(name.to_sym,cscope)
+    scope.add_constant(name.to_sym,cscope) if scope != @global_scope
     build_class_scopes(e[3], cscope)
   end
           
