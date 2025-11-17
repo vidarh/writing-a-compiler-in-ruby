@@ -512,7 +512,7 @@ module Tokens
                 @s.get
               end
               return [[:callm, :Regexp, :new, pattern], nil]
-            elsif c == ?\
+            elsif c == ?\\
               # Escape sequence
               pattern << c.chr
               next_c = @s.get
