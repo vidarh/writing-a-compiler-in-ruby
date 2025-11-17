@@ -482,39 +482,36 @@ For `a, *b, c, d = array`:
 
 ## 19. If-Statement Without Else Returns Condition Value Instead of Nil
 
+**Status**: ✅ FIXED (2025-11-17, commit e0b645a)
+
 **Problem**: When an if-statement has no else-branch and the condition is false, the expression returns the condition value instead of nil.
 
 ```ruby
 result = if false then 123 end
-puts result.inspect  # Outputs: false (WRONG - should be nil)
+puts result.inspect  # Was: false (WRONG) - Now: nil (correct)
 
 result = if true then 123 end
 puts result.inspect  # Outputs: 123 (correct)
 ```
 
-**Root Cause**: In `compile_control.rb`, the `compile_if` function only generates the endif label and jump when `else_arm` is present. When there's no else-arm:
-- Line 114: `@e.jmp(l_end_if_arm) if else_arm` - No jump generated
-- Line 125: `@e.local(l_end_if_arm) if else_arm` - No endif label created
-- When condition is false, execution jumps to else label but has no code to load nil into %eax
-- The %eax register still contains the condition value (false)
+**Root Cause**: In `compile_control.rb`, the `compile_if` function only generated the endif label and jump when `else_arm` was present. When there was no else-arm, the %eax register contained the condition value (false) instead of nil.
 
-**Failed Fix Attempts**:
-1. Using `@e.load_address("nil")` - causes segfault during bootstrap initialization
-2. Using `compile_eval_arg(scope, :nil)` - causes segfault during bootstrap initialization
-3. Using `get_arg(scope, :nil)` followed by `@e.movl` - generates invalid assembly with literal `[:global, :nil]`
+**Solution**: Modified `parser.rb` to automatically add `[:do, :nil]` as the else-branch for all if/unless statements without explicit else clauses. This parser-level fix is superior to compiler-level fixes because:
+1. S-expression `%s(if ...)` code remains unaffected (critical for bootstrap)
+2. No risk of breaking bootstrap code that depends on current behavior
+3. All regular Ruby if-statements automatically get correct nil behavior
+4. Cleaner AST structure - all if-statements consistently have both branches
 
-**Why Fixes Fail**: The fix requires loading nil during the else-branch code generation. However, if-statements without else-arms occur during early bootstrap (e.g., Class initialization), and the nil global may not be properly initialized yet at that point. Any attempt to reference nil causes bootstrap failures.
+**Changes**:
+- `parser.rb:196-200`: Add explicit `[:do, :nil]` else-branch in `parse_if`
+- `lib/core/symbol.rb:41-46`: Add explicit `else nil` to Symbol#<=> for code clarity
+- `test/selftest.rb:670`: Update test expectation for new AST structure
 
-**Impact**: 
-- if_spec.rb fails 2/25 tests
-- Any code relying on `if condition; value; end` returning nil when condition is false will get the condition value instead
-
-**Workaround**: Always provide an explicit else-branch: `if condition; value; else; nil; end`
-
-**Solution Needed**: The fix requires either:
-1. Ensuring nil is initialized before any if-statements are compiled, or
-2. Using a different code generation strategy that doesn't reference the nil global, or  
-3. Deferring nil loading to a later stage after globals are set up
+**Impact**:
+- ✅ selftest passes (0 failures)
+- ✅ selftest-c passes (0 failures)
+- ✅ if-without-else now correctly returns nil
+- ✅ No regressions in bootstrap or existing tests
 
 **Priority**: Medium - Affects correctness but has simple workaround
 
