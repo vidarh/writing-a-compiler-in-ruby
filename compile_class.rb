@@ -42,6 +42,18 @@ class Compiler
     compile_class(scope,name, *exps)
   end
 
+  # Helper method to search for a method in the class vtable chain (including superclasses)
+  def find_method_in_vtable_chain(class_scope, method_name)
+    current = class_scope
+    while current
+      entry = current.vtable[method_name]
+      return entry if entry
+      # Walk up the superclass chain
+      current = current.instance_variable_get(:@superclass)
+    end
+    nil
+  end
+
   # Compiles method aliasing: alias new_name old_name
   # Creates a new vtable entry that points to the same implementation as the old method
   # Also handles global variable aliasing: alias $new $old
@@ -78,8 +90,8 @@ class Compiler
 
     class_scope = scope.class_scope
 
-    # Look up the old method in the vtable
-    old_entry = class_scope.vtable[old_name]
+    # Look up the old method in the vtable (search superclass chain)
+    old_entry = find_method_in_vtable_chain(class_scope, old_name)
     if !old_entry
       error("Cannot alias undefined method '#{old_name}'")
     end
