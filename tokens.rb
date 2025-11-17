@@ -450,17 +450,17 @@ module Tokens
 
               @s.get
 
-              if paired && c == delim
+              if c == ?\
+                # Escape sequence - consume next character literally
+                content << c.chr
+                next_c = @s.get
+                content << next_c.chr if next_c
+              elsif paired && c == delim
                 depth += 1
                 content << c.chr
               elsif c == closing
                 depth -= 1
                 content << c.chr if depth > 0
-              elsif c == ?\
-                # Escape sequence
-                content << c.chr
-                next_c = @s.get
-                content << next_c.chr if next_c
               else
                 content << c.chr
               end
