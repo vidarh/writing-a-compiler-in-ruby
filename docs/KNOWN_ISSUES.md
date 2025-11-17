@@ -1420,7 +1420,43 @@ when ?/
 
 ---
 
-## 37. Regex Literal After Semicolon Parsed as Division (ARCHITECTURE ISSUE)
+## 37. %Q{} Percent Literal Lookahead - REVERTED (2025-11-17)
+
+**Problem**: Attempted to implement lookahead to distinguish `%Q{foo}` percent literals from modulo operator `%` by peeking ahead after consuming `%`. This approach was fundamentally broken and broke selftest-c.
+
+**Attempted Implementation** (REVERTED):
+```ruby
+# Broken code (removed from tokens.rb):
+if !is_percent_literal
+  pct = @s.get      # Consume %
+  if pct
+    next_char = @s.peek
+    if next_char && ALPHA.member?(next_char)
+      is_percent_literal = true
+    end
+    @s.unget(pct)   # Put % back
+  end
+end
+```
+
+**Why It Failed**: The code logic itself was flawed (not a compilation issue). When compiled with the broken lookahead, the resulting compiler binary was corrupted and produced "undefined method 'nil' for Tokens__Tokenizer" errors at runtime.
+
+**Current Implementation**: Simple heuristic using `@first || prev_lastop` to detect percent literals. This works for most cases but doesn't handle patterns like `eval %Q{foo}` where percent literal follows an identifier.
+
+**Impact**:
+- selftest-c: PASSES (with reverted code)
+- Most percent literals work correctly
+- Edge case `method_name %Q{string}` may not parse correctly
+
+**Status**: Proper lookahead implementation deferred - current simple heuristic is sufficient for bootstrap
+
+**Priority**: Low - Current heuristic works for compiler's own code and most Ruby code
+
+**Files**: tokens.rb:398-413 (reverted in commit 2f290d2)
+
+---
+
+## 38. Regex Literal After Semicolon Parsed as Division (ARCHITECTURE ISSUE)
 
 **Problem**: When a regex literal appears after a semicolon, it's incorrectly parsed as division because the tokenizer doesn't know that a semicolon was consumed by the parser.
 
@@ -1535,7 +1571,7 @@ This requires architectural changes to scope value stacks properly within subexp
 
 ---
 
-## 38. Top-Level Instance Variables Generate Invalid Assembly Labels
+## 40. Top-Level Instance Variables Generate Invalid Assembly Labels
 
 **Problem**: Instance variables used at top-level scope (outside of methods or classes) generate assembly labels with the `@` prefix, which is invalid in assembly.
 
@@ -1582,7 +1618,7 @@ test_method
 
 ---
 
-## 39. RbConfig::CONFIG Cannot Be Resolved Statically
+## 41. RbConfig::CONFIG Cannot Be Resolved Statically
 
 **Problem**: The compiler cannot resolve `RbConfig::CONFIG` at compile time, causing compilation failure with "Unable to resolve: RbConfig::CONFIG statically (FIXME)".
 
@@ -1606,7 +1642,7 @@ RbConfig::CONFIG["EXTSTATIC"]  # Fails to compile
 
 ---
 
-## 35. Duplicate Method Definitions Generate Assembly Errors
+## 42. Duplicate Method Definitions Generate Assembly Errors
 
 **Problem**: When a Ruby file defines the same method multiple times (which is allowed in Ruby - later definitions override earlier ones), the compiler generates duplicate assembly labels causing "symbol already defined" errors.
 

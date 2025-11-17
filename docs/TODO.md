@@ -2,11 +2,13 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-16 - Latest Update)
+## Test Status (2025-11-17 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, **3 passed (4%)**, 14 failed, **21 crashed**, **41 compile failures (52%)**
+**Language Specs**: 79 files, **3 passed (4%)**, 20 failed, **26 crashed (33%)**, **30 compile failures (38%)**
+  - Progress: Compile failures reduced from 33 to 30 (global vars, include support)
+  - alias_spec, execution_spec, private_spec now compile (but crash/fail at runtime)
 **Custom Specs (spec/)**: 37 files, **25 passed (68%)**, 4 failed, 5 crashed, 3 compile failures. 86 tests, 72 passed (84%)
 
 ## High Priority (Language Spec Compilation Failures)
@@ -69,7 +71,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **super_spec.rb** - COMPILE FAIL (infinite recursion issue - see KNOWN_ISSUES)
 
 ### Other Specs
-- [ ] **alias_spec.rb** - COMPILE FAIL (Module not found - dependency issue, not alias bug)
+- [x] **alias_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed with alias runtime + global vars) - CRASH (runtime issue)
 - [ ] **assignments_spec.rb** - COMPILE FAIL
 - [ ] **optional_assignments_spec.rb** - COMPILE FAIL
 - [ ] **case_spec.rb** - COMPILE FAIL (regex literal `/pattern/` parsed as division - see KNOWN_ISSUES #35)
@@ -85,7 +87,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **retry_spec.rb** - ✅ COMPILES (was COMPILE FAIL) - FAILED (retry not implemented)
 - [x] **throw_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed special global $!) - FAILED (catch/throw not implemented)
 - [ ] **variables_spec.rb** - COMPILE FAIL
-- [ ] **private_spec.rb** - COMPILE FAIL
+- [x] **private_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed with global vars) - CRASH (runtime issue)
 - [ ] **send_spec.rb** - COMPILE FAIL
 - [ ] **safe_navigator_spec.rb** - COMPILE FAIL
 - [ ] **precedence_spec.rb** - COMPILE FAIL
@@ -95,7 +97,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 ### Infrastructure/Meta Specs
 - [x] **BEGIN_spec.rb** - ✅ COMPILES (now compiles with special globals fix) - CRASH (BEGIN blocks not implemented)
 - [x] **END_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed $? special global) - FAILED (END blocks not implemented)
-- [ ] **execution_spec.rb** - COMPILE FAIL
+- [x] **execution_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed with %x{} support) - FAILED (tests fail)
 - [x] **file_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - link failure (fixture loading)
 - [x] **line_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - link failure (fixture loading)
 - [x] **magic_comment_spec.rb** - ✅ COMPILES (now compiles with special globals fix) - CRASH (shared not implemented)
