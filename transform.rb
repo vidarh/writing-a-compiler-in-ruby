@@ -45,7 +45,9 @@ class Compiler
       next :skip if e[0] == :sexp
       if e[0] == :lambda || e[0] == :proc
         seen = true
-        args = e[1] || E[]
+        # args can be an array, :block symbol, or nil
+        args = e[1]
+        args = E[] if !args || args == :block
         body = e[2] || nil
         rescue_clause = e[3]  # May be nil
         ensure_clause = e[4]  # May be nil
@@ -360,7 +362,8 @@ class Compiler
 
         # Extract parameter names (handle tuples like [:param, :default, :nil])
         # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
-        params = (param_list || []).collect { |p| p.is_a?(Array) ? p[0] : p }
+        # param_list can be an array or a symbol like :block (for block arguments)
+        params = param_list.is_a?(Array) ? param_list.collect { |p| p.is_a?(Array) ? p[0] : p } : []
 
         # Find which parameters are in env (need initialization)
         # Note: using reject with negation because .select doesn't exist in lib/core/array.rb
@@ -714,6 +717,16 @@ class Compiler
   # - After splat: assign from end using negative indices
   #
   def rewrite_destruct(exps)
+    # First, convert [:comma, ...] on LHS to [:destruct, ...]
+    exps.depth_first(:assign) do |e|
+      l = e[1]
+      if l.is_a?(Array) && l[0] == :comma
+        # Convert [:comma, a, b, c] to [:destruct, a, b, c]
+        l[0] = :destruct
+      end
+    end
+
+    # Now process [:destruct, ...] assignments
     exps.depth_first(:assign) do |e|
       l = e[1]
       if l.is_a?(Array) && l[0] == :destruct
@@ -810,11 +823,20 @@ class Compiler
       enumerable = e[2]
       body = e[3]
 
-      # Create proc node for the block passed to .each
-      # Proc node format: [:proc, [params], [exps], rescue, ensure]
-      # Body is [:do, exp1, exp2, ...], convert to [exp1, exp2, ...]
-      body_exps = (body.is_a?(Array) && body[0] == :do) ? body[1..-1] : [body]
-      proc_node = E[e.position, :proc, [var], body_exps, nil, nil]
+      # Check if var is a complex expression (class var, instance var, constant, etc.)
+      # If so, we need to use a temporary parameter and assign to the actual target
+      if var.is_a?(Array) || (var.is_a?(Symbol) && (var.to_s.start_with?('@@', '@') || var.to_s[0] == var.to_s[0].upcase))
+        # Complex target - use temporary parameter
+        tmp_param = :__for_var
+        body_exps = (body.is_a?(Array) && body[0] == :do) ? body[1..-1] : [body]
+        # Prepend assignment of tmp_param to actual var at start of body
+        body_exps = [[:assign, var, tmp_param]] + body_exps
+        proc_node = E[e.position, :proc, [tmp_param], body_exps, nil, nil]
+      else
+        # Simple variable - use it directly as parameter
+        body_exps = (body.is_a?(Array) && body[0] == :do) ? body[1..-1] : [body]
+        proc_node = E[e.position, :proc, [var], body_exps, nil, nil]
+      end
 
       # Modify e in-place to become [:let, [__for_tmp], [:do, assign, each_call, return_tmp]]
       # This creates: (__for_tmp = enumerable; __for_tmp.each { |var| body }; __for_tmp)
