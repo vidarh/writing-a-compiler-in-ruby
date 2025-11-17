@@ -113,7 +113,7 @@ class Hash
     #
     #puts "START FOR KEY: #{key}"
     while !(d = @data[pos]).nil? and !key.eql?(d)
-      %s(__docnt)
+      #%s(__docnt)
       pos = (pos + 4)
       if pos >= cap
         pos -= cap

@@ -51,9 +51,14 @@ class Compiler
     #    from the module to the class if the class slot is uninitialized.
     #    (Note: __include_module has built-in null check, so safe to call even if module not yet initialized)
 
-    # Generate runtime call: __include_module(self, ModuleName)
-    # where self is the class being defined, and ModuleName is the module constant
-    compile_eval_arg(scope, [:sexp, [:call, :__include_module, [:self, incl.to_sym]]])
+    # Generate runtime call: __include_module(target, ModuleName)
+    # In class/module scope: target is self (the class being defined)
+    # In global scope: target is Object (top-level include adds to Object)
+    if scope.is_a?(GlobalScope)
+      compile_eval_arg(scope, [:sexp, [:call, :__include_module, [:Object, incl.to_sym]]])
+    else
+      compile_eval_arg(scope, [:sexp, [:call, :__include_module, [:self, incl.to_sym]]])
+    end
 
     # FIXME:
     # - Ensure we handle eigenclasses properly.

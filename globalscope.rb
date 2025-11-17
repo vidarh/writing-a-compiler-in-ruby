@@ -6,6 +6,7 @@
 # not. For now, we'll treat all of them as global variables.
 class GlobalScope < Scope
   attr_reader :class_scope, :globals
+  attr_accessor :aliases
 
   def initialize(offsets)
     @vtableoffsets = offsets
@@ -22,6 +23,7 @@ class GlobalScope < Scope
     # compiler-specific descriptive names prefixed with __.
     @aliases = {
       :"$:" => "LOAD_PATH",           # Load path array
+      :"$\"" => "LOADED_FEATURES",     # Array of loaded files (loaded by require)
       :"$0" => "__D_0",                # Program name
       :"$!" => "__exception_message",  # Last exception message (set by raise)
       :"$@" => "__exception_backtrace",# Last exception backtrace
@@ -32,12 +34,40 @@ class GlobalScope < Scope
       :"$;" => "__field_separator",    # Default separator for String#split
       :"$." => "__input_line_number",  # Current input line number
       :"$&" => "__last_match",         # String matched by last successful regex
-      :"$$" => "__process_id"          # Process ID of current Ruby process
+      :"$$" => "__process_id",         # Process ID of current Ruby process
+      :"$=" => "__case_insensitive",   # Case-insensitive comparison (deprecated, now no-op)
+      :"$<" => "__argf",               # ARGF - virtual concatenation of files from command line
+      :"$>" => "__default_output",     # Default output destination (STDOUT by default)
+      :"$~" => "__last_match_data",    # MatchData object from last regex match
+      :"$`" => "__pre_match",          # String before the match
+      :"$'" => "__post_match",         # String after the match
+      :"$+" => "__last_paren_match",   # Last captured group from regex match
+      :"$*" => "__argv",               # Command-line arguments (ARGV)
+      # $-x command-line option flags
+      :"$-0" => "__D_dash_0",          # Input record separator alias ($/)
+      :"$-a" => "__D_dash_a",          # Autosplit mode
+      :"$-d" => "__D_dash_d",          # Debug mode
+      :"$-F" => "__D_dash_F",          # Autosplit field separator
+      :"$-i" => "__D_dash_i",          # In-place edit mode
+      :"$-I" => "__D_dash_I",          # Load path directories
+      :"$-K" => "__D_dash_K",          # Character encoding
+      :"$-l" => "__D_dash_l",          # Line-ending processing
+      :"$-p" => "__D_dash_p",          # Print loop mode
+      :"$-v" => "__D_dash_v",          # Verbose mode
+      :"$-w" => "__D_dash_w"           # Warning level
     }
   end
 
   def add_global(c)
     @globals[c] = true
+  end
+
+  def add_global_alias(new_name, old_name)
+    # Get the storage name for the old global (resolving aliases)
+    s = @aliases[old_name]
+    # If old_name is already an alias, use its target; otherwise use old_name
+    target = s || old_name.to_s[1..-1]  # Strip $ prefix
+    @aliases[new_name] = target
   end
 
   def add_constant(c,v = true)

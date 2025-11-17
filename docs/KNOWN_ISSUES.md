@@ -1534,3 +1534,112 @@ This requires architectural changes to scope value stacks properly within subexp
 **Workaround**: Rewrite using explicit values: `{a: a}` instead of `{a:}`
 
 ---
+
+## 38. Top-Level Instance Variables Generate Invalid Assembly Labels
+
+**Problem**: Instance variables used at top-level scope (outside of methods or classes) generate assembly labels with the `@` prefix, which is invalid in assembly.
+
+**Example**:
+```ruby
+# At top-level:
+@dollar_dash_zero = $-0
+$-0 = @dollar_dash_zero
+puts "ok"
+```
+
+**Assembly Error**:
+```
+out/test_dollar_dash_assign.s:9435: Error: invalid char '@' beginning operand 2 `@dollar_dash_zero'
+out/test_dollar_dash_assign.s:135601: Error: junk at end of line, first unrecognized character is `@'
+```
+
+**Assembly Output** (INVALID):
+```asm
+@dollar_dash_zero:
+  .long 0
+```
+
+**Root Cause**: Instance variables at top-level are treated as globals and output with the `@` prefix intact in assembly labels. Assembly syntax doesn't allow `@` in label names.
+
+**Workaround**: Put code inside methods, as instance variables inside methods work correctly:
+```ruby
+def test_method
+  @dollar_dash_zero = $-0
+  $-0 = @dollar_dash_zero
+  puts "ok"
+end
+test_method
+```
+
+**Impact**:
+- Affects rubyspec/language/predefined_spec.rb (which uses instance variables inside methods - works fine)
+- Only affects test code written at top-level
+- Production code typically uses methods, so this is rarely encountered
+
+**Priority**: Low - Easily avoided by using methods, which is standard Ruby practice
+
+**Test File**: test_dollar_dash_assign.rb (needs to be rewritten to use method)
+
+---
+
+## 39. RbConfig::CONFIG Cannot Be Resolved Statically
+
+**Problem**: The compiler cannot resolve `RbConfig::CONFIG` at compile time, causing compilation failure with "Unable to resolve: RbConfig::CONFIG statically (FIXME)".
+
+**Error Message**:
+```
+Unable to resolve: RbConfig::CONFIG statically (FIXME)
+```
+
+**Example**:
+```ruby
+require 'rbconfig'
+RbConfig::CONFIG["EXTSTATIC"]  # Fails to compile
+```
+
+**Impact**: Any code that accesses RbConfig::CONFIG (common in library code) fails to compile.
+
+**Test**: spec/rbconfig_access_spec.rb
+
+**Status**: Not started
+**Priority**: Medium
+
+---
+
+## 35. Duplicate Method Definitions Generate Assembly Errors
+
+**Problem**: When a Ruby file defines the same method multiple times (which is allowed in Ruby - later definitions override earlier ones), the compiler generates duplicate assembly labels causing "symbol already defined" errors.
+
+**Error Message**:
+```
+Error: symbol `__method_Object_method_missing' is already defined
+Error: symbol `__method_Object_foo' is already defined
+```
+
+**Example**:
+```ruby
+def foo
+  puts "first"
+end
+
+def foo  # Valid in Ruby - replaces first definition
+  puts "second"
+end
+
+foo  # Should print "second"
+```
+
+**Root Cause**: The compiler generates assembly labels based on class name and method name only. When the same method is defined twice, it tries to emit the same label twice, causing an assembler error.
+
+**Proposed Solution**: Add a suffix to subsequent method definitions (e.g., `__method_Object_foo`, `__method_Object_foo__2`, `__method_Object_foo__3`). The vtable should point to the latest version.
+
+**Impact**: Primarily affects test code that redefines methods in different test cases. The full rubyspec/language/predefined_spec.rb fails to compile due to this issue.
+
+**Workaround**: None - code must be restructured to avoid duplicate method definitions.
+
+**Test**: rubyspec/language/predefined_spec.rb
+
+**Status**: Not started
+**Priority**: Low (only seen in predefined_spec.rb so far)
+
+---

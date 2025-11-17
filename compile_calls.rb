@@ -196,10 +196,19 @@ class Compiler
     return compile_yield(scope, args, block) if func == :yield
 
     # Handle 'include ModuleName' as compile-time module inclusion
+    # Works in:
+    # - ClassScope/ModuleScope (class/module body) - includes into that class/module
+    # - GlobalScope (top level) - includes into Object
+    # Other scopes (LocalVarScope, etc.) - treat as regular method call
     if func == :include
-      # args is array of module names, but we only support single module for now
-      mod_name = args.is_a?(Array) ? args[0] : args
-      return compile_include(scope, mod_name, pos)
+      if scope.is_a?(ModuleScope) || scope.is_a?(GlobalScope)
+        # args is array of module names, but we only support single module for now
+        mod_name = args.is_a?(Array) ? args[0] : args
+        return compile_include(scope, mod_name, pos)
+      else
+        # Not in class/module/global scope - fall through to regular method call
+        # This allows include to work as a method in other contexts (e.g., RSpec matchers)
+      end
     end
 
     # This is a bit of a hack. get_arg will also be called from

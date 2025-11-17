@@ -8,6 +8,7 @@
 # However it requires String support to be functional first.
 #
 __FILE__ = "lib/core/stubs.rb"
+__LINE__ = nil
 
 
 # Set up the 'main' object
@@ -46,4 +47,3 @@ RUBY_ENGINE="vidarh/compiler"
 # Stub for Thread class (not implemented)
 class Thread
 end
-

@@ -686,6 +686,10 @@ class String
     return nil
   end
 
+  # FIXME: Stub.
+  def force_encoding(encoding)
+    encoding
+  end
 end
 
 # FIXME: This is an interesting bootstrapping problem

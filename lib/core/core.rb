@@ -95,6 +95,7 @@ require 'core/env'
 require 'core/method'
 require 'core/rational'
 require 'core/encoding'
+require 'core/rbconfig'
 require 'core/math'
 require 'core/binding'
 

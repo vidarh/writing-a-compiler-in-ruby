@@ -20,7 +20,25 @@ module Tokens
           tmp << s.get
         end
       elsif tmp == "$"
-        tmp << s.get # FIXME: Need to check what characters are legal after $ (and not covered above)
+        # Handle special global variables
+        # Single-character specials: $!, $@, $&, $`, $', $+, $,, $., $/, $:, $;, $<, $=, $>, $?, $\, and $~
+        # Also $- followed by a single alphanumeric character (e.g., $-0, $-a, $-w)
+        c = s.peek
+        if c == ?-
+          tmp << s.get  # consume '-'
+          # Check if there's an alphanumeric after the dash
+          c = s.peek
+          if c && (ALNUM.member?(c) || c == ?_)
+            tmp << s.get  # consume the character after the dash
+          end
+        elsif c && (c == ?! || c == ?@ || c == ?& || c == ?` || c == ?' || c == ?+ ||
+                    c == ?, || c == ?. || c == ?/ || c == ?: || c == ?; || c == ?< ||
+                    c == ?= || c == ?> || c == ?? || c == ?\\ || c == ?~)
+          tmp << s.get
+        else
+          # For other cases, consume one character
+          tmp << s.get
+        end
         return tmp.to_sym
       end
       if tmp.size > 0 && (s.peek == ?! || s.peek == ??)
