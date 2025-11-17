@@ -1676,3 +1676,56 @@ foo  # Should print "second"
 **Priority**: Low (only seen in predefined_spec.rb so far)
 
 ---
+
+## 43. Percent Literal Delimiter Restrictions
+
+**Problem**: Certain characters cannot be used as percent literal delimiters due to parsing ambiguities:
+- `$` - Conflicts with global variable syntax
+- `@` - Conflicts with instance variable syntax  
+- `_` - Conflicts with identifier syntax
+- Backslash `\` - Now supported (fixed 2025-11-17)
+
+**Example**:
+```ruby
+# These work:
+%Q{hello}
+%Q(hello)
+%Q[hello]
+%Q!hello!
+
+# These don't work:
+%Q$hello$   # $ conflicts with $global_var syntax
+%Q@hello@   # @ conflicts with @ivar syntax
+%Q_hello_   # _ conflicts with identifiers
+
+# This now works (as of 2025-11-17):
+%Q\hello\   # Backslash delimiter fixed
+```
+
+**Root Cause**: When `$` is used as a delimiter in percent literals with interpolation, the closing `$` after `#{...}` creates ambiguity - it could be:
+1. The closing delimiter (correct)
+2. The start of a global variable (incorrect, but gets parsed)
+
+Similar issues exist for `@` (instance vars) and `_` (identifiers).
+
+**Fix Applied (2025-11-17)**:
+- Backslash delimiter now works correctly - escape handling is skipped when backslash is the delimiter
+- `$`, `@`, and `_` are excluded from allowed delimiters to avoid ambiguity
+- Error reporting improved: shows position at start of percent literal, not EOF
+
+**Impact**:
+- Most percent literals work correctly
+- Rare delimiters like `$`, `@`, `_` are not supported
+- string_spec.rb now compiles (was COMPILE FAIL due to `%\...\` and `%$...$`)
+
+**Test**: 
+- `test_bs.rb` - backslash delimiter
+- rubyspec/language/string_spec.rb - comprehensive percent literal tests
+
+**Status**: ✅ FIXED (2025-11-17) - backslash delimiter supported, problematic delimiters excluded
+
+**Priority**: Low - affected delimiters are rarely used
+
+**Commit**: b187fd5 "Fix percent literal parsing bugs"
+
+---
