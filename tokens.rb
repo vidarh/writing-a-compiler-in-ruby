@@ -396,6 +396,7 @@ module Tokens
         # - Standard cases: x = %Q{...} (at statement start)
         # - Argument cases: eval %Q{...} (after identifier, but followed by Q{)
         if @first || prev_lastop
+          percent_start_pos = @s.position  # Save position for error reporting
           @s.get  # consume '%'
 
           # Check for type character
@@ -406,16 +407,16 @@ module Tokens
 
           # Check if we have a delimiter
           # Percent literals can use any non-alphanumeric character as delimiter
-          # Exclude @ (instance vars) and _ (identifiers can start with it)
+          # Exclude @ (instance vars), _ (identifiers), and $ (global vars) to avoid ambiguity
           delim = @s.peek
-          is_delimiter = delim && !ALNUM.member?(delim) && delim != ?_ && delim != ?@
+          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_" && delim != "@" && delim != "$"
           if is_delimiter
             # Determine closing delimiter
             closing = case delim
-            when ?{ then ?}
-            when ?( then ?)
-            when ?[ then ?]
-            when ?< then ?>
+            when "{" then "}"
+            when "(" then ")"
+            when "[" then "]"
+            when "<" then ">"
             else delim
             end
 
@@ -424,15 +425,15 @@ module Tokens
             # Parse content until closing delimiter
             content = ""
             depth = 1
-            paired = (delim == ?{ || delim == ?( || delim == ?[ || delim == ?<)
+            paired = (delim == "{" || delim == "(" || delim == "[" || delim == "<")
 
             while depth > 0
               c = @s.peek
-              raise "Unterminated percent literal" if c == nil
+              raise CompilerError.new("Unterminated percent literal", percent_start_pos) if c == nil
 
               @s.get
 
-              if c.ord == 92  # backslash
+              if c.ord == 92 && delim != "\\"  # backslash (but not if backslash is the delimiter)
                 # Escape sequence - consume next character literally
                 content << c.chr
                 next_c = @s.get
