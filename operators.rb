@@ -107,8 +107,18 @@ Operators = {
   #
   "="         => Oper.new(  7, :assign,   :infix, 2, 2, :right, 5),
   "||="       => Oper.new(  7, :or_assign,:infix, 2, 2, :right, 5),
+  "&&="       => Oper.new(  7, :and_assign,:infix, 2, 2, :right, 5),
   "-="        => Oper.new(  7, :decr,     :infix, 2, 2, :right, 5),
   "+="        => Oper.new(  7, :incr,     :infix, 2, 2, :right, 5),
+  "*="        => Oper.new(  7, :mul_assign,:infix, 2, 2, :right, 5),
+  "/="        => Oper.new(  7, :div_assign,:infix, 2, 2, :right, 5),
+  "%="        => Oper.new(  7, :mod_assign,:infix, 2, 2, :right, 5),
+  "**="       => Oper.new(  7, :pow_assign,:infix, 2, 2, :right, 5),
+  "&="        => Oper.new(  7, :and_bitwise_assign,:infix, 2, 2, :right, 5),
+  "|="        => Oper.new(  7, :or_bitwise_assign,:infix, 2, 2, :right, 5),
+  "^="        => Oper.new(  7, :xor_assign,:infix, 2, 2, :right, 5),
+  "<<="       => Oper.new(  7, :lshift_assign,:infix, 2, 2, :right, 5),
+  ">>="       => Oper.new(  7, :rshift_assign,:infix, 2, 2, :right, 5),
 
   "?"         => Oper.new(  6, :ternif,   :infix),
   "return"    => Oper.new(  6, :return,   :prefix,1,0, :right, 3),

@@ -469,8 +469,12 @@ module Tokens
           end
         end
 
-        # Modulo operator
+        # Modulo operator or %= assignment
         @s.get
+        if @s.peek == ?=
+          @s.get
+          return ["%=", Operators["%="]]
+        end
         return ["%", Operators["%"]]
       when ?/
         if @first || prev_lastop
@@ -497,8 +501,12 @@ module Tokens
             end
           end
         else
-          # Division operator
+          # Division operator or /= assignment
           @s.get
+          if @s.peek == ?=
+            @s.get
+            return ["/=", Operators["/="]]
+          end
           return ["/", Operators["/"]]
         end
       when ?-

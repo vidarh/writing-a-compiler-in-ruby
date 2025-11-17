@@ -46,7 +46,10 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :stackframe, :stackpointer, :deref, :include, :addr,
-                   :protected, :array, :splat, :mod, :or_assign, :break, :next, :alias,
+                   :protected, :array, :splat, :mod, :or_assign, :and_assign, :break, :next, :alias,
+                   :mul_assign, :div_assign, :mod_assign, :pow_assign,
+                   :and_bitwise_assign, :or_bitwise_assign, :xor_assign,
+                   :lshift_assign, :rshift_assign,
                    :__compiler_internal, # See `compile_pragma.rb`
                    :__inline, # See `inline.rb`
                    :bitand, :bitor, :bitxor, # Bitwise operators
@@ -405,6 +408,48 @@ class Compiler
 
   def compile_incr(scope, left, right)
     compile_assign(scope, left, [:callm, left, :+, [right]])
+  end
+
+  def compile_mul_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :*, [right]])
+  end
+
+  def compile_div_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :/, [right]])
+  end
+
+  def compile_mod_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :%, [right]])
+  end
+
+  def compile_pow_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :**, [right]])
+  end
+
+  def compile_and_bitwise_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :&, [right]])
+  end
+
+  def compile_or_bitwise_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :|, [right]])
+  end
+
+  def compile_xor_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :^, [right]])
+  end
+
+  def compile_lshift_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :<<, [right]])
+  end
+
+  def compile_rshift_assign(scope, left, right)
+    compile_assign(scope, left, [:callm, left, :>>, [right]])
+  end
+
+  def compile_and_assign(scope, left, right)
+    # a &&= b is equivalent to: a && (a = b)
+    # Only assigns if a is truthy
+    compile_if(scope, left, [:assign, left, right])
   end
 
   # Shortcircuit 'left && right' is equivalent to 'if left; right; end'
