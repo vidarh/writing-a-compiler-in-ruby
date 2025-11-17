@@ -186,8 +186,21 @@ class Compiler
   def compile_class(scope, name,superclass, *exps)
     superc = name == :Class ? nil : @classes[superclass]
 
-    if name.is_a?(Array)
-      return compile_eigenclass(scope, name[-1], *exps)
+    # Check if this is an eigenclass definition: class << obj
+    if name.is_a?(Array) && name[0] == :eigen
+      return compile_eigenclass(scope, name[1], *exps)
+    end
+
+    # Handle nested class syntax: class Foo::Bar
+    # Parser creates [:deref, :Foo, :Bar] for this
+    nested_parent = nil
+    nested_child = nil
+    if name.is_a?(Array) && name[0] == :deref
+      # For Foo::Bar: parent is Foo, child is Bar
+      nested_parent = name[1]
+      nested_child = name[2]
+      # Flatten to Foo__Bar for the class name
+      name = "#{nested_parent}__#{nested_child}".to_sym
     end
 
     # Determine the parent scope for this class definition
@@ -219,6 +232,15 @@ class Compiler
       # Also register in parent scope so lookups work
       if parent_scope.respond_to?(:add_constant) && parent_scope != @global_scope
         parent_scope.add_constant(name.to_sym, cscope)
+      end
+    end
+
+    # For nested class/module Foo::Bar, register Bar in Foo's namespace
+    # This must happen outside the !cscope check because modules are created by transform phase
+    if nested_parent && nested_child
+      parent_module = @global_scope.find_constant(nested_parent)
+      if parent_module && parent_module.respond_to?(:add_constant)
+        parent_module.add_constant(nested_child, cscope)
       end
     end
 

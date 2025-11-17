@@ -671,11 +671,18 @@ class Compiler
           # refactoring step; it was done as a workaround for a compiler @bug
           build_class_scopes_for_class(e, scope)
         elsif e[0] == :module
-          cscope   = @classes[e[1].to_sym]
-          cscope ||= ModuleScope.new(scope, e[1], @vtableoffsets, @classes[:Object])
+          # Handle nested module syntax: module Foo::Bar
+          module_name = e[1]
+          if module_name.is_a?(Array) && module_name[0] == :deref
+            # Flatten Foo::Bar to Foo__Bar
+            module_name = "#{module_name[1]}__#{module_name[2]}".to_sym
+          end
+
+          cscope   = @classes[module_name.to_sym]
+          cscope ||= ModuleScope.new(scope, module_name, @vtableoffsets, @classes[:Object])
           @classes[cscope.name.to_sym] =  cscope
           @global_scope.add_constant(cscope.name.to_sym,cscope)
-          scope.add_constant(e[1].to_sym,cscope)
+          scope.add_constant(module_name.to_sym,cscope)
           build_class_scopes(e[3], cscope)
         elsif e[0] == :sexp
         else
