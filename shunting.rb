@@ -64,8 +64,9 @@ module OpPrec
                (ostack.last.right_pri == pri && op.assoc == :left) ||
                ostack.last.type == :postfix) &&
              ((op && op.type == :rp) || ostack.last.type != :lp) &&
-             # Don't reduce prefix operators when a higher-precedence prefix operator follows
-             !(ostack.last.type == :prefix && op && op.type == :prefix && pri < ostack.last.pri)
+             # Don't reduce prefix operators when an equal-or-higher-precedence prefix operator follows
+             # This allows "not not false" to parse as "not (not false)" instead of "(not) not false"
+             !(ostack.last.type == :prefix && op && op.type == :prefix && pri <= ostack.last.pri)
         o = ostack.pop
         @out.oper(o) if o.sym
       end
@@ -240,7 +241,6 @@ module OpPrec
       src.each do |t,o,keyword|
         op = o
         token = t
-
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator.
         # Also, keywords that have operator mappings (like if/while/rescue) should
