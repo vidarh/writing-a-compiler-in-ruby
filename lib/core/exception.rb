@@ -228,6 +228,9 @@ end
 class UncaughtThrowError < StandardError
 end
 
+class LoadError < StandardError
+end
+
 # Initialize special exception globals
 # $! holds the current exception message (set by raise, cleared after rescue)
 $! = nil
