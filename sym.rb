@@ -77,6 +77,9 @@ module Tokens
             return :":==="
           end
           return :":=="
+        elsif s.peek == ?~
+          s.get
+          return :":=~"
         end
         return :":="
       elsif s.peek == ?<
