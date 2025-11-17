@@ -193,7 +193,11 @@ class Parser < ParserBase
       keyword(:end) or expected("expression or 'end' for open 'if'")
     end
     ret = E[pos,type.to_sym, cond, E[:do].concat(exps)]
-    ret << E[:do].concat(elseexps) if elseexps
+    if elseexps
+      ret << E[:do].concat(elseexps)
+    else
+      ret << E[:do, :nil]
+    end
     return  ret
   end
 

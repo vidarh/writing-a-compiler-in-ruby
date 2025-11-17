@@ -41,8 +41,9 @@ class Symbol
   def <=> other
     if other.is_a?(Symbol)
       return to_s <=> other.to_s
+    else
+      nil
     end
-    nil
   end
 
   def to_s

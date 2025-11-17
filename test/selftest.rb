@@ -667,7 +667,7 @@ def test_compiler
 
   c = Compiler.new(e)
   c.rewrite_concat(prog)
-  expect_eq(prog.inspect, [:do, [:if, [:<, :a, 2], [:do, [:callm, :STDERR, :puts, [[:callm, [:callm, [:callm, "a ", :to_s], :concat, [[:callm, :b, :to_s]]], :concat, [[:callm, " c", :to_s]]]]]]]].inspect, "concat => callm (2)")
+  expect_eq(prog.inspect, [:do, [:if, [:<, :a, 2], [:do, [:callm, :STDERR, :puts, [[:callm, [:callm, [:callm, "a ", :to_s], :concat, [[:callm, :b, :to_s]]], :concat, [[:callm, " c", :to_s]]]]]], [:do, :nil]]].inspect, "concat => callm (2)")
 
   dummypos = Scanner::Position.new("test", 1,1)
 
