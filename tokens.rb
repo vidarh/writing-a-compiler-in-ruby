@@ -450,7 +450,7 @@ module Tokens
 
               @s.get
 
-              if c == ?\
+              if c.ord == 92  # backslash
                 # Escape sequence - consume next character literally
                 content << c.chr
                 next_c = @s.get
