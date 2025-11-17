@@ -671,6 +671,15 @@ class Parser < ParserBase
     type = keyword(:module) or return
     ws
     name = expect(Atom) || literal('<<') or expected("class name")
+    if name
+      # Check for namespaced module name (e.g., Foo::Bar::Baz)
+      # Build up [:deref, :Foo, :Bar, :Baz] for module Foo::Bar::Baz
+      while literal('::')
+        ws
+        next_part = expect(Atom) or expected("module name after ::")
+        name = [:deref, name, next_part]
+      end
+    end
     ws
     error("A module can not have a super class") if @scanner.peek == ?<
     exps = kleene { parse_exp }
