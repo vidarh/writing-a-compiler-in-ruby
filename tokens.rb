@@ -460,6 +460,12 @@ module Tokens
               # Must prefix with : so transform.rb recognizes them as symbols
               symbols = content.split.map { |word| (":#{word}").to_sym }
               return [[:array, *symbols], nil]
+            when ?x
+              # %x{} - command execution (same as backticks)
+              # For now, only support literal strings without interpolation
+              # Build the AST node directly: [:call, :system, [string]]
+              # TODO: Support interpolation like backticks do
+              return [[:call, :system, [content]], nil]
             else
               # Unknown type - treat as modulo
               @s.unget(type.chr) if type

@@ -33,6 +33,11 @@ class Kernel
     %s(exit (callm code __get_raw))
   end
 
+  # Execute a shell command (stub - not implemented)
+  def system(cmd)
+    raise "system() not implemented - backtick/command execution not supported"
+  end
+
   # Convert argument to Array
   def Array(arg)
     if arg.respond_to?(:to_ary)
