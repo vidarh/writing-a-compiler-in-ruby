@@ -397,8 +397,11 @@ module Tokens
           end
 
           # Check if we have a delimiter
+          # Percent literals can use any non-alphanumeric character as delimiter
+          # Exclude characters that have special meaning: @, $, _
           delim = @s.peek
-          if delim && (delim == ?{ || delim == ?( || delim == ?[ || delim == ?< || delim == ?| || delim == ?! || delim == ?/)
+          is_delimiter = delim && !ALNUM.member?(delim) && delim != ?_ && delim != ?@ && delim != ?$
+          if is_delimiter
             # Determine closing delimiter
             closing = case delim
             when ?{ then ?}
