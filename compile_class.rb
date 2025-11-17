@@ -196,11 +196,19 @@ class Compiler
     nested_parent = nil
     nested_child = nil
     if name.is_a?(Array) && name[0] == :deref
-      # For Foo::Bar: parent is Foo, child is Bar
-      nested_parent = name[1]
-      nested_child = name[2]
-      # Flatten to Foo__Bar for the class name
-      name = "#{nested_parent}__#{nested_child}".to_sym
+      # Only handle simple two-level nesting for now
+      # [:deref, :Foo, :Bar] where both Foo and Bar are symbols
+      if name.length == 3 && name[1].is_a?(Symbol) && name[2].is_a?(Symbol)
+        # For Foo::Bar: parent is Foo, child is Bar
+        nested_parent = name[1]
+        nested_child = name[2]
+        # Flatten to Foo__Bar for the class name
+        name = "#{nested_parent}__#{nested_child}".to_sym
+      else
+        # Complex nested class like Foo::Bar::Baz or runtime values
+        # Not supported yet
+        error("Complex nested class/module syntax not supported: #{name.inspect}", scope)
+      end
     end
 
     # Determine the parent scope for this class definition
@@ -231,7 +239,9 @@ class Compiler
       @global_scope.add_constant(fully_qualified_name, cscope)
       # Also register in parent scope so lookups work
       if parent_scope.respond_to?(:add_constant) && parent_scope != @global_scope
-        parent_scope.add_constant(name.to_sym, cscope)
+        # name should be a symbol at this point, but check just in case
+        register_name = name.is_a?(Symbol) ? name : fully_qualified_name
+        parent_scope.add_constant(register_name, cscope)
       end
     end
 
