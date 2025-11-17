@@ -284,7 +284,15 @@ class Compiler
   # For now we are assuming statically resolvable chains, and not
   # tested multi-level dereference (e.g. Foo::Bar::Baz)
   #
-  def compile_deref(scope, left, right)
+  def compile_deref(scope, left, right = nil)
+    # Prefix form: ::Constant (global scope lookup)
+    # When :: is used as prefix, left is the constant name and right is nil
+    if right.nil?
+      # ::Constant means look up Constant in global scope
+      constant_name = left
+      return get_arg(@global_scope, constant_name)
+    end
+
     # Special case: self::Constant is a runtime lookup that can't be resolved statically
     # This commonly appears in defined?(self::Constant)
     # For now, stub it to return nil - this allows the spec to compile even though
@@ -294,10 +302,71 @@ class Compiler
       return get_arg(scope, nil)
     end
 
-    cscope = scope.find_constant(left)
+    # If left is an expression (like [:deref, :Foo]), we need to resolve it to get the scope
+    # This handles ::Foo::Bar where left is [:deref, :Foo] (prefix form)
+    is_global_prefix = false
+    if left.is_a?(Array) && left[0] == :deref
+      # For ::Foo::Bar, left is [:deref, :Foo] and right is :Bar
+      # We need to resolve ::Foo to get its scope, then look up Bar in that scope
+
+      # Extract the constant name from the deref expression
+      # [:deref, :Foo] means ::Foo (prefix form)
+      # [:deref, :A, :B] means A::B (infix form)
+      if left.length == 2
+        # Prefix form: [:deref, :Foo] means ::Foo
+        # This is a global scope lookup
+        is_global_prefix = true
+        constant_name = left[1]
+        # Try multiple lookup strategies:
+        # 1. Direct lookup in @classes with simple name
+        # 2. Lookup in @classes with Object__ prefix (top-level classes)
+        # 3. Lookup in global scope
+        cscope = @classes[constant_name]
+        cscope ||= @classes["Object__#{constant_name}".to_sym]
+        cscope ||= @global_scope.find_constant(constant_name)
+      elsif left.length == 3
+        # Infix form: [:deref, :A, :B] means A::B
+        # Recursively resolve to get the scope
+        parent_scope_name = left[1]
+        child_constant_name = left[2]
+        parent_scope = scope.find_constant(parent_scope_name)
+        if parent_scope && parent_scope.is_a?(ModuleScope)
+          cscope = parent_scope.find_constant(child_constant_name)
+        else
+          error("Unable to resolve nested deref: #{left.inspect}::#{right} statically",scope)
+        end
+      else
+        error("Unable to resolve complex deref: #{left.inspect}::#{right} statically",scope)
+      end
+    else
+      cscope = scope.find_constant(left)
+    end
+
     if !cscope || !cscope.is_a?(ModuleScope)
       error("Unable to resolve: #{left}::#{right} statically (FIXME)",scope)
     end
+
+    # For global prefix lookups (::Foo::Bar), we need special handling because
+    # constants may have Object__ prefix due to transform/compile phase discrepancies
+    if is_global_prefix
+      prefix = cscope.name
+      if !prefix.empty?
+        mangled_name = prefix + "__" + right.to_s
+        # Workaround for discrepancy between transform-phase and compile-phase class scopes:
+        # Top-level classes may be stored with Object__ prefix in transform but without it in compile.
+        if !@global_constants.include?(mangled_name) && !@global_constants.include?(mangled_name.to_sym)
+          if !prefix.include?("__")  # Only for non-nested classes
+            alt_name = "Object__" + mangled_name
+            if @global_constants.include?(alt_name) || @global_constants.include?(alt_name.to_sym)
+              mangled_name = alt_name
+            end
+          end
+        end
+        # Use :global type to generate movl (dereference), not movl $ (address)
+        return Value.new([:global, mangled_name], :object)
+      end
+    end
+
     get_arg(cscope,right)
   end
 
