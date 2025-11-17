@@ -489,6 +489,21 @@ class ShouldNotProxy
     result
   end
 
+  def include(expected)
+    $spec_assertions = $spec_assertions + 1
+    # Check if target responds to include?
+    if @target.respond_to?(:include?)
+      result = @target.include?(expected)
+      if result
+        $current_test_has_failure = true
+        puts "\e[31m    FAILED: Expected #{@target.inspect} not to include #{expected.inspect}\e[0m"
+      end
+    else
+      $current_test_has_failure = true
+      puts "\e[31m    FAILED: #{@target.class} does not respond to include?\e[0m"
+    end
+  end
+
   def method_missing(method, *args)
     $spec_assertions = $spec_assertions + 1
     result = @target.__send__(method, *args)
@@ -581,6 +596,10 @@ def be_close(expected, tolerance)
   BeCloseMatcher.new(expected, tolerance)
 end
 
+def include(expected)
+  IncludeMatcher.new(expected)
+end
+
 class BeCloseMatcher < Matcher
   def initialize(expected, tolerance)
     @expected = expected
@@ -597,6 +616,20 @@ class BeCloseMatcher < Matcher
 
   def failure_message(actual)
     "Expected #{actual} to be within #{@tolerance} of #{@expected}"
+  end
+end
+
+class IncludeMatcher < Matcher
+  def match?(actual)
+    if actual.respond_to?(:include?)
+      actual.include?(@expected)
+    else
+      false
+    end
+  end
+
+  def failure_message(actual)
+    "Expected #{actual.inspect} to include #{@expected.inspect}"
   end
 end
 
@@ -691,6 +724,13 @@ def not_supported_on(*args)
   if block_given?
     yield
   end
+end
+
+def skip(message = nil)
+  # Mark the current test as skipped
+  $spec_skipped = $spec_skipped + 1
+  # Prevent the test from being counted as failed
+  $current_test_has_failure = false
 end
 
 # Context is an alias for describe
