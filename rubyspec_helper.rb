@@ -1,6 +1,10 @@
 # rubyspec_helper.rb
 # Minimal MSpec-compatible implementation for compiling rubyspec tests
 
+# Stub for MSpecScript - used by some specs but doesn't need actual functionality
+class MSpecScript
+end
+
 $spec_passed = 0
 $spec_failed = 0
 $spec_skipped = 0
@@ -45,6 +49,10 @@ end
 
 # Tolerance for floating point comparisons
 TOLERANCE = 0.00001
+
+# CODE_LOADING_DIR - path to fixtures/code directory for file loading specs
+# Simplified version without realpath support (since File.realpath may not be implemented)
+CODE_LOADING_DIR = "rubyspec/fixtures/code"
 
 def describe(description, options = nil, &block)
   # Handle hash options or block

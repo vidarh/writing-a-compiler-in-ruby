@@ -44,7 +44,38 @@ class Compiler
 
   # Compiles method aliasing: alias new_name old_name
   # Creates a new vtable entry that points to the same implementation as the old method
+  # Also handles global variable aliasing: alias $new $old
   def compile_alias(scope, new_name, old_name)
+    # Check if this is a global variable alias (both names start with $)
+    if old_name.to_s[0] == ?$ && new_name.to_s[0] == ?$
+      # Global variable aliasing - just make them refer to the same storage
+      # Get the aliased name for the old global
+      old_arg = scope.get_arg(old_name)
+      if old_arg[0] != :global
+        error("Cannot alias undefined global variable '#{old_name}'")
+      end
+
+      # Find the GlobalScope - walk up the scope chain
+      global_scope = scope
+      while global_scope && !global_scope.is_a?(GlobalScope)
+        # Try to find parent scope via various methods
+        if global_scope.respond_to?(:class_scope) && global_scope.class_scope.is_a?(GlobalScope)
+          global_scope = global_scope.class_scope
+        elsif global_scope.instance_variable_get(:@next)
+          global_scope = global_scope.instance_variable_get(:@next)
+        else
+          global_scope = nil
+        end
+      end
+
+      if global_scope && global_scope.respond_to?(:add_global_alias)
+        global_scope.add_global_alias(new_name, old_name)
+      end
+
+      # No runtime code needed - aliasing is compile-time only for globals
+      return Value.new([:subexpr])
+    end
+
     class_scope = scope.class_scope
 
     # Look up the old method in the vtable
@@ -146,30 +177,41 @@ class Compiler
   # that belong to the class.
   def compile_class(scope, name,superclass, *exps)
     superc = name == :Class ? nil : @classes[superclass]
-    cscope = scope.find_constant(name)
 
     if name.is_a?(Array)
       return compile_eigenclass(scope, name[-1], *exps)
     end
 
-    # If cscope is nil, the class hasn't been pre-registered (e.g., class defined in lambda)
-    # Create it on-demand and register it in both @classes and scope chain
-    # The parent scope determines the class naming:
-    # - At top-level or in lambda at top-level: use GlobalScope for "Foo"
-    # - Inside class Bar: use Bar's ClassScope for "Bar__Foo"
-    # Walk scope chain to find ClassScope, but if we hit GlobalScope first, use it
-    if !cscope
-      parent_scope = scope
-      while parent_scope && !parent_scope.is_a?(ClassScope) && parent_scope != @global_scope
-        parent_scope = parent_scope.next
-      end
-      parent_scope ||= @global_scope
+    # Determine the parent scope for this class definition
+    # Walk scope chain to find ModuleScope/ClassScope, but if we hit GlobalScope first, use it
+    parent_scope = scope
+    while parent_scope && !parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope
+      parent_scope = parent_scope.next
+    end
+    parent_scope ||= @global_scope
 
+    # Calculate the fully qualified name for this class
+    # If parent is a ModuleScope/ClassScope, prefix with parent name (e.g., "Foo__Bar")
+    # If parent is GlobalScope, use just the name (e.g., "Bar")
+    if parent_scope.is_a?(ModuleScope)
+      fully_qualified_name = "#{parent_scope.name}__#{name}".to_sym
+    else
+      fully_qualified_name = name.to_sym
+    end
+
+    # Check if this fully qualified class already exists
+    # This ensures nested classes don't collide with global classes of the same name
+    cscope = @classes[fully_qualified_name]
+
+    # If cscope is nil, the class hasn't been defined yet - create it
+    if !cscope
       cscope = ClassScope.new(parent_scope, name, @vtableoffsets, superc)
-      @classes[name.to_sym] = cscope
-      @global_scope.add_constant(name.to_sym, cscope)
-      # Also register in current scope so lookups work
-      scope.add_constant(name.to_sym) if scope != @global_scope
+      @classes[fully_qualified_name] = cscope
+      @global_scope.add_constant(fully_qualified_name, cscope)
+      # Also register in parent scope so lookups work
+      if parent_scope.respond_to?(:add_constant) && parent_scope != @global_scope
+        parent_scope.add_constant(name.to_sym, cscope)
+      end
     end
 
     @e.comment("=== class #{cscope.name} ===")
