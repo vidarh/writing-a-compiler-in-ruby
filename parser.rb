@@ -735,7 +735,9 @@ class Parser < ParserBase
     superclass = nil
     if literal("<")
       ws
-      superclass = expect(Atom) or expected("superclass")
+      # Accept any expression as superclass (e.g., class Foo < Bar, class Foo < get_class(), etc.)
+      # Invalid superclasses (like strings, integers) will raise TypeError at runtime
+      superclass = parse_subexp or expected("superclass")
     end
     exps = kleene { parse_exp }
     keyword(:end) or expected("expression or 'end'")
@@ -764,7 +766,9 @@ class Parser < ParserBase
     superclass = nil
     if literal("<")
       ws
-      superclass = expect(Atom) or expected("superclass")
+      # Accept any expression as superclass (e.g., class Foo < Bar, class Foo < get_class(), etc.)
+      # Invalid superclasses (like strings, integers) will raise TypeError at runtime
+      superclass = parse_subexp or expected("superclass")
     end
     exps = kleene { parse_exp }
     keyword(:end) or expected("expression or 'end'")

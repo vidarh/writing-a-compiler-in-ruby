@@ -44,28 +44,40 @@ C.new("test")
 
 ---
 
-## 2. Parser Requires Atom for Superclass
+## 2. Compiler Can't Handle Non-Constant Superclasses - PARTIALLY FIXED
 
-**Problem**: The parser only accepts an Atom (identifier) for the superclass in class definitions. It doesn't accept arbitrary expressions like strings, numbers, or other literals that should raise TypeError at runtime.
+**Status**: Parser now accepts expressions as superclasses (✓), but compiler crashes on non-constant superclasses.
+
+**Problem**: The compiler assumes superclass is always a constant (symbol) and looks it up in @classes hash at compile time. When superclass is an expression (like `""`, `get_class()`, etc.), the compiler fails.
 
 **Impact**:
-- rubyspec/language/class_spec.rb: COMPILE FAIL (line 450: `class TestClass < ""`)
+- rubyspec/language/class_spec.rb: COMPILE FAIL (line 450 and others with non-constant superclasses)
+- spec/class_superclass_atom_spec.rb: Compiles but doesn't raise TypeError at runtime
 
 ```ruby
-# These should parse successfully but raise TypeError at runtime
-class TestClass < ""; end         # Parse error: Expected: superclass
-class TestClass < 1; end          # Parse error: Expected: superclass
-class TestClass < :symbol; end    # Parse error: Expected: superclass
+# Parser now accepts these (✓), but compiler fails:
+class TestClass < ""; end           # Compiler error: can't look up "" in @classes
+class TestClass < get_class(); end  # Compiler error: can't look up expression
+class TestClass < 1; end            # Compiler error: can't look up 1
 ```
 
-**Root Cause**: In parser.rb:717, `parse_class_body` (and `parse_class` at line 737) calls `expect(Atom)` for the superclass, which only accepts identifiers.
+**Root Cause**:
+1. ✓ Parser fixed (parser.rb:738, 761) - now calls `parse_subexp` instead of `expect(Atom)`
+2. ✗ Compiler (compile_class.rb:187) - `superc = @classes[superclass]` assumes superclass is a symbol
+3. ✗ Missing runtime type check - should emit code to validate superclass is a Class and raise TypeError if not
 
-**Impact**: Tests for invalid superclass types fail to compile instead of raising runtime errors. Affects rubyspec/language/class_spec.rb.
+**Implementation Needed**:
+1. In compile_class.rb:187, detect if superclass is an expression (not a symbol)
+2. If expression: emit runtime code to evaluate it, check it's a Class, use it as superclass
+3. If symbol: use existing compile-time lookup in @classes hash
+4. Add runtime check: `raise TypeError, "superclass must be a Class" unless superclass.is_a?(Class)`
 
-**Fix**: Change superclass parsing to accept any expression:
-```ruby
-superclass = parse_subexp or expected("superclass")
-```
+**Priority**: HIGH - Causes COMPILE FAIL, blocks class_spec.rb
+
+**Files**:
+- parser.rb:738, 761 - FIXED: Now accepts expressions
+- compile_class.rb:186-187 - Needs fix for runtime superclass evaluation
+- Runtime needs TypeError check for invalid superclass types
 
 **Location**: parser.rb:737 (parse_class) and parser.rb:746 (parse_class_body)
 
