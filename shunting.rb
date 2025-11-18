@@ -228,6 +228,13 @@ module OpPrec
            ostack.last.sym == :ternalt
           @out.value(nil)
         end
+        # Handle keyword argument shorthand in function calls: foo(a:)
+        # Similar to above but for parenthesis context (ostack.first.sym == nil)
+        if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
+           src.lasttoken && src.lasttoken[0] == ":" &&
+           ostack.last && ostack.last.sym == :ternalt
+          @out.value(nil)
+        end
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break

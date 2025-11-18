@@ -319,7 +319,12 @@ module OpPrec
           elements = E[lv, rightv].compact.map { |e| convert_ternalt_to_pair(e) }
           @vstack << E[:hash] + elements
         else
-          result = E[o.sym, lv, rightv].compact
+          # For ternalt, don't compact - nil rightv is meaningful for keyword shorthand (a:)
+          if o.sym == :ternalt
+            result = E[o.sym, lv, rightv]
+          else
+            result = E[o.sym, lv, rightv].compact
+          end
           # Special handling for &block forwarding without parentheses:
           # When :to_block is created and the vstack already has a :call expression,
           # merge it into the call's arguments instead of pushing separately.
