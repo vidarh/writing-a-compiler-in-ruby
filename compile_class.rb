@@ -204,17 +204,29 @@ class Compiler
     nested_parent = nil
     nested_child = nil
     if name.is_a?(Array) && name[0] == :deref
-      # Only handle simple two-level nesting for now
-      # [:deref, :Foo, :Bar] where both Foo and Bar are symbols
-      if name.length == 3 && name[1].is_a?(Symbol) && name[2].is_a?(Symbol)
-        # For Foo::Bar: parent is Foo, child is Bar
-        nested_parent = name[1]
-        nested_child = name[2]
-        # Flatten to Foo__Bar for the class name
-        name = "#{nested_parent}__#{nested_child}".to_sym
+      # Handle nested class/module names like Foo::Bar or Foo::Bar::Baz
+      # Flatten the nested deref structure to a single name like Foo__Bar__Baz
+      parts = []
+      n = name
+      while n.is_a?(Array) && n[0] == :deref && n.length == 3
+        if n[2].is_a?(Symbol)
+          parts.unshift(n[2])
+          n = n[1]
+        else
+          # Non-symbol child (runtime expression) - not supported
+          error("Complex nested class/module syntax not supported: #{name.inspect}", scope)
+        end
+      end
+      if n.is_a?(Symbol)
+        parts.unshift(n)
+        # Flatten to Foo__Bar__Baz for the class name
+        name = parts.join("__").to_sym
+        # For tracking parent scope, use first part as nested_parent, rest as nested_child
+        # This is simplified - we're effectively creating a flat namespace
+        nested_parent = parts[0..-2].join("__").to_sym if parts.length > 1
+        nested_child = parts.last if parts.length > 1
       else
-        # Complex nested class like Foo::Bar::Baz or runtime values
-        # Not supported yet
+        # Parent is not a symbol (runtime expression) - not supported
         error("Complex nested class/module syntax not supported: #{name.inspect}", scope)
       end
     end
