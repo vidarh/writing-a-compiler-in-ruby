@@ -96,14 +96,13 @@ module OpPrec
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
 
       # Handle keyword argument shorthand: {a:, b:} where : is followed by ,
-      # When we see comma in a hash and last operator is :ternalt WITH NO RIGHT VALUE, push nil
-      # The vstack should have exactly 1 value (the key that was already popped by :ternalt as left operand)
-      # In shorthand {a:,}, after seeing `:`, the key is on vstack and :ternalt is on ostack
-      # We need to push nil as the right operand
+      # When we see comma in a hash and last operator is :ternalt, check if last token was :
+      # If last token was :, then :ternalt has no right value and needs nil
+      # This handles {a:, b:, c:} correctly regardless of how many keys precede
       if op && op.sym == :comma &&
          !ostack.empty? && ostack.first && ostack.first.sym == :hash &&
          ostack.last && ostack.last.sym == :ternalt &&
-         @out.vstack.size == 1  # vstack has just the key (left operand already popped)
+         src.lasttoken && src.lasttoken[0] == ":"
         @out.value(nil)
       end
 
