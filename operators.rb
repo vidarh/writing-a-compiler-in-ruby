@@ -86,7 +86,7 @@ Operators = {
   "for"       => Oper.new(2, :for_stmt,    :infix, 2, 2, :right, 1),
 
   "rescue"    => Oper.new(2, :rescue_mod, :infix, 2, 2, :right, 1),
-  "begin"     => Oper.new(2, :begin_stmt, :infix, 2, 2, :right, 1),
+  "begin"     => Oper.new(2, :begin_stmt, :prefix, 0, 0),
   "lambda"    => Oper.new(2, :lambda_stmt, :prefix, 0, 0),
 #    :infix_or_postfix => 
 #    :prefix => Oper.new(1, :while, 1, 0)
