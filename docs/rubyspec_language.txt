@@ -2,7 +2,7 @@ DEBUG: Starting run_rubyspec for rubyspec/language/
 Running all specs in rubyspec/language/...
 ================================
 
-[33m[COMPILE FAIL] rubyspec/language/alias_spec.rb
+[34m[CRASH] rubyspec/language/alias_spec.rb
 [32m[PASS] rubyspec/language/and_spec.rb (P:10 F:0 S:0 T:10)
 [34m[CRASH] rubyspec/language/array_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/assignments_spec.rb
@@ -14,13 +14,13 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/class_variable_spec.rb
 [31m[FAIL] rubyspec/language/comment_spec.rb (P:0 F:1 S:0 T:1)
 [33m[COMPILE FAIL] rubyspec/language/constants_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/defined_spec.rb
+[34m[CRASH] rubyspec/language/defined_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/def_spec.rb
 [34m[CRASH] rubyspec/language/delegation_spec.rb
-[34m[CRASH] rubyspec/language/encoding_spec.rb
+[31m[FAIL] rubyspec/language/encoding_spec.rb (P:2 F:4 S:0 T:6)
 [31m[FAIL] rubyspec/language/END_spec.rb (P:0 F:14 S:7 T:21)
 [34m[CRASH] rubyspec/language/ensure_spec.rb
-[33m[COMPILE FAIL] rubyspec/language/execution_spec.rb
+[31m[FAIL] rubyspec/language/execution_spec.rb (P:0 F:8 S:0 T:8)
 [34m[CRASH] rubyspec/language/file_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/for_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/hash_spec.rb
@@ -58,7 +58,7 @@ Running all specs in rubyspec/language/...
 [33m[COMPILE FAIL] rubyspec/language/regexp/encoding_spec.rb
 [33m[COMPILE FAIL] rubyspec/language/regexp/escapes_spec.rb
 [31m[FAIL] rubyspec/language/regexp/grouping_spec.rb (P:0 F:12 S:0 T:12)
-[33m[COMPILE FAIL] rubyspec/language/regexp/interpolation_spec.rb
+[34m[CRASH] rubyspec/language/regexp/interpolation_spec.rb
 [31m[FAIL] rubyspec/language/regexp/modifiers_spec.rb (P:0 F:21 S:0 T:21)
 [31m[FAIL] rubyspec/language/regexp/repetition_spec.rb (P:0 F:27 S:1 T:28)
 [31m[FAIL] rubyspec/language/regexp_spec.rb (P:1 F:37 S:1 T:39)
@@ -86,13 +86,13 @@ Running all specs in rubyspec/language/...
 Summary:
   Total spec files: 79
   Passed: 3
-  Failed: 19
-  Crashed (no test output): 24
-  Failed to compile: 33
+  Failed: 21
+  Crashed (no test output): 26
+  Failed to compile: 29
 
 Individual Test Cases:
-  Total tests: 581
-  Passed: 34
-  Failed: 536
+  Total tests: 595
+  Passed: 36
+  Failed: 548
   Skipped: 11
-  Pass rate: 5%
+  Pass rate: 6%
