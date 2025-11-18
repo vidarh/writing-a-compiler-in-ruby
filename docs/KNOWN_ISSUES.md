@@ -1886,33 +1886,30 @@ Expected an argument on left hand side of assignment - got subexpr,
 
 ## 47. Argument Name Rewritten to Environment Index Reference
 
-**Problem**: During closure rewriting, an argument name is incorrectly rewritten to an environment index reference `[:index, :__env__, N]`, causing "Arg.name must be Symbol" error during compilation.
+**Problem**: Was: During closure rewriting, method parameter names were incorrectly rewritten to environment index references.
 
-**Example (in rubyspec/language/hash_spec.rb)**:
-```ruby
-# The exact trigger is unknown, but hash_spec.rb causes this error
-```
+**Status**: ✅ PARTIALLY FIXED - The "Arg.name must be Symbol" error is resolved
 
-**Error Message**:
-```
-/app/function.rb:12:in `initialize': Internal error: Arg.name must be Symbol; '[:index, :__env__, 1]' (RuntimeError)
-	from /app/function.rb:61:in `new'
-	from /app/function.rb:61:in `block in initialize'
-	from /app/compile_class.rb:16:in `compile_defm'
-```
+**What was fixed**:
+- Added `:defm` handling in `rewrite_env_vars` to skip parameter list rewriting
+- commit 99f3a8d fixes the specific error
 
-**Root Cause**: The closure rewriting pass in transform.rb incorrectly rewrites a method parameter name to an environment reference. This suggests:
-1. A variable that should remain as a parameter name is being treated as a closure-captured variable
-2. The rewrite is happening in a context where it shouldn't (e.g., in a method signature)
+**Remaining issues in hash_spec.rb**:
+- After the fix, hash_spec now fails with different error:
+  ```
+  Expected an argument on left hand side of assignment - got subexpr,
+  (left: [:comma, [:index, :__env__, 7], [:index, :__env__, 8]], right: ...)
+  ```
+- This appears to be destructuring assignment where both LHS elements are environment references
+- The compiler doesn't recognize `a, b = value` where a and b are env indices
 
 **Impact**:
-- rubyspec/language/hash_spec.rb: COMPILE FAIL (unrelated to keyword argument shorthand which is now fixed)
+- hash_spec.rb: Still COMPILE FAIL (different error)
+- def_spec.rb: Still COMPILE FAIL (duplicate symbol definitions)
 
-**Status**: ❌ NOT FIXED - requires investigation of closure rewriting logic in transform.rb
-
-**Priority**: Medium - blocks hash_spec.rb despite keyword shorthand being fixed
-
-**Note**: This is separate from Issue #1 (keyword argument shorthand `{a:}`) which has been fixed. The hash literal syntax now works correctly, but hash_spec.rb fails due to this closure rewriting bug.
+**Note**: The closure rewriting now correctly skips :defm parameter lists. The remaining issues are:
+1. Destructuring with environment references as LHS
+2. Duplicate method symbol definitions in certain specs
 
 ---
 
