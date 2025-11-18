@@ -38,9 +38,15 @@ module OpPrec
     def convert_ternalt_to_pair(elem)
       if elem.is_a?(Array) && elem[0] == :ternalt
         # foo: 42 becomes [:ternalt, foo, 42] but should be [:pair, :foo, 42]
+        # {a:} becomes [:ternalt, a, nil] but should be [:pair, :a, a] (keyword argument shorthand)
         # Convert symbol name to symbol literal
         key_sym = elem[1].is_a?(Symbol) ? elem[1] : elem[1].to_sym
-        return E[:pair, E[:sexp, key_sym.inspect.to_sym], elem[2]]
+        value = elem[2]
+        # If no value provided (keyword argument shorthand), use the key name as the value
+        if value.nil?
+          value = elem[1]  # Use the variable name as the value
+        end
+        return E[:pair, E[:sexp, key_sym.inspect.to_sym], value]
       end
       elem
     end

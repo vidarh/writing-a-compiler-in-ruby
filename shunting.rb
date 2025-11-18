@@ -209,6 +209,13 @@ module OpPrec
            (ostack.last.sym == :range || ostack.last.sym == :exclusive_range)
           @out.value(nil)
         end
+        # Handle keyword argument shorthand: if last token was : in a hash (e.g., {a:}),
+        # push nil as placeholder - treeoutput will convert {a:} to {a: a}
+        if !ostack.empty? && ostack.first && ostack.first.sym == :hash &&
+           src.lasttoken && src.lasttoken[0] == ":" &&
+           ostack.last.sym == :ternalt
+          @out.value(nil)
+        end
         src.unget(token) if !lp_on_entry
         reduce(ostack, op)
         return :break
