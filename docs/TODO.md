@@ -13,9 +13,14 @@
 
 ## High Priority (Language Spec Compilation Failures)
 
-Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
+**Status Update (2025-11-18)**: All 29 compile failures have been investigated. See **COMPILE_FAILURES_SUMMARY.md** for complete analysis.
+- 18/29 have documented root causes in KNOWN_ISSUES.md
+- 11/29 need individual investigation (no obvious parse error)
+- Top issues: Keyword arg shorthand (#36, 4 specs), Nested const in closures (#46, 3 specs)
 
-### Critical Blockers (Remaining 53 COMPILE FAIL specs)
+Focus on rubyspec/language/ compile failures:
+
+### Critical Blockers
 
 **Quick Wins (Likely Simple Fixes)**:
 - [x] **unless_spec** - ✅ FIXED - Handle nil in get_arg (compiler.rb:138), now PASSES 6/6 tests
