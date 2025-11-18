@@ -44,7 +44,31 @@ C.new("test")
 
 ---
 
-## 2. Parenthesized Control Flow - PARTIALLY RESOLVED
+## 2. Parser Requires Atom for Superclass
+
+**Problem**: The parser only accepts an Atom (identifier) for the superclass in class definitions. It doesn't accept arbitrary expressions like strings, numbers, or other literals that should raise TypeError at runtime.
+
+```ruby
+# These should parse successfully but raise TypeError at runtime
+class TestClass < ""; end         # Parse error: Expected: superclass
+class TestClass < 1; end          # Parse error: Expected: superclass
+class TestClass < :symbol; end    # Parse error: Expected: superclass
+```
+
+**Root Cause**: In parser.rb:717, `parse_class_body` (and `parse_class` at line 737) calls `expect(Atom)` for the superclass, which only accepts identifiers.
+
+**Impact**: Tests for invalid superclass types fail to compile instead of raising runtime errors. Affects rubyspec/language/class_spec.rb.
+
+**Fix**: Change superclass parsing to accept any expression:
+```ruby
+superclass = parse_subexp or expected("superclass")
+```
+
+**Location**: parser.rb:737 (parse_class) and parser.rb:746 (parse_class_body)
+
+---
+
+## 3. Parenthesized Control Flow - PARTIALLY RESOLVED
 
 **Status**: ✅ PARTIALLY FIXED (2025-11-12)
 
@@ -1727,5 +1751,42 @@ Similar issues exist for `@` (instance vars) and `_` (identifiers).
 **Priority**: Low - affected delimiters are rarely used
 
 **Commit**: b187fd5 "Fix percent literal parsing bugs"
+
+---
+## 44. Percent Literals in Method Arguments Require Parentheses
+
+**Problem**: Percent literals like `%Q{...}` cannot be used as arguments to method calls without parentheses.
+
+**Example**:
+```ruby
+# This doesn't work - generates "undefined reference to Q"
+eval %Q{puts "hello"}
+
+# Workaround - use parentheses:
+eval(%Q{puts "hello"})
+```
+
+**Root Cause**: The tokenizer uses the heuristic `@first || prev_lastop` to distinguish percent literals from modulo operators. After an identifier like `eval`, neither condition is true, so `%Q` is parsed as modulo (`%`) followed by identifier (`Q`).
+
+**Why It's Hard to Fix**: Adding lookahead to detect `%Q{` patterns is error-prone because:
+1. Scanner only supports 1-character lookahead via `peek`
+2. Using `get`/`unget` for lookahead breaks position tracking and causes parse errors elsewhere (e.g., hash.rb)
+3. The distinction between `%` (modulo) and `%Q{` (percent literal) requires 2-3 character lookahead
+
+**Workaround**: Use parentheses for method calls:
+- `eval(%Q{...})` instead of `eval %Q{...}`
+- `foo(%w[a b c])` instead of `foo %w[a b c]`
+
+**Impact**:
+- alias_spec.rb: COMPILE FAIL due to `eval %Q{...}` patterns (lines 59, 96)
+- Most code unaffected - parentheses are common style anyway
+
+**Status**: ❌ NOT FIXED - workaround available (use parentheses)
+
+**Priority**: Low - affects rare edge case, easy workaround
+
+**Test**: test_eval_percent_q.rb - demonstrates the issue
+
+**Related**: Issue #43 (Percent Literal Delimiter Restrictions)
 
 ---
