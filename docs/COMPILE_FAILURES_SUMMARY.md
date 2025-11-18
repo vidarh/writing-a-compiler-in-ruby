@@ -75,6 +75,8 @@
   - Error after `require $spec_filename`
   - Global variable `$spec_filename` not in scope or not recognized
 
+**Test**: spec/return_global_var_spec.rb
+
 **Status**: Global variable handling or require with variable argument
 
 ---
@@ -85,10 +87,12 @@
 - ✅ rubyspec/language/until_spec.rb (line 158: `((i+=1) == 3 ? next : j+=i) until i > 10`)
   - Error: Missing value in expression / op: {ternif/2 pri=6}
   - Ternary operator with `next` in until modifier
+  - **Test**: spec/until_ternary_next_spec.rb
 
 - ✅ rubyspec/language/while_spec.rb (line 93: parenthesized break statement)
   - Error: Missing value in expression / op: {or_assign/2 pri=7}
   - `break if c` inside parentheses with or-assign
+  - **Test**: spec/while_parenthesized_break_spec.rb
 
 **Status**: Parser doesn't handle ternary+next and parenthesized break in certain contexts
 
@@ -101,6 +105,8 @@
   - Error: Missing value in expression / op: {callm/2 pri=98}
   - Combination of rescue exception capture and safe navigation operator
 
+**Test**: spec/rescue_safe_navigation_spec.rb
+
 **Status**: Parser doesn't support `&.` in rescue exception binding
 
 ---
@@ -111,6 +117,8 @@
 - ✅ rubyspec/language/variables_spec.rb (line 410: `(* = 1).should == 1`)
   - Error: Missing value in expression / {splat/1 pri=8}
   - Anonymous splat assignment `* = value` (valid Ruby, discards value)
+
+**Test**: spec/anonymous_splat_assignment_spec.rb
 
 **Status**: Parser doesn't recognize `*` alone as valid assignment target
 
