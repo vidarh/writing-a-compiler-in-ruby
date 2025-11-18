@@ -404,7 +404,7 @@ module Tokens
 
           # Check if we have a delimiter
           delim = @s.peek
-          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_"
+          is_delimiter = delim && !ALNUM.member?(delim)
           if is_delimiter
             # Determine closing delimiter
             closing = case delim
@@ -484,9 +484,8 @@ module Tokens
 
           # Check if we have a delimiter
           # Percent literals can use any non-alphanumeric character as delimiter
-          # Exclude _ (identifiers) to avoid ambiguity
           delim = @s.peek
-          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_"
+          is_delimiter = delim && !ALNUM.member?(delim)
           if is_delimiter
             # Determine closing delimiter
             closing = case delim

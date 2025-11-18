@@ -38,7 +38,11 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [x] **for...end method chaining** - ✅ FIXED - Added operator-based parsing, method chaining works
 - [x] **Rescue in do...end blocks** - ✅ FIXED - Issues #25 and #28 resolved. spec/do_block_rescue_spec.rb passes 2/2
 - [ ] **Lambda with default parameters** - Affects: lambda_spec. See KNOWN_ISSUES #9
-- [ ] **String interpolation percent literals** - Affects: string_spec, heredoc_spec. Tokenizer refactor needed
+- [x] **String interpolation percent literals** - ✅ PARTIALLY FIXED - Interpolation now works, `$` and `@` delimiters allowed
+  - See PERCENT_LITERAL_REFACTORING_PLAN.md for remaining cleanup work
+  - TODO: Phase 1 - Review escape handling in quoted.rb against string_spec
+  - TODO: Phase 2 - Delegate all percent parsing to quoted.rb
+  - TODO: Phase 3 - Remove code duplication between tokens.rb and quoted.rb
 
 ### Control Flow Specs
 - [x] **break_spec.rb** - ✅ COMPILES (was nil ClassScope, now fixed) - runtime segfault remains
