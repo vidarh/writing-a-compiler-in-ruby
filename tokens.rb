@@ -556,11 +556,21 @@ module Tokens
             when ?q
               # %q{} - single-quoted string
               return [content, nil]
-            when ?w, ?W
+            when ?w
               # %w{} - array of words (no interpolation)
-              # %W{} - array of words (with interpolation, but not supported yet - treat as %w)
-              # TODO: Implement proper interpolation support for %W{}
               return [[:array, *content.split], nil]
+            when ?W
+              # %W{} - array of words (with interpolation)
+              # content might be a string or [:concat, ...] array
+              if content.is_a?(Array)
+                # Interpolated - need to split at runtime
+                # For now, just return the interpolated string wrapped in a split call
+                # TODO: This is a simplification - proper implementation would split on whitespace
+                return [[:call, content, :split], nil]
+              else
+                # No interpolation - split at compile time
+                return [[:array, *content.split], nil]
+              end
             when ?i, ?I
               # %i{} - array of symbols (no interpolation)
               # %I{} - array of symbols (with interpolation, but not supported yet - treat as %i)
