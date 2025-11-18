@@ -94,6 +94,15 @@ module OpPrec
     def oper(src,token,ostack, opstate, op, lp_on_entry, possible_func, lastlp)
       #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}" if ENV['DEBUG_PARSER']
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
+
+      # Handle keyword argument shorthand: {a:, b:} where : is followed by ,
+      # When we see comma in a hash and last operator is :ternalt, push nil value
+      if op && op.sym == :comma &&
+         !ostack.empty? && ostack.first && ostack.first.sym == :hash &&
+         ostack.last && ostack.last.sym == :ternalt
+        @out.value(nil)
+      end
+
       # When if/unless/while/until/rescue appear in prefix position, parse as statement UNLESS
       # they're appearing after a prefix operator (which would make them modifiers)
       if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
