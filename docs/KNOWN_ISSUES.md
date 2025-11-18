@@ -1883,3 +1883,35 @@ Expected an argument on left hand side of assignment - got subexpr,
 **Priority**: Low - dynamically assigning nested constants in closures is rare
 
 ---
+
+## 47. Argument Name Rewritten to Environment Index Reference
+
+**Problem**: During closure rewriting, an argument name is incorrectly rewritten to an environment index reference `[:index, :__env__, N]`, causing "Arg.name must be Symbol" error during compilation.
+
+**Example (in rubyspec/language/hash_spec.rb)**:
+```ruby
+# The exact trigger is unknown, but hash_spec.rb causes this error
+```
+
+**Error Message**:
+```
+/app/function.rb:12:in `initialize': Internal error: Arg.name must be Symbol; '[:index, :__env__, 1]' (RuntimeError)
+	from /app/function.rb:61:in `new'
+	from /app/function.rb:61:in `block in initialize'
+	from /app/compile_class.rb:16:in `compile_defm'
+```
+
+**Root Cause**: The closure rewriting pass in transform.rb incorrectly rewrites a method parameter name to an environment reference. This suggests:
+1. A variable that should remain as a parameter name is being treated as a closure-captured variable
+2. The rewrite is happening in a context where it shouldn't (e.g., in a method signature)
+
+**Impact**:
+- rubyspec/language/hash_spec.rb: COMPILE FAIL (unrelated to keyword argument shorthand which is now fixed)
+
+**Status**: ❌ NOT FIXED - requires investigation of closure rewriting logic in transform.rb
+
+**Priority**: Medium - blocks hash_spec.rb despite keyword shorthand being fixed
+
+**Note**: This is separate from Issue #1 (keyword argument shorthand `{a:}`) which has been fixed. The hash literal syntax now works correctly, but hash_spec.rb fails due to this closure rewriting bug.
+
+---
