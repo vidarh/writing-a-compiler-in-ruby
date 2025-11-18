@@ -191,6 +191,14 @@ class Compiler
       return compile_eigenclass(scope, name[1], *exps)
     end
 
+    # Check if this is a global namespace definition: class ::A
+    # Parser creates [:global, :A] for this
+    force_global = false
+    if name.is_a?(Array) && name[0] == :global
+      force_global = true
+      name = name[1]
+    end
+
     # Handle nested class syntax: class Foo::Bar
     # Parser creates [:deref, :Foo, :Bar] for this
     nested_parent = nil
@@ -212,12 +220,17 @@ class Compiler
     end
 
     # Determine the parent scope for this class definition
-    # Walk scope chain to find ModuleScope/ClassScope, but if we hit GlobalScope first, use it
-    parent_scope = scope
-    while parent_scope && !parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope
-      parent_scope = parent_scope.next
+    # If force_global (class ::A), always use global scope
+    # Otherwise walk scope chain to find ModuleScope/ClassScope, but if we hit GlobalScope first, use it
+    if force_global
+      parent_scope = @global_scope
+    else
+      parent_scope = scope
+      while parent_scope && !parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope
+        parent_scope = parent_scope.next
+      end
+      parent_scope ||= @global_scope
     end
-    parent_scope ||= @global_scope
 
     # Calculate the fully qualified name for this class
     # If parent is a ModuleScope/ClassScope, prefix with parent name (e.g., "Foo__Bar")

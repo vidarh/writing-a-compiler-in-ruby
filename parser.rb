@@ -750,7 +750,7 @@ class Parser < ParserBase
     ws
     # Check for global namespace (::ClassName)
     # In Ruby, ::A means "class A in the global namespace"
-    # We'll represent this as just :A (not nested), the compiler will handle the global scope
+    # We'll represent this as [:global, :A] so the compiler knows to emit at top level
     global_namespace = false
     if literal('::')
       ws
@@ -768,6 +768,10 @@ class Parser < ParserBase
         ws
         next_part = expect(Atom) or expected("class name after ::")
         name = [:deref, name, next_part]
+      end
+      # Mark as global namespace if :: prefix was present
+      if global_namespace
+        name = [:global, name]
       end
     end
     ws

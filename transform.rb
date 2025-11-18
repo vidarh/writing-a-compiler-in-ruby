@@ -699,9 +699,14 @@ class Compiler
     superc = @classes[superclass.to_sym]
     name = e[1]
 
+    # Handle global namespace class definition like [:global, :A]
+    # For class ::A, create the class in global scope regardless of current scope
+    if name.is_a?(Array) && name[0] == :global
+      name = name[1]
+      scope = @global_scope
     # Handle namespaced class names like [:deref, :Foo, :Bar]
     # For class Foo::Bar, we need to find Foo's scope and create Bar within it
-    if name.is_a?(Array) && name[0] == :deref
+    elsif name.is_a?(Array) && name[0] == :deref
       # Extract parent and child from [:deref, parent, child]
       # For Foo::Bar::Baz, this will be nested: [:deref, [:deref, :Foo, :Bar], :Baz]
       parent_name = name[1]
