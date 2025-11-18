@@ -162,14 +162,37 @@
 
 ---
 
-### Unknown / Likely Passes (3 specs)
-**No Obvious Errors Found**:
+### Duplicate Symbol Definitions (1 spec)
+**Assembly Error - Symbol Already Defined**
 
-- rubyspec/language/predefined_spec.rb (bisect timed out - likely very large file)
-- rubyspec/language/symbol_spec.rb (no error output)
-- rubyspec/language/regexp/escapes_spec.rb (no error output)
+- ✅ rubyspec/language/predefined_spec.rb (lines 196074, 196147: `symbol __method_Object_method_missing is already defined`)
 
-**Status**: May compile successfully or have subtle runtime issues
+**Error**: Compiler generates duplicate method definitions in assembly
+
+**Status**: Compiler bug - method redefinition not handled properly
+
+---
+
+### Expression Reduction Error (1 spec)
+**Parser Stack Error**
+
+- ✅ rubyspec/language/symbol_spec.rb (line 91: Expression did not reduce to single value - 2 values on stack)
+
+**Error**: "Expression did not reduce to single value (2 values on stack)" with comma and assign operators
+**Related**: WARNING: "String interpolation requires passing block to Quoted.expect"
+
+**Status**: Parser/shunting yard bug - likely related to %w with quotes
+
+---
+
+### Register Allocator Division By Zero (1 spec)
+**Compiler Internal Error**
+
+- ✅ rubyspec/language/regexp/escapes_spec.rb (regalloc.rb:332: divided by 0)
+
+**Error**: ZeroDivisionError in register allocator during compilation
+
+**Status**: Compiler bug in register allocation phase
 
 ---
 
@@ -188,12 +211,14 @@
 | Safe navigation `&.` | 1 | Requires new operator support |
 | Heredoc parsing | 1 | Tokenizer bug |
 | Block parsing (do-end) | 1 | Parser bug |
+| Duplicate symbol definitions | 1 | Compiler bug |
+| Expression reduction error | 1 | Parser/shunting yard bug |
+| Register allocator div-by-zero | 1 | Compiler bug |
 | Other edge cases | 4 | Needs investigation |
 | Ruby 2.7+ features | 1 | Out of scope |
-| Unknown / likely pass | 3 | May work or runtime issues |
 
-**Total Documented**: 26/29 specs have identified root causes (90%)
-**Total Unknown**: 3 specs (10%)
+**Total Documented**: 29/29 specs have identified root causes (100%)
+**All compile failures are now fully documented!**
 
 ## Next Steps
 
