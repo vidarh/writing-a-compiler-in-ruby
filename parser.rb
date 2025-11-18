@@ -526,7 +526,7 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
-    ret = parse_class || parse_module || parse_def || parse_alias || parse_sexp ||
+    ret = parse_def || parse_alias || parse_sexp ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
@@ -691,6 +691,27 @@ class Parser < ParserBase
     return E[pos, type.to_sym, name, :Object, exps]
   end
 
+  # Like parse_module but for when 'module' keyword has already been consumed
+  def parse_module_body
+    pos = position
+    ws
+    name = expect(Atom) || literal('<<') or expected("class name")
+    if name
+      # Check for namespaced module name (e.g., Foo::Bar::Baz)
+      # Build up [:deref, :Foo, :Bar, :Baz] for module Foo::Bar::Baz
+      while literal('::')
+        ws
+        next_part = expect(Atom) or expected("module name after ::")
+        name = [:deref, name, next_part]
+      end
+    end
+    ws
+    error("A module can not have a super class") if @scanner.peek == ?<
+    exps = kleene { parse_exp }
+    keyword(:end) or expected("expression or \'end\'")
+    return E[pos, :module, name, :Object, exps]
+  end
+
   # class ::= ("class" ws* (name|'<<') ws* (< ws* superclass)? ws* name ws* exp* "end"
   def parse_class
     pos = position
@@ -719,6 +740,35 @@ class Parser < ParserBase
     exps = kleene { parse_exp }
     keyword(:end) or expected("expression or 'end'")
     return E[pos, type.to_sym, name, superclass || :Object, exps]
+  end
+
+  # Like parse_class but for when 'class' keyword has already been consumed
+  def parse_class_body
+    pos = position
+    ws
+    name = expect(Atom) || literal('<<') or expected("class name")
+    if name == "<<"
+      ob = parse_subexp
+      name = [:eigen, ob]
+    elsif name
+      # Check for namespaced class name (e.g., Foo::Bar::Baz)
+      # Build up [:deref, :Foo, :Bar, :Baz] for class Foo::Bar::Baz
+      while literal('::')
+        ws
+        next_part = expect(Atom) or expected("class name after ::")
+        name = [:deref, name, next_part]
+      end
+    end
+    ws
+    # FIXME: Workaround for initialization error
+    superclass = nil
+    if literal("<")
+      ws
+      superclass = expect(Atom) or expected("superclass")
+    end
+    exps = kleene { parse_exp }
+    keyword(:end) or expected("expression or 'end'")
+    return E[pos, :class, name, superclass || :Object, exps]
   end
 
   # alias ::= "alias" ws* new_name ws* old_name
@@ -850,7 +900,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_class || parse_module || parse_def || parse_alias || parse_defexp || literal("protected")
+    ret = parse_def || parse_alias || parse_defexp || literal("protected")
     if ret.is_a?(Array)
       ret = E[pos].concat(ret)
     elsif ret.respond_to?(:position) && !ret.position

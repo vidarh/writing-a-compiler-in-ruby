@@ -146,9 +146,15 @@ module OpPrec
             @out.value(:lambda)
             possible_func = true
             opstate = :infix_or_postfix
-            # Set op to nil to skip further operator processing
-            op = nil
           end
+        elsif op.sym == :class_stmt
+          #STDERR.puts "   class statement"
+          @out.value(@parser.parse_class_body)
+          return :prefix
+        elsif op.sym == :module_stmt
+          #STDERR.puts "   module statement"
+          @out.value(@parser.parse_module_body)
+          return :prefix
         end
       end
 
