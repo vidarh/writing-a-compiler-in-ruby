@@ -724,6 +724,12 @@ class Compiler
 
   # Compiles an assignment statement.
   def compile_assign(scope, left, right)
+    # Handle anonymous splat assignment: (* = value)
+    # This is a no-op assignment that just returns the value
+    if left == :*
+      return compile_eval_arg(scope, right)
+    end
+
     # transform "foo.bar = baz" into "foo.bar=(baz)"
     # Also need to handle :call equivalently.
     if left.is_a?(Array) && left[0] == :callm && left.size == 3 # no arguments

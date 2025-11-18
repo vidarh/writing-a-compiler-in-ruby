@@ -734,24 +734,31 @@ klass.class  # ✓ Works
 
 **Error**: "Missing value in expression / {splat/1 pri=8}"
 
-**Root Cause**: Inside parentheses, `*` is being treated as a prefix splat operator instead of recognizing it as part of an assignment pattern. The parser doesn't detect that `*` followed by `=` in this context is an anonymous splat assignment.
+**Root Cause**: The splat operator `*` is defined as a prefix operator with arity=1, minarity=1 in operators.rb. This means it REQUIRES an operand. When `*` appears alone (as in `* = 1`), the parser treats it as a prefix operator expecting an operand, and throws "Missing value in expression" when it encounters `=` instead.
+
+**Attempted Fixes**:
+1. **Setting minarity=0** - Allows splat without operand, but causes "Expression did not reduce to single value" errors in normal splat usage like `foo(*bar)` because the operator reduces too early (before consuming its operand)
+2. **Lookahead in shunting.rb** - Would require peeking ahead to see if `=` follows `*`, but proper implementation needs peek_token() method in scanner (using instance_variable_get/set violates CLAUDE.md rules)
 
 **Affects**:
 - variables_spec.rb:410 - `(* = 1).should == 1`
 - Any code using anonymous splat in expression contexts
 
 **Implementation Needed**:
-1. Detect `* =` pattern inside parentheses as assignment, not splat operator
-2. Similar to how `a, b = 1, 2` is recognized as multiple assignment
-3. May require lookahead to check if `*` is followed by `=`
+1. Add proper peek_token() method to scanner.rb for lookahead without consuming
+2. In shunting.rb, when encountering `*` in prefix position, peek ahead
+3. If next token is `=`, push placeholder value (`:*`) instead of splat operator
+4. compiler.rb already has handler for `left == :*` that treats it as no-op assignment
 
-**Workaround**: Use anonymous splat without parentheses.
+**Workaround**: Use explicit variable with multiple assignment: `_, = 1`
 
-**Priority**: Low - Rare pattern, has simple workaround
+**Priority**: Low - Rare pattern, has workaround
 
 **Files**:
-- shunting.rb - Expression parser handling of `*` operator
-- operators.rb - Splat operator definition
+- operators.rb - Splat operator definition (line 170)
+- shunting.rb - Expression parser (needs lookahead for `* =` pattern)
+- scanner.rb - Needs peek_token() method
+- compiler.rb:729 - Already has anonymous splat handler (returns value without storing)
 
 ---
 
