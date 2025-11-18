@@ -145,7 +145,7 @@ module OpPrec
             # Push :lambda as a value and mark as possible function
             @out.value(:lambda)
             possible_func = true
-            opstate = :infix_or_postfix
+            return :infix_or_postfix
           end
         elsif op.sym == :class_stmt
           #STDERR.puts "   class statement"
