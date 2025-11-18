@@ -79,7 +79,7 @@ module Tokens
         ret = [:concat] if !ret
 
         # Add any buffered string before the interpolation
-        ret << buf if buf != ""
+        ret << buf
 
         # Consume the {
         s.get
