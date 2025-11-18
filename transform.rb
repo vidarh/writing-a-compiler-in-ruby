@@ -354,11 +354,19 @@ class Compiler
   def rewrite_env_vars(exp, env)
     seen = false
     exp.depth_first do |e|
-      # Handle lambda/proc/defun specially - process body but not parameter list
-      if e.is_a?(Array) && (e[0] == :lambda || e[0] == :proc || e[0] == :defun)
+      # Handle lambda/proc/defun/defm specially - process body but not parameter list
+      if e.is_a?(Array) && (e[0] == :lambda || e[0] == :proc || e[0] == :defun || e[0] == :defm)
         # Get parameter list and body index
-        param_list = e[0] == :defun ? e[2] : e[1]
-        body_index = e[0] == :defun ? 3 : 2
+        # defm is [:defm, name, [params], body] - params at index 2, body at index 3
+        # defun is [:defun, name, [params], body] - params at index 2, body at index 3
+        # lambda/proc is [:lambda, [params], body] - params at index 1, body at index 2
+        if e[0] == :defun || e[0] == :defm
+          param_list = e[2]
+          body_index = 3
+        else
+          param_list = e[1]
+          body_index = 2
+        end
 
         # Extract parameter names (handle tuples like [:param, :default, :nil])
         # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
