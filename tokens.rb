@@ -404,7 +404,7 @@ module Tokens
 
           # Check if we have a delimiter
           delim = @s.peek
-          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_" && delim != "@" && delim != "$"
+          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_"
           if is_delimiter
             # Determine closing delimiter
             closing = case delim
@@ -417,8 +417,9 @@ module Tokens
 
             @s.get  # consume opening delimiter
 
-            # Parse content until closing delimiter
-            content = ""
+            # Parse content until closing delimiter, handling interpolation
+            ret = nil
+            buf = ""
             depth = 1
             paired = (delim == "{" || delim == "(" || delim == "[" || delim == "<")
 
@@ -432,23 +433,39 @@ module Tokens
                 next_char = @s.peek
                 if next_char
                   @s.get
-                  content << "\\" << next_char
+                  buf << "\\" << next_char
                 else
-                  content << "\\"
+                  buf << "\\"
                 end
               elsif paired && c == delim
                 depth += 1
-                content << c
+                buf << c
               elsif c == closing
                 depth -= 1
-                content << c if depth > 0
+                buf << c if depth > 0
+              elsif c == "#"
+                # Check for interpolation #{ (only if not the closing delimiter)
+                buf << "#"
+                if @s.peek == "{"
+                  # Use Quoted.handle_interpolation helper
+                  result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
+                  if result
+                    ret = result
+                    buf = ""
+                  end
+                end
               else
-                content << c
+                buf << c
               end
             end
 
-            # %Q is like double-quoted string - allows interpolation
-            return [content, nil]
+            # Return interpolated string or plain string
+            if ret
+              ret << buf if buf != ""
+              return [ret, nil]
+            else
+              return [buf, nil]
+            end
           else
             # Not a valid delimiter - treat as modulo
             @s.unget  # put back Q
@@ -467,9 +484,9 @@ module Tokens
 
           # Check if we have a delimiter
           # Percent literals can use any non-alphanumeric character as delimiter
-          # Exclude @ (instance vars), _ (identifiers), and $ (global vars) to avoid ambiguity
+          # Exclude _ (identifiers) to avoid ambiguity
           delim = @s.peek
-          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_" && delim != "@" && delim != "$"
+          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_"
           if is_delimiter
             # Determine closing delimiter
             closing = case delim
@@ -483,9 +500,13 @@ module Tokens
             @s.get  # consume opening delimiter
 
             # Parse content until closing delimiter
-            content = ""
+            # For %Q, %W, %I, %x, %r: handle interpolation
+            # For %q, %w, %i: no interpolation
+            ret = nil
+            buf = ""
             depth = 1
             paired = (delim == "{" || delim == "(" || delim == "[" || delim == "<")
+            needs_interpolation = (type == ?Q || type == nil || type == ?W || type == ?I || type == ?x || type == ?r)
 
             while depth > 0
               c = @s.peek
@@ -495,24 +516,43 @@ module Tokens
 
               if c.ord == 92 && delim != "\\"  # backslash (but not if backslash is the delimiter)
                 # Escape sequence - consume next character literally
-                content << c.chr
+                buf << c.chr
                 next_c = @s.get
-                content << next_c.chr if next_c
+                buf << next_c.chr if next_c
               elsif paired && c == delim
                 depth += 1
-                content << c.chr
+                buf << c.chr
               elsif c == closing
                 depth -= 1
-                content << c.chr if depth > 0
+                buf << c.chr if depth > 0
+              elsif needs_interpolation && c == "#"
+                # Check for interpolation #{ (only for types that support it, and only if not the delimiter)
+                buf << "#"
+                if @s.peek == "{"
+                  # Use Quoted.handle_interpolation helper
+                  result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
+                  if result
+                    ret = result
+                    buf = ""
+                  end
+                end
               else
-                content << c.chr
+                buf << c.chr
               end
+            end
+
+            # Finalize content
+            content = if ret
+              ret << buf if buf != ""
+              ret
+            else
+              buf
             end
 
             # Return based on type
             case type
             when ?Q, nil
-              # %Q{} or %{} - double-quoted string
+              # %Q{} or %{} - double-quoted string (with interpolation)
               return [content, nil]
             when ?q
               # %q{} - single-quoted string
