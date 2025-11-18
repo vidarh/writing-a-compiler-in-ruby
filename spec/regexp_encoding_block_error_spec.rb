@@ -1,14 +1,12 @@
 require_relative '../rubyspec/spec_helper'
 
-# Reproduces: rubyspec/language/regexp/encoding_spec.rb
+# Reproduces: rubyspec/language/regexp/encoding_spec.rb line 46
 # Parse error: Expected 'end' for 'do'-block
+# Triggered by regex interpolation with nested regex: /#{/./}/
 
-describe "Regexp encoding with blocks" do
-  it "handles regexp in blocks" do
-    result = [1, 2, 3].map do |x|
-      /test/
-      x * 2
-    end
-    result.should == [2, 4, 6]
+describe "Regexp with interpolated regex" do
+  it "handles regex interpolation containing regex" do
+    match = /#{/./}/.match("test")
+    match.to_a.should == ["t"]
   end
 end
