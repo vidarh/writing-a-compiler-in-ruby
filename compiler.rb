@@ -204,6 +204,14 @@ class Compiler
     return Value.new([:addr,lab])
   end
 
+  # Helper to convert a constant name string to AST form for runtime string lookup
+  # Returns [[:sexp, [:call, :__get_string, label.to_sym]]] (wrapped in array for call args)
+  # Matches the pattern used in transform.rb rewrite_strconst line 121 + 127
+  def const_name_to_string_ast(name_str)
+    lab = @string_constants[name_str] || (@string_constants[name_str] = @e.get_local)
+    return [[:sexp, [:call, :__get_string, lab.to_sym]]]
+  end
+
   # Outputs all constants used within the code generated so far.
   # Outputs them as string and global constants, respectively.
   def output_constants
@@ -298,11 +306,11 @@ class Compiler
 
     # Special case: self::Constant is a runtime lookup that can't be resolved statically
     # This commonly appears in defined?(self::Constant)
-    # For now, stub it to return nil - this allows the spec to compile even though
-    # the runtime behavior won't be correct
+    # Generate runtime lookup: __const_get_on(self, "ConstantName")
     if left == :self
-      warning("self::#{right} requires runtime constant lookup - stubbing to nil")
-      return get_arg(scope, nil)
+      res = compile_eval_arg(scope, [:call, :__const_get_on, [:self] + const_name_to_string_ast(right.to_s)])
+      @e.save_result(res)
+      return Value.new([:subexpr])
     end
 
     # If left is an expression (like [:deref, :Foo]), we need to resolve it to get the scope
@@ -335,26 +343,26 @@ class Compiler
         parent_scope = scope.find_constant(parent_scope_name)
         if parent_scope && parent_scope.is_a?(ModuleScope)
           cscope = parent_scope.find_constant(child_constant_name)
-        else
-          # Cannot resolve nested deref statically - stub to nil
-          warning("Unable to resolve nested deref: #{left.inspect}::#{right} statically - stubbing to nil")
-          return get_arg(scope, nil)
         end
-      else
-        # Cannot resolve complex deref statically - stub to nil
-        warning("Unable to resolve complex deref: #{left.inspect}::#{right} statically - stubbing to nil")
-        return get_arg(scope, nil)
+      end
+
+      # If we couldn't resolve the nested/complex deref, generate runtime lookup
+      if !cscope && (left.is_a?(Array) && left[0] == :deref)
+        res = compile_eval_arg(scope, [:call, :__const_get_on, [left] + const_name_to_string_ast(right.to_s)])
+        @e.save_result(res)
+        return Value.new([:subexpr])
       end
     else
       cscope = scope.find_constant(left)
     end
 
     if !cscope || !cscope.is_a?(ModuleScope)
-      # Cannot resolve statically - stub to nil to allow compilation
+      # Cannot resolve statically - generate runtime constant lookup
       # This commonly appears in defined?(Undefined::Constant) where the constant doesn't exist
-      # The runtime behavior won't be correct, but at least it compiles
-      warning("Unable to resolve: #{left}::#{right} statically - stubbing to nil")
-      return get_arg(scope, nil)
+      args_array = const_name_to_string_ast(left.to_s) + const_name_to_string_ast(right.to_s)
+      res = compile_eval_arg(scope, [:call, :__const_get, args_array])
+      @e.save_result(res)
+      return Value.new([:subexpr])
     end
 
     # For global prefix lookups (::Foo::Bar), we need special handling because
@@ -716,10 +724,23 @@ class Compiler
 
   # Compiles an assignment statement.
   def compile_assign(scope, left, right)
-    # transform "foo.bar = baz" into "foo.bar=(baz) - FIXME: Is this better handled in treeoutput.rb?
+    # transform "foo.bar = baz" into "foo.bar=(baz)"
     # Also need to handle :call equivalently.
     if left.is_a?(Array) && left[0] == :callm && left.size == 3 # no arguments
       return compile_callm(scope, left[1], (left[2].to_s + "=").to_sym, right)
+    end
+
+    # Handle Foo::Bar = value or self::Bar = value
+    # These are static constant assignments, not method calls
+    if left.is_a?(Array) && left[0] == :deref
+      # [:deref, parent, const_name] = value
+      # This is a scoped constant assignment
+      parent = left[1]
+      const_name = left[2]
+
+      # For self::Const or Foo::Const, just treat as a constant in current scope for now
+      # FIXME: Should handle proper scoping with parent modules/classes
+      left = const_name
     end
 
     source = compile_eval_arg(scope, right)
@@ -732,6 +753,19 @@ class Compiler
     atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
     aparam = args[1]
     atype = :addr if atype == :possible_callm
+
+    # If atype is :subexpr, it means the object to call the setter on is in %eax
+    # This happens with compound assignments like h[:key] &&= value
+    # We need to call the setter method on the object in %eax
+    if atype == :subexpr && left.is_a?(Array) && left[0] == :callm
+      # left is [:callm, obj, method, args]
+      # We need to call obj.method=(args..., right)
+      setter_method = (left[2].to_s + "=").to_sym
+      setter_args = left[3] || []
+      setter_args = [setter_args] unless setter_args.is_a?(Array)
+      setter_args = setter_args + [right]
+      return compile_callm(scope, left[1], setter_method, setter_args)
+    end
 
     if atype == :addr || atype == :cvar
       scope.add_constant(aparam)

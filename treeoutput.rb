@@ -288,7 +288,20 @@ module OpPrec
         end
         lv = flatten(leftv)
         if o.sym == :assign && lv.is_a?(Array)
-            lv = [:destruct] + lv
+            # Only wrap in :destruct if this is actually a comma-separated list of variables
+            # Not if it's a single structured expression like [:deref, :Foo, :Bar]
+            #
+            # Known AST operator symbols that indicate a structured expression (not a variable list):
+            ast_operators = [:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array]
+
+            if ast_operators.include?(lv[0])
+              # This is a structured expression like [:deref, :Foo, :Bar]
+              # Don't wrap in :destruct
+            else
+              # This is a flattened variable list like [:a, :b, :c]
+              # Wrap in :destruct for destructuring assignment
+              lv = [:destruct] + lv
+            end
         end
 
         # Handle implicit hash in array for single element or non-comma case

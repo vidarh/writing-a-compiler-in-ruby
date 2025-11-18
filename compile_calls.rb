@@ -324,6 +324,12 @@ class Compiler
     return compile_yield(scope, args, block) if method == :yield and ob == :self
     return compile_super(scope, args,block) if method == :super and ob == :self
 
+    # Special handling for defined?() - don't evaluate arguments, just stub to nil
+    if method == :defined? && ob == :self
+      @e.comment("defined?() - stubbed to nil")
+      return compile_exp(scope, :nil)
+    end
+
     @e.comment("callm #{ob.inspect}.#{method.inspect}")
     trace(nil,"=> callm #{ob.inspect}.#{method.inspect}\n")
 

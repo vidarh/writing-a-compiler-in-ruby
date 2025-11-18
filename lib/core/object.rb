@@ -66,8 +66,8 @@ class Object
   end
 
   def method_missing (sym, *args)
-    cname = self.class.inspect
-    raise "undefined method '#{sym.to_s}' for #{cname}"
+    receiver_info = self.inspect
+    raise "undefined method '#{sym.to_s}' for #{receiver_info}"
   end
 
     def respond_to?(method)

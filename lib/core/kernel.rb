@@ -48,4 +48,23 @@ class Kernel
       [arg]
     end
   end
+
+  # Runtime constant lookup - stub implementation
+  # Used when constant cannot be resolved statically
+  def __const_get(parent_name, const_name)
+    STDERR.puts "Runtime constant lookup not implemented: #{parent_name}::#{const_name}"
+    raise "NameError: uninitialized constant #{parent_name}::#{const_name}"
+  end
+
+  # Runtime constant lookup on an object - stub implementation
+  def __const_get_on(parent_obj, const_name)
+    STDERR.puts "Runtime constant lookup not implemented: <object>::#{const_name}"
+    raise "NameError: uninitialized constant #{const_name}"
+  end
+
+  # Runtime constant lookup in global scope - stub implementation
+  def __const_get_global(const_name)
+    STDERR.puts "Runtime constant lookup not implemented: #{const_name}"
+    raise "NameError: uninitialized constant #{const_name}"
+  end
 end

@@ -791,9 +791,10 @@ class Compiler
         # be a problem?
         e[0] = :let
         e[1] = [:__destruct]
-        # Convert right-hand side to array using to_a for proper destructuring
-        # This handles cases like `x, y = nil` where nil.to_a returns []
-        e[2] = [:do, [:assign, :__destruct, [:callm, r, :to_a, []]]]
+        # Convert right-hand side to array using Array() for proper destructuring
+        # Array() tries to_ary, then to_a, then wraps in array if neither exists
+        # This handles cases like `x, y = 42` where 42 doesn't respond to to_a
+        e[2] = [:do, [:assign, :__destruct, [:call, :Array, [r]]]]
         ex = e
 
         if splat_idx
