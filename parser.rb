@@ -748,6 +748,15 @@ class Parser < ParserBase
   def parse_class_body
     pos = position
     ws
+    # Check for global namespace (::ClassName)
+    # In Ruby, ::A means "class A in the global namespace"
+    # We'll represent this as just :A (not nested), the compiler will handle the global scope
+    global_namespace = false
+    if literal('::')
+      ws
+      global_namespace = true
+    end
+
     name = expect(Atom) || literal('<<') or expected("class name")
     if name == "<<"
       ob = parse_subexp
