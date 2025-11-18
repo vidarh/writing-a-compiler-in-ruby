@@ -23,17 +23,17 @@
 1. **Keyword Argument Shorthand** - Issue #36 (4 specs) - **PARTIALLY FIXED**
    - Files: hash_spec, def_spec, method_spec, keyword_arguments_spec
    - Status: Hash literal syntax `{a:}`, `{a:, b:, c:}` now works ✓ (commit 3b8cd1f)
-   - Remaining: hash_spec still fails with "Arg.name must be Symbol" (unrelated compiler bug)
+   - Remaining: hash_spec still fails with "Arg.name must be Symbol" - see KNOWN_ISSUES #47
    - Impact: Blocks basic hash and method call features
    - Test: spec/keyword_arg_shorthand_hash_spec.rb
-   - Difficulty: Medium - Parser expands `{a:}` to `{a: a}` ✓, separate issue in hash_spec fixtures
+   - Difficulty: Medium - Parser expands `{a:}` to `{a: a}` ✓, closure rewrite bug blocks hash_spec
 
-2. **Global Namespace Class Definition** - Assembly Bug (3 specs) - **HIGH**
+2. **Global Namespace Class Definition** - Assembly Bug (3 specs) - **FIXED**
    - Files: metaclass_spec, private_spec, singleton_class_spec
-   - Error: `class ::A` emits `[:sexp :__S___3aA]` instead of assembly
-   - Impact: Basic class definition syntax fails
-   - Test: spec/metaclass_assembly_error_spec.rb
-   - Difficulty: Medium - Compiler bug in constant name generation
+   - Status: Fully fixed (commit 1b47b62) - parser, compiler, and transform all updated
+   - Parser marks with [:global, name], compiler/transform handle correctly
+   - Test: spec/metaclass_assembly_error_spec.rb - PASSES
+   - Note: These specs may still have other compile failures from different issues
 
 3. **Closure Environment Link Errors** - Compiler Bug (3 specs) - **HIGH**
    - Files: for_spec, send_spec, super_spec
