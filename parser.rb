@@ -674,7 +674,14 @@ class Parser < ParserBase
     pos = position
     type = keyword(:module) or return
     ws
-    name = expect(Atom) || literal('<<') or expected("class name")
+    # Check for global namespace (::ModuleName)
+    global_namespace = false
+    if literal('::')
+      ws
+      global_namespace = true
+    end
+
+    name = expect(Atom) || literal('<<') or expected("module name")
     if name
       # Check for namespaced module name (e.g., Foo::Bar::Baz)
       # Build up [:deref, :Foo, :Bar, :Baz] for module Foo::Bar::Baz
@@ -682,6 +689,10 @@ class Parser < ParserBase
         ws
         next_part = expect(Atom) or expected("module name after ::")
         name = [:deref, name, next_part]
+      end
+      # Mark as global namespace if :: prefix was present
+      if global_namespace
+        name = [:global, name]
       end
     end
     ws
@@ -695,7 +706,16 @@ class Parser < ParserBase
   def parse_module_body
     pos = position
     ws
-    name = expect(Atom) || literal('<<') or expected("class name")
+    # Check for global namespace (::ModuleName)
+    # In Ruby, ::A means "module A in the global namespace"
+    # We'll represent this as [:global, :A] so the compiler knows to emit at top level
+    global_namespace = false
+    if literal('::')
+      ws
+      global_namespace = true
+    end
+
+    name = expect(Atom) || literal('<<') or expected("module name")
     if name
       # Check for namespaced module name (e.g., Foo::Bar::Baz)
       # Build up [:deref, :Foo, :Bar, :Baz] for module Foo::Bar::Baz
@@ -703,6 +723,10 @@ class Parser < ParserBase
         ws
         next_part = expect(Atom) or expected("module name after ::")
         name = [:deref, name, next_part]
+      end
+      # Mark as global namespace if :: prefix was present
+      if global_namespace
+        name = [:global, name]
       end
     end
     ws

@@ -673,16 +673,23 @@ class Compiler
         elsif e[0] == :module
           # Handle nested module syntax: module Foo::Bar
           module_name = e[1]
-          if module_name.is_a?(Array) && module_name[0] == :deref
+          parent_scope = scope
+
+          # Handle global namespace module definition like [:global, :A]
+          # For module ::A, create the module in global scope regardless of current scope
+          if module_name.is_a?(Array) && module_name[0] == :global
+            module_name = module_name[1]
+            parent_scope = @global_scope
+          elsif module_name.is_a?(Array) && module_name[0] == :deref
             # Flatten Foo::Bar to Foo__Bar
             module_name = "#{module_name[1]}__#{module_name[2]}".to_sym
           end
 
           cscope   = @classes[module_name.to_sym]
-          cscope ||= ModuleScope.new(scope, module_name, @vtableoffsets, @classes[:Object])
+          cscope ||= ModuleScope.new(parent_scope, module_name, @vtableoffsets, @classes[:Object])
           @classes[cscope.name.to_sym] =  cscope
           @global_scope.add_constant(cscope.name.to_sym,cscope)
-          scope.add_constant(module_name.to_sym,cscope)
+          parent_scope.add_constant(module_name.to_sym,cscope)
           build_class_scopes(e[3], cscope)
         elsif e[0] == :sexp
         else
