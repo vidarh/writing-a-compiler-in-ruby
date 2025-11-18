@@ -395,9 +395,69 @@ module Tokens
         # This handles both:
         # - Standard cases: x = %Q{...} (at statement start)
         # - Argument cases: eval %Q{...} (after identifier, but followed by Q{)
-        if @first || prev_lastop
-          percent_start_pos = @s.position  # Save position for error reporting
-          @s.get  # consume '%'
+
+        # Separate handling for %Q specifically
+        percent_start_pos = @s.position  # Save position before consuming
+        pct_char = @s.get  # consume '%'
+        if @s.peek == ?Q
+          type = @s.get  # consume 'Q'
+
+          # Check if we have a delimiter
+          delim = @s.peek
+          is_delimiter = delim && !ALNUM.member?(delim) && delim != "_" && delim != "@" && delim != "$"
+          if is_delimiter
+            # Determine closing delimiter
+            closing = case delim
+            when "{" then "}"
+            when "(" then ")"
+            when "[" then "]"
+            when "<" then ">"
+            else delim
+            end
+
+            @s.get  # consume opening delimiter
+
+            # Parse content until closing delimiter
+            content = ""
+            depth = 1
+            paired = (delim == "{" || delim == "(" || delim == "[" || delim == "<")
+
+            while depth > 0
+              c = @s.peek
+              raise CompilerError.new("Unterminated percent literal", percent_start_pos) if c == nil
+
+              @s.get
+              if c == "\\"
+                # Handle escape sequences
+                next_char = @s.peek
+                if next_char
+                  @s.get
+                  content << "\\" << next_char
+                else
+                  content << "\\"
+                end
+              elsif paired && c == delim
+                depth += 1
+                content << c
+              elsif c == closing
+                depth -= 1
+                content << c if depth > 0
+              else
+                content << c
+              end
+            end
+
+            # %Q is like double-quoted string - allows interpolation
+            return [content, nil]
+          else
+            # Not a valid delimiter - treat as modulo
+            @s.unget  # put back Q
+            @s.unget  # put back %
+            return read_token  # retry
+          end
+        elsif @first || prev_lastop
+          # '%' already consumed above
+          # percent_start_pos already set before consuming '%'
 
           # Check for type character
           type = nil
@@ -490,10 +550,13 @@ module Tokens
             @s.unget(type.chr) if type
             @s.unget("%")
           end
+        else
+          # Not %Q and not (@first || prev_lastop) - treat as modulo
+          # '%' already consumed above, so don't consume again
         end
 
         # Modulo operator or %= assignment
-        @s.get
+        # '%' already consumed above
         if @s.peek == ?=
           @s.get
           return ["%=", Operators["%="]]
