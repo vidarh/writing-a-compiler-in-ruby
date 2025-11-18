@@ -48,6 +48,9 @@ C.new("test")
 
 **Problem**: The parser only accepts an Atom (identifier) for the superclass in class definitions. It doesn't accept arbitrary expressions like strings, numbers, or other literals that should raise TypeError at runtime.
 
+**Impact**:
+- rubyspec/language/class_spec.rb: COMPILE FAIL (line 450: `class TestClass < ""`)
+
 ```ruby
 # These should parse successfully but raise TypeError at runtime
 class TestClass < ""; end         # Parse error: Expected: superclass
@@ -1532,6 +1535,10 @@ This is not a simple tokenization bug - it's an architectural issue. The parser 
 - OR: Making semicolons actual tokens instead of whitespace
 - OR: Complete redesign of parser/tokenizer boundary
 
+**Impact**:
+- rubyspec/language/case_spec.rb: COMPILE FAIL (line 392: `when (raise if 2+2 == 3; /a/)`)
+- Edge case - rarely encountered in practice
+
 **Current Status**: **DEFERRED** - This requires significant architectural changes. The attempted hack with sticky flags is too fragile and breaks existing code.
 
 **Workaround**: Avoid regex literals immediately after semicolons. Use `Regexp.new("pattern")` instead.
@@ -1541,6 +1548,11 @@ This is not a simple tokenization bug - it's an architectural issue. The parser 
 ## 36. Keyword Argument Shorthand Not Supported (HIGH PRIORITY)
 
 **Problem**: Ruby 3.1+ keyword argument shorthand `{a:}` meaning `{a: a}` is not supported in the parser.
+
+**Impact**:
+- rubyspec/language/hash_spec.rb: COMPILE FAIL (line 307: `h = {a:}`)
+- rubyspec/language/def_spec.rb: COMPILE FAIL (keyword argument shorthand in method definitions)
+- rubyspec/language/method_spec.rb: COMPILE FAIL (keyword argument shorthand in method calls)
 
 **Example**:
 ```ruby
@@ -1788,5 +1800,67 @@ eval(%Q{puts "hello"})
 **Test**: test_eval_percent_q.rb - demonstrates the issue
 
 **Related**: Issue #43 (Percent Literal Delimiter Restrictions)
+
+---
+## 45. Splat with Begin Block in Array Indexing
+
+**Problem**: Using splat operator with a begin block inside array indexing `[]` causes a syntax error.
+
+**Example**:
+```ruby
+h = {k: 10}
+x = h[*begin [:k] end]  # Syntax error
+```
+
+**Error Message**: "Syntax error. [{array/1 pri=97}]"
+
+**Root Cause**: The parser's handling of array indexing `[]` doesn't properly support complex expressions with splat + begin blocks. The `*begin ... end` pattern works in assignments but not inside `[]`.
+
+**Workaround**: Extract the expression to a variable first:
+```ruby
+h = {k: 10}
+keys = *begin [:k] end
+x = h[*keys]
+```
+
+**Impact**:
+- rubyspec/language/assignments_spec.rb: COMPILE FAIL (line 261: `$spec_b[*begin 1; [:k] end] += 10`)
+- Rare pattern - not commonly seen in production code
+
+**Status**: ❌ NOT FIXED - workaround available (extract to variable)
+
+**Priority**: Low - affects edge case, easy workaround
+
+**Test**: spec/array_index_splat_begin_spec.rb
+
+---
+## 46. Nested Constant Assignment in Closures Not Supported
+
+**Problem**: Assigning to nested constants (e.g., `A::B::CONST = value`) inside closures/blocks causes "Expected an argument on left hand side of assignment" error.
+
+**Example**:
+```ruby
+it "test" do
+  ConstantSpecs::ClassB::CS_CONST101 = :value  # Error: got subexpr
+end
+```
+
+**Error Message**:
+```
+Expected an argument on left hand side of assignment - got subexpr,
+(left: [[:index, :__env__, 1], [[:index, :__env__, 1], :ConstantSpecs, :ClassB], :CS_CONST101],
+ right: [:sexp, :__S_const101_1])
+```
+
+**Root Cause**: The compiler doesn't recognize nested constant paths as valid assignment targets when they appear in closure contexts. The AST structure `[:index, ...]` for `A::B::C` is treated as "subexpr" rather than a valid lvalue.
+
+**Workaround**: Avoid nested constant assignments in closures. Define constants at the top level instead.
+
+**Impact**:
+- rubyspec/language/constants_spec.rb: COMPILE FAIL (line 556: `ConstantSpecs::ClassB::CS_CONST101 = :const101_1`)
+
+**Status**: ❌ NOT FIXED - requires compiler changes to recognize nested constant paths as valid assignment targets
+
+**Priority**: Low - dynamically assigning nested constants in closures is rare
 
 ---
