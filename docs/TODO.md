@@ -13,16 +13,142 @@
 
 ## High Priority (Language Spec Compilation Failures)
 
-**Status Update (2025-11-18)**: All 29 compile failures have been investigated. See **COMPILE_FAILURES_SUMMARY.md** for complete analysis.
-- 18/29 have documented root causes in KNOWN_ISSUES.md
-- 11/29 need individual investigation (no obvious parse error)
-- Top issues: Keyword arg shorthand (#36, 4 specs), Nested const in closures (#46, 3 specs)
+**Status Update (2025-11-18)**: All 29 compile failures investigated and categorized. See **COMPILE_FAILURES_SUMMARY.md** and **MINIMAL_SPECS_STATUS.md**.
+- 18 specs with verified minimal test cases in spec/
+- 11 specs with complex compiler bugs requiring deep investigation
+- Prioritized by impact (specs affected) and estimated difficulty
 
-Focus on rubyspec/language/ compile failures:
+### Priority 1: High Impact, Fixable (4-7 specs affected each)
 
-### Critical Blockers
+1. **Keyword Argument Shorthand** - Issue #36 (4 specs) - **CRITICAL**
+   - Files: hash_spec, def_spec, method_spec, keyword_arguments_spec
+   - Error: `{a:}` syntax not supported (Ruby 3.1+)
+   - Impact: Blocks basic hash and method call features
+   - Test: spec/keyword_arg_shorthand_hash_spec.rb
+   - Difficulty: Medium - Parser needs to expand `{a:}` to `{a: a}`
 
-**Quick Wins (Likely Simple Fixes)**:
+2. **Global Namespace Class Definition** - Assembly Bug (3 specs) - **HIGH**
+   - Files: metaclass_spec, private_spec, singleton_class_spec
+   - Error: `class ::A` emits `[:sexp :__S___3aA]` instead of assembly
+   - Impact: Basic class definition syntax fails
+   - Test: spec/metaclass_assembly_error_spec.rb
+   - Difficulty: Medium - Compiler bug in constant name generation
+
+3. **Closure Environment Link Errors** - Compiler Bug (3 specs) - **HIGH**
+   - Files: for_spec, send_spec, super_spec
+   - Error: `undefined reference to __env__` and `__closure__`
+   - Impact: Advanced closure scenarios broken
+   - Tests: spec/for_closure_link_error_spec.rb, spec/send_closure_link_error_spec.rb
+   - Difficulty: Hard - Compiler generates references but doesn't emit symbols
+
+### Priority 2: Medium Impact (2-3 specs each)
+
+4. **Splat with Begin Block in Array Indexing** - Issue #45 (2 specs)
+   - Files: assignments_spec, optional_assignments_spec
+   - Error: `arr[*begin ... end]` syntax error
+   - Test: spec/array_index_splat_begin_spec.rb
+   - Difficulty: Medium - Parser doesn't handle begin in array index
+
+5. **Nested Constant Assignment in Closures** - Issue #46 (3 specs)
+   - Files: constants_spec, module_spec, precedence_spec
+   - Error: "Expected an argument on left hand side" - `A::B::C = value` in closures
+   - Test: spec/module_nested_const_spec.rb
+   - Difficulty: Hard - Compiler doesn't recognize nested const as lvalue
+
+6. **Control Flow Edge Cases** (2 specs)
+   - Files: until_spec, while_spec
+   - Errors: Ternary+next, parenthesized break
+   - Tests: spec/until_ternary_next_spec.rb, spec/while_parenthesized_break_spec.rb
+   - Difficulty: Medium - Parser doesn't handle specific combinations
+
+### Priority 3: Low Impact but Fixable (1 spec each)
+
+7. **Safe Navigation Operator** - Feature Missing (1 spec)
+   - File: safe_navigator_spec.rb
+   - Error: `&.` operator not supported (Ruby 2.3+)
+   - Test: spec/safe_navigator_spec.rb
+   - Difficulty: Medium - New operator, affects rescue_spec too
+
+8. **Regex After Semicolon** - Issue #38 (1 spec) - **DEFERRED**
+   - File: case_spec.rb
+   - Error: `/a/` after `;` parsed as division
+   - Test: spec/regex_after_semicolon_spec.rb
+   - Difficulty: Hard - Architecture issue (tokenizer doesn't know parser state)
+
+9. **Parser Superclass Atom Requirement** - Issue #2 (1 spec)
+   - File: class_spec.rb
+   - Error: `class Foo < ""` requires identifier
+   - Test: spec/class_superclass_atom_spec.rb
+   - Difficulty: Easy - Parser should accept expressions
+
+10. **Anonymous Splat Assignment** (1 spec)
+    - File: variables_spec.rb
+    - Error: `* = value` not recognized
+    - Test: spec/anonymous_splat_assignment_spec.rb
+    - Difficulty: Easy - Parser doesn't accept `*` as assignment target
+
+11. **Regex Interpolation with Nested Regex** (1 spec)
+    - File: regexp/encoding_spec.rb
+    - Error: `/#{/./}/` parse error
+    - Test: spec/regexp_encoding_block_error_spec.rb
+    - Difficulty: Medium - Tokenizer confused by nested regex
+
+### Priority 4: Complex Compiler Bugs (Deep Investigation Required)
+
+12. **Global Variable Scope in require** (1 spec)
+    - File: return_spec.rb
+    - Error: `require $spec_filename` - variable not resolved
+    - Test: spec/return_global_var_spec.rb
+    - Difficulty: Hard - Compiler or require implementation issue
+
+13. **Duplicate Symbol Definitions** (1 spec)
+    - File: predefined_spec.rb
+    - Error: `symbol __method_Object_method_missing is already defined`
+    - Difficulty: Hard - Large file, method redefinition bug
+
+14. **Symbol Expression Reduction** (1 spec)
+    - File: symbol_spec.rb
+    - Error: `%w{'!' '!=' '!~'}` - expression reduction error
+    - Test: spec/symbol_expression_reduction_error_spec.rb
+    - Difficulty: Hard - Shunting yard bug with quotes
+
+15. **Register Allocator Division by Zero** (1 spec)
+    - File: regexp/escapes_spec.rb
+    - Error: regalloc.rb:332 divided by 0
+    - Difficulty: Very Hard - Deep compiler bug in register allocation
+
+16. **Heredoc Parsing** (1 spec)
+    - File: heredoc_spec.rb
+    - Error: Unterminated heredoc (tokenizer edge case)
+    - Difficulty: Medium - Specific heredoc syntax bug
+
+17. **Pattern Matching** (1 spec) - **OUT OF SCOPE**
+    - File: pattern_matching_spec.rb
+    - Note: Ruby 2.7+ feature, target is Ruby 2.5
+
+### Recommended Attack Order
+
+**Phase 1: Easy Wins (10-14 specs fixed)**
+- Start with #9 (superclass atom) and #10 (anonymous splat) - simple parser fixes
+- Then tackle #1 (keyword arg shorthand) - 4 specs, medium difficulty
+- Consider #11 (regex interpolation) if time permits
+
+**Phase 2: Medium Impact (4-6 specs fixed)**
+- Fix #4 (splat+begin) and #6 (control flow edge cases) - parser improvements
+- Attempt #7 (safe navigation) if feeling ambitious
+
+**Phase 3: Hard Bugs (3-6 specs fixed)**
+- Address #2 (global namespace class) - assembly generation bug
+- Tackle #3 (closure environment) if needed - complex compiler bug
+- Consider #5 (nested const in closures) - hard lvalue recognition
+
+**Phase 4: Deep Investigation**
+- Items #12-16 require significant debugging time
+- Consider deferring until Phase 1-3 complete
+
+### Old Critical Blockers (Completed)
+
+**Quick Wins (COMPLETED)**:
 - [x] **unless_spec** - ✅ FIXED - Handle nil in get_arg (compiler.rb:138), now PASSES 6/6 tests
 - [x] **until end.should without parens** - ✅ FIXED - Removed parse_until from parse_defexp (parser.rb:488)
 - [x] **Parenthesized break/next/return** - ✅ FIXED - Added nil value check before closing paren (shunting.rb:162-165)
