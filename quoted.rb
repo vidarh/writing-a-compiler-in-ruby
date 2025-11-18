@@ -65,50 +65,48 @@ module Tokens
 
     HASH = "#"
 
-    def self.expect_dquoted(s,q='"')
+    # Helper: Handle string interpolation #{...}
+    # Returns true if interpolation was found and handled, false otherwise
+    # If interpolation found, adds interpolated expression to ret array
+    def self.handle_interpolation(s, ret, buf, &block)
+      if s.peek == ?{
+        if !block_given?
+          STDERR.puts "WARNING: String interpolation requires passing block to Quoted.expect"
+          return false
+        end
+
+        # Initialize ret as [:concat] if not already done
+        ret = [:concat] if !ret
+
+        # Add any buffered string before the interpolation
+        ret << buf if buf != ""
+
+        # Consume the {
+        s.get
+
+        # Parse the interpolated expression
+        ret << yield
+
+        # Expect closing }
+        s.expect_str("}")
+
+        return ret
+      end
+      false
+    end
+
+    def self.expect_dquoted(s,q='"',&block)
       ret = nil
       buf = ""
-      while (e = escaped(s,q[0])); 
-        if e == "#" && s.peek == ?{
-          # Uh-oh. String interpolation
-          #
-          # We'll need to do something dirty here:
-          #
-          # We will call back into the main parser... UGLY.
-          # 
-          # We need to do this because you need to do a full
-          # parse to actually know when the string interpolation
-          # ends, since it can be recursive (!)
-          #
-          # This has an ugly impact: We need to get the parser
-          # object from somewhere. We'll pass that as a block.
-          #
-          # We will also need to return something other than a plain
-          # string. We'll return [:concat, string, fragments, one, by, one]
-          # where the fragments can be strings or expressions.
-          # 
-          # NOTE: There's a semi-obvious optimization here that is
-          #  NOT universally safe: Any seeming constant expression
-          #  could result in the concatenation done at compile time.
-          #  For 99.99% of apps this would be safe, but in Ruby some
-          #  moron *could* overload methods and make the seemingly
-          #  constant expression have side effects. We'll likely have
-          #  an option to do this optimization (with some safety checks,
-          #  but for correctness we also need to be able to turn the
-          #  :concat into [:callm, original-string, :concat] or similar.
-          #
-          if !block_given?
-            STDERR.puts "WARNING: String interpolation requires passing block to Quoted.expect"
-          else
-            if !ret
-              ret = [:concat]
-            end
-            #ret ||= [:concat]
-            ret << buf 
+      while (e = escaped(s,q[0]));
+        if e == "#"
+          # Check for interpolation #{...}
+          result = handle_interpolation(s, ret, buf, &block)
+          if result
+            ret = result
             buf = ""
-            s.get
-            ret << yield
-            s.expect_str("}")
+          else
+            buf << e
           end
         else
           buf << e
