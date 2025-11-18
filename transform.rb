@@ -703,7 +703,19 @@ class Compiler
 
   def build_class_scopes_for_class(e, scope)
     superclass = e[2]
-    superc = @classes[superclass.to_sym]
+    # Handle superclass - it can be a symbol, constant name, or an expression
+    # For expressions (like method calls), we can't resolve at compile time
+    # so we fall back to Object as the known superclass
+    if superclass.is_a?(Symbol)
+      superc = @classes[superclass]
+    elsif superclass.is_a?(Array) && superclass[0] == :deref
+      # Handle namespaced superclass like Foo::Bar
+      # For now just use Object as fallback
+      superc = @classes[:Object]
+    else
+      # Dynamic superclass expression - use Object as compile-time fallback
+      superc = @classes[:Object]
+    end
     name = e[1]
 
     # Handle global namespace class definition like [:global, :A]
