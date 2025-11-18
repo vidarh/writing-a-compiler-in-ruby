@@ -185,6 +185,7 @@ Operators = {
   # "Fake" operator for [] following a name
   "#index#"   => Oper.new(100, :index,    :infix),
   "."         => Oper.new( 98, :callm,    :infix, 2,2,:left),
+  "&."        => Oper.new( 98, :safe_callm, :infix, 2,2,:left),  # Safe navigation operator (Ruby 2.3+)
   # :: is context-sensitive: prefix for global scope (::Foo), infix for namespace (Foo::Bar)
   "::"        => {
     :prefix => Oper.new(100, :deref, :prefix, 1, 1, :right),

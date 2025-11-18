@@ -1117,6 +1117,7 @@ class Compiler
     else
       return compile_call(scope, exp[1], exp[2],exp[3], pos) if (exp[0] == :call)
       return compile_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :callm)
+      return compile_safe_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :safe_callm)
       return compile_call(scope, exp[0], exp.rest, nil, pos) if (exp.is_a? Array)
     end
 

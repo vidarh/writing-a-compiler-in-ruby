@@ -408,4 +408,35 @@ class Compiler
     return Value.new([:subexpr], :object)
   end
 
+  # Compile safe navigation operator: obj&.method
+  # Returns nil if obj is nil, otherwise calls method
+  def compile_safe_callm(scope, ob, method, args, block = nil)
+    @e.comment("safe_callm #{ob.to_s}&.#{method.to_s} START")
+
+    # Generate labels
+    end_label = @e.get_local
+    nil_label = @e.get_local
+
+    # Evaluate the object
+    ret = compile_eval_arg(scope, ob)
+    @e.save_result(ret)
+
+    # Check if nil (nil is a global label in this compiler)
+    @e.cmpl("nil", :eax)
+    @e.je(nil_label)
+
+    # Not nil - call the method normally
+    compile_callm(scope, ob, method, args, block)
+    @e.jmp(end_label)
+
+    # Was nil - return nil
+    @e.local(nil_label)
+    @e.movl("nil", :eax)
+
+    @e.local(end_label)
+    @e.comment("safe_callm #{ob.to_s}&.#{method.to_s} END")
+
+    return Value.new([:subexpr], :object)
+  end
+
 end
