@@ -114,22 +114,62 @@
 
 ---
 
-### No Obvious Parse Error (11 specs)
-**May Compile or Have Other Issues**:
+### Closure Compilation Link Errors (3 specs)
+**Undefined __env__ and __closure__ References**
 
-- rubyspec/language/for_spec.rb
-- rubyspec/language/heredoc_spec.rb
-- rubyspec/language/metaclass_spec.rb
-- rubyspec/language/predefined_spec.rb
-- rubyspec/language/private_spec.rb
-- rubyspec/language/send_spec.rb
-- rubyspec/language/singleton_class_spec.rb
-- rubyspec/language/super_spec.rb
-- rubyspec/language/symbol_spec.rb
-- rubyspec/language/regexp/encoding_spec.rb
-- rubyspec/language/regexp/escapes_spec.rb
+- ✅ rubyspec/language/for_spec.rb (lines 97, 109: undefined __env__ and __closure__)
+- ✅ rubyspec/language/send_spec.rb (lines 559, 573: undefined __env__)
+- ✅ rubyspec/language/super_spec.rb (lines 340, 1013: undefined Module reference)
 
-**Status**: Need individual investigation - may have runtime issues or pass
+**Error**: Link fails with "undefined reference to `__env__'" and "undefined reference to `__closure__'"
+
+**Status**: Closure/eigenclass compilation bug - compiler generates references but doesn't emit the symbols
+
+---
+
+### Assembly Code Generation Errors (3 specs)
+**Compiler Emits AST Instead of Assembly**
+
+- ✅ rubyspec/language/metaclass_spec.rb (Error: junk `[:sexp' after expression)
+- ✅ rubyspec/language/private_spec.rb (Error: junk `[:sexp' after expression)
+- ✅ rubyspec/language/singleton_class_spec.rb (Error: junk `[:sexp' after expression)
+
+**Error**: Assembly contains literal "[:sexp :__S___3aA]" instead of proper assembly instructions
+
+**Status**: Compiler bug - failing to compile certain constructs, emitting AST nodes directly
+
+---
+
+### Heredoc Parsing Error (1 spec)
+**Unterminated Heredoc**
+
+- ✅ rubyspec/language/heredoc_spec.rb (tokens.rb:813: Unterminated heredoc)
+
+**Error**: "Unterminated heredoc (expected HERE\n)"
+
+**Status**: Heredoc tokenizer issue - likely edge case in heredoc parsing
+
+---
+
+### Block Parsing Error (1 spec)
+**Expected 'end' for 'do'-block**
+
+- ✅ rubyspec/language/regexp/encoding_spec.rb (line 46: Expected: 'end' for 'do'-block)
+
+**Error**: Parse error expecting block terminator
+
+**Status**: Parser doesn't handle certain do-block constructs
+
+---
+
+### Unknown / Likely Passes (3 specs)
+**No Obvious Errors Found**:
+
+- rubyspec/language/predefined_spec.rb (bisect timed out - likely very large file)
+- rubyspec/language/symbol_spec.rb (no error output)
+- rubyspec/language/regexp/escapes_spec.rb (no error output)
+
+**Status**: May compile successfully or have subtle runtime issues
 
 ---
 
@@ -138,18 +178,22 @@
 | Root Cause | Specs Affected | Fixable? |
 |------------|----------------|----------|
 | Keyword arg shorthand (#36) | 4 | Requires parser support |
+| Nested const in closures (#46) | 3 | Requires compiler changes |
+| Closure link errors (__env__) | 3 | Compiler bug - HIGH PRIORITY |
+| Assembly code gen errors (:sexp) | 3 | Compiler bug - HIGH PRIORITY |
 | Splat+begin in indexing (#45) | 2 | Edge case, workaround exists |
+| Control flow edge cases | 2 | Needs investigation |
 | Regex after semicolon (#38) | 1 | Deferred (architecture issue) |
 | Superclass atom requirement (#2) | 1 | Low priority |
-| Nested const in closures (#46) | 3 | Requires compiler changes |
 | Safe navigation `&.` | 1 | Requires new operator support |
-| Control flow edge cases | 2 | Needs investigation |
+| Heredoc parsing | 1 | Tokenizer bug |
+| Block parsing (do-end) | 1 | Parser bug |
 | Other edge cases | 4 | Needs investigation |
 | Ruby 2.7+ features | 1 | Out of scope |
-| Unknown / may pass | 11 | Needs investigation |
+| Unknown / likely pass | 3 | May work or runtime issues |
 
-**Total Documented**: 18/29 specs have identified root causes
-**Total Needing Investigation**: 11 specs
+**Total Documented**: 26/29 specs have identified root causes (90%)
+**Total Unknown**: 3 specs (10%)
 
 ## Next Steps
 
