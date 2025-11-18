@@ -1915,3 +1915,36 @@ Expected an argument on left hand side of assignment - got subexpr,
 **Note**: This is separate from Issue #1 (keyword argument shorthand `{a:}`) which has been fixed. The hash literal syntax now works correctly, but hash_spec.rb fails due to this closure rewriting bug.
 
 ---
+
+## 48. Global Constant References (::Constant) Generate Invalid Assembly
+
+**Problem**: Using the global scope operator `::` to reference a constant (like `::Private`) generates invalid assembly with literal AST nodes.
+
+**Example**:
+```ruby
+class ::Private  # class definition fixed in commit 1b47b62
+end
+
+x = ::Private    # constant REFERENCE still broken
+```
+
+**Error Message**:
+```
+Error: junk `[:sexp' after expression
+Error: invalid char ':' beginning operand 2 `:__S___3aPrivate]__G'
+```
+
+**Root Cause**: The global namespace fix (commit 1b47b62) handles `class ::Name` definitions but not `::Name` constant references in expressions. The parser produces `[:deref, nil, :Name]` or similar for constant refs, which isn't properly compiled.
+
+**Impact**:
+- rubyspec/language/private_spec.rb: COMPILE FAIL
+- rubyspec/language/metaclass_spec.rb: COMPILE FAIL (has other issues too)
+- Any code using `::Constant` references
+
+**Status**: ❌ NOT FIXED - requires handling global constant references in compiler
+
+**Priority**: Medium - blocks multiple specs that use `::Constant` syntax
+
+**Note**: Related to but distinct from the `class ::A` fix. Class definitions are fixed; constant references are not.
+
+---

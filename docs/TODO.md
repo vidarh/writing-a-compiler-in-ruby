@@ -28,12 +28,12 @@
    - Test: spec/keyword_arg_shorthand_hash_spec.rb
    - Difficulty: Medium - Parser expands `{a:}` to `{a: a}` ✓, closure rewrite bug blocks hash_spec
 
-2. **Global Namespace Class Definition** - Assembly Bug (3 specs) - **FIXED**
+2. **Global Namespace Class Definition** - Assembly Bug (3 specs) - **PARTIALLY FIXED**
    - Files: metaclass_spec, private_spec, singleton_class_spec
-   - Status: Fully fixed (commit 1b47b62) - parser, compiler, and transform all updated
-   - Parser marks with [:global, name], compiler/transform handle correctly
+   - Status: Class definitions `class ::A` fixed (commit 1b47b62)
+   - Remaining: Constant references `::Constant` still fail - see KNOWN_ISSUES #48
    - Test: spec/metaclass_assembly_error_spec.rb - PASSES
-   - Note: These specs may still have other compile failures from different issues
+   - private_spec, metaclass_spec still fail due to `::Constant` references
 
 3. **Closure Environment Link Errors** - Compiler Bug (3 specs) - **HIGH**
    - Files: for_spec, send_spec, super_spec
