@@ -20,12 +20,13 @@
 
 ### Priority 1: High Impact, Fixable (4-7 specs affected each)
 
-1. **Keyword Argument Shorthand** - Issue #36 (4 specs) - **CRITICAL**
+1. **Keyword Argument Shorthand** - Issue #36 (4 specs) - **PARTIALLY FIXED**
    - Files: hash_spec, def_spec, method_spec, keyword_arguments_spec
-   - Error: `{a:}` syntax not supported (Ruby 3.1+)
+   - Status: Hash literal syntax `{a:}`, `{a:, b:, c:}` now works ✓ (commit 3b8cd1f)
+   - Remaining: hash_spec still fails with "Arg.name must be Symbol" (unrelated compiler bug)
    - Impact: Blocks basic hash and method call features
    - Test: spec/keyword_arg_shorthand_hash_spec.rb
-   - Difficulty: Medium - Parser needs to expand `{a:}` to `{a: a}`
+   - Difficulty: Medium - Parser expands `{a:}` to `{a: a}` ✓, separate issue in hash_spec fixtures
 
 2. **Global Namespace Class Definition** - Assembly Bug (3 specs) - **HIGH**
    - Files: metaclass_spec, private_spec, singleton_class_spec
