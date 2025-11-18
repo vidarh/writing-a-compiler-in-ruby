@@ -53,9 +53,10 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [x] **unless_spec.rb** - ✅ **PASSES 6/6** (was 5/6, fixed nil else-arm bug)
 
 ### Data Structure Specs
-- [ ] **array_spec.rb** - CRASH (compiles, runtime crash in mspec framework)
+- [x] **array_spec.rb** - ✅ COMPILES (was COMPILE FAIL regression, fixed %w interpolation handling) - CRASH (runtime segfault)
 - [ ] **hash_spec.rb** - COMPILE FAIL (keyword arg shorthand `{a:}` - see KNOWN_ISSUES #36)
 - [x] **range_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed by long method name fix) - runtime segfault
+- [x] **string_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed underscore delimiter exclusion) - runtime status TBD
 
 ### Class/Module Specs
 - [ ] **class_spec.rb** - COMPILE FAIL (nested class `class Foo::Bar`, defined?(::A) issues)
@@ -68,7 +69,7 @@ Focus on rubyspec/language/ compile failures blocking 51/79 specs (65%):
 - [ ] **method_spec.rb** - COMPILE FAIL (keyword arg shorthand `call(a:)` - see KNOWN_ISSUES #36)
 - [ ] **block_spec.rb** - CRASH (compiles, runtime segfault - likely KNOWN_ISSUES #3)
 - [x] **proc_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed destructuring detection) - runtime segfault
-- [x] **lambda_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed lambda without block + SpecEvaluate stub)
+- [x] **lambda_spec.rb** - ✅ COMPILES (was COMPILE FAIL, fixed lambda without block return statement in shunting.rb) - runtime status TBD
 - [x] **yield_spec.rb** - ✅ COMPILES (now compiles with special globals fix)
 - [x] **delegation_spec.rb** - ✅ COMPILES (now compiles with special globals fix)
 - [ ] **keyword_arguments_spec.rb** - COMPILE FAIL (likely keyword arg shorthand - see KNOWN_ISSUES #36)
