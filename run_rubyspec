@@ -136,8 +136,20 @@ run_single_spec() {
     if [ $? -eq 0 ]; then
         # The binary name is based on the temp file name
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
-        bash -c "./out/${TEMP_SPEC_NAME} < /dev/null > /tmp/spec_output_$$ 2>&1" 2>/dev/null
-        EXIT_CODE=$?
+        # Run spec and capture output using script to force line buffering via PTY
+        script -q -c "./out/${TEMP_SPEC_NAME}" /tmp/spec_output_$$ < /dev/null > /dev/null 2>&1
+        # Determine exit code based on output: if summary line exists, it completed
+        if grep -q "passed.*failed.*skipped" /tmp/spec_output_$$; then
+            # Completed - check if any failures
+            if grep -q "[1-9][0-9]* failed" /tmp/spec_output_$$; then
+                EXIT_CODE=1
+            else
+                EXIT_CODE=0
+            fi
+        else
+            # No summary = crashed
+            EXIT_CODE=139
+        fi
 
         if [ "$VERBOSE" -eq 1 ]; then
             cat /tmp/spec_output_$$
@@ -201,11 +213,32 @@ if [ -d "$TARGET" ]; then
         FAILED_COUNT=""
         SKIPPED_COUNT=""
         TOTAL_COUNT=""
+        HAS_SUMMARY=""
         if echo "$SPEC_OUTPUT" | grep -q "passed.*failed.*skipped"; then
+            HAS_SUMMARY="1"
             PASSED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* passed" | grep -o "[0-9]*" | head -1)
             FAILED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* failed" | grep -o "[0-9]*" | head -1)
             SKIPPED_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "[0-9]* skipped" | grep -o "[0-9]*" | head -1)
             TOTAL_COUNT=$(echo "$SPEC_OUTPUT" | grep -o "([0-9]* total)" | grep -o "[0-9]*" | head -1)
+        fi
+
+        # If no summary line was found (crash before end), look for the last [P:X F:Y S:Z] line
+        # This gives us partial counts from the tests that did run before the crash
+        if [ -z "$TOTAL_COUNT" ]; then
+            # Get the last line matching [P:X F:Y S:Z]
+            LAST_PFS=$(echo "$SPEC_OUTPUT" | grep -o '\[P:[0-9]* F:[0-9]* S:[0-9]*\]' | tail -1)
+            if [ -n "$LAST_PFS" ]; then
+                PASSED_COUNT=$(echo "$LAST_PFS" | sed 's/.*P:\([0-9]*\).*/\1/')
+                FAILED_COUNT=$(echo "$LAST_PFS" | sed 's/.*F:\([0-9]*\).*/\1/')
+                SKIPPED_COUNT=$(echo "$LAST_PFS" | sed 's/.*S:\([0-9]*\).*/\1/')
+                TOTAL_COUNT=$((PASSED_COUNT + FAILED_COUNT + SKIPPED_COUNT))
+            else
+                # No tests ran at all - show zeros
+                PASSED_COUNT=0
+                FAILED_COUNT=0
+                SKIPPED_COUNT=0
+                TOTAL_COUNT=0
+            fi
         fi
 
         # Format count string
@@ -214,21 +247,20 @@ if [ -d "$TARGET" ]; then
             COUNT_STR=" (P:${PASSED_COUNT:-0} F:${FAILED_COUNT:-0} S:${SKIPPED_COUNT:-0} T:${TOTAL_COUNT})"
         fi
 
-        # If there's no TOTAL_COUNT, the spec crashed before printing summary
-        # This is top priority to fix regardless of exit code
-        if [ -z "$TOTAL_COUNT" ]; then
-            if [ $RESULT -eq 3 ]; then
-                echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE${COUNT_STR}"
-                FAILED_COMPILE=$((FAILED_COMPILE + 1))
-            else
-                echo -e "\e[34m[CRASH] $SPEC_FILE${COUNT_STR}"
-                SEGFAULT=$((SEGFAULT + 1))
-            fi
+        # Determine spec result based on whether summary was printed
+        # No summary = crash (even if we have partial counts)
+        if [ $RESULT -eq 3 ]; then
+            echo -e "\e[33m[COMPILE FAIL] $SPEC_FILE${COUNT_STR}"
+            FAILED_COMPILE=$((FAILED_COMPILE + 1))
+        elif [ -z "$HAS_SUMMARY" ]; then
+            # No summary line = crashed before completion
+            echo -e "\e[34m[CRASH] $SPEC_FILE${COUNT_STR}"
+            SEGFAULT=$((SEGFAULT + 1))
         elif [ $RESULT -eq 0 ]; then
             echo -e "\e[32m[PASS] $SPEC_FILE${COUNT_STR}"
             PASSED=$((PASSED + 1))
         else
-            # Exit code 1 or 2 but has counts means tests ran but some failed
+            # Has summary but some tests failed
             echo -e "\e[31m[FAIL] $SPEC_FILE${COUNT_STR}"
             FAILED=$((FAILED + 1))
         fi
