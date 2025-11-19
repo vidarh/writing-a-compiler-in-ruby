@@ -502,6 +502,9 @@ class Emitter
     @allocator.evict_caller_saved
     if loc.is_a?(Symbol) || loc.is_a?(Register)
       emit(:call, "*"+to_operand_value(loc))
+    elsif loc.is_a?(Integer)
+      # Integer means vtable offset - call through %eax
+      callm(loc)
     else
       emit(:call, loc)
     end
