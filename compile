@@ -10,11 +10,11 @@ asmdebug = ARGV.include?("-g") ? "-g" : ""
 
 def dr(cmd)
   puts cmd
-  system("docker run -v #{Dir.pwd}:/app -i ruby-compiler-buildenv bash -c '#{cmd}'")
+  system("docker run -v #{Dir.pwd}:/app -v /tmp:/tmp -i ruby-compiler-buildenv bash -c '#{cmd}'")
 end
 
 puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
-if dr("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} 2>&1 >out/#{bname}.s")
+if dr("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} >out/#{bname}.s")
   if dr("gcc -Wall #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
     puts "+++ \e[32mCompiled tgc\e[37m"
   else

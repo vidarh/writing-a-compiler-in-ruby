@@ -170,6 +170,25 @@ module Tokens
         when ?w
           words = true
           s.get
+        when ?s
+          # %s{} is a symbol literal, but %s() is hijacked for s-expressions
+          # Only handle %s{} here
+          s.get
+          if s.peek == ?{
+            # Symbol literal %s{...}
+            s.get  # consume {
+            buf = ""
+            while s.peek && s.peek != ?}
+              buf << s.get
+            end
+            s.get if s.peek == ?}  # consume }
+            return ":#{buf}".to_sym
+          else
+            # It's %s() for s-expression, let caller handle it
+            s.unget("s")
+            s.unget("%")
+            return nil
+          end
         when LC,UC
           s.unget(c)
           return nil

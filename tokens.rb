@@ -528,6 +528,24 @@ module Tokens
             @s.unget  # put back %
             return read_token  # retry
           end
+        elsif @s.peek == ?s
+          # %s{} is a symbol literal
+          # Note: %s() is hijacked for s-expressions, so only handle %s{}
+          @s.get  # consume 's'
+          if @s.peek == ?{
+            @s.get  # consume '{'
+            buf = ""
+            while @s.peek && @s.peek != ?}
+              buf << @s.get
+            end
+            @s.get if @s.peek == ?}  # consume '}'
+            return [":#{buf}".to_sym, nil]
+          else
+            # Not %s{} - unget and let other code handle it
+            @s.unget  # put back s
+            @s.unget  # put back %
+            return read_token  # retry
+          end
         elsif @first || prev_lastop
           # '%' already consumed above
           # percent_start_pos already set before consuming '%'
