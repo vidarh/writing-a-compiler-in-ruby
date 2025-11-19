@@ -140,7 +140,7 @@ module OpPrec
         elsif op.sym == :begin_stmt
           #STDERR.puts "   begin statement"
           @out.value(@parser.parse_begin_body)
-          return :prefix
+          return :infix_or_postfix  # Allow postfix while/until after begin...end
         elsif op.sym == :lambda_stmt
           #STDERR.puts "   lambda statement"
           # Lambda keyword already consumed, try to parse the block
