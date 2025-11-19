@@ -139,8 +139,14 @@ module Tokens
 
       c = s.peek
       buf = Quoted.expect(s)
-      bs = ":#{buf.to_s}"
-      return bs.to_sym if buf
+      if buf
+        # Handle empty string specially - need ":''".to_sym not ":".to_sym
+        if buf == ""
+          return ":''".to_sym
+        end
+        bs = ":#{buf.to_s}"
+        return bs.to_sym
+      end
       s.unget(":")
       return nil
    end
