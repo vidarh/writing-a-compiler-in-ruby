@@ -1938,6 +1938,34 @@ end
 
 ---
 
+## 49. Internal AST Nodes Emitted as Method Calls
+
+**Problem**: The compiler sometimes emits internal AST node names (like `hash_splat`, `ternalt`, `proc`) as method calls instead of compiling them properly. These should never appear as method names - they are internal compiler constructs.
+
+**Example errors from keyword_arguments_spec.rb**:
+```
+undefined method 'hash_splat' for #<Object:...>
+undefined method 'ternalt' for #<Object:...>
+undefined method 'proc' for #<Object:...>
+```
+
+**Internal AST nodes that should never be method calls**:
+- `:hash_splat` - Hash spread operator `**hash`
+- `:ternalt` - Ternary else branch `? : `
+- `:proc` - Proc/block creation
+- `:splat` - Array spread operator `*array`
+- `:to_block` - Block conversion `&block`
+
+**Root Cause**: Code generation is missing handlers for these AST nodes in certain contexts. When the compiler encounters an unhandled node type, it falls through to treating it as a method call.
+
+**Impact**: Specs that use these constructs will compile but fail at runtime with "undefined method" errors for what should be internal compiler operations.
+
+**Status**: Not fixed. Requires investigation into which code paths are failing to handle these nodes.
+
+**Affected specs**: keyword_arguments_spec.rb (now compiles after `call $2` fix but has runtime failures)
+
+---
+
 ## Multi-Statement Parentheses - Semicolons Work, Newlines Don't
 
 **Problem**: Ruby allows multiple statements inside parentheses, separated by semicolons or newlines. Semicolons work, but newlines don't:
