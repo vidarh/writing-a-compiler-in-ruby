@@ -300,6 +300,13 @@ module OpPrec
         if op
           op = op[opstate] if op.is_a?(Hash)
 
+          # Handle prefix operators with minarity 0 when an infix operator arrives
+          # Example: "break; 42" - the ; is infix, so break should close with nil
+          # Note: :lp types ([, {, () are not infix - they provide values to the prefix operator
+          if opstate == :prefix && op && op.type == :infix && ostack.last && ostack.last.type == :prefix && ostack.last.minarity == 0
+            @out.value(nil)
+          end
+
           # This makes me feel dirty, but it reflects the grammar:
           # - Inside a literal hash, or function call arguments "," outside of any type of parentheses binds looser than a function call,
           #   while outside of it, it binds tighter... Yay for context sensitive precedence rules.
@@ -348,15 +355,18 @@ module OpPrec
         # This is an error unless the top of the @ostack has minarity == 0,
         # which means it's ok for it to be provided with no argument
         # HOWEVER: respect operator precedence. If the incoming operator has
-        # higher precedence (lower priority number), let it be reduced first.
-        # Example: "break *[1, 2]" - * (pri 8) should be reduced before break (pri 22)
+        # higher precedence (higher priority number), let it be reduced first.
+        # Example: "break *[1, 2]" - we DON'T close break with nil yet
         if ostack.last.minarity == 0
-          # Only close with nil if incoming operator has lower/equal precedence
+          # Only push nil if there's an incoming operator with lower precedence
+          # Don't push nil at end of input (op=nil) - the operator should have its value
           if op && op.pri < ostack.last.pri
-            # Incoming operator has higher precedence - don't close yet
-          else
+            # Incoming operator has lower precedence (lower priority number) - don't close yet
+            # Example: "break *[1, 2]" - splat (pri 8) < break (pri 22), so process splat first
+          elsif op
             @out.value(nil)
           end
+          # At end of input (op=nil), don't push nil - operator should reduce with its value
         else
           scanner = @tokenizer.scanner
           token_info = token.respond_to?(:position) ? token.position.short : token.inspect
