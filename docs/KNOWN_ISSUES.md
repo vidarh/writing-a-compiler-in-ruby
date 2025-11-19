@@ -1938,19 +1938,38 @@ end
 
 ---
 
-## Multi-Statement Parentheses Not Supported
+## Multi-Statement Parentheses - Semicolons Work, Newlines Don't
 
-**Problem**: Ruby allows multiple statements inside parentheses, separated by semicolons or newlines:
+**Problem**: Ruby allows multiple statements inside parentheses, separated by semicolons or newlines. Semicolons work, but newlines don't:
 
 ```ruby
+# This WORKS:
 a = (x = 1; y = 2)  # a gets value of y (2)
+
+# This DOESN'T WORK:
 a = (
   x = 1
   y = 2
 )
+# Error: Parses as function call (x = 1)(y = 2) instead of two statements
 ```
 
-This is not currently supported by the compiler.
+**Root Cause**: The shunting yard parser treats newlines as whitespace inside parentheses. When the tokenizer consumes whitespace via `src.ws if lp_on_entry` (shunting.rb:374), newlines are consumed without recording that a statement break occurred. The subsequent token is then treated as part of the previous expression.
+
+**Attempted Fix (2025-11-19)**: Track newlines in consumed whitespace and inject `:do` operator:
+1. Added `@had_newline_in_ws` flag to track newlines
+2. Modified whitespace consumption to peek for newlines before consuming
+3. Injected `:do` operator when newline found after a value in parentheses context
+4. Set `opstate = :prefix` and `possible_func = false` after injection
+
+**Why It Failed**: Scanner position tracking failed when using `scanner.position = pos` to rewind after peeking, causing a segfault in selftest. The basic approach was correct:
+```
+DEBUG: Injecting :do separator, ostack=[{/0 pri=99}, {assign/2 pri=7}], vstack=[:x, :a, 1]
+DEBUG: After reduce, ostack=[{/0 pri=99}], vstack=[:x, [:assign, :a, 1]]
+```
+The `:do` was correctly injected and reduced the `=` operator, but the scanner rewind corrupted state.
+
+**Key Insight**: The issue is that `newline_before_current` is set by the tokenizer during its own whitespace handling, but inside parentheses the shunting yard calls `src.ws` which consumes whitespace (including newlines) independently, without updating this flag.
 
 **Rejected Solution 1**: Adding a `parse_paren_exps` method in parser.rb that the shunting yard calls when encountering `(` in non-call context. This approach was rejected because:
 
@@ -1964,24 +1983,36 @@ This is not currently supported by the compiler.
 2. **Breaks existing code**: Code like `while condition do; end` fails to parse because `;` is now seen as an operator expecting operands
 3. **Scope confusion**: The operator would need to know whether it's inside parentheses vs inside a block, which the shunting yard doesn't track
 
-**Correct Solution** (not yet implemented):
+**Further Attempt (2025-11-19)**: Adding newline as operator with special handling:
 
-The proper fix requires either:
-1. Context-aware operator handling where `;` is only recognized as an operator inside `()` but not inside `do...end` or `{...}` blocks
-2. A two-phase approach: parse with `;` in WS, then have a transform pass that detects `(a)(b)` patterns from failed multi-statement parens and combines them
-3. Special handling in the shunting yard specifically for `(` that tracks semicolons and builds `:do` blocks without making `;` a general operator
+1. Added `"\n"` to Operators hash as `:do` operator like `;`
+2. Modified shunting.rb to use `nolfws` inside `()` (not `{}`, `[]`, or function calls)
+3. Skip newlines in prefix position (after `(`, after `;`)
+4. Push nil for trailing `;` or `\n` before `)`
+5. Push nil when inhibiting with minarity 0 prefix operator
 
-Until a proper solution is implemented, this remains unsupported.
+**Result**: Semicolon works correctly, but newline-as-operator causes a runtime bug where a Hash object is passed to method_missing instead of a Symbol. The error manifests as:
+```
+Unhandled exception: undefined method '{}' for {}
+```
 
-**Workaround**: Use `begin...end` blocks instead:
+The `sym` argument to method_missing is actually a Hash, not a Symbol. This happens specifically when `"\n"` is returned as an operator from the tokenizer. Moving the newline operator to a constant in tokens.rb (not in Operators hash) doesn't fix the issue. The root cause is not yet understood - something in the compilation creates a Hash where a Symbol should be passed.
+
+**Current Workaround**: The shunting.rb changes are kept (they fix other issues with `;` handling), but newline-as-operator is disabled. Use semicolons or `begin...end` blocks:
 
 ```ruby
+# Use semicolons:
+a = (x = 1; y = 2)
+
+# Or use begin...end:
 a = begin
   x = 1
   y = 2
 end
 ```
 
-**Priority**: LOW - rare usage pattern with easy workaround
+**Future Work**: Debug why returning newline as an operator causes Hash to appear in method_missing. The issue may be related to vtable thunk generation or symbol table handling.
+
+**Priority**: LOW - rare usage pattern with easy workarounds
 
 ---

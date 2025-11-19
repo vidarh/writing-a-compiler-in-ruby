@@ -214,6 +214,13 @@ module OpPrec
            ostack.last.type == :prefix && ostack.last.minarity == 0
           @out.value(nil)
         end
+        # Handle trailing ; before ) - infix :do operator needs its right operand
+        # e.g., (1;2;) - push nil for the missing right value
+        if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
+           ostack.last.type == :infix && ostack.last.minarity == 0 &&
+           src.lasttoken && src.lasttoken[0] == ";"
+          @out.value(nil)
+        end
         # Handle endless ranges: if the last token was .. or ... (range operator) followed immediately by ),
         # push nil as the missing right-hand value
         if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
@@ -294,6 +301,11 @@ module OpPrec
            token == :end)
 
           src.unget(token)
+          # If we're in prefix position with a minarity 0 operator, it needs nil
+          # This handles cases like "literal("(") or return\n" where return has no argument
+          if opstate == :prefix && ostack.last && ostack.last.type == :prefix && ostack.last.minarity == 0
+            @out.value(nil)
+          end
           break
         end
 
