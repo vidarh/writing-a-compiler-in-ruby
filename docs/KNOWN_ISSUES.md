@@ -1937,3 +1937,51 @@ end
 **Note**: Combined with the previous `class ::A` fix, both class and module global namespace definitions are now fully supported.
 
 ---
+
+## Multi-Statement Parentheses Not Supported
+
+**Problem**: Ruby allows multiple statements inside parentheses, separated by semicolons or newlines:
+
+```ruby
+a = (x = 1; y = 2)  # a gets value of y (2)
+a = (
+  x = 1
+  y = 2
+)
+```
+
+This is not currently supported by the compiler.
+
+**Rejected Solution 1**: Adding a `parse_paren_exps` method in parser.rb that the shunting yard calls when encountering `(` in non-call context. This approach was rejected because:
+
+1. **Architectural violation**: It bypasses the shunting yard algorithm for parentheses, creating an inconsistent parsing path where some parentheses are handled by the parser and others by the shunting yard
+2. **Breaks compositionality**: The shunting yard should be the single authority for expression parsing. Having the parser take over mid-expression creates fragile special cases
+3. **Wrong abstraction level**: Statement separation (`;`) is a parser concern, not an expression parser concern. Mixing these responsibilities creates coupling that makes future changes harder
+
+**Rejected Solution 2**: Making `;` a global infix operator that produces `:do` blocks, removing it from the WS (whitespace) constant. This approach was rejected because:
+
+1. **Context-sensitivity**: Semicolon has different semantics in different contexts - inside parentheses it should create `:do` blocks, but inside method bodies it's already handled by the parser. Making it a global operator breaks `def foo; end` patterns
+2. **Breaks existing code**: Code like `while condition do; end` fails to parse because `;` is now seen as an operator expecting operands
+3. **Scope confusion**: The operator would need to know whether it's inside parentheses vs inside a block, which the shunting yard doesn't track
+
+**Correct Solution** (not yet implemented):
+
+The proper fix requires either:
+1. Context-aware operator handling where `;` is only recognized as an operator inside `()` but not inside `do...end` or `{...}` blocks
+2. A two-phase approach: parse with `;` in WS, then have a transform pass that detects `(a)(b)` patterns from failed multi-statement parens and combines them
+3. Special handling in the shunting yard specifically for `(` that tracks semicolons and builds `:do` blocks without making `;` a general operator
+
+Until a proper solution is implemented, this remains unsupported.
+
+**Workaround**: Use `begin...end` blocks instead:
+
+```ruby
+a = begin
+  x = 1
+  y = 2
+end
+```
+
+**Priority**: LOW - rare usage pattern with easy workaround
+
+---
