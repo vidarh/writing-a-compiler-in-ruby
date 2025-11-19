@@ -30,6 +30,7 @@ class Encoding
   Big5 = Encoding.new("Big5")
   ISO_8859_1 = Encoding.new("ISO-8859-1")
   ISO_8859_16 = Encoding.new("ISO-8859-16")
+  Windows_31J = Encoding.new("Windows-31J")
 
   # Class methods
   def self.default_internal
