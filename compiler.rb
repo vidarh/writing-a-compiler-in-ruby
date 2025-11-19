@@ -737,9 +737,22 @@ class Compiler
     end
 
     # transform "foo.bar = baz" into "foo.bar=(baz)"
-    # Also need to handle :call equivalently.
-    if left.is_a?(Array) && left[0] == :callm && left.size == 3 # no arguments
-      return compile_callm(scope, left[1], (left[2].to_s + "=").to_sym, right)
+    # Also handle "foo[idx] = baz" -> "foo.[]=(idx, baz)"
+    if left.is_a?(Array) && left[0] == :callm
+      obj = left[1]
+      method = left[2]
+      setter_method = (method.to_s + "=").to_sym
+
+      if left.size == 3  # no arguments: foo.bar = baz
+        return compile_callm(scope, obj, setter_method, right)
+      else  # has arguments: foo[idx] = baz or foo.method(arg) = baz
+        args = left[3] || []
+        # args may be a single arg or array of args
+        # If it's a single arg that's not already wrapped, wrap it
+        args = [args] if !args.is_a?(Array) || (args[0].is_a?(Symbol) && args[0] != :sexp && ![:array, :hash, :splat].include?(args[0]))
+        all_args = args + [right]
+        return compile_callm(scope, obj, setter_method, all_args)
+      end
     end
 
     # Handle Foo::Bar = value or self::Bar = value
@@ -765,19 +778,6 @@ class Compiler
     atype = args[0]  # FIXME: Ugly, but the compiler can't yet compile atype,aparem = get_arg ...
     aparam = args[1]
     atype = :addr if atype == :possible_callm
-
-    # If atype is :subexpr, it means the object to call the setter on is in %eax
-    # This happens with compound assignments like h[:key] &&= value
-    # We need to call the setter method on the object in %eax
-    if atype == :subexpr && left.is_a?(Array) && left[0] == :callm
-      # left is [:callm, obj, method, args]
-      # We need to call obj.method=(args..., right)
-      setter_method = (left[2].to_s + "=").to_sym
-      setter_args = left[3] || []
-      setter_args = [setter_args] unless setter_args.is_a?(Array)
-      setter_args = setter_args + [right]
-      return compile_callm(scope, left[1], setter_method, setter_args)
-    end
 
     if atype == :addr || atype == :cvar
       scope.add_constant(aparam)
