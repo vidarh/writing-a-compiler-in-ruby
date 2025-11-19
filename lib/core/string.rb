@@ -594,6 +594,11 @@ class String
     ary
   end
 
+  # Helper for %I{} with interpolation - splits string and converts to symbols
+  def __percent_I
+    split.map { |w| w.to_sym }
+  end
+
   # Remove leading whitespace (space, tab, newline, carriage return)
   # Returns a new string
   def lstrip

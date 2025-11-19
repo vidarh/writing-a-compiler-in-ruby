@@ -647,11 +647,16 @@ module Tokens
               end
             when ?i, ?I
               # %i{} - array of symbols (no interpolation)
-              # %I{} - array of symbols (with interpolation, but not supported yet - treat as %i)
-              # TODO: Implement proper interpolation support for %I{}
+              # %I{} - array of symbols (with interpolation)
               # Must prefix with : so transform.rb recognizes them as symbols
-              symbols = content.split.map { |word| (":#{word}").to_sym }
-              return [[:array, *symbols], nil]
+              if content.is_a?(Array)
+                # Interpolated - call helper to split and convert to symbols at runtime
+                return [[:callm, content, :__percent_I], nil]
+              else
+                # No interpolation - split at compile time
+                symbols = content.split.map { |word| (":#{word}").to_sym }
+                return [[:array, *symbols], nil]
+              end
             when ?x
               # %x{} - command execution (same as backticks)
               # For now, only support literal strings without interpolation
