@@ -47,3 +47,13 @@ RUBY_ENGINE="vidarh/compiler"
 # Stub for Thread class (not implemented)
 class Thread
 end
+
+# Stub for Module class
+# FIXME: Module should be a superclass of Class, but that requires
+# significant refactoring of the object model
+class Module
+end
+
+# Stub for Fiber class (not implemented)
+class Fiber
+end
