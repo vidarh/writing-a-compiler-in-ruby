@@ -540,18 +540,24 @@ class Compiler
   # lambda in `#compile_case`
   def compile_case_test(compare_exp, test_exprs)
     test_value = test_exprs
-    xrest = []
+    xrest = nil
     if test_exprs.is_a?(Array)
       #STDERR.puts test_exprs.inspect
       if test_exprs[0] == :comma
         test_value = test_exprs[1]
-        xrest = Array(test_exprs[2])
+        xrest = test_exprs[2]  # Keep as-is, don't wrap in Array()
       end
       #STDERR.puts xrest.inspect
     end
-    cmp = [:callm, test_value, :===, [compare_exp]]
+    # When compare_exp is nil (case with no condition), test for truthiness
+    # Otherwise use === comparison
+    if compare_exp.nil?
+      cmp = test_value
+    else
+      cmp = [:callm, test_value, :===, [compare_exp]]
+    end
 
-    if xrest.empty?
+    if xrest.nil?
       cmp
     else
       [:or, cmp, compile_case_test(compare_exp, xrest)]

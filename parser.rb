@@ -215,12 +215,13 @@ class Parser < ParserBase
     return E[:when, cond, parse_opt_defexp]
   end
 
-  # case ::= "case" ws* condition when* ("else" ws* defexp*) "end"
+  # case ::= "case" ws* condition? when* ("else" ws* defexp*) "end"
+  # When condition is omitted, each when tests its expressions as booleans
   def parse_case
     pos = position
     keyword(:case) or return
     ws
-    cond = parse_condition or expected("condition for 'case' block")
+    cond = parse_condition  # Condition is optional
     nolfws; literal(";"); ws  # Consume optional ; after condition
     whens = kleene { parse_when }
     ws
@@ -232,7 +233,11 @@ class Parser < ParserBase
     end
     ws
     keyword(:end) or expected("'end' for open 'case'")
-    return E[pos, :case, cond, whens, elses].compact
+    # Don't compact - cond can be nil for case-without-condition
+    # Only compact the elses if nil
+    result = E[pos, :case, cond, whens]
+    result << elses if elses
+    return result
   end
 
 
