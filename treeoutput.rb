@@ -267,6 +267,13 @@ module OpPrec
         @vstack << E[o.sym, leftv, rightv].compact
       elsif ra and rightv[0] == :comma and o.sym != :comma
         @vstack << E[o.sym, leftv, flatten(rightv)].compact
+      elsif o.sym == :do
+        # Semicolon operator - flatten nested :do blocks into single block
+        # (a; b; c) becomes [:do, a, b, c] not [:do, [:do, a, b], c]
+        # Handle nil values for empty statements (do; end, ;expr)
+        left_exprs = leftv.nil? ? [] : (la && leftv[0] == :do ? leftv[1..-1] : [leftv])
+        right_exprs = rightv.nil? ? [] : (ra && rightv[0] == :do ? rightv[1..-1] : [rightv])
+        @vstack << E[:do] + left_exprs + right_exprs
       elsif ra and rightv[0] == :flatten
         # Convert [:call, :lambda, [], [:proc, ...]] to [:lambda, ...]
         # This allows lambda to work like a method call while generating proper lambda nodes

@@ -280,8 +280,12 @@ module OpPrec
         # However, we need to check that the operator mapping exists for the current opstate.
         # Additionally, keywords can appear as expressions inside parentheses (e.g., "(def foo; end; 42)")
         has_op_for_state = op && (op.is_a?(Hash) ? op[opstate] : true)
-        in_parens = lp_on_entry && ostack.first && ostack.first.type == :lp && ostack.first.sym == nil
-        if @inhibit.include?(token) or
+        # in_parens is true for any left-paren context: (), [], {}
+        # This allows ; as :do operator inside these contexts
+        in_parens = lp_on_entry && ostack.first && ostack.first.type == :lp
+        # Don't inhibit inside parentheses - allows ; as :do operator in (x = 1; y = 2)
+        # Only inhibit if this is an operator (o is non-nil), not a value
+        if (@inhibit.include?(token) && !in_parens && op) or
           keyword && !has_op_for_state &&
           !in_parens &&
           (opstate != :prefix ||

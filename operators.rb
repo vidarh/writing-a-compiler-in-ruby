@@ -208,6 +208,11 @@ Operators = {
   "("         => Oper.new( 99, nil,       :lp),
   ")"         => Oper.new(  0, nil,       :rp),
 
+  # Semicolon as statement separator - creates :do blocks
+  # Very low priority (1) so it reduces everything before it
+  # minarity=0 allows empty statements (do; end, ;expr)
+  ";"         => Oper.new(  1, :do,       :infix, 2, 0),
+
 }
 
 # Operators that are allowed as method names

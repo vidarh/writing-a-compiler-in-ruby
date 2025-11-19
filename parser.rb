@@ -97,7 +97,8 @@ class Parser < ParserBase
     is_keyword_arg = false
 
     # Build stop tokens list for default value parsing
-    stop_tokens = [COMMA] + extra_stop_tokens
+    # Include ; as stop token since it's a statement separator
+    stop_tokens = [COMMA, ";"] + extra_stop_tokens
 
     # Check for keyword argument syntax: name: or name: value
     if literal(":")
@@ -161,8 +162,9 @@ class Parser < ParserBase
     # :do is needed in the inhibited set because of ugly constructs like
     # "while cond do end" where the "do .. end" block belongs to "while",
     # not to any function in the condition.
+    # ; is also inhibited since it's a statement separator after the condition
     pos = position
-    ret = @sexp.parse || @shunting.parse([:do])
+    ret = @sexp.parse || @shunting.parse([:do, ";"])
     return ret
   end
 
@@ -219,7 +221,7 @@ class Parser < ParserBase
     keyword(:case) or return
     ws
     cond = parse_condition or expected("condition for 'case' block")
-    ws
+    nolfws; literal(";"); ws  # Consume optional ; after condition
     whens = kleene { parse_when }
     ws
     elses = nil  # FIXME: Self-hosted compiler doesn't initialize local vars to nil.
@@ -450,7 +452,9 @@ class Parser < ParserBase
   # subexp ::= exp nolfws*
   def parse_subexp
     pos = position
-    ret = @shunting.parse
+    # Inhibit ; at statement level - it's a separator, not :do operator
+    # Inside parentheses, ; will still work as :do operator (see shunting.rb)
+    ret = @shunting.parse([";"])
     if ret.is_a?(Array)
       ret = E[pos] + ret
     end
@@ -526,6 +530,8 @@ class Parser < ParserBase
   def parse_defexp
     pos = position
     ws
+    # Consume leading semicolons (empty statements)
+    while literal(";"); ws; end
     ret = parse_def || parse_alias || parse_sexp ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
@@ -959,7 +965,15 @@ class Parser < ParserBase
     # runtime issue.
     # res << self.require(File.expand_path(File.dirname(__FILE__)+"/lib/core/core.rb")) if require_core and !@opts[:norequire]
     res << self.require("core/core.rb") if require_core and !@opts[:norequire]
-    res.concat(kleene { parse_exp })
+    exps = kleene { parse_exp }
+    # Flatten nested :do blocks from semicolon sequences
+    exps.each do |exp|
+      if exp.is_a?(Array) && exp[0] == :do
+        res.concat(exp[1..-1])
+      else
+        res << exp
+      end
+    end
     ws
     error("Expected EOF") if scanner.peek
     return res
