@@ -653,9 +653,12 @@ class Compiler
           # entry.`
           #
           arr = e[2].is_a?(Array) ? e[2] : [e[2]]
+          # Only add vtable entries if we're in a class/module scope
+          # At global scope, attr_accessor applies to Object
+          target_scope = scope.is_a?(ModuleScope) ? scope : scope.class_scope
           arr.each {|entry|
-            scope.add_vtable_entry(entry.to_s[1..-1].to_sym)
-            scope.add_ivar("@#{entry.to_s[1..-1]}".to_sym)
+            target_scope.add_vtable_entry(entry.to_s[1..-1].to_sym)
+            target_scope.add_ivar("@#{entry.to_s[1..-1]}".to_sym)
           }
 
           # Then let's do the quick hack:

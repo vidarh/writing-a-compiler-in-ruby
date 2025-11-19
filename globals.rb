@@ -2,6 +2,7 @@
 class Globals
   def initialize
     @global_functions = {}
+    @all_names = {}  # Track all names ever used for suffix disambiguation
   end
 
   def keys
@@ -12,13 +13,19 @@ class Globals
   def set(fname, function)
     suffix = ""
     i = 0
-    if @global_functions[fname]
-      while @global_functions[fname + suffix]
+    original_fname = fname
+    # Check @all_names instead of @global_functions to handle functions
+    # that were already output and removed from the hash
+    if @all_names[fname]
+      while @all_names[fname + suffix]
         i += 1
         suffix = "__#{i}"
       end
       fname = fname + suffix
     end
+
+    # Track this name permanently
+    @all_names[fname] = true
 
     # add the method to the global list of functions defined so far
     # with its "munged" name.

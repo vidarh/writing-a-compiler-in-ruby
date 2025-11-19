@@ -396,10 +396,66 @@ module Tokens
         # - Standard cases: x = %Q{...} (at statement start)
         # - Argument cases: eval %Q{...} (after identifier, but followed by Q{)
 
-        # Separate handling for %Q specifically
+        # Separate handling for %Q and %{ specifically
+        # These need to work even after an identifier (like `eval %{...}`)
         percent_start_pos = @s.position  # Save position before consuming
         pct_char = @s.get  # consume '%'
-        if @s.peek == ?Q
+
+        # Check for %{ (plain percent literal with brace delimiter)
+        if @s.peek == ?{
+          delim = "{"
+          closing = "}"
+          @s.get  # consume opening delimiter
+
+          # Parse content until closing delimiter, handling interpolation
+          ret = nil
+          buf = ""
+          depth = 1
+
+          while depth > 0
+            c = @s.peek
+            raise CompilerError.new("Unterminated percent literal", percent_start_pos) if c == nil
+
+            @s.get
+            if c == "\\"
+              # Handle escape sequences
+              next_char = @s.peek
+              if next_char
+                @s.get
+                buf << "\\" << next_char
+              else
+                buf << "\\"
+              end
+            elsif c == "{"
+              depth += 1
+              buf << c
+            elsif c == closing
+              depth -= 1
+              buf << c if depth > 0
+            elsif c == "#"
+              # Check for interpolation #{ (only if not the closing delimiter)
+              buf << "#"
+              if @s.peek == "{"
+                # Use Quoted.handle_interpolation helper
+                result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
+                if result
+                  ret = result
+                  buf = ""
+                end
+              end
+            else
+              buf << c
+            end
+          end
+
+          # Return interpolated string or plain string
+          if ret
+            ret << buf if buf != ""
+            return [ret, nil]
+          else
+            return [buf, nil]
+          end
+        elsif @s.peek == ?Q
           type = @s.get  # consume 'Q'
 
           # Check if we have a delimiter
@@ -791,6 +847,7 @@ module Tokens
 
               # Read heredoc body until we find the marker
               body = ""
+              heredoc_start = @s.position
               while true
                 line = ""
                 while @s.peek && @s.peek != ?\n
@@ -810,7 +867,7 @@ module Tokens
                   body << "\n"
                   @s.get
                 elsif @s.peek == nil
-                  raise "Unterminated heredoc (expected #{marker})"
+                  raise CompilerError.new("Unterminated heredoc (expected #{marker.inspect})", heredoc_start)
                 end
               end
 
