@@ -553,34 +553,6 @@ class Parser < ParserBase
     kleene { parse_exp }
   end
 
-  # Parse a parenthesized expression group like (x = 1; y = 2)
-  # Returns the value of the last expression or a :do block for multiple
-  # Called from shunting yard when ( is encountered in expression context
-  def parse_paren_exps
-    pos = position
-    # Opening ( is already consumed
-    ws
-    exps = []
-    # Parse expressions until we hit )
-    while !literal(")")
-      exp = parse_defexp
-      break if !exp
-      exps << exp
-      ws
-      # Skip semicolons between expressions
-      while literal(";")
-        ws
-      end
-    end
-
-    # If no expressions, return :nil literal
-    return :nil if exps.empty?
-    # If single expression, return it directly
-    return exps[0] if exps.length == 1
-    # Multiple expressions become a :do block
-    E[pos, :do] + exps
-  end
-
   # block_body ::=  ws * defexp*
   def parse_block_exps
     ws

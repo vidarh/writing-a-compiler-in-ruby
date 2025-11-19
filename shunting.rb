@@ -240,25 +240,17 @@ module OpPrec
         return :break
       elsif op && op.type == :lp
         reduce(ostack, op)
-        # For parentheses in non-call context, use parser to handle multi-statement expressions
-        # This handles (x = 1; y = 2) properly
-        if !possible_func && op.sym == nil
-          result = @parser.parse_paren_exps
-          @out.value(result)
-          opstate = :infix_or_postfix
-        else
-          opstate = shunt_subexpr([op], src, possible_func)
-          ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
+        opstate = shunt_subexpr([op], src, possible_func)
+        ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
 
-          # Handling function calls and a[1] vs [1]
-          #
-          # - If foo is a method, then "foo [1]" is "foo([1])"
-          # - If foo is a local variable, then "foo [1]" is "foo.[](1)"
-          # - foo[1] is always foo.[](1)
-          # So we need to know if there's whitespace, and we then higher up need to know if
-          # if's a method. Fuck the Ruby grammar
-          reduce(@ostack, @opcall2) if @ostack[-1].nil? || @ostack[-1].sym != :call
-        end
+        # Handling function calls and a[1] vs [1]
+        #
+        # - If foo is a method, then "foo [1]" is "foo([1])"
+        # - If foo is a local variable, then "foo [1]" is "foo.[](1)"
+        # - foo[1] is always foo.[](1)
+        # So we need to know if there's whitespace, and we then higher up need to know if
+        # if's a method. Fuck the Ruby grammar
+        reduce(@ostack, @opcall2) if @ostack[-1].nil? || @ostack[-1].sym != :call
       elsif op
         reduce(ostack, op)
         opstate = :prefix
