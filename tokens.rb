@@ -692,26 +692,50 @@ module Tokens
         return ["%", Operators["%"]]
       when ?/
         if @first || prev_lastop
-          # Parse regexp literal
+          # Parse regexp literal with interpolation support
           @s.get  # consume '/'
-          pattern = ""
+          ret = nil
+          buf = ""
           while true
-            c = @s.get
+            c = @s.peek
+            if c == nil
+              raise "Unterminated regexp"
+            end
+            @s.get
             if c == ?/
               # End of regexp, skip modifiers for now
-              while @s.peek && (@s.peek == ?i || @s.peek == ?m || @s.peek == ?x || @s.peek == ?o)
+              while @s.peek && (@s.peek == ?i || @s.peek == ?m || @s.peek == ?x || @s.peek == ?o || @s.peek == ?e || @s.peek == ?n || @s.peek == ?s || @s.peek == ?u)
                 @s.get
+              end
+              # Finalize pattern
+              if ret
+                ret << buf if buf != ""
+                pattern = ret
+              else
+                pattern = buf
               end
               return [[:callm, :Regexp, :new, pattern], nil]
             elsif c == ?\\
               # Escape sequence
-              pattern << c.chr
+              buf << c.chr
               next_c = @s.get
-              pattern << next_c.chr if next_c
-            elsif c == nil
-              raise "Unterminated regexp"
+              buf << next_c.chr if next_c
+            elsif c == ?#
+              # Check for interpolation #{
+              if @s.peek == ?{
+                # Use Quoted.handle_interpolation helper
+                result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
+                if result
+                  ret = result
+                  buf = ""
+                else
+                  buf << c.chr
+                end
+              else
+                buf << c.chr
+              end
             else
-              pattern << c.chr
+              buf << c.chr
             end
           end
         else
