@@ -794,13 +794,25 @@ class Compiler
   # - Splat: collect remaining elements minus those after it
   # - After splat: assign from end using negative indices
   #
+  # Helper to flatten nested :comma nodes
+  # [:comma, :a, [:comma, :b, :c]] => [:a, :b, :c]
+  def flatten_comma(node)
+    return [node] unless node.is_a?(Array) && node[0] == :comma
+    result = []
+    node[1..-1].each do |elem|
+      result.concat(flatten_comma(elem))
+    end
+    result
+  end
+
   def rewrite_destruct(exps)
     # First, convert [:comma, ...] on LHS to [:destruct, ...]
     exps.depth_first(:assign) do |e|
       l = e[1]
       if l.is_a?(Array) && l[0] == :comma
-        # Convert [:comma, a, b, c] to [:destruct, a, b, c]
-        l[0] = :destruct
+        # Flatten nested :comma nodes and convert to [:destruct, a, b, c, ...]
+        vars = flatten_comma(l)
+        e[1] = [:destruct, *vars]
       end
     end
 
