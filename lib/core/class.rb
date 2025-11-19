@@ -273,6 +273,20 @@ class Class
     %s(__include_module self mod)
   end
 
+  # Visibility modifiers - stubbed as no-ops for now
+  # These need to be implemented properly to track method visibility
+  def private *args
+    nil
+  end
+
+  def protected *args
+    nil
+  end
+
+  def public *args
+    nil
+  end
+
 end
 
 %s(assign (index Class 0) Class)

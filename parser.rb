@@ -620,8 +620,10 @@ class Parser < ParserBase
       saved_after_vis = @scanner.position
       ws
       if !keyword(:def)
-        # Visibility modifier not followed by def, so backtrack completely
-        @scanner.position = saved_pos
+        # Visibility modifier not followed by def, so put it back with whitespace
+        # We need to include a space to separate from what follows
+        @scanner.unget(" ")
+        @scanner.unget(vis.to_s)
         return nil
       end
     else
