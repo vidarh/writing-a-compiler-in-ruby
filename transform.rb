@@ -432,10 +432,10 @@ class Compiler
         # expression nodes in the parser
         # Skip AST operator symbols at index 0 - they're not variable references
         next if i == 0 && (ex == :index || ex == :deref)
-        # Skip symbols in :deref nodes - they're constant/module names, not variables
-        # [:deref, parent, const_name] - don't rewrite parent or const_name
-        # Exception: if parent is an array (nested expression), it will be processed separately
-        next if (i == 1 || i == 2) && e[0] == :deref && ex.is_a?(Symbol)
+        # Skip constant names in :deref nodes - they're constant/module names, not variables
+        # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
+        # The parent might be a variable like: a = Object; a::CONST
+        next if i == 2 && e[0] == :deref && ex.is_a?(Symbol)
         num = env.index(ex)
         if num
           seen = true
