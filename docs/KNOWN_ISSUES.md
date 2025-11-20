@@ -101,13 +101,21 @@ result = break if condition  # ✗ Consumes `result` variable name
 a ||= break if c             # ✗ Consumes `a` variable name
 ```
 
-**Error**: "Missing value in expression / op: {assign/2 pri=7} / vstack: [] / rightv: [:break, :result]"
+Also fails when followed by newline and new statement:
+```ruby
+a = (
+  break if true
+  c = false        # ✗ Parsed as: break if true(c) = false
+)
+```
 
-**Root Cause**: When `break` (prefix operator, pri=22) is followed by `if` (infix operator, pri=2), the shunting yard algorithm doesn't correctly handle the modifier if pattern. The `break` consumes tokens that should be outside its scope.
+**Error**: "Missing value in expression / op: {assign/2 pri=7} / vstack: [] / rightv: [:break, :result]" or "Expected an argument on left hand side of assignment - got subexpr"
+
+**Root Cause**: When `break` (prefix operator, pri=22) is followed by `if` (infix operator, pri=2), the shunting yard algorithm doesn't correctly handle statement termination (newlines). The `if` modifier continues to consume tokens from the next statement.
 
 **Test**: spec/break_if_modifier_spec.rb, spec/or_assign_paren_expr_spec.rb (compiles, runtime segfault)
 
-**Affects**: while_spec.rb, until_spec.rb (test cases with `break if` patterns)
+**Affects**: while_spec.rb (COMPILE FAIL), until_spec.rb (test cases with `break if` patterns)
 
 **Priority**: MEDIUM - workaround exists (use explicit if/end instead of modifier if)
 
@@ -2044,3 +2052,196 @@ end
 **Priority**: LOW - rare usage pattern with easy workarounds
 
 ---
+
+## 50. Bootstrap Issue: Array Operations in depth_first Blocks Crash - FIXED
+
+**Problem**: When writing transform functions in transform.rb that use `Array#<<` or build complex arrays inside `depth_first` blocks, the compiled compiler crashes with a jump to address 0.
+
+**Root Cause**: Using a local variable named `assign` conflicted with the `:assign` symbol in the AST, causing the compiled compiler to generate incorrect code. The issue was NOT about array operations - it was a variable naming issue.
+
+**Fix**: Rename the variable from `assign` to `asgn` to avoid the name conflict. The transform now works correctly in both MRI and the compiled compiler.
+
+**Status**: FIXED. The `rewrite_default_args` transform is now enabled and working:
+- Moves default argument expressions into method body as if/assign statements
+- Uses `numargs` to check argument count at runtime
+- Properly preserves `:default` marker for arity calculation
+
+---
+
+## 51. Procs in Class Bodies Inside Lambdas Fail with Undefined Closure Variables - FIXED
+
+**Problem**: When a proc/lambda is defined inside a class/module body that is itself inside another lambda or method, the closure variables `__env__`, `__closure__`, and `__tmp_proc` are not properly set up.
+
+```ruby
+# This fails to compile:
+require 'rubyspec_helper'
+
+def run_specs
+  describe("test") do
+    it "test" do
+      class MyClass
+        OBJ = Object.new
+        OBJ.instance_eval do    # <- This proc fails
+          def foo; end
+        end
+      end
+    end
+  end
+end
+```
+
+**Errors**:
+```
+undefined reference to `__tmp_proc'
+undefined reference to `__env__'
+undefined reference to `__closure__'
+```
+
+**Root Cause**: The `rewrite_lambda` transformation is called from `rewrite_let_env`, which only processes `:defm` (method definition) nodes. When a proc appears in a class body that's inside a lambda, the class body is compiled in `ClassScope` context, not the enclosing lambda's scope. The proc transformation generates code that references closure variables (`__env__`, `__tmp_proc`, `__closure__`) as if they were available, but they're not in the class scope.
+
+The parse tree shows the structure:
+```
+(defun "__lambda_L239" (self __closure__ __env__)
+  (let ()                    # <- Empty let, no local vars
+    (class DefSpecNested ... (
+      (callm OBJ instance_eval () (do
+        (assign (index __env__ 0) (stackframe))  # <- Uses __env__ from class context
+        (assign __tmp_proc ...)                   # <- Uses __tmp_proc from class context
+        ...
+      ))
+    ))
+  ))
+```
+
+The lambda `L239` takes `__env__` as a parameter, but the code in the class body tries to use it directly, which compiles to a global symbol reference instead of a local variable access.
+
+**Impact**: Cannot use procs/lambdas inside class/module bodies that are themselves inside methods or lambdas. This affects:
+- mspec-style specs with `describe`/`it` blocks containing classes
+- Any nested structure like `method { class Foo { block { } } }`
+
+**Fix**: Modified `ClassScope` to track the enclosing local scope separately from the namespace parent:
+1. Added `@local_scope` field to `ClassScope` for accessing enclosing method/block variables
+2. Updated `ClassScope#get_arg` to check `@local_scope` for `:lvar` and `:arg` lookups before falling back to namespace scope
+3. Modified `compile_class` to pass the incoming scope as `local_scope` when creating or reopening a class
+
+This allows procs in class bodies to correctly resolve variables like `__env__`, `__tmp_proc`, and `__closure__` from the enclosing method/lambda scope.
+
+**Status**: FIXED
+
+**Test Case**: `test_class_lambda_method.rb`
+
+---
+
+
+## 52. Module/Class Reopening Inside Methods Creates Duplicate Scope - FIXED
+
+**Problem**: When a module/class is defined at global scope and then reopened inside a method, the compiler created a duplicate scope with a different name (e.g., `Object__ClassSpecs` instead of `ClassSpecs`), causing constant lookups to fail.
+
+**Example**:
+```ruby
+module ClassSpecs
+  class B; end
+end
+
+def run_specs
+  # Reopening ClassSpecs here created Object__ClassSpecs
+  module ClassSpecs
+    Number = 12
+  end
+  
+  describe("test") do
+    it "uses B" do
+      ClassSpecs::B.new  # Error: undefined reference to `B'
+    end
+  end
+end
+```
+
+**Root Cause**: When `compile_class` was called from inside a method, it walked up the scope chain and found the Object ClassScope as the parent. It then computed `fully_qualified_name = "Object__ClassSpecs"` which didn't exist in `@classes`, so it created a new scope. This new scope was registered in Object's `@constants[:ClassSpecs]`, causing later lookups to find the wrong scope that didn't have the nested classes registered.
+
+**Affected Specs**:
+- rubyspec/language/class_spec.rb - Had many `undefined reference to 'B'`, `'C'`, `'D'` errors
+- Any rubyspec file with modules reopened inside `def run_specs`
+
+**Fix**: Modified `compile_class.rb` with several improvements:
+
+1. Check if class/module exists with simple name when parent scope is Object:
+```ruby
+# Only do this for symbol names (not runtime-computed names like [:index, :__env__, 4])
+if !cscope && parent_scope.is_a?(ModuleScope) && parent_scope.name == "Object" && name.is_a?(Symbol)
+  cscope = @classes[name]
+  fully_qualified_name = name if cscope
+end
+```
+
+2. Added `explicit_namespace` flag for `class Foo::Bar` syntax to prevent double prefixing:
+```ruby
+# When using explicit namespace syntax (class Foo::Bar), the name already contains
+# the full path, so don't add parent scope prefix
+if explicit_namespace
+  fully_qualified_name = name.to_sym
+elsif parent_scope.is_a?(ModuleScope)
+  fully_qualified_name = "#{parent_scope.name}__#{name}".to_sym
+else
+  fully_qualified_name = name.to_sym
+end
+```
+
+**Status**: FIXED (with remaining edge cases in Issue 53)
+
+**Files Modified**: compile_class.rb:206, 229-230, 254-261, 264-268
+
+**Remaining Issues**:
+- `class Foo::Bar < L` inside reopened module still has superclass lookup issues (see Issue 53)
+- Constants defined in eigenclasses inside lambdas aren't found
+
+---
+
+
+## 53. Superclass and Constant Lookup in Nested/Reopened Classes
+
+**Problem**: Several issues remain with superclass and constant resolution when classes/modules are reopened inside lambdas or methods:
+
+1. **Superclass Lookup**: When inheriting from a class inside a reopened module, the superclass gets double-prefixed:
+```ruby
+module ClassSpecs
+  class L; end
+end
+
+def run_specs
+  module ClassSpecs  # Reopening
+    class M < L     # Should find ClassSpecs__L
+    end             # Actually generates reference to ClassSpecs__ClassSpecs__L
+  end
+end
+```
+
+2. **Constants in Eigenclasses Inside Lambdas**:
+```ruby
+class << obj
+  CONST = 123
+end
+-> { CONST }.call  # Error: undefined reference to 'CONST'
+```
+
+3. **Runtime Constant Assignment**:
+```ruby
+# Inside lambda with closure-captured parent
+obj::FOO = 1  # Error: Expected argument on left hand side of assignment
+```
+
+**Root Cause**:
+1. Superclass symbol `:L` needs to be resolved to fully qualified name `ClassSpecs__L` during transform or compile phase, but currently uses simple symbol lookup
+2. Constants defined in eigenclasses need to be accessible from the enclosing scope chain
+3. Runtime constant assignment with non-symbol parent not supported
+
+**Affected Specs**:
+- rubyspec/language/class_spec.rb - `ClassSpecs__ClassSpecs__L` errors
+- rubyspec/language/metaclass_spec.rb - CONST undefined
+- rubyspec/language/singleton_class_spec.rb - CONST undefined
+- rubyspec/language/constants_spec.rb - runtime constant assignment
+
+**Status**: OPEN
+
+---
+
