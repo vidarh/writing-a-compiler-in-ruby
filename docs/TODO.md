@@ -2,13 +2,15 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## Test Status (2025-11-17 - Latest Update)
+## Test Status (2025-11-20 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
-**Language Specs**: 79 files, **3 passed (4%)**, 20 failed, **26 crashed (33%)**, **30 compile failures (38%)**
-  - Progress: Compile failures reduced from 33 to 30 (global vars, include support)
-  - alias_spec, execution_spec, private_spec now compile (but crash/fail at runtime)
+**Language Specs**: 79 files, **3 passed (4%)**, 25 failed, **36 crashed (46%)**, **15 compile failures (19%)**
+  - Progress: Compile failures reduced from 27 to 15 (*begin...end parsing fixed)
+  - Test pass rate: 16% (157/975 individual tests passing)
+  - Passing specs: and_spec, not_spec, unless_spec
+  - Main blockers: nested destructuring assignment, safe navigation operator, runtime crashes
 **Custom Specs (spec/)**: 37 files, **25 passed (68%)**, 4 failed, 5 crashed, 3 compile failures. 86 tests, 72 passed (84%)
 
 ## High Priority (Language Spec Compilation Failures)
@@ -44,9 +46,11 @@
 
 ### Priority 2: Medium Impact (2-3 specs each)
 
-4. **Splat with Begin Block in Array Indexing** - Issue #45 (2 specs)
+4. **Splat with Begin Block** - Issue #45 - ✅ **FIXED** (commit ce239f1)
    - Files: assignments_spec, optional_assignments_spec
-   - Error: `arr[*begin ... end]` syntax error
+   - Status: `*begin...end` parsing now works correctly
+   - Fix: begin blocks now parse regardless of waiting prefix operators
+   - Remaining: Both specs still fail with nested destructuring assignment errors
    - Test: spec/array_index_splat_begin_spec.rb
    - Difficulty: Medium - Parser doesn't handle begin in array index
 
