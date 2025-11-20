@@ -848,7 +848,12 @@ class Compiler
           # Handle destructuring with splat
           # Before splat: use positive indices
           (0...splat_idx).each do |i|
-            ex[2] << [:assign, vars[i], [:callm,:__destruct,:[],[i]]]
+            v = vars[i]
+            # If v is an array but not a known AST operator node, it's nested destructuring
+            if v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
+              v = [:destruct, *v]
+            end
+            ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
           end
 
           # After splat: use negative indices from the end
@@ -856,9 +861,14 @@ class Compiler
           if after_splat > 0
             (1..after_splat).each do |offset|
               idx = splat_idx + offset
+              v = vars[idx]
+              # If v is an array but not a known AST operator node, it's nested destructuring
+              if v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
+                v = [:destruct, *v]
+              end
               # Use negative index: -1 for last element, -2 for second-to-last, etc
               neg_idx = -after_splat + offset - 1
-              ex[2] << [:assign, vars[idx], [:callm,:__destruct,:[],[neg_idx]]]
+              ex[2] << [:assign, v, [:callm,:__destruct,:[],[neg_idx]]]
             end
           end
 
@@ -891,6 +901,11 @@ class Compiler
         else
           # No splat: simple destructuring
           vars.each_with_index do |v,i|
+            # If v is an array but not a known AST operator node, it's nested destructuring
+            # Wrap it in :destruct so it gets expanded recursively
+            if v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
+              v = [:destruct, *v]
+            end
             ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
           end
         end
@@ -966,6 +981,99 @@ class Compiler
     rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
+    rewrite_default_args(exp)
     rewrite_let_env(exp)
+  end
+
+  # Transform default arguments from method signature into method body
+  # This turns:
+  #   def foo(a, b = expr)
+  #     body
+  #   end
+  # Into:
+  #   def foo(a, b)
+  #     if numargs < 2; b = expr; end
+  #     body
+  #   end
+  #
+  # This must run BEFORE rewrite_let_env so that closures in default
+  # expressions are properly handled.
+  def rewrite_default_args(exp)
+    exp.depth_first(:defm) do |e|
+      args = e[2]
+      if args
+        if args.is_a?(Array)
+          # Check for defaults
+          has_defaults = false
+          i = 0
+          while i < args.length
+            arg = args[i]
+            if arg.is_a?(Array) && arg[1] == :default
+              has_defaults = true
+            end
+            i = i + 1
+          end
+
+          if has_defaults
+            # Count defaults
+            default_count = 0
+            ci = 0
+            while ci < args.length
+              carg = args[ci]
+              if carg.is_a?(Array) && carg[1] == :default
+                default_count = default_count + 1
+              end
+              ci = ci + 1
+            end
+
+            # Create arrays
+            new_args = Array.new(args.length)
+            default_assigns = Array.new(default_count)
+
+            # Fill arrays
+            di = 0
+            i = 0
+            while i < args.length
+              arg = args[i]
+              if arg.is_a?(Array) && arg[1] == :default
+                name = arg[0]
+                default_expr = arg[2]
+                # Build if statement using different variable name
+                threshold = i + 3
+                cond = [:lt, :numargs, threshold]
+                asgn = [:assign, name, default_expr]
+                if_stmt = [:if, cond, asgn]
+                default_assigns[di] = if_stmt
+                di = di + 1
+                new_args[i] = [name, :default, :nil]
+              else
+                new_args[i] = arg
+              end
+              i = i + 1
+            end
+
+            # Build new body with default assigns prepended
+            body = e[3]
+            body = [] if !body.is_a?(Array)
+
+            new_body = []
+            j = 0
+            while j < default_count
+              new_body << default_assigns[j]
+              j = j + 1
+            end
+            k = 0
+            while k < body.length
+              new_body << body[k]
+              k = k + 1
+            end
+
+            # Update the method definition
+            e[2] = new_args
+            e[3] = new_body
+          end
+        end
+      end
+    end
   end
 end
