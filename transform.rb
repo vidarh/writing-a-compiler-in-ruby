@@ -326,6 +326,12 @@ class Compiler
               vars += vars2
               env  += env2
             end
+          elsif n[0] == :deref
+            # [:deref, parent, const_name] - only process parent (n[1]), not const_name (n[2])
+            # Const names in deref expressions are not variable references
+            # But parent could be an expression or variable that needs processing
+            parent = n[1].is_a?(Array) ? [n[1]] : n[1]
+            vars, env = find_vars(parent, scopes, env, freq, in_lambda, false, current_params)
           else
             vars, env = find_vars(n[1..-1], scopes, env, freq, in_lambda, false, current_params)
           end
@@ -424,7 +430,12 @@ class Compiler
         # FIXME: This is necessary in order to avoid rewriting compiler keywords in some
         # circumstances. The proper solution would be to introduce more types of
         # expression nodes in the parser
-        next if i == 0 && ex == :index
+        # Skip AST operator symbols at index 0 - they're not variable references
+        next if i == 0 && (ex == :index || ex == :deref)
+        # Skip symbols in :deref nodes - they're constant/module names, not variables
+        # [:deref, parent, const_name] - don't rewrite parent or const_name
+        # Exception: if parent is an array (nested expression), it will be processed separately
+        next if (i == 1 || i == 2) && e[0] == :deref && ex.is_a?(Symbol)
         num = env.index(ex)
         if num
           seen = true
