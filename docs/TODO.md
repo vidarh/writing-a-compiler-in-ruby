@@ -7,10 +7,13 @@
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)
 **Language Specs**: 79 files, **3 passed (4%)**, 25 failed, **36 crashed (46%)**, **15 compile failures (19%)**
-  - Progress: Compile failures reduced from 27 to 15 (*begin...end parsing fixed)
-  - Test pass rate: 16% (157/975 individual tests passing)
+  - Test pass rate: 16% (157/973 individual tests passing) - **STABLE**
   - Passing specs: and_spec, not_spec, unless_spec
-  - Main blockers: nested destructuring assignment, safe navigation operator, runtime crashes
+  - Recent fixes:
+    - ✅ Fixed nested destructuring assignment (commit 47f7cb9)
+    - ✅ Fixed closure environment corruption of :deref nodes (commit b8d257e)
+    - ✅ Fixed :deref closure rewriting regression (commit b9ecc40)
+  - Main blockers: constants_spec/metaclass_spec (linker errors), safe_navigator_spec (closure bug), variables_spec (anonymous splat)
 **Custom Specs (spec/)**: 37 files, **25 passed (68%)**, 4 failed, 5 crashed, 3 compile failures. 86 tests, 72 passed (84%)
 
 ## High Priority (Language Spec Compilation Failures)
