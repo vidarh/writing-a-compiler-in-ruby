@@ -203,6 +203,7 @@ class Compiler
     # Parser creates [:deref, :Foo, :Bar] for this
     nested_parent = nil
     nested_child = nil
+    explicit_namespace = false  # True when using Foo::Bar syntax (name contains full path)
     if name.is_a?(Array) && name[0] == :deref
       # Handle nested class/module names like Foo::Bar or Foo::Bar::Baz
       # Flatten the nested deref structure to a single name like Foo__Bar__Baz
@@ -225,6 +226,8 @@ class Compiler
         # This is simplified - we're effectively creating a flat namespace
         nested_parent = parts[0..-2].join("__").to_sym if parts.length > 1
         nested_child = parts.last if parts.length > 1
+        # Mark that we used explicit namespace syntax - don't add parent prefix
+        explicit_namespace = true
       else
         # Parent is not a symbol (runtime expression) - not supported
         error("Complex nested class/module syntax not supported: #{name.inspect}", scope)
@@ -245,9 +248,13 @@ class Compiler
     end
 
     # Calculate the fully qualified name for this class
+    # If explicit_namespace (class Foo::Bar syntax), use the flattened name directly
     # If parent is a ModuleScope/ClassScope, prefix with parent name (e.g., "Foo__Bar")
     # If parent is GlobalScope, use just the name (e.g., "Bar")
-    if parent_scope.is_a?(ModuleScope)
+    if explicit_namespace
+      # Name already contains full path (e.g., ClassSpecs__L), don't add prefix
+      fully_qualified_name = name.to_sym
+    elsif parent_scope.is_a?(ModuleScope)
       fully_qualified_name = "#{parent_scope.name}__#{name}".to_sym
     else
       fully_qualified_name = name.to_sym
@@ -257,9 +264,21 @@ class Compiler
     # This ensures nested classes don't collide with global classes of the same name
     cscope = @classes[fully_qualified_name]
 
+    # If not found with fully qualified name, try the simple name
+    # This handles the case where a module/class was defined at global scope
+    # and is being reopened from inside a method (where parent_scope is Object)
+    # Only do this for symbol names (not runtime-computed names like [:index, :__env__, 4])
+    if !cscope && parent_scope.is_a?(ModuleScope) && parent_scope.name == "Object" && name.is_a?(Symbol)
+      cscope = @classes[name]
+      # If found, use the existing scope's name for consistency
+      fully_qualified_name = name if cscope
+    end
+
     # If cscope is nil, the class hasn't been defined yet - create it
     if !cscope
-      cscope = ClassScope.new(parent_scope, name, @vtableoffsets, superc)
+      # Pass scope as local_scope for accessing enclosing local variables
+      local_scope = (scope != parent_scope) ? scope : nil
+      cscope = ClassScope.new(parent_scope, name, @vtableoffsets, superc, local_scope)
       @classes[fully_qualified_name] = cscope
       @global_scope.add_constant(fully_qualified_name, cscope)
       # Also register in parent scope so lookups work
@@ -268,6 +287,11 @@ class Compiler
         register_name = name.is_a?(Symbol) ? name : fully_qualified_name
         parent_scope.add_constant(register_name, cscope)
       end
+    else
+      # Class is being reopened - update local_scope for this invocation
+      # This allows accessing local variables from the enclosing scope
+      local_scope = (scope != parent_scope) ? scope : nil
+      cscope.local_scope = local_scope if local_scope
     end
 
     # For nested class/module Foo::Bar, register Bar in Foo's namespace

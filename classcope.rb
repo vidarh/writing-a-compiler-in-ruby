@@ -25,8 +25,9 @@ class ModuleScope < Scope
   # slot 5 is reserved for next_sibling
   CLASS_IVAR_NUM = 6
 
-  def initialize(next_scope, name, offsets, superclass = nil)
+  def initialize(next_scope, name, offsets, superclass = nil, local_scope = nil)
     @next = next_scope
+    @local_scope = local_scope  # For looking up variables in enclosing local scopes
     @superclass = superclass
     @name = name
     @vtable = {}
@@ -47,6 +48,11 @@ class ModuleScope < Scope
 
   def include_module(m)
     @modules << m
+  end
+
+  # Set the local scope for accessing variables from enclosing methods/blocks
+  def local_scope=(scope)
+    @local_scope = scope
   end
 
   def find_constant(c)
@@ -168,7 +174,14 @@ class ModuleScope < Scope
     return get_class_var(a) if as[0..1] == "@@" or @class_vars.include?(a)
     return get_instance_var(a) if a.to_s[0] == ?@ or @instance_vars.include?(a)
 
-    # if not in class scope, check next (outer) scope.
+    # First check the local scope (for variables from enclosing methods/blocks)
+    if @local_scope
+      n = @local_scope.get_arg(a)
+      # If found as a local variable or argument, return it
+      return n if n && (n[0] == :lvar || n[0] == :arg)
+    end
+
+    # if not in local scope, check namespace (outer) scope.
     n =  @next.get_arg(a) if @next
 
     return n if n[0] == :global # Prevent e.g. "true" from being treated as method call

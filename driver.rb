@@ -35,7 +35,7 @@ require 'compiler'
      elsif File.exist?(arg)
        input_source = File.open(arg, "r")
      else
-       STDERR.puts "No such file or argument: #{arg}"
+       STDERR.puts "No such file or argument: '#{arg}'"
        exit(1)
      end
   end

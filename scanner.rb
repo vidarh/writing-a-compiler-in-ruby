@@ -136,7 +136,7 @@ class Scanner
   end
 
   # Avoid initialization on every call. Hacky workaround.
-  # Note: semicolon removed from WS - it's now an operator
+  # Note: semicolon removed from WS - it's an operator
   WS = [9,10,13,32,?#.ord]
   C = ?#
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n' | '\\' '\n')*

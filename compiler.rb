@@ -356,6 +356,7 @@ class Compiler
       cscope = scope.find_constant(left)
     end
 
+
     if !cscope || !cscope.is_a?(ModuleScope)
       # Cannot resolve statically - generate runtime constant lookup
       # This commonly appears in defined?(Undefined::Constant) where the constant doesn't exist

@@ -16,6 +16,11 @@ class ControlScope < Scope
     @loop_label || super
   end
 
+  # Delegate to next scope to check for rest arguments
+  def rest?
+    @next ? @next.rest? : false
+  end
+
   # Delegate to next scope to find ClassScope/ModuleScope
   def class_scope
     if @next

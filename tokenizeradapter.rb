@@ -38,6 +38,10 @@ class TokenizerAdapter
     @tokenizer.ws
   end
 
+  def nolfws
+    @tokenizer.nolfws
+  end
+
   def unget token
     @tokenizer.unget(token)
   end

@@ -1009,6 +1009,10 @@ module Tokens
       @s.ws
     end
 
+    def nolfws
+      @s.nolfws
+    end
+
     attr_reader :lasttoken
 
     def get
@@ -1027,7 +1031,7 @@ module Tokens
         # FIXME: This rule should likely cover more
         # cases; may want additional flags
         if @lastop && @last && @last[0] != :return
-          # Track if we're about to skip a newline with ws
+          # Check if there's a newline before consuming whitespace
           @newline_before_current = (@s.peek && @s.peek.ord == 10)
           @s.ws
         else

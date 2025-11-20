@@ -213,7 +213,7 @@ Operators = {
   # minarity=0 allows empty statements (do; end, ;expr)
   # Note: Newline as separator is handled specially in tokens.rb to avoid
   # including it in the Operators hash which would cause issues with vtable thunks
-  ";"         => Oper.new(  1, :do,       :infix, 2, 0),
+  ";"         => Oper.new(  1, :do,       :infix, 2, 0, :left),
 
 }
 

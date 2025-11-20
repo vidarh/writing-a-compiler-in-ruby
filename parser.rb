@@ -164,7 +164,7 @@ class Parser < ParserBase
     # not to any function in the condition.
     # ; is also inhibited since it's a statement separator after the condition
     pos = position
-    ret = @sexp.parse || @shunting.parse([:do, ";"])
+    ret = @sexp.parse || @shunting.parse([:do, ";", "\n"])
     return ret
   end
 
@@ -457,9 +457,9 @@ class Parser < ParserBase
   # subexp ::= exp nolfws*
   def parse_subexp
     pos = position
-    # Inhibit ; at statement level - it's a separator, not :do operator
-    # Inside parentheses, ; will still work as :do operator (see shunting.rb)
-    ret = @shunting.parse([";"])
+    # Inhibit ; and newline at statement level - they're separators, not :do operator
+    # Inside parentheses, ; and newline will still work as :do operator (see shunting.rb)
+    ret = @shunting.parse([";", "\n"])
     if ret.is_a?(Array)
       ret = E[pos] + ret
     end
