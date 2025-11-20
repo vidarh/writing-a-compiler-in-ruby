@@ -106,6 +106,14 @@ module OpPrec
         @out.value(nil)
       end
 
+      # begin is always a complete expression that produces a value
+      # It should be parsed regardless of whether a prefix operator is waiting
+      if opstate == :prefix && op.sym == :begin_stmt
+        #STDERR.puts "   begin statement"
+        @out.value(@parser.parse_begin_body)
+        return :infix_or_postfix  # Allow postfix while/until after begin...end
+      end
+
       # When if/unless/while/until/rescue appear in prefix position, parse as statement UNLESS
       # they're appearing after a prefix operator (which would make them modifiers)
       if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
@@ -137,10 +145,6 @@ module OpPrec
           src.unget(token)
           reduce(ostack)
           return :break
-        elsif op.sym == :begin_stmt
-          #STDERR.puts "   begin statement"
-          @out.value(@parser.parse_begin_body)
-          return :infix_or_postfix  # Allow postfix while/until after begin...end
         elsif op.sym == :lambda_stmt
           #STDERR.puts "   lambda statement"
           # Lambda keyword already consumed, try to parse the block
@@ -280,6 +284,22 @@ module OpPrec
       src.each do |t,o,keyword|
         op = o
         token = t
+
+        # Inside () parentheses, newlines act as statement separators
+        # Insert implicit ; when we see a new token after a newline
+        # This must happen BEFORE processing the current token
+        # BUT: don't insert ; before closing paren - there's nothing after it
+        is_closing_paren = op && (op.is_a?(Hash) ? (op[:infix_or_postfix] && op[:infix_or_postfix].type == :rp) : op.type == :rp)
+        if lp_on_entry && opstate == :infix_or_postfix && @tokenizer.newline_before_current && !is_closing_paren
+          is_paren = ostack.first && ostack.first.sym == nil && ostack.first.type == :lp
+          if is_paren
+            # Insert implicit ; operator to separate statements
+            do_op = Operators[";"]
+            reduce(ostack, do_op)
+            ostack << do_op
+            opstate = :prefix  # After ; we expect a new expression
+          end
+        end
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator.
         # Also, keywords that have operator mappings (like if/while/rescue) should
@@ -345,7 +365,10 @@ module OpPrec
             result = @parser.send(parser_method)
             @out.value(result)
           else
-            if possible_func
+            # When a value follows a possible function name without a newline,
+            # treat it as an argument. But if there was a newline, it's a new statement.
+            # This ensures "foo bar" is "foo(bar)" but "foo\nbar" is two separate expressions.
+            if possible_func && !@tokenizer.newline_before_current
               # Fix for parser bug with parenthesis-free method chains like "result.should eql 3"
               # Reduce operators with priority > @opcall2 (9), but not @opcall2 itself
               # This makes "foo bar baz" parse as "foo(bar(baz))" not "foo(bar, baz)"
@@ -360,7 +383,9 @@ module OpPrec
         end
         possible_func = op ? op.type == :lp :  (!token.is_a?(Numeric) || !token.is_a?(Array))
         lastlp = false
-        src.ws if lp_on_entry
+        if lp_on_entry
+          src.ws
+        end
       end
 
       if opstate == :prefix && (ostack.size && ostack.last && ostack.last.type == :prefix)
