@@ -43,5 +43,11 @@ class FuncScope < Scope
     end
     return self
   end
+
+  # Delegate to parent scope for name (module/class prefix)
+  # This ensures constants defined inside module/class bodies get the correct prefix
+  def name
+    @next ? @next.name : ""
+  end
 end
 

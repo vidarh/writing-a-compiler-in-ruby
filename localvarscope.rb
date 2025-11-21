@@ -53,4 +53,10 @@ class LocalVarScope < Scope
     return @next.class_scope if @next
     return self
   end
+
+  # Delegate to parent scope for name (module/class prefix)
+  # This ensures constants defined in local scopes inside modules/classes get the correct prefix
+  def name
+    @next ? @next.name : ""
+  end
 end
