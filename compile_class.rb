@@ -278,7 +278,12 @@ class Compiler
     if !cscope
       # Pass scope as local_scope for accessing enclosing local variables
       local_scope = (scope != parent_scope) ? scope : nil
-      cscope = ClassScope.new(parent_scope, name, @vtableoffsets, superc, local_scope)
+      # When explicit_namespace is true (class Foo::Bar syntax), name contains the full path
+      # but ClassScope.name will add parent prefix, so extract just the child name
+      # Example: name="ClassSpecs__L", parent=ClassSpecs => use local_name="L"
+      # to avoid double prefix (ClassSpecs__ClassSpecs__L)
+      local_name = explicit_namespace && nested_child ? nested_child : name
+      cscope = ClassScope.new(parent_scope, local_name, @vtableoffsets, superc, local_scope)
       @classes[fully_qualified_name] = cscope
       @global_scope.add_constant(fully_qualified_name, cscope)
       # Also register in parent scope so lookups work
@@ -309,13 +314,28 @@ class Compiler
     @e.evict_regs_for(:self)
 
 
-    name = cscope.name.to_sym
+    # Use the fully qualified name for global constant tracking and class object creation
+    # But when we're inside a module scope, use the simple name for get_arg (the module will add prefix)
+    # When we're in global scope or using explicit namespace from outside the module, use fq_name
+    fq_name = fully_qualified_name.to_sym
+
+    # Determine which name to use in the assignment based on the scope context
+    # If parent_scope is a ModuleScope and we're not using explicit namespace from outside,
+    # use the simple name so the module's get_arg adds the prefix correctly
+    assign_name = if parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope && !explicit_namespace
+      # Inside a module, use simple name (e.g., :L not :ClassSpecs__L)
+      cscope.local_name.to_sym
+    else
+      # Global scope or explicit namespace: use fully qualified name
+      fq_name
+    end
+
     # The check for :Class and :Kernel is an "evil" temporary hack to work around the bootstrapping
     # issue of creating these class objects before Object is initialized. A better solution (to avoid
     # demanding an explicit order would be to clear the Object constant and make sure __new_class_object
     #does not try to deref a null pointer
     #
-    sscope = (name == superclass or name == :Class or name == :Kernel) ? nil : @classes[superclass]
+    sscope = (fq_name == superclass or fq_name == :Class or fq_name == :Kernel) ? nil : @classes[superclass]
 
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
@@ -325,13 +345,13 @@ class Compiler
       classob = [:index, superc.name.to_sym , 0]
     end
     compile_eval_arg(scope, [:if,
-                             [:sexp,[:eq, name, 0]],
+                             [:sexp,[:eq, assign_name, 0]],
                              # then
-                             [:assign, name.to_sym,
+                             [:assign, assign_name,
                               mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
                              ]])
 
-    @global_constants << name
+    @global_constants << fq_name
 
     # In the context of "cscope", "self" refers to the Class object of the newly instantiated class.
     # Previously we used "@instance_size" directly instead of [:index, :self, 1], but when fixing instance
@@ -343,14 +363,14 @@ class Compiler
 
     # We need to store the "raw" name here, rather than a String object,
     # as String may not have been initialized yet
-    compile_exp(cscope, [:assign, [:index, :self, 2], name.to_s])
+    compile_exp(cscope, [:assign, [:index, :self, 2], fq_name.to_s])
 
     exps.each do |e|
       addr = compile_do(cscope, *e)
     end
 
-    @e.comment("=== end class #{name} ===")
-    return Value.new([:global, name], :object)
+    @e.comment("=== end class #{fq_name} ===")
+    return Value.new([:global, fq_name], :object)
   end
 
 end
