@@ -259,6 +259,20 @@ module OpPrec
           elements = elements.map { |e| convert_ternalt_to_pair(e) }
           @vstack << E[o.sym] + elements
         end
+      elsif o.sym == :splat && ra && rightv[0] == :comma
+        # FIXME: Workaround for operator precedence issue where *a, b parses as [:splat, [:comma, a, b]]
+        # instead of [:comma, [:splat, a], b]. Rewrite to correct form.
+        # This extracts the first element from the comma, wraps it in splat, then rebuilds the comma.
+        flat = flatten(rightv)
+        first = flat[0]
+        rest = flat[1..-1]
+        if rest.empty?
+          @vstack << E[:splat, first]
+        else
+          result = E[:comma, E[:splat, first], rest[0]]
+          rest[1..-1].each {|r| result = E[:comma, result, r]}
+          @vstack << result
+        end
       elsif ra and rightv[0] == :comma and o.sym == :return
         @vstack << E[o.sym, leftv, [:array]+flatten(rightv)].compact
       elsif ra and rightv[0] == :to_block and o.sym == :comma

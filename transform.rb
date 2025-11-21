@@ -891,25 +891,17 @@ class Compiler
           # For *a,b,c: start_idx=0, end_idx=-2 (skip last 2)
           start_idx = splat_idx
           if after_splat > 0
-            # Use Array#[start, length] form: [start_idx..-after_splat-1]
-            # Rewrite as: __destruct[start_idx, [0, __destruct.length - start_idx - after_splat].max]
-            # This handles edge cases where array is too short
+            # Use range form: __destruct[start_idx..-after_splat-1]
+            # This handles splat in the middle or start with tail elements
+            end_idx = -(after_splat + 1)
             ex[2] << [:assign, splat_var,
               [:callm, :__destruct, :[],
-                [start_idx,
-                 [:callm,
-                   [:callm, 0, :max,
-                     [[:callm,
-                       [:callm,
-                         [:callm, :__destruct, :length],
-                         :-, [start_idx]],
-                       :-, [after_splat]]]],
-                   :to_i]]]]
+                [[:range, [:sexp, start_idx], [:sexp, end_idx]]]]]
           else
             # No elements after splat, use range to end: __destruct[start_idx..-1]
             ex[2] << [:assign, splat_var,
               [:callm, :__destruct, :[],
-                [[:range, start_idx, -1]]]]
+                [[:range, [:sexp, start_idx], [:sexp, -1]]]]]
           end
         else
           # No splat: simple destructuring

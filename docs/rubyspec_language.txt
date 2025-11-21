@@ -9,7 +9,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/BEGIN_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/block_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/break_spec.rb (P:0 F:0 S:0 T:0)
-[34m[CRASH] rubyspec/language/case_spec.rb (P:11 F:13 S:0 T:24)
+[34m[CRASH] rubyspec/language/case_spec.rb (P:12 F:21 S:0 T:33)
 [33m[COMPILE FAIL] rubyspec/language/class_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/class_variable_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] rubyspec/language/comment_spec.rb (P:0 F:1 S:0 T:1)
@@ -29,7 +29,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/keyword_arguments_spec.rb (P:0 F:26 S:0 T:26)
 [34m[CRASH] rubyspec/language/lambda_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/line_spec.rb (P:0 F:1 S:0 T:1)
-[34m[CRASH] rubyspec/language/loop_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/loop_spec.rb (P:2 F:1 S:0 T:3)
 [34m[CRASH] rubyspec/language/magic_comment_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [33m[COMPILE FAIL] rubyspec/language/metaclass_spec.rb (P:0 F:0 S:0 T:0)
@@ -91,8 +91,8 @@ Summary:
   Failed to compile: 14
 
 Individual Test Cases:
-  Total tests: 980
-  Passed: 157
-  Failed: 806
+  Total tests: 992
+  Passed: 160
+  Failed: 815
   Skipped: 17
   Pass rate: 16%
