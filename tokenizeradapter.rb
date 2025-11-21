@@ -54,6 +54,18 @@ class TokenizerAdapter
     @tokenizer.newline_before_current
   end
 
+  def newline_before_current=(value)
+    @tokenizer.newline_before_current = value
+  end
+
+  def at_newline
+    @tokenizer.at_newline
+  end
+
+  def last_ws_consumed_newline
+    @tokenizer.last_ws_consumed_newline
+  end
+
   def scanner
     @tokenizer.scanner
   end

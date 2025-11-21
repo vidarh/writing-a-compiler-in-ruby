@@ -6,6 +6,7 @@
 # concise style in Ruby
 class Scanner
   attr_reader :col, :lineno, :filename # @filename holds the name of the file the parser reads from
+  attr_reader :last_ws_consumed_newline # Tracks if the last ws() call consumed a newline
 
 #  Position = Struct.new(:filename, :lineno, :col)
 
@@ -51,6 +52,7 @@ class Scanner
     @buf = ""
     @lineno = 1
     @col = 1
+    @last_ws_consumed_newline = false
 
     # set filename if io is an actual file (instead of STDIN)
     # otherwhise, indicate it comes from a stream
@@ -141,12 +143,14 @@ class Scanner
   C = ?#
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n' | '\\' '\n')*
   def ws
+    @last_ws_consumed_newline = false
     while (c = peek) && (WS.member?(c.ord) || c == "\\")
       if c == "\\"
         # Check if it's line continuation: backslash followed by newline
         get
         if peek == LF
           get  # consume the newline
+          @last_ws_consumed_newline = true
         else
           # Not line continuation, put the backslash back
           unget("\\")
@@ -154,8 +158,10 @@ class Scanner
         end
       else
         get
+        @last_ws_consumed_newline = true if c.ord == 10  # Track newline consumption
         if c == C
           while (c = get) && c != LF do; end
+          @last_ws_consumed_newline = true  # Comments end with newline
         end
       end
     end

@@ -313,10 +313,15 @@ end
 module Tokens
   class Tokenizer
     attr_accessor :keywords
-    attr_reader :newline_before_current
+    attr_accessor :newline_before_current
+    attr_reader :at_newline
 
     def scanner
       @s
+    end
+
+    def last_ws_consumed_newline
+      @s.last_ws_consumed_newline
     end
 
     def initialize(scanner,parser)
@@ -326,6 +331,7 @@ module Tokens
       @first = true
       @lastop = false
       @newline_before_current = false
+      @at_newline = false
     end
 
     def each
@@ -1028,14 +1034,15 @@ module Tokens
         end
         res = [res,nil] if res
       else
+        # Check if there's a newline before consuming any whitespace
+        # This must be done BEFORE calling ws/nolfws as they consume the newline
+        @newline_before_current = (@s.peek && @s.peek.ord == 10)
+
         # FIXME: This rule should likely cover more
         # cases; may want additional flags
         if @lastop && @last && @last[0] != :return
-          # Check if there's a newline before consuming whitespace
-          @newline_before_current = (@s.peek && @s.peek.ord == 10)
           @s.ws
         else
-          @newline_before_current = false
           @s.nolfws
         end
 
@@ -1043,7 +1050,7 @@ module Tokens
         # This fixes: 4.ceildiv(-3) followed by -4.ceildiv(3) on next line
         # Without this, -4 is parsed as binary subtraction instead of unary minus
         # Store boolean directly to avoid local variable issues in self-hosted compiler
-        @__at_newline = @s.peek ? (@s.peek.ord == 10) : false
+        @at_newline = @s.peek ? (@s.peek.ord == 10) : false
 
         prev_lastop = @lastop
         @lastop = false
@@ -1058,7 +1065,7 @@ module Tokens
       # Parser bug fix: Only set @lastop = true after newline if previous token was an operator
       # Stabby lambda method calls (-> { x }.a) should NOT skip newlines
       # But operators like ) should skip newlines to allow: 4.ceildiv(-3) \n -4.ceildiv(3)
-      if @__at_newline && old_last && old_last[1] && old_last[1].is_a?(Oper)
+      if @at_newline && old_last && old_last[1] && old_last[1].is_a?(Oper)
         # Previous token was an operator, so newline can be skipped
         @lastop = true
       else

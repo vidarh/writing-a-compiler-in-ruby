@@ -33,7 +33,7 @@ module OpPrec
       # call operator
 
       @opcall  = Operators["#call#"]
-      @opcall2 = Operators["#call2#"] 
+      @opcall2 = Operators["#call2#"]
 
       @opcallm = Operators["."]
 
@@ -277,6 +277,7 @@ module OpPrec
                                 # "opstate" is used to handle things like pre-increment and post-increment that
                                 # share the same token.
       lp_on_entry = ostack.first && ostack.first.type == :lp
+      had_newline_after_ws = false  # Track if src.ws consumed a newline
 
       lastlp = true
       op = nil
@@ -290,7 +291,8 @@ module OpPrec
         # This must happen BEFORE processing the current token
         # BUT: don't insert ; before closing paren - there's nothing after it
         is_closing_paren = op && (op.is_a?(Hash) ? (op[:infix_or_postfix] && op[:infix_or_postfix].type == :rp) : op.type == :rp)
-        if lp_on_entry && opstate == :infix_or_postfix && @tokenizer.newline_before_current && !is_closing_paren
+        newline_before = @tokenizer.newline_before_current || had_newline_after_ws
+        if lp_on_entry && opstate == :infix_or_postfix && newline_before && !is_closing_paren
           is_paren = ostack.first && ostack.first.sym == nil && ostack.first.type == :lp
           if is_paren
             # Insert implicit ; operator to separate statements
@@ -298,6 +300,7 @@ module OpPrec
             reduce(ostack, do_op)
             ostack << do_op
             opstate = :prefix  # After ; we expect a new expression
+            possible_func = false  # Prevent next token from being treated as function argument
           end
         end
         # Normally we stop when encountering a keyword, but it's ok to encounter
@@ -385,6 +388,10 @@ module OpPrec
         lastlp = false
         if lp_on_entry
           src.ws
+          # Track if ws() consumed a newline for next token's implicit semicolon check
+          had_newline_after_ws = @tokenizer.last_ws_consumed_newline
+        else
+          had_newline_after_ws = false
         end
       end
 
@@ -408,7 +415,7 @@ module OpPrec
           scanner = @tokenizer.scanner
           token_info = token.respond_to?(:position) ? token.position.short : token.inspect
           # Include ostack and vstack state for debugging
-          vstack_info = @out.instance_variable_get(:@vstack) rescue []
+          vstack_info = @out.vstack
           msg = "Missing value for prefix operator #{ostack[-1].sym.to_s} / token: #{token_info} / ostack: #{ostack.inspect} / vstack: #{vstack_info.inspect}"
           raise ShuntingYardError.new(msg,
                                       scanner ? scanner.filename : nil,
@@ -430,7 +437,7 @@ module OpPrec
     def parse(inhibit=[])
       out = @out.dup
       out.reset
-      tmp = self.class.new(out, @tokenizer,@parser, inhibit)
+      tmp = self.class.new(out, @tokenizer, @parser, inhibit)
       res = tmp.shunt(@tokenizer)
       res ? res.result : nil
     end
