@@ -799,16 +799,17 @@ module Tokens
 
         first = @s.get
 
-        # Special case: Handle anonymous splat (* = value)
-        # If we see * in prefix position followed by =, treat as identifier :_
+        # Special case: Handle anonymous splat (* = value) or (*)
+        # If we see * in prefix position followed by = or ), treat as identifier :_
         if first == "*" && (@first || prev_lastop)
-          # Peek ahead through whitespace to check for =
+          # Peek ahead through whitespace to check for = or )
           ws_chars = ""
           while @s.peek && [" ", "\t", "\r", "\n"].member?(@s.peek)
             ws_chars << @s.get
           end
 
-          if @s.peek == ?=
+          next_char = @s.peek
+          if next_char == ?=
             # Check it's not **= or *= (compound assignment)
             equals = @s.get
             following = @s.peek
@@ -821,6 +822,11 @@ module Tokens
             end
             # It's *= or **= or something else, unget and continue
             @s.unget(equals) if equals
+          elsif next_char == ?)
+            # This is (*) - anonymous splat in parentheses
+            # Return :_ as identifier
+            @s.unget(ws_chars.reverse) if ws_chars && !ws_chars.empty?
+            return [:_, nil]
           end
           # Unget whitespace and continue normal operator handling
           @s.unget(ws_chars.reverse) if ws_chars && !ws_chars.empty?
