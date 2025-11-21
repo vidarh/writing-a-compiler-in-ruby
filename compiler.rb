@@ -769,6 +769,33 @@ class Compiler
       left = const_name
     end
 
+    # Handle multiple assignment targets (destructuring after closure rewriting)
+    # e.g., [[:index, :__env__, 9], [:index, :__env__, 8], :b] = value
+    # This happens when nested destructuring has closure variables or symbols
+    # Check: first element is an array (not a symbol operator) AND
+    # the array looks like a list of targets (not a single expression like [:callm, ...])
+    if left.is_a?(Array) && left.length > 1 && left[0].is_a?(Array) &&
+       [:index, :deref].include?(left[0][0]) &&
+       left.all? { |t| t.is_a?(Symbol) || (t.is_a?(Array) && [:index, :deref].include?(t[0])) }
+      # This is multiple assignment targets - we need to extract from right side array
+      # and assign each element
+      # Compile right side first
+      source = compile_eval_arg(scope, right)
+      @e.save_result(source)
+
+      # For each target, extract the corresponding element and assign
+      left.each_with_index do |target, idx|
+        # Extract element: right[idx]
+        @e.movl(source, :eax) if source.is_a?(Symbol)
+        elem = compile_eval_arg(scope, [:callm, source.is_a?(Symbol) ? :eax : right, :[], [idx]])
+        @e.save_result(elem)
+        # Now assign to target
+        compile_assign(scope, target, elem)
+      end
+
+      return Value.new([:subexpr], :object)
+    end
+
     source = compile_eval_arg(scope, right)
     atype = nil
     aparam = nil
