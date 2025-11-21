@@ -432,6 +432,8 @@ class Compiler
         # expression nodes in the parser
         # Skip AST operator symbols at index 0 - they're not variable references
         next if i == 0 && (ex == :index || ex == :deref)
+        # Also skip :callm at position 0
+        next if i == 0 && ex == :callm
         # Skip constant names in :deref nodes - they're constant/module names, not variables
         # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
         # The parent might be a variable like: a = Object; a::CONST

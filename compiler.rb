@@ -775,25 +775,33 @@ class Compiler
     # Check: first element is an array (not a symbol operator) AND
     # the array looks like a list of targets (not a single expression like [:callm, ...])
     if left.is_a?(Array) && left.length > 1 && left[0].is_a?(Array) &&
-       [:index, :deref].include?(left[0][0]) &&
-       left.all? { |t| t.is_a?(Symbol) || (t.is_a?(Array) && [:index, :deref].include?(t[0])) }
-      # This is multiple assignment targets - we need to extract from right side array
-      # and assign each element
-      # Compile right side first
-      source = compile_eval_arg(scope, right)
-      @e.save_result(source)
+       [:index, :deref].include?(left[0][0])
+      # Debug: check if this looks like a valid target list
+      valid_targets = left.all? { |t| t.is_a?(Symbol) || (t.is_a?(Array) && [:index, :deref].include?(t[0])) }
+      if !valid_targets
+        # This array contains something that's not a simple target
+        # Log and skip - let it fall through to the error
+        STDERR.puts "DEBUG: Malformed destructuring target: #{left.inspect}"
+        STDERR.puts "  right: #{right.inspect}"
+      else
+        # This is multiple assignment targets - we need to extract from right side array
+        # and assign each element
+        # Compile right side first
+        source = compile_eval_arg(scope, right)
+        @e.save_result(source)
 
-      # For each target, extract the corresponding element and assign
-      left.each_with_index do |target, idx|
-        # Extract element: right[idx]
-        @e.movl(source, :eax) if source.is_a?(Symbol)
-        elem = compile_eval_arg(scope, [:callm, source.is_a?(Symbol) ? :eax : right, :[], [idx]])
-        @e.save_result(elem)
-        # Now assign to target
-        compile_assign(scope, target, elem)
+        # For each target, extract the corresponding element and assign
+        left.each_with_index do |target, idx|
+          # Extract element: right[idx]
+          @e.movl(source, :eax) if source.is_a?(Symbol)
+          elem = compile_eval_arg(scope, [:callm, source.is_a?(Symbol) ? :eax : right, :[], [idx]])
+          @e.save_result(elem)
+          # Now assign to target
+          compile_assign(scope, target, elem)
+        end
+
+        return Value.new([:subexpr], :object)
       end
-
-      return Value.new([:subexpr], :object)
     end
 
     source = compile_eval_arg(scope, right)
