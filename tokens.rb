@@ -798,6 +798,34 @@ module Tokens
         # Special cases - two/three character operators, and character constants
 
         first = @s.get
+
+        # Special case: Handle anonymous splat (* = value)
+        # If we see * in prefix position followed by =, treat as identifier :_
+        if first == "*" && (@first || prev_lastop)
+          # Peek ahead through whitespace to check for =
+          ws_chars = ""
+          while @s.peek && [" ", "\t", "\r", "\n"].member?(@s.peek)
+            ws_chars << @s.get
+          end
+
+          if @s.peek == ?=
+            # Check it's not **= or *= (compound assignment)
+            equals = @s.get
+            following = @s.peek
+            if following && following != ?= && following != ?*
+              # This is * followed by = (not *= or **=)
+              # Unget everything and return :_ as identifier
+              @s.unget(equals) if equals
+              @s.unget(ws_chars.reverse) if ws_chars && !ws_chars.empty?
+              return [:_, nil]
+            end
+            # It's *= or **= or something else, unget and continue
+            @s.unget(equals) if equals
+          end
+          # Unget whitespace and continue normal operator handling
+          @s.unget(ws_chars.reverse) if ws_chars && !ws_chars.empty?
+        end
+
         if second = @s.get
           if first == "?" and !([32, 10, 9, 13].member?(second[0].chr.ord))
             # FIXME: This changed in Ruby 1.9 to return a string, which is just plain idiotic.
