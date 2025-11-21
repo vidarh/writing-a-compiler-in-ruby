@@ -9,12 +9,18 @@
 **Language Specs**: 79 files, **3 passed (4%)**, 25 failed, **36 crashed (46%)**, **15 compile failures (19%)**
   - Test pass rate: 16% (157/973 individual tests passing) - **STABLE**
   - Passing specs: and_spec, not_spec, unless_spec
-  - Recent fixes:
+  - Recent fixes (2025-11-21):
+    - ✅ Fixed implicit semicolon insertion for grouping parentheses `(42\nx=99)` (commit 6f31a4b)
+    - ✅ Removed all instance_variable_get usage from compile_class.rb (commit d8a63e8)
+    - ✅ Fixed anonymous splat assignment `* = value` and `((*) = value)` (commits a3048cd, d133da9)
+    - ✅ Several specs now compile that were COMPILE FAIL: class_spec, constants_spec (now linker errors)
+    - ✅ while_parenthesized_break_spec, until_ternary_next_spec now compile (runtime issues remain)
+  - Previous fixes:
     - ✅ Fixed nested destructuring assignment (commit 47f7cb9)
     - ✅ Fixed closure environment corruption of :deref nodes (commit b8d257e)
     - ✅ Fixed :deref closure rewriting regression (commit b9ecc40)
-  - Main blockers: constants_spec/metaclass_spec (linker errors), safe_navigator_spec (closure bug), variables_spec (anonymous splat)
-**Custom Specs (spec/)**: 37 files, **25 passed (68%)**, 4 failed, 5 crashed, 3 compile failures. 86 tests, 72 passed (84%)
+  - Main blockers: constants_spec/class_spec (linker errors), assignments_spec/variables_spec (destructuring)
+**Custom Specs (spec/)**: 37 files, **26 passed (70%)**, 4 failed, 5 crashed, 2 compile failures. 87 tests, 73 passed (84%)
 
 ## High Priority (Language Spec Compilation Failures)
 
@@ -89,11 +95,13 @@
    - Test: spec/class_superclass_atom_spec.rb
    - Difficulty: Easy - Parser should accept expressions
 
-10. **Anonymous Splat Assignment** (1 spec)
+10. **Anonymous Splat Assignment** (1 spec) - ✅ **FIXED**
     - File: variables_spec.rb
-    - Error: `* = value` not recognized
-    - Test: spec/anonymous_splat_assignment_spec.rb
-    - Difficulty: Easy - Parser doesn't accept `*` as assignment target
+    - Status: Fully implemented (commits a3048cd, d133da9)
+    - `* = value`, `(* = value)`, and `((*) = value)` all work
+    - Test: spec/anonymous_splat_assignment_spec.rb - PASSES
+    - Tokenizer detects `*` followed by `=` or `)` in prefix position
+    - Emits `:_` identifier instead of splat operator
 
 11. **Regex Interpolation with Nested Regex** (1 spec)
     - File: regexp/encoding_spec.rb
