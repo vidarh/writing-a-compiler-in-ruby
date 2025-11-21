@@ -2,18 +2,7 @@
 
 **Purpose**: Outstanding tasks only. See KNOWN_ISSUES.md for bug details.
 
-## CRITICAL Code Quality Issues
-
-**CRITICAL**: Remove all `instance_variable_get` usage in compile_class.rb
-- **Files**: compile_class.rb lines 52, 76, 77
-- **Why CRITICAL**: `instance_variable_get` is ABSOLUTELY FORBIDDEN per CLAUDE.md
-- **Locations**:
-  - Line 52: `current.instance_variable_get(:@superclass)` - walking superclass chain
-  - Lines 76-77: `global_scope.instance_variable_get(:@next)` - traversing scope chain
-- **Fix Required**: Add proper accessor methods to the relevant classes instead of bypassing encapsulation
-- **Priority**: MUST be fixed before any other non-critical work
-
-## Test Status (2025-11-20 - Latest Update)
+## Test Status (2025-11-21 - Latest Update)
 
 **Selftest**: **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Integer Specs**: 67 files, 31 passed (46%), 31 failed, 5 crashed. 568 tests, 360 passed (63%)

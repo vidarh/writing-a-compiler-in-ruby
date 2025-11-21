@@ -49,7 +49,7 @@ class Compiler
       entry = current.vtable[method_name]
       return entry if entry
       # Walk up the superclass chain
-      current = current.instance_variable_get(:@superclass)
+      current = current.superclass
     end
     nil
   end
@@ -73,8 +73,8 @@ class Compiler
         # Try to find parent scope via various methods
         if global_scope.respond_to?(:class_scope) && global_scope.class_scope.is_a?(GlobalScope)
           global_scope = global_scope.class_scope
-        elsif global_scope.instance_variable_get(:@next)
-          global_scope = global_scope.instance_variable_get(:@next)
+        elsif global_scope.next
+          global_scope = global_scope.next
         else
           global_scope = nil
         end
