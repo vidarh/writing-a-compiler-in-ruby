@@ -862,8 +862,12 @@ class Compiler
           # Before splat: use positive indices
           (0...splat_idx).each do |i|
             v = vars[i]
+            # If v is [:splat, anything], unwrap it - can't assign to splat directly
+            # In nested destructuring, splat just means "assign the value"
+            if v.is_a?(Array) && v[0] == :splat
+              v = v[1]
             # If v is an array but not a known AST operator node, it's nested destructuring
-            if v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
+            elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
               v = [:destruct, *v]
             end
             ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
@@ -875,8 +879,11 @@ class Compiler
             (1..after_splat).each do |offset|
               idx = splat_idx + offset
               v = vars[idx]
+              # If v is [:splat, var], unwrap it - can't assign to splat directly
+              if v.is_a?(Array) && v[0] == :splat
+                v = v[1]
               # If v is an array but not a known AST operator node, it's nested destructuring
-              if v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
+              elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
                 v = [:destruct, *v]
               end
               # Use negative index: -1 for last element, -2 for second-to-last, etc
@@ -906,9 +913,13 @@ class Compiler
         else
           # No splat: simple destructuring
           vars.each_with_index do |v,i|
+            # If v is [:splat, var], unwrap it - can't assign to splat directly
+            # In this context, splat just means "assign the value to var"
+            if v.is_a?(Array) && v[0] == :splat
+              v = v[1]
             # If v is an array but not a known AST operator node, it's nested destructuring
             # Wrap it in :destruct so it gets expanded recursively
-            if v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
+            elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
               v = [:destruct, *v]
             end
             ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
