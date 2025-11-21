@@ -295,7 +295,13 @@ class Compiler
   # For now we are assuming statically resolvable chains, and not
   # tested multi-level dereference (e.g. Foo::Bar::Baz)
   #
-  def compile_deref(scope, left, right = nil)
+  def compile_deref(scope, left = nil, right = nil)
+    # Handle malformed :deref node (no children)
+    # This can occur when transform.rb incorrectly adds [:deref] to a :let variables list
+    if left.nil?
+      error("Malformed :deref node with no children - likely a transform bug", scope)
+    end
+
     # Prefix form: ::Constant (global scope lookup)
     # When :: is used as prefix, left is the constant name and right is nil
     if right.nil?
