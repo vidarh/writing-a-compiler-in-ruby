@@ -819,7 +819,31 @@ class Compiler
   end
 
   def rewrite_destruct(exps)
-    # First, convert [:comma, ...] on LHS to [:destruct, ...]
+    # Handle single splat assignment: (*a) = [1, 2, 3] => a = [1, 2, 3]
+    exps.depth_first(:assign) do |e|
+      l = e[1]
+      if l.is_a?(Array) && l[0] == :splat
+        # Single splat on left side: (*var) = rhs
+        # Convert to: var = [rhs elements...]
+        var = l[1]
+        r = e[2]
+        # Wrap right side in array if it's not already an array literal
+        if r.is_a?(Array) && r[0] == :array
+          # Already an array literal, just assign it
+          e[1] = var
+        elsif r.is_a?(Array)
+          # Array of values, wrap in :array
+          e[1] = var
+          e[2] = [:array, *r]
+        else
+          # Single value, wrap in array
+          e[1] = var
+          e[2] = [:array, r]
+        end
+      end
+    end
+
+    # Convert [:comma, ...] on LHS to [:destruct, ...]
     exps.depth_first(:assign) do |e|
       l = e[1]
       if l.is_a?(Array) && l[0] == :comma
