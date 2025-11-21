@@ -13,13 +13,15 @@
     - ✅ Fixed implicit semicolon insertion for grouping parentheses `(42\nx=99)` (commit 6f31a4b)
     - ✅ Removed all instance_variable_get usage from compile_class.rb (commit d8a63e8)
     - ✅ Fixed anonymous splat assignment `* = value` and `((*) = value)` (commits a3048cd, d133da9)
+    - ✅ Fixed closure rewriting corruption of :callm nodes in destructuring (commit 8e77703)
+    - ✅ assignments_spec.rb now compiles (was COMPILE FAIL, now linker errors for scoped constants)
     - ✅ Several specs now compile that were COMPILE FAIL: class_spec, constants_spec (now linker errors)
     - ✅ while_parenthesized_break_spec, until_ternary_next_spec now compile (runtime issues remain)
   - Previous fixes:
     - ✅ Fixed nested destructuring assignment (commit 47f7cb9)
     - ✅ Fixed closure environment corruption of :deref nodes (commit b8d257e)
     - ✅ Fixed :deref closure rewriting regression (commit b9ecc40)
-  - Main blockers: constants_spec/class_spec (linker errors), assignments_spec/variables_spec (destructuring)
+  - Main blockers: constants_spec/class_spec (linker errors for scoped constant assignment)
 **Custom Specs (spec/)**: 37 files, **26 passed (70%)**, 4 failed, 5 crashed, 2 compile failures. 87 tests, 73 passed (84%)
 
 ## High Priority (Language Spec Compilation Failures)
