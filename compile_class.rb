@@ -296,8 +296,17 @@ class Compiler
       # but ClassScope.name will add parent prefix, so extract just the child name
       # Example: name="ClassSpecs__L", parent=ClassSpecs => use local_name="L"
       # to avoid double prefix (ClassSpecs__ClassSpecs__L)
-      local_name = explicit_namespace && nested_child ? nested_child : name
-      cscope = ClassScope.new(parent_scope, local_name, @vtableoffsets, superc, local_scope)
+      # HOWEVER: Only use nested_child if parent_scope is actually the parent module!
+      # If parent_scope doesn't match nested_parent (e.g., class ClassSpecs::Number::MyClass
+      # where parent_scope falls back to Object), use the full name and @global_scope
+      # to avoid Object__MyClass
+      use_nested_child = explicit_namespace && nested_child &&
+                         parent_scope.is_a?(ModuleScope) &&
+                         parent_scope.name == nested_parent.to_s
+      local_name = use_nested_child ? nested_child : name
+      # When explicit namespace but parent doesn't match, use @global_scope to avoid wrong prefix
+      scope_for_class = use_nested_child ? parent_scope : @global_scope
+      cscope = ClassScope.new(scope_for_class, local_name, @vtableoffsets, superc, local_scope)
       @classes[fully_qualified_name] = cscope
       @global_scope.add_constant(fully_qualified_name, cscope)
       # Also register in parent scope so lookups work
@@ -362,14 +371,34 @@ class Compiler
     # When using explicit namespace (class Foo::Bar from outside Foo),
     # the constant check/assignment must use global scope to avoid incorrect prefixing
     # Otherwise scope.get_arg can't find Foo__Bar and adds the current scope prefix
-    const_scope = explicit_namespace ? @global_scope : scope
+    #
+    # However, when we're inside a lambda/proc (where scope != scope.class_scope),
+    # we can't use @global_scope because superclass might be a closure variable.
+    # In that case, we need to:
+    # 1. Use scope for evaluating the superclass (to access closure variables)
+    # 2. Use a direct global assignment (via :sexp) to avoid adding Object__ prefix
+    in_lambda = scope != scope.class_scope
 
-    compile_eval_arg(const_scope, [:if,
-                             [:sexp,[:eq, assign_name, 0]],
-                             # then
-                             [:assign, assign_name,
-                              mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
-                             ]])
+    if explicit_namespace && in_lambda
+      # Inside lambda with explicit namespace: evaluate superclass in scope,
+      # but assign to global constant directly (without prefix)
+      # Use :sexp to bypass scope prefixing, but check/assign using the symbol directly
+      compile_eval_arg(scope, [:sexp,
+                               [:if,
+                                [:eq, fq_name, 0],
+                                [:assign, fq_name,
+                                 [:call, :__new_class_object, [cscope.klass_size, superclass, ssize, classob]]
+                                ]]])
+    else
+      # Normal case: use const_scope for everything
+      const_scope = explicit_namespace ? @global_scope : scope
+      compile_eval_arg(const_scope, [:if,
+                               [:sexp,[:eq, assign_name, 0]],
+                               # then
+                               [:assign, assign_name,
+                                mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
+                               ]])
+    end
 
     @global_constants << fq_name
 
