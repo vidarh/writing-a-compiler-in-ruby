@@ -782,6 +782,16 @@ class Compiler
     # the array looks like a list of targets (not a single expression like [:callm, ...])
     if left.is_a?(Array) && left.length > 1 && left[0].is_a?(Array) &&
        [:index, :deref].include?(left[0][0])
+      # Unwrap single-element arrays that contain valid targets
+      # Transform [[:index, :__env__, N]] to [:index, :__env__, N]
+      left = left.collect do |t|
+        if t.is_a?(Array) && t.length == 1 && t[0].is_a?(Array) && [:index, :deref].include?(t[0][0])
+          t[0]  # Unwrap
+        else
+          t
+        end
+      end
+
       # Debug: check if this looks like a valid target list
       valid_targets = left.all? { |t| t.is_a?(Symbol) || (t.is_a?(Array) && [:index, :deref].include?(t[0])) }
       if !valid_targets
