@@ -1008,12 +1008,76 @@ class Compiler
     end
   end
 
+  # Pre-register constants defined in class bodies (including inside lambdas/procs)
+  # This ensures constants are visible to code that comes after them in the class body
+  def register_constants(exp, scope)
+    exp.depth_first(:class) do |class_node|
+      # Find the ClassScope for this class
+      class_name = class_node[1]
+
+      # Handle global namespace (::ClassName)
+      if class_name.is_a?(Array) && class_name[0] == :global
+        class_name = class_name[1]
+      end
+
+      # Handle nested classes (Foo::Bar)
+      if class_name.is_a?(Array) && class_name[0] == :deref
+        class_name = flatten_deref(class_name)
+      end
+
+      class_scope = @classes[class_name]
+      next unless class_scope  # Skip if scope wasn't created
+
+      # Scan class body for constant assignments (including in lambdas/procs)
+      class_node[3..-1].each do |stmt|
+        next unless stmt.is_a?(Array)
+        stmt.depth_first(:assign) do |assign_node|
+          left = assign_node[1]
+          if left.is_a?(Symbol) && (?A..?Z).member?(left.to_s[0])
+            # Add to ClassScope so get_constant can find it
+            class_scope.add_constant(left)
+            # Add to global constants for .bss emission
+            prefix = class_scope.name
+            full_name = prefix.empty? ? left : "#{prefix}__#{left}".to_sym
+            @global_constants << full_name
+          end
+        end
+      end
+
+      :skip  # Don't recurse into nested classes (they're handled separately)
+    end
+  end
+
+  # Helper to flatten Foo::Bar::Baz to Foo__Bar__Baz
+  def flatten_deref(node)
+    parts = []
+    n = node
+    while n.is_a?(Array) && n[0] == :deref && n.length == 3
+      if n[2].is_a?(Symbol)
+        parts.unshift(n[2])
+        n = n[1]
+      else
+        break
+      end
+    end
+    if n.is_a?(Symbol)
+      parts.unshift(n)
+      parts.join("__").to_sym
+    else
+      node
+    end
+  end
+
   def preprocess exp
     # The global scope is needed for some rewrites
     setup_global_scope(exp)
 
     rewrite_for(exp)
     rewrite_destruct(exp)
+
+    # Pre-register constants after for/destruct rewrites create assignments
+    register_constants(exp, @global_scope)
+
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_strconst(exp)
