@@ -264,11 +264,13 @@ class Compiler
     # Calculate the fully qualified name for this class
     # If explicit_namespace (class Foo::Bar syntax), use the flattened name directly
     # If parent is a ModuleScope/ClassScope, prefix with parent name (e.g., "Foo__Bar")
-    # If parent is GlobalScope, use just the name (e.g., "Bar")
+    # If parent is GlobalScope or Object (default parent), use just the name (e.g., "Bar")
+    # We skip Object prefix because classes/modules defined in lambdas/methods land in
+    # Object scope but should be global constants, not Object__Foo
     if explicit_namespace
       # Name already contains full path (e.g., ClassSpecs__L), don't add prefix
       fully_qualified_name = name.to_sym
-    elsif parent_scope.is_a?(ModuleScope)
+    elsif parent_scope.is_a?(ModuleScope) && parent_scope.name != "Object"
       fully_qualified_name = "#{parent_scope.name}__#{name}".to_sym
     else
       fully_qualified_name = name.to_sym
@@ -343,13 +345,14 @@ class Compiler
     fq_name = fully_qualified_name.to_sym
 
     # Determine which name to use in the assignment based on the scope context
-    # If parent_scope is a ModuleScope and we're not using explicit namespace from outside,
+    # If parent_scope is a real ModuleScope (not Object) and we're not using explicit namespace,
     # use the simple name so the module's get_arg adds the prefix correctly
-    assign_name = if parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope && !explicit_namespace
-      # Inside a module, use simple name (e.g., :L not :ClassSpecs__L)
+    # But if parent is Object, always use fq_name to avoid Object__ prefix
+    assign_name = if parent_scope.is_a?(ModuleScope) && parent_scope.name != "Object" && parent_scope != @global_scope && !explicit_namespace
+      # Inside a real module (not Object), use simple name (e.g., :L not :ClassSpecs__L)
       cscope.local_name.to_sym
     else
-      # Global scope or explicit namespace: use fully qualified name
+      # Global scope, Object parent, or explicit namespace: use fully qualified name
       fq_name
     end
 
@@ -372,17 +375,18 @@ class Compiler
     # the constant check/assignment must use global scope to avoid incorrect prefixing
     # Otherwise scope.get_arg can't find Foo__Bar and adds the current scope prefix
     #
-    # However, when we're inside a lambda/proc (where scope != scope.class_scope),
-    # we can't use @global_scope because superclass might be a closure variable.
-    # In that case, we need to:
-    # 1. Use scope for evaluating the superclass (to access closure variables)
-    # 2. Use a direct global assignment (via :sexp) to avoid adding Object__ prefix
-    in_lambda = scope != scope.class_scope
+    # When parent_scope is Object (the default parent), use @global_scope to avoid
+    # adding "Object__" prefix to all classes/modules defined in lambdas/methods.
+    # This happens because when we walk the scope chain from inside a lambda, we skip
+    # FuncScope/LocalVarScope and land on Object as the nearest ModuleScope.
+    #
+    # However, we still need to use the original scope for evaluating the superclass
+    # expression, as it might reference closure variables.
+    use_global_for_object = parent_scope.is_a?(ModuleScope) && parent_scope.name == "Object"
 
-    if explicit_namespace && in_lambda
-      # Inside lambda with explicit namespace: evaluate superclass in scope,
-      # but assign to global constant directly (without prefix)
-      # Use :sexp to bypass scope prefixing, but check/assign using the symbol directly
+    if use_global_for_object || explicit_namespace
+      # Use s-expression for direct global assignment to avoid Object__ prefix
+      # This bypasses scope.get_arg which would add the Object__ prefix
       compile_eval_arg(scope, [:sexp,
                                [:if,
                                 [:eq, fq_name, 0],
@@ -390,9 +394,8 @@ class Compiler
                                  [:call, :__new_class_object, [cscope.klass_size, superclass, ssize, classob]]
                                 ]]])
     else
-      # Normal case: use const_scope for everything
-      const_scope = explicit_namespace ? @global_scope : scope
-      compile_eval_arg(const_scope, [:if,
+      # Normal case: inside a real module/class scope
+      compile_eval_arg(scope, [:if,
                                [:sexp,[:eq, assign_name, 0]],
                                # then
                                [:assign, assign_name,

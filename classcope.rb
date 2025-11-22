@@ -114,8 +114,9 @@ class ModuleScope < Scope
     # If the constant name already contains "__", it's likely a fully-qualified name
     # (e.g., ClassSpecs__Empty). Look it up in the global scope instead of adding
     # another prefix, to avoid creating malformed names like Object__ClassSpecs__Empty
-    if a.to_s.include?("__")
-      # Fully qualified constant - delegate to parent scope without adding prefix
+    # Also, Object should never add a prefix - constants in Object are global
+    if a.to_s.include?("__") || name == "Object"
+      # Fully qualified constant or Object scope - delegate to parent scope without adding prefix
       return @next.get_arg(a) if @next
     end
 
