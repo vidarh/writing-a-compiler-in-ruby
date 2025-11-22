@@ -5,7 +5,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/alias_spec.rb (P:0 F:0 S:0 T:0)
 [32m[PASS] rubyspec/language/and_spec.rb (P:10 F:0 S:0 T:10)
 [34m[CRASH] rubyspec/language/array_spec.rb (P:13 F:9 S:0 T:22)
-[33m[COMPILE FAIL] rubyspec/language/assignments_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/assignments_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/BEGIN_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/block_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/break_spec.rb (P:0 F:0 S:0 T:0)
@@ -29,7 +29,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/keyword_arguments_spec.rb (P:0 F:26 S:0 T:26)
 [34m[CRASH] rubyspec/language/lambda_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/line_spec.rb (P:0 F:1 S:0 T:1)
-[34m[CRASH] rubyspec/language/loop_spec.rb (P:2 F:1 S:0 T:3)
+[34m[CRASH] rubyspec/language/loop_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/magic_comment_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [33m[COMPILE FAIL] rubyspec/language/metaclass_spec.rb (P:0 F:0 S:0 T:0)
@@ -78,7 +78,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/undef_spec.rb (P:0 F:0 S:0 T:0)
 [32m[PASS] rubyspec/language/unless_spec.rb (P:6 F:0 S:0 T:6)
 [31m[FAIL] rubyspec/language/until_spec.rb (P:18 F:13 S:0 T:31)
-[33m[COMPILE FAIL] rubyspec/language/variables_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/variables_spec.rb (P:0 F:4 S:0 T:4)
 [34m[CRASH] rubyspec/language/while_spec.rb (P:8 F:0 S:0 T:8)
 [34m[CRASH] rubyspec/language/yield_spec.rb (P:0 F:0 S:0 T:0)
 
@@ -87,12 +87,12 @@ Summary:
   Total spec files: 79
   Passed: 3
   Failed: 25
-  Crashed (no test output): 37
-  Failed to compile: 14
+  Crashed (no test output): 39
+  Failed to compile: 12
 
 Individual Test Cases:
-  Total tests: 992
-  Passed: 160
-  Failed: 815
+  Total tests: 993
+  Passed: 158
+  Failed: 818
   Skipped: 17
-  Pass rate: 16%
+  Pass rate: 15%
