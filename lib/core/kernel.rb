@@ -67,4 +67,16 @@ class Kernel
     STDERR.puts "Runtime constant lookup not implemented: #{const_name}"
     raise "NameError: uninitialized constant #{const_name}"
   end
+
+  # Runtime require - stub implementation
+  # All requires must be resolved at compile time in this AOT compiler
+  # Raise LoadError if require is called at runtime
+  def require(path)
+    raise LoadError.new("Dynamic require not supported in AOT compiler: #{path}")
+  end
+
+  # Runtime require_relative - stub implementation
+  def require_relative(path)
+    raise LoadError.new("Dynamic require_relative not supported in AOT compiler: #{path}")
+  end
 end

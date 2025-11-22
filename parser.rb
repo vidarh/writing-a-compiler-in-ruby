@@ -906,8 +906,10 @@ class Parser < ParserBase
     q = parse_subexp or expected("name of source to require")
     ws
 
-    if q.is_a?(Array) || @opts[:norequire]
-      STDERR.puts "WARNING: NOT processing require for #{q.inspect}"
+    # Only attempt static require for string literals
+    # Variables (Symbol), expressions (Array), or norequire mode become runtime calls
+    if !q.is_a?(String) || @opts[:norequire]
+      STDERR.puts "WARNING: NOT processing require for #{q.inspect} - will be runtime call"
       return E[pos, :require, q]
     end
 
@@ -921,10 +923,10 @@ class Parser < ParserBase
     q = parse_subexp or expected("name of source to require_relative")
     ws
 
-    # require_relative needs to resolve the path relative to the current file
-    # For now, treat it like require (the compile-time handling will need to be updated)
-    if q.is_a?(Array) || @opts[:norequire]
-      STDERR.puts "WARNING: NOT processing require_relative for #{q.inspect}"
+    # Only attempt static require_relative for string literals
+    # Variables (Symbol), expressions (Array), or norequire mode become runtime calls
+    if !q.is_a?(String) || @opts[:norequire]
+      STDERR.puts "WARNING: NOT processing require_relative for #{q.inspect} - will be runtime call"
       return E[pos, :require, q]
     end
 
