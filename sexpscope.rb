@@ -30,8 +30,8 @@ class SexpScope < Scope
   # by the index. Since this returns 1 or 0, it will
   # never match `:possible_callm` so the code works,
   # but smells...
-  def get_arg(a)
-    arg = @next.get_arg(a)
+  def get_arg(a, save = false)
+    arg = @next.get_arg(a, save)
     if arg[0] == :possible_callm
       arg[0] = :addr
     end

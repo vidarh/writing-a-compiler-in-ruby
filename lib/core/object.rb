@@ -116,6 +116,16 @@ class Object
     self.class.__send_for_obj__(self,sym,*args)
   end
 
+  # Runtime constant lookup for undefined constants
+  # This is called when accessing a constant that wasn't defined at compile time
+  # FIXME: Should call const_missing hook if available
+  # FIXME: Should actually look up dynamic constants from a runtime hash
+  def __const_get_global(const_name)
+    # For now, just raise NameError
+    # Future: look up in dynamic constants hash, call const_missing
+    raise NameError.new("uninitialized constant #{const_name}")
+  end
+
   # FIXME: Belongs in Kernel
 # FIXME: Add splat support for s-expressions / call so that
 # the below works

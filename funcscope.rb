@@ -23,7 +23,7 @@ class FuncScope < Scope
   # Returns an argument within the function scope, if defined here.
   # A function holds it's own scope chain, so if the function doens't
   # return anything, we fall back to just an addr.
-  def get_arg(a)
+  def get_arg(a, save = false)
     a = a.to_sym
     if @func
       arg = @func.get_arg(a)

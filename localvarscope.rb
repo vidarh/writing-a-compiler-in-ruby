@@ -34,7 +34,7 @@ class LocalVarScope < Scope
   # If the passed argument isn't defined in this local scope,
   # check the next (outer) scope.
   # Finally, return it as an adress, if both doesn't work.
-  def get_arg(a)
+  def get_arg(a, save = false)
     a = a.to_sym
     if @locals.include?(a)
       # Our local variable: use index + rest adjustment + parent's lvaroffset
@@ -43,7 +43,7 @@ class LocalVarScope < Scope
     end
 
     # Variable in outer scope: delegate to parent (offset already correct relative to %ebp)
-    return @next.get_arg(a) if @next
+    return @next.get_arg(a, save) if @next
     return [:addr, a]
   end
 

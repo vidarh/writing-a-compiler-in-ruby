@@ -5,18 +5,20 @@
 # (because their value is known at compile time), but some of them are
 # not. For now, we'll treat all of them as global variables.
 class GlobalScope < Scope
-  attr_reader :class_scope, :globals
+  attr_reader :class_scope, :globals, :constants
   attr_accessor :aliases
 
   def initialize(offsets)
     @vtableoffsets = offsets
     @globals = {}
+    @constants = {}  # Track defined constants (classes, modules, etc.)
     @class_scope = ClassScope.new(self,"Object",@vtableoffsets,nil)
 
     # Despite not following "$name" syntax, these are really global constants.
     @globals[:false] = true
     @globals[:true]  = true
     @globals[:nil]   = true
+    @globals[:self]  = true  # Prevent :self from being treated as method call
 
     # Special "built-in" globals with single-character or special names starting with $
     # Map them to assembly-safe names. Some use Ruby standard aliases, others use
@@ -72,6 +74,8 @@ class GlobalScope < Scope
 
   def add_constant(c,v = true)
     @globals[c] = v
+    # Also track in @constants for runtime lookup decision
+    register_constant(c)
   end
 
   def find_constant(c)
@@ -82,9 +86,17 @@ class GlobalScope < Scope
     false
   end
 
+  # Register a constant as defined (class, module, or constant assignment)
+  # This allows us to emit direct address references for defined constants
+  # and runtime lookups for undefined ones (enabling const_missing hooks)
+  def register_constant(name)
+    @constants[name] = true
+  end
+
   # Returns an argument within the global scope, if defined here.
-  # Otherwise returns it as an address (<tt>:addr</tt>)
-  def get_arg(a)
+  # For undefined constants, returns [:runtime_const, name] to trigger runtime lookup (when reading)
+  # save parameter: true when this is an assignment target, false when reading
+  def get_arg(a, save = false)
     # Handle $:, $0, $!, $@ etc. - map to assembly-safe aliases
     s = @aliases[a]
     if s
@@ -105,7 +117,17 @@ class GlobalScope < Scope
 
     return [:global, a] if @globals.member?(a)
     return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
-    return [:addr, a]
+
+    # For constants (uppercase):
+    # - If being assigned (save is truthy), always return [:addr, a] so assignment works
+    # - If being read and defined, return [:addr, a] for static reference
+    # - If being read and undefined, return [:runtime_const, a] for runtime lookup
+    if save || @constants.member?(a)
+      return [:addr, a]
+    else
+      # Undefined constant being read - emit runtime lookup
+      return [:runtime_const, a]
+    end
   end
 
   def name

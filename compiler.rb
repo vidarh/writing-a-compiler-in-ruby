@@ -170,7 +170,7 @@ class Compiler
       name = a.to_s
       return intern(scope,name[1..-1]) if name[0] == ?:
 
-      arg = scope.get_arg(a)
+      arg = scope.get_arg(a, save)
 
       # If this is a local variable or argument, we either
       # obtain the argument it is cached in, or we cache it
@@ -729,6 +729,11 @@ class Compiler
       return Value.new(@e.result_value, :object)
     elsif atype == :possible_callm
       return Value.new(compile_eval_arg(scope,[:callm,:self,aparam,[]]), :object)
+    elsif atype == :runtime_const
+      # Runtime constant lookup for undefined constants
+      # Call __const_get_global(const_name) which will trigger const_missing or raise NameError
+      const_name_arg = const_name_to_string_ast(aparam.to_s)
+      return Value.new(compile_eval_arg(scope, [:callm, :self, :__const_get_global, const_name_arg]), :object)
     end
 
     return Value.new(@e.load(atype, aparam), args.type)
@@ -1338,9 +1343,83 @@ class Compiler
     @e.ret
   end
 
+  # Pre-scan the AST to register all statically-defined constants
+  # This ensures that constants defined anywhere in the code are marked as "known"
+  # before compilation, so references to them remain static.
+  def scan_and_register_constants(exp)
+    return unless exp.is_a?(Array)
+    return if exp.empty?
+
+    case exp[0]
+    when :class, :module
+      # Register class/module name
+      if exp[1].is_a?(Symbol)
+        @global_scope.register_constant(exp[1])
+      elsif exp[1].is_a?(Array) && exp[1][0] == :deref
+        # Handle nested names like Foo::Bar - extract and register
+        parts = []
+        n = exp[1]
+        while n.is_a?(Array) && n[0] == :deref && n.length == 3
+          parts.unshift(n[2]) if n[2].is_a?(Symbol)
+          n = n[1]
+        end
+        parts.unshift(n) if n.is_a?(Symbol)
+        # Register the fully qualified name
+        @global_scope.register_constant(parts.join("__").to_sym) if parts.any?
+      end
+      # Recursively scan the class/module body
+      i = 3
+      while i < exp.length
+        scan_and_register_constants(exp[i]) if exp[i]
+        i = i + 1
+      end
+
+    when :assign
+      # Register constant assignments: CONST = value
+      if exp[1].is_a?(Symbol) && exp[1].to_s[0] && exp[1].to_s[0] >= ?A && exp[1].to_s[0] <= ?Z
+        @global_scope.register_constant(exp[1])
+      elsif exp[1].is_a?(Array) && exp[1][0] == :destruct
+        # Handle destructuring: (A, B) = values
+        # Register simple constant symbols, skip :deref patterns like m::A
+        i = 1
+        while i < exp[1].length
+          target = exp[1][i]
+          if target.is_a?(Symbol) && target.to_s[0] && target.to_s[0] >= ?A && target.to_s[0] <= ?Z
+            @global_scope.register_constant(target)
+          elsif target.is_a?(Array) && target[0] == :destruct
+            # Nested destructuring - recursively process
+            scan_and_register_constants([:assign, target, nil])
+          end
+          # Skip :deref patterns - those are runtime assignments
+          i = i + 1
+        end
+      end
+      # Recursively scan the right side
+      scan_and_register_constants(exp[2]) if exp[2]
+
+    when :do, :block, :sexp
+      # Recursively scan all sub-expressions
+      i = 1
+      while i < exp.length
+        scan_and_register_constants(exp[i]) if exp[i]
+        i = i + 1
+      end
+
+    else
+      # For all other expression types, recursively scan
+      i = 0
+      while i < exp.length
+        e = exp[i]
+        scan_and_register_constants(e) if e.is_a?(Array)
+        i = i + 1
+      end
+    end
+  end
+
   # Starts the actual compile process.
   def compile exp
     alloc_vtable_offsets(exp)
+    scan_and_register_constants(exp)  # Pre-scan to register all constants
     compile_main(exp)
     # after the main function, we ouput all functions and constants
     # used and defined so far.

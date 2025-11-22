@@ -10,8 +10,8 @@ class Scope
     @next.method if @next
   end
 
-  def  get_arg(a)
-    @next ? @next.get_arg(a) : nil
+  def  get_arg(a, save = false)
+    @next ? @next.get_arg(a, save) : nil
   end
 
   def add_global(c)

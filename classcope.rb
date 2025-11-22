@@ -110,30 +110,34 @@ class ModuleScope < Scope
   end
 
 
-  def get_constant(a)
+  def get_constant(a, save = false)
     # If the constant name already contains "__", it's likely a fully-qualified name
     # (e.g., ClassSpecs__Empty). Look it up in the global scope instead of adding
     # another prefix, to avoid creating malformed names like Object__ClassSpecs__Empty
     # Also, Object should never add a prefix - constants in Object are global
     if a.to_s.include?("__") || name == "Object"
       # Fully qualified constant or Object scope - delegate to parent scope without adding prefix
-      return @next.get_arg(a) if @next
+      return @next.get_arg(a, save) if @next
     end
 
     if @constants.member?(a.to_sym)
       return [:global,name + "__" + a.to_s]
     else
-      @modules.each do |m|
-        n = m.get_constant(a)
-        return n if n
+      # When assigning (save is truthy), don't look up in modules/superclass
+      # because we're defining a new constant, not reading an existing one
+      if !save
+        @modules.each do |m|
+          n = m.get_constant(a, save)
+          return n if n
+        end
+
+        if @superclass
+          n = @superclass.get_constant(a, save)
+          return n if n && n[0] != :addr
+        end
       end
 
-      if @superclass
-        n = @superclass.get_constant(a)
-        return n if n && n[0] != :addr
-      end
-
-      return @next.get_arg(a)
+      return @next.get_arg(a, save)
     end
   end
 
@@ -172,7 +176,7 @@ class ModuleScope < Scope
   # First, check if argument is class or instance variable.
   # If argument is not defined within class scope, check next (outer) scope.
   # If both fails, the argument is an adress (<tt>:addr</tt>).
-  def get_arg(a)
+  def get_arg(a, save = false)
     # Handle self
     if a.to_sym == :self
       return [:global,name]
@@ -180,7 +184,7 @@ class ModuleScope < Scope
 
     as = a.to_s
 
-    return get_constant(a)  if (?A..?Z).member?(as[0])
+    return get_constant(a, save)  if (?A..?Z).member?(as[0])
     return get_class_var(a) if as[0..1] == "@@" or @class_vars.include?(a)
     return get_instance_var(a) if a.to_s[0] == ?@ or @instance_vars.include?(a)
 
@@ -192,7 +196,7 @@ class ModuleScope < Scope
     end
 
     # if not in local scope, check namespace (outer) scope.
-    n =  @next.get_arg(a) if @next
+    n =  @next.get_arg(a, save) if @next
 
     return n if n[0] == :global # Prevent e.g. "true" from being treated as method call
     return [:possible_callm, n[1]] if n && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants

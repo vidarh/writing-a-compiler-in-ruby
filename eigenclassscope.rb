@@ -19,10 +19,10 @@ class EigenclassScope < ClassScope
     @next.get_class_var(var)
   end
 
-  def get_arg(var)
+  def get_arg(var, save = false)
     if var == :self
-      return @next.get_arg(var)
+      return @next.get_arg(var, save)
     end
-    super(var)
+    super(var, save)
   end
 end
