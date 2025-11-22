@@ -236,9 +236,23 @@ class Compiler
 
     # Determine the parent scope for this class definition
     # If force_global (class ::A), always use global scope
+    # For explicit namespace (class Foo::Bar from outside Foo), look up Foo as parent
     # Otherwise walk scope chain to find ModuleScope/ClassScope, but if we hit GlobalScope first, use it
     if force_global
       parent_scope = @global_scope
+    elsif explicit_namespace && nested_parent
+      # For class Foo::Bar defined outside Foo, look up Foo as the parent scope
+      # If the parent doesn't exist yet, fall back to walking the scope chain
+      # (This handles cases like `class nil::Foo` which should fail at runtime, not compile time)
+      parent_scope = @classes[nested_parent]
+      if !parent_scope
+        # Parent not found in @classes - fall back to scope chain lookup
+        parent_scope = scope
+        while parent_scope && !parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope
+          parent_scope = parent_scope.next
+        end
+        parent_scope ||= @global_scope
+      end
     else
       parent_scope = scope
       while parent_scope && !parent_scope.is_a?(ModuleScope) && parent_scope != @global_scope
@@ -344,7 +358,13 @@ class Compiler
     if superc && superc.name != "Object"
       classob = [:index, superc.name.to_sym , 0]
     end
-    compile_eval_arg(scope, [:if,
+
+    # When using explicit namespace (class Foo::Bar from outside Foo),
+    # the constant check/assignment must use global scope to avoid incorrect prefixing
+    # Otherwise scope.get_arg can't find Foo__Bar and adds the current scope prefix
+    const_scope = explicit_namespace ? @global_scope : scope
+
+    compile_eval_arg(const_scope, [:if,
                              [:sexp,[:eq, assign_name, 0]],
                              # then
                              [:assign, assign_name,
