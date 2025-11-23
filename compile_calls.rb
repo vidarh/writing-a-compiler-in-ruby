@@ -204,7 +204,13 @@ class Compiler
       if scope.is_a?(ModuleScope) || scope.is_a?(GlobalScope)
         # args is array of module names, but we only support single module for now
         mod_name = args.is_a?(Array) ? args[0] : args
-        return compile_include(scope, mod_name, pos)
+
+        # Only handle compile-time constant names - if module name is dynamic expression,
+        # fall through to runtime method call
+        if mod_name.is_a?(Symbol)
+          return compile_include(scope, mod_name, pos)
+        end
+        # Fall through to regular method call for dynamic module names
       else
         # Not in class/module/global scope - fall through to regular method call
         # This allows include to work as a method in other contexts (e.g., RSpec matchers)
