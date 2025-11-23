@@ -1418,6 +1418,14 @@ class Compiler
           scan_and_register_constants(exp[i], new_scope_path) if exp[i]
           i = i + 1
         end
+      else
+        # Singleton class (class << obj) - scan body without changing scope path
+        # Constants defined here should be registered at current scope level
+        i = 3
+        while i < exp.length
+          scan_and_register_constants(exp[i], scope_path) if exp[i]
+          i = i + 1
+        end
       end
 
     when :assign

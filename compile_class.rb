@@ -308,7 +308,15 @@ class Compiler
                          parent_scope.name == nested_parent.to_s
       local_name = use_nested_child ? nested_child : name
       # When explicit namespace but parent doesn't match, use @global_scope to avoid wrong prefix
-      scope_for_class = use_nested_child ? parent_scope : @global_scope
+      # UNLESS parent is a real ModuleScope (not Object), in which case use it for prefix
+      scope_for_class = if use_nested_child
+        parent_scope
+      elsif parent_scope.is_a?(ModuleScope) && parent_scope.name != "Object" && parent_scope != @global_scope
+        # Parent is a real module/class (including eigenclasses), use it for prefix
+        parent_scope
+      else
+        @global_scope
+      end
       cscope = ClassScope.new(scope_for_class, local_name, @vtableoffsets, superc, local_scope)
       @classes[fully_qualified_name] = cscope
       @global_scope.add_constant(fully_qualified_name, cscope)
