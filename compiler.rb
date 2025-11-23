@@ -836,6 +836,20 @@ class Compiler
     aparam = args[1]
     atype = :addr if atype == :possible_callm
 
+    # Handle runtime constant assignment - transform to method call
+    if atype == :runtime_const
+      # Pop the value from stack if needed
+      if source.is_a?(Symbol)
+        @e.popl(:eax)
+        source = :eax
+      end
+
+      # Transform to: __const_set_global(const_name, value)
+      const_name_arg = const_name_to_string_ast(aparam.to_s)
+      result = compile_callm(scope, :self, :__const_set_global, [const_name_arg, source])
+      return Value.new(result, :object)
+    end
+
     if atype == :addr || atype == :cvar
       scope.add_constant(aparam)
       prefix = scope.name

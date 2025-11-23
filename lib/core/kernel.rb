@@ -68,6 +68,13 @@ class Kernel
     raise "NameError: uninitialized constant #{const_name}"
   end
 
+  # Runtime constant assignment in global scope - stub implementation
+  # Dynamic constant assignment is not supported in this AOT compiler
+  def __const_set_global(const_name, value)
+    STDERR.puts "Runtime constant assignment not implemented: #{const_name}"
+    raise "NameError: dynamic constant assignment not supported: #{const_name}"
+  end
+
   # Runtime require - stub implementation
   # All requires must be resolved at compile time in this AOT compiler
   # Raise LoadError if require is called at runtime
