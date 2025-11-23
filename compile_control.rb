@@ -160,7 +160,12 @@ class Compiler
 
     var = compile_eval_arg(scope, cond)
     compile_jmp_on_false(scope, var, normal_exit)
-    compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    # Handle bare symbols/values in body - evaluate them directly
+    if body.is_a?(Array)
+      compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    else
+      compile_eval_arg(ControlScope.new(scope, break_label, loop_label), body)
+    end
     @e.evict_all
     @e.jmp(loop_label)
 
@@ -186,7 +191,12 @@ class Compiler
 
     var = compile_eval_arg(scope, cond)
     compile_jmp_on_true(scope, var, normal_exit)  # Jump on true (opposite of while)
-    compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    # Handle bare symbols/values in body - evaluate them directly
+    if body.is_a?(Array)
+      compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    else
+      compile_eval_arg(ControlScope.new(scope, break_label, loop_label), body)
+    end
     @e.evict_all
     @e.jmp(loop_label)
 

@@ -42,7 +42,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :unless,
                    :assign, :while, :until, :index, :bindex, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :incr, :decr, :block,
+                   :hash, :return,:sexp, :module, :rescue, :raise, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :stackframe, :stackpointer, :deref, :include, :addr,
@@ -423,6 +423,21 @@ class Compiler
     # This method is kept for backwards compatibility but shouldn't be called
     # The else_body parameter is accepted but ignored (handled in compile_block)
     compile_exp(scope,lval)
+  end
+
+  # Compile raise statement
+  # Transforms raise into a call to Kernel#raise
+  # - Bare raise: re-raises current exception ($!)
+  # - raise(arg): calls raise with argument
+  # - raise(exc, msg): calls raise with exception class and message
+  def compile_raise(scope, *args)
+    if args.empty?
+      # Bare raise - re-raise current exception stored in $!
+      return compile_callm(scope, :self, :raise, [:"$!"])
+    else
+      # raise with arguments - pass them through to Kernel#raise
+      return compile_callm(scope, :self, :raise, args)
+    end
   end
 
   def compile_decr(scope, left, right)
