@@ -1375,17 +1375,19 @@ class Compiler
   # Pre-scan the AST to register all statically-defined constants
   # This ensures that constants defined anywhere in the code are marked as "known"
   # before compilation, so references to them remain static.
-  def scan_and_register_constants(exp)
+  # scope_path: array of scope names building qualified name (e.g., ["ConstantSpecs", "ModuleA"])
+  def scan_and_register_constants(exp, scope_path = [])
     return unless exp.is_a?(Array)
     return if exp.empty?
 
     case exp[0]
     when :class, :module
-      # Register class/module name
+      # Extract class/module name and build new scope path
+      class_name = nil
       if exp[1].is_a?(Symbol)
-        @global_scope.register_constant(exp[1])
+        class_name = exp[1]
       elsif exp[1].is_a?(Array) && exp[1][0] == :deref
-        # Handle nested names like Foo::Bar - extract and register
+        # Handle nested names like Foo::Bar - extract parts
         parts = []
         n = exp[1]
         while n.is_a?(Array) && n[0] == :deref && n.length == 3
@@ -1393,53 +1395,82 @@ class Compiler
           n = n[1]
         end
         parts.unshift(n) if n.is_a?(Symbol)
-        # Register the fully qualified name
-        @global_scope.register_constant(parts.join("__").to_sym) if parts.any?
+        class_name = parts.join("__").to_sym if parts.any?
       end
-      # Recursively scan the class/module body
-      i = 3
-      while i < exp.length
-        scan_and_register_constants(exp[i]) if exp[i]
-        i = i + 1
+
+      if class_name
+        # Register the class/module name itself (for class references)
+        # Always register bare class/module names (for direct references like "Compiler")
+        @global_scope.register_constant(class_name)
+
+        # Also register qualified name if nested (for fully-qualified references)
+        if !scope_path.empty?
+          qualified_name = (scope_path + [class_name]).join("__").to_sym
+          @global_scope.register_constant(qualified_name)
+        end
+
+        # Build new scope path for scanning body
+        new_scope_path = scope_path + [class_name.to_s]
+
+        # Recursively scan the class/module body with new scope path
+        i = 3
+        while i < exp.length
+          scan_and_register_constants(exp[i], new_scope_path) if exp[i]
+          i = i + 1
+        end
       end
 
     when :assign
-      # Register constant assignments: CONST = value
+      # Register constant assignments
+      # Always register bare name (for lookup within same scope)
+      # Also register qualified name if nested (actual symbol name)
       if exp[1].is_a?(Symbol) && exp[1].to_s[0] && exp[1].to_s[0] >= ?A && exp[1].to_s[0] <= ?Z
-        @global_scope.register_constant(exp[1])
+        const_name = exp[1]
+        # Always register bare name
+        @global_scope.register_constant(const_name)
+        # Also register qualified name if nested
+        if !scope_path.empty?
+          qualified_name = (scope_path + [const_name.to_s]).join("__").to_sym
+          @global_scope.register_constant(qualified_name)
+        end
       elsif exp[1].is_a?(Array) && exp[1][0] == :destruct
         # Handle destructuring: (A, B) = values
-        # Register simple constant symbols, skip :deref patterns like m::A
         i = 1
         while i < exp[1].length
           target = exp[1][i]
           if target.is_a?(Symbol) && target.to_s[0] && target.to_s[0] >= ?A && target.to_s[0] <= ?Z
+            # Always register bare name
             @global_scope.register_constant(target)
+            # Also register qualified name if nested
+            if !scope_path.empty?
+              qualified_name = (scope_path + [target.to_s]).join("__").to_sym
+              @global_scope.register_constant(qualified_name)
+            end
           elsif target.is_a?(Array) && target[0] == :destruct
             # Nested destructuring - recursively process
-            scan_and_register_constants([:assign, target, nil])
+            scan_and_register_constants([:assign, target, nil], scope_path)
           end
           # Skip :deref patterns - those are runtime assignments
           i = i + 1
         end
       end
-      # Recursively scan the right side
-      scan_and_register_constants(exp[2]) if exp[2]
+      # Recursively scan the right side (preserve scope path)
+      scan_and_register_constants(exp[2], scope_path) if exp[2]
 
     when :do, :block, :sexp
-      # Recursively scan all sub-expressions
+      # Recursively scan all sub-expressions (preserve scope path)
       i = 1
       while i < exp.length
-        scan_and_register_constants(exp[i]) if exp[i]
+        scan_and_register_constants(exp[i], scope_path) if exp[i]
         i = i + 1
       end
 
     else
-      # For all other expression types, recursively scan
+      # For all other expression types, recursively scan (preserve scope path)
       i = 0
       while i < exp.length
         e = exp[i]
-        scan_and_register_constants(e) if e.is_a?(Array)
+        scan_and_register_constants(e, scope_path) if e.is_a?(Array)
         i = i + 1
       end
     end

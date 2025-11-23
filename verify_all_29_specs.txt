@@ -1,0 +1,43 @@
+# Verification of all 29 minimal specs
+
+## Testing each spec file against its corresponding rubyspec error
+
+1. array_index_splat_begin_spec.rb -> assignments_spec.rb
+2. optional_assignments_splat_begin_spec.rb -> optional_assignments_spec.rb
+3. regex_after_semicolon_spec.rb -> case_spec.rb
+4. class_superclass_atom_spec.rb -> class_spec.rb
+5. constants_nested_assign_spec.rb -> constants_spec.rb
+6. def_keyword_args_spec.rb -> def_spec.rb
+7. for_closure_link_error_spec.rb -> for_spec.rb
+8. keyword_arg_shorthand_hash_spec.rb -> hash_spec.rb
+9. heredoc_parsing_error_spec.rb -> heredoc_spec.rb
+10. keyword_arguments_full_spec.rb -> keyword_arguments_spec.rb
+11. metaclass_assembly_error_spec.rb -> metaclass_spec.rb
+12. method_keyword_args_spec.rb -> method_spec.rb
+13. module_nested_const_spec.rb -> module_spec.rb
+14. pattern_matching_spec.rb -> pattern_matching_spec.rb
+15. precedence_nested_const_spec.rb -> precedence_spec.rb
+16. predefined_duplicate_symbol_spec.rb -> predefined_spec.rb
+17. private_assembly_error_spec.rb -> private_spec.rb
+18. regexp_encoding_block_error_spec.rb -> regexp/encoding_spec.rb
+19. regexp_escapes_regalloc_error_spec.rb -> regexp/escapes_spec.rb
+20. rescue_safe_navigation_spec.rb -> rescue_spec.rb
+21. return_global_var_spec.rb -> return_spec.rb
+22. safe_navigator_spec.rb -> safe_navigator_spec.rb
+23. send_closure_link_error_spec.rb -> send_spec.rb
+24. singleton_class_assembly_error_spec.rb -> singleton_class_spec.rb
+25. super_closure_link_error_spec.rb -> super_spec.rb
+26. symbol_expression_reduction_error_spec.rb -> symbol_spec.rb
+27. until_ternary_next_spec.rb -> until_spec.rb
+28. anonymous_splat_assignment_spec.rb -> variables_spec.rb
+29. while_parenthesized_break_spec.rb -> while_spec.rb
+
+## Status:
+✅ 1. array_index_splat_begin - VERIFIED MATCH
+✅ 2. optional_assignments_splat_begin - VERIFIED MATCH
+✅ 3. regex_after_semicolon - VERIFIED MATCH
+✅ 4. class_superclass_atom - FIXED AND VERIFIED
+⚠️  5. constants_nested_assign - PARTIAL (related but doesn't trigger exact warning)
+❌ 6. def_keyword_args - NEEDS FIX (wrong error)
+✅ 7. for_closure_link_error - FIXED AND VERIFIED
+... (continuing)
