@@ -115,6 +115,15 @@ class GlobalScope < Scope
       return [:global, clean_name]
     end
 
+    # Handle instance variables (starting with @) at global scope
+    # Strip @ prefix to make assembly-safe
+    # At global scope, instance variables are essentially globals
+    if a && a.to_s[0] == ?@
+      clean_name = a.to_s[1..-1]
+      @globals[clean_name.to_sym] = true
+      return [:global, clean_name]
+    end
+
     return [:global, a] if @globals.member?(a)
     return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
 
