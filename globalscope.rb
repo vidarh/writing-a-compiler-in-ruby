@@ -12,6 +12,7 @@ class GlobalScope < Scope
     @vtableoffsets = offsets
     @globals = {}
     @constants = {}  # Track defined constants (classes, modules, etc.)
+    @modules = []    # Track included modules at global scope
     @class_scope = ClassScope.new(self,"Object",@vtableoffsets,nil)
 
     # Despite not following "$name" syntax, these are really global constants.
@@ -130,10 +131,16 @@ class GlobalScope < Scope
     # For constants (uppercase):
     # - If being assigned (save is truthy), always return [:addr, a] so assignment works
     # - If being read and defined, return [:addr, a] for static reference
-    # - If being read and undefined, return [:runtime_const, a] for runtime lookup
+    # - If being read and undefined, check included modules first, then emit runtime lookup
     if save || @constants.member?(a)
       return [:addr, a]
     else
+      # Check included modules for this constant (e.g., from top-level include)
+      @modules.each do |m|
+        n = m.get_constant(a, save)
+        return n if n
+      end
+
       # Undefined constant being read - emit runtime lookup
       return [:runtime_const, a]
     end
@@ -151,6 +158,7 @@ class GlobalScope < Scope
     0
   end
 
-  def include_module m
+  def include_module(m)
+    @modules << m if m
   end
 end
