@@ -393,23 +393,46 @@ class Compiler
     # expression, as it might reference closure variables.
     use_global_for_object = parent_scope.is_a?(ModuleScope) && parent_scope.name == "Object"
 
-    if use_global_for_object || explicit_namespace
-      # Use s-expression for direct global assignment to avoid Object__ prefix
-      # This bypasses scope.get_arg which would add the Object__ prefix
-      compile_eval_arg(scope, [:sexp,
-                               [:if,
-                                [:eq, fq_name, 0],
-                                [:assign, fq_name,
-                                 [:call, :__new_class_object, [cscope.klass_size, superclass, ssize, classob]]
-                                ]]])
+    # If superclass is an expression (not a simple symbol/constant), wrap the class creation
+    # in a let block to evaluate the superclass first. This avoids SexpScope converting
+    # method calls to function calls.
+    if superclass.is_a?(Array)
+      # Superclass is an expression - evaluate it in a let block
+      # This allows method calls like remove_const(:Foo) to work correctly
+      let(scope, :__superclass__) do |let_scope|
+        compile_eval_arg(let_scope, [:assign, :__superclass__, superclass])
+
+        if use_global_for_object || explicit_namespace
+          compile_eval_arg(let_scope, [:sexp,
+                                   [:if,
+                                    [:eq, fq_name, 0],
+                                    [:assign, fq_name,
+                                     [:call, :__new_class_object, [cscope.klass_size, :__superclass__, ssize, classob]]
+                                    ]]])
+        else
+          compile_eval_arg(let_scope, [:if,
+                                   [:sexp,[:eq, assign_name, 0]],
+                                   [:assign, assign_name,
+                                    mk_new_class_object(cscope.klass_size, :__superclass__, ssize, classob)
+                                   ]])
+        end
+      end
     else
-      # Normal case: inside a real module/class scope
-      compile_eval_arg(scope, [:if,
-                               [:sexp,[:eq, assign_name, 0]],
-                               # then
-                               [:assign, assign_name,
-                                mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
-                               ]])
+      # Simple superclass (symbol or nil) - use directly
+      if use_global_for_object || explicit_namespace
+        compile_eval_arg(scope, [:sexp,
+                                 [:if,
+                                  [:eq, fq_name, 0],
+                                  [:assign, fq_name,
+                                   [:call, :__new_class_object, [cscope.klass_size, superclass, ssize, classob]]
+                                  ]]])
+      else
+        compile_eval_arg(scope, [:if,
+                                 [:sexp,[:eq, assign_name, 0]],
+                                 [:assign, assign_name,
+                                  mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
+                                 ]])
+      end
     end
 
     @global_constants << fq_name
