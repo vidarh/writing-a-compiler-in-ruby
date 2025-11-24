@@ -1383,9 +1383,20 @@ class Compiler
     case exp[0]
     when :class, :module
       # Extract class/module name and build new scope path
-      class_name = nil
       if exp[1].is_a?(Symbol)
-        class_name = exp[1]
+        # Simple class name
+        # Register only the actual BSS name: qualified if nested, bare if top-level
+        if !scope_path.empty?
+          @global_scope.register_constant((scope_path + [exp[1]]).join("__").to_sym)
+        else
+          @global_scope.register_constant(exp[1])
+        end
+        # Recursively scan the class/module body with new scope path
+        i = 3
+        while i < exp.length
+          scan_and_register_constants(exp[i], scope_path + [exp[1].to_s]) if exp[i]
+          i = i + 1
+        end
       elsif exp[1].is_a?(Array) && exp[1][0] == :deref
         # Handle nested names like Foo::Bar - extract parts
         parts = []
@@ -1395,26 +1406,19 @@ class Compiler
           n = n[1]
         end
         parts.unshift(n) if n.is_a?(Symbol)
-        class_name = parts.join("__").to_sym if parts.any?
-      end
-
-      if class_name
-        # Register only the actual BSS name: qualified if nested, bare if top-level
-        if !scope_path.empty?
-          qualified_name = (scope_path + [class_name]).join("__").to_sym
-          @global_scope.register_constant(qualified_name)
-        else
-          @global_scope.register_constant(class_name)
-        end
-
-        # Build new scope path for scanning body
-        new_scope_path = scope_path + [class_name.to_s]
-
-        # Recursively scan the class/module body with new scope path
-        i = 3
-        while i < exp.length
-          scan_and_register_constants(exp[i], new_scope_path) if exp[i]
-          i = i + 1
+        if parts.any?
+          # Register only the actual BSS name: qualified if nested, bare if top-level
+          if !scope_path.empty?
+            @global_scope.register_constant((scope_path + [parts.join("__")]).join("__").to_sym)
+          else
+            @global_scope.register_constant(parts.join("__").to_sym)
+          end
+          # Recursively scan the class/module body with new scope path
+          i = 3
+          while i < exp.length
+            scan_and_register_constants(exp[i], scope_path + [parts.join("__")]) if exp[i]
+            i = i + 1
+          end
         end
       else
         # Singleton class (class << obj) - scan body without changing scope path
@@ -1428,33 +1432,27 @@ class Compiler
 
     when :assign
       # Register constant assignments
-      # Always register bare name (for lookup within same scope)
-      # Also register qualified name if nested (actual symbol name)
       if exp[1].is_a?(Symbol) && exp[1].to_s[0] && exp[1].to_s[0] >= ?A && exp[1].to_s[0] <= ?Z
-        const_name = exp[1]
         # Register only the actual BSS name: qualified if nested, bare if top-level
         if !scope_path.empty?
-          qualified_name = (scope_path + [const_name.to_s]).join("__").to_sym
-          @global_scope.register_constant(qualified_name)
+          @global_scope.register_constant((scope_path + [exp[1].to_s]).join("__").to_sym)
         else
-          @global_scope.register_constant(const_name)
+          @global_scope.register_constant(exp[1])
         end
       elsif exp[1].is_a?(Array) && exp[1][0] == :destruct
         # Handle destructuring: (A, B) = values
         i = 1
         while i < exp[1].length
-          target = exp[1][i]
-          if target.is_a?(Symbol) && target.to_s[0] && target.to_s[0] >= ?A && target.to_s[0] <= ?Z
+          if exp[1][i].is_a?(Symbol) && exp[1][i].to_s[0] && exp[1][i].to_s[0] >= ?A && exp[1][i].to_s[0] <= ?Z
             # Register only the actual BSS name: qualified if nested, bare if top-level
             if !scope_path.empty?
-              qualified_name = (scope_path + [target.to_s]).join("__").to_sym
-              @global_scope.register_constant(qualified_name)
+              @global_scope.register_constant((scope_path + [exp[1][i].to_s]).join("__").to_sym)
             else
-              @global_scope.register_constant(target)
+              @global_scope.register_constant(exp[1][i])
             end
-          elsif target.is_a?(Array) && target[0] == :destruct
+          elsif exp[1][i].is_a?(Array) && exp[1][i][0] == :destruct
             # Nested destructuring - recursively process
-            scan_and_register_constants([:assign, target, nil], scope_path)
+            scan_and_register_constants([:assign, exp[1][i], nil], scope_path)
           end
           # Skip :deref patterns - those are runtime assignments
           i = i + 1
