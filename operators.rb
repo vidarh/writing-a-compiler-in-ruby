@@ -96,7 +96,7 @@ Operators = {
 
   "break" => Oper.new(22, :break, :prefix, 1, 0, :right, 3),
   "next"  => Oper.new(22, :next,  :prefix, 1, 0, :right, 3),
-  "defined?" => Oper.new(0, :defined?, :prefix, nil, nil, :right, 1),  # Very low precedence
+  "defined?" => Oper.new(3, :defined?, :prefix, nil, nil, :right, 6),  # pri > if(2), right_pri in range to consume assignments
 
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND
   "&"         => {
