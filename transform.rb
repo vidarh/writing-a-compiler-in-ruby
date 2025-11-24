@@ -105,7 +105,50 @@ class Compiler
   end
 
 
-  # Re-write string constants outside %s() to 
+  # Rewrite defined? operator to return appropriate string or false
+  # This must happen BEFORE rewrite_strconst so strings get properly handled
+  def rewrite_defined(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      if e.is_a?(Array) && e[0] == :"defined?"
+        arg = e[1]
+        result = nil
+
+        # Analyze the argument to determine its type
+        if arg.is_a?(Array)
+          case arg[0]
+          # Assignment operators - all map to "assignment"
+          when :assign, :massign, :iasgn, :op_asgn, :or_asgn, :and_asgn,
+               :mul_assign, :div_assign, :mod_assign, :pow_assign,
+               :and_bitwise_assign, :or_bitwise_assign, :xor_assign,
+               :shl_assign, :shr_assign
+            result = "assignment"
+          # For other cases, return false
+          else
+            STDERR.puts "Warning: defined? for #{arg[0].inspect} not implemented, returning false"
+            result = false
+          end
+        elsif arg.is_a?(Symbol)
+          # For variables, return false for now
+          STDERR.puts "Warning: defined? for variable #{arg.inspect} not implemented, returning false"
+          result = false
+        else
+          STDERR.puts "Warning: defined? for #{arg.inspect} not implemented, returning false"
+          result = false
+        end
+
+        # Replace the defined? node with the result
+        # rewrite_strconst will handle string constant conversion
+        if result == false
+          e.replace(E[:false])
+        else
+          e.replace(E[result])
+        end
+      end
+    end
+  end
+
+  # Re-write string constants outside %s() to
   # %s(call __get_string [original string constant])
   def rewrite_strconst(exp)
     exp.depth_first do |e|
@@ -1080,6 +1123,7 @@ class Compiler
 
     rewrite_concat(exp)
     rewrite_range(exp)
+    rewrite_defined(exp)  # Must run before rewrite_strconst
     rewrite_strconst(exp)
     rewrite_integer_constant(exp)
     rewrite_symbol_constant(exp)
