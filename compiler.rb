@@ -1399,14 +1399,12 @@ class Compiler
       end
 
       if class_name
-        # Register the class/module name itself (for class references)
-        # Always register bare class/module names (for direct references like "Compiler")
-        @global_scope.register_constant(class_name)
-
-        # Also register qualified name if nested (for fully-qualified references)
+        # Register only the actual BSS name: qualified if nested, bare if top-level
         if !scope_path.empty?
           qualified_name = (scope_path + [class_name]).join("__").to_sym
           @global_scope.register_constant(qualified_name)
+        else
+          @global_scope.register_constant(class_name)
         end
 
         # Build new scope path for scanning body
@@ -1434,12 +1432,12 @@ class Compiler
       # Also register qualified name if nested (actual symbol name)
       if exp[1].is_a?(Symbol) && exp[1].to_s[0] && exp[1].to_s[0] >= ?A && exp[1].to_s[0] <= ?Z
         const_name = exp[1]
-        # Always register bare name
-        @global_scope.register_constant(const_name)
-        # Also register qualified name if nested
+        # Register only the actual BSS name: qualified if nested, bare if top-level
         if !scope_path.empty?
           qualified_name = (scope_path + [const_name.to_s]).join("__").to_sym
           @global_scope.register_constant(qualified_name)
+        else
+          @global_scope.register_constant(const_name)
         end
       elsif exp[1].is_a?(Array) && exp[1][0] == :destruct
         # Handle destructuring: (A, B) = values
@@ -1447,12 +1445,12 @@ class Compiler
         while i < exp[1].length
           target = exp[1][i]
           if target.is_a?(Symbol) && target.to_s[0] && target.to_s[0] >= ?A && target.to_s[0] <= ?Z
-            # Always register bare name
-            @global_scope.register_constant(target)
-            # Also register qualified name if nested
+            # Register only the actual BSS name: qualified if nested, bare if top-level
             if !scope_path.empty?
               qualified_name = (scope_path + [target.to_s]).join("__").to_sym
               @global_scope.register_constant(qualified_name)
+            else
+              @global_scope.register_constant(target)
             end
           elsif target.is_a?(Array) && target[0] == :destruct
             # Nested destructuring - recursively process
@@ -1464,6 +1462,12 @@ class Compiler
       end
       # Recursively scan the right side (preserve scope path)
       scan_and_register_constants(exp[2], scope_path) if exp[2]
+
+    when :defm, :defs
+      # Skip scanning method bodies - constants assigned in methods are dynamically
+      # executed and should use runtime lookup, not static :addr references
+      # (They will get Object prefix added by compile_assign, but aren't in GlobalScope)
+      return
 
     when :do, :block, :sexp
       # Recursively scan all sub-expressions (preserve scope path)

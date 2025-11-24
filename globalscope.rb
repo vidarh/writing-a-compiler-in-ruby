@@ -136,8 +136,9 @@ class GlobalScope < Scope
       return [:addr, a]
     else
       # Check included modules for this constant (e.g., from top-level include)
+      # Pass false as third parameter to prevent modules from delegating back to global scope
       @modules.each do |m|
-        n = m.get_constant(a, save)
+        n = m.get_constant(a, save, false)
         return n if n
       end
 

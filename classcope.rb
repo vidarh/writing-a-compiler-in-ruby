@@ -110,14 +110,16 @@ class ModuleScope < Scope
   end
 
 
-  def get_constant(a, save = false)
+  def get_constant(a, save = false, allow_delegation = true)
     # If the constant name already contains "__", it's likely a fully-qualified name
     # (e.g., ClassSpecs__Empty). Look it up in the global scope instead of adding
     # another prefix, to avoid creating malformed names like Object__ClassSpecs__Empty
     # Also, Object should never add a prefix - constants in Object are global
     if a.to_s.include?("__") || name == "Object"
       # Fully qualified constant or Object scope - delegate to parent scope without adding prefix
-      return @next.get_arg(a, save) if @next
+      # But only if delegation is allowed (to prevent infinite recursion)
+      return @next.get_arg(a, save) if @next && allow_delegation
+      return nil if !allow_delegation
     end
 
     if @constants.member?(a.to_sym)
@@ -132,12 +134,17 @@ class ModuleScope < Scope
         end
 
         if @superclass
-          n = @superclass.get_constant(a, save)
-          return n if n && n[0] != :addr
+          n = @superclass.get_constant(a, save, allow_delegation)
+          # Return superclass result if found statically (not :addr to avoid exposing internal names)
+          # Don't return :runtime_const - let it fall through to check @next (lexical scope)
+          return n if n && n[0] != :addr && n[0] != :runtime_const
         end
       end
 
-      return @next.get_arg(a, save)
+      # Only delegate to parent scope if allow_delegation is true
+      # This prevents infinite recursion when GlobalScope checks its included modules
+      return @next.get_arg(a, save) if allow_delegation
+      return nil
     end
   end
 
