@@ -41,7 +41,7 @@ class Emitter
     @out = Peephole.new(out)
     @basic_main = false
     @section = 0 # Are we in a stabs section?
-    @allocator = RegisterAllocator.new
+    @allocator = RegisterAllocator.new(self)
 
     @debug = :stabs
     @lineno = nil

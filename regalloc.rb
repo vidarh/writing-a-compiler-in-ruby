@@ -114,7 +114,7 @@ class RegisterAllocator
   end
 
 
-  def initialize
+  def initialize(emitter = nil)
     # This is the list of registers that are available to be allocated
     @registers      = [:edx,:ecx, :edi]
 
@@ -123,6 +123,9 @@ class RegisterAllocator
 
     # Caller saved
     @caller_saved   = [:edx, :ecx, :edi]
+
+    # Reference to emitter for automatic spilling
+    @emitter        = emitter
 
     reset!
   end
@@ -319,15 +322,28 @@ class RegisterAllocator
       end
     end
 
-    if !free
-      # This really should not happen, unless we are
-      # very careless about #with_register blocks.
+    # Automatic register spilling: if no register is free and we have an emitter,
+    # spill a register to the stack temporarily
+    spilled_reg = nil
+    if !free && @emitter
+      # Pick the first allocated register to spill (FIFO strategy)
+      spilled_reg = @registers.find { |r| @allocated_registers.include?(r) }
 
-      STDERR.puts "==="
-      STDERR.puts @cached.inspect
-      STDERR.puts "--"
-      STDERR.puts @free_registers.inspect
-      STDERR.puts @allocators.inspect
+      if spilled_reg
+        @emitter.comment("SPILL: Pushing #{spilled_reg} to stack")
+        @emitter.pushl(spilled_reg)
+        free = spilled_reg
+        # Don't mark as allocated yet - we'll do that below
+      end
+    end
+
+    if !free
+      # Even after attempting to spill, no register available - this is a fatal error
+      STDERR.puts "=== REGISTER ALLOCATION FAILED ==="
+      STDERR.puts "@cached: #{@cached.inspect}"
+      STDERR.puts "@free_registers: #{@free_registers.inspect}"
+      STDERR.puts "@allocated_registers: #{@allocated_registers.inspect}"
+      STDERR.puts "@allocators: #{@allocators.inspect}"
       #raise "Register allocation FAILED"
       1/0
     end
@@ -348,6 +364,12 @@ class RegisterAllocator
     yield(free)
 
     # ... and clean up afterwards:
+
+    # Restore spilled register BEFORE freeing, to maintain proper nesting
+    if spilled_reg
+      @emitter.comment("RESTORE: Popping #{spilled_reg} from stack")
+      @emitter.popl(spilled_reg)
+    end
 
     @allocators.pop
     free!(free)
