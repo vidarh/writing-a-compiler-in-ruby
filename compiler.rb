@@ -56,7 +56,8 @@ class Compiler
                    :mulfull, # Widening multiply - returns both low and high words
                   :div64, # 64-bit division - divides EDX:EAX by operand
                   :unwind, # Exception stack unwinding
-                  :pattern # Pattern matching (Ruby 3.0+)
+                  :pattern, # Pattern matching (Ruby 3.0+)
+                  :as_pattern # AS patterns in pattern matching (Ruby 3.0+)
                   ]
 
   Keywords = @@keywords

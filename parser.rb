@@ -245,14 +245,27 @@ class Parser < ParserBase
       break if @scanner.peek == ']' || @scanner.peek == ')'
 
       # Parse a single pattern element
-      # Try to parse keyword pattern (a:, b:) or positional pattern
+      # Try to parse keyword pattern (a:, a: value) or positional pattern
       name = parse_name
       if name
         ws
         if literal(':')
-          # Keyword pattern: a: binds to variable a
-          # Store as [:pattern_key, :a] meaning bind key :a to variable a
-          patterns << E[:pattern_key, name]
+          # Keyword pattern - could be shorthand (a:) or full (a: 0)
+          ws
+          # Check if this is shorthand (followed by comma or close) or full form
+          next_char = @scanner.peek
+          if next_char == ',' || next_char == ')' || next_char == ']'
+            # Shorthand: a: (binds key :a to variable a)
+            patterns << E[:pattern_key, name]
+          else
+            # Full form: a: value
+            value = parse_subexp
+            if !value
+              expected("value after ':' in pattern")
+            end
+            # Create a pair for hash pattern matching
+            patterns << E[:pair, E[:sexp, name.inspect.to_sym], value]
+          end
           ws
           if literal(',')
             ws
@@ -351,6 +364,15 @@ class Parser < ParserBase
         ws
         literal(')') or expected("')' to close pattern")
         return E[pos, :pattern, name] + pattern_contents
+      elsif literal('=>')
+        # AS pattern: ConstantName => var (e.g., Integer => n)
+        # Matches the type and binds to the variable
+        ws
+        var = parse_name
+        if !var
+          expected("variable name after '=>' in AS pattern")
+        end
+        return E[pos, :as_pattern, name, var]
       elsif @scanner.peek == ':'
         # Bare hash pattern like a: 1, b: 2 (name already consumed)
         return parse_hash_pattern_after_name(name)

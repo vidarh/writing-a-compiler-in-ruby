@@ -34,6 +34,24 @@ class Compiler
         # e[2] remains the body
       end
 
+      # Find :in nodes with :as_pattern (e.g., in Integer => n)
+      if e[0] == :in && e[1].is_a?(Array) && e[1][0] == :as_pattern
+        as_pattern = e[1]
+        type_name = as_pattern[1]
+        var_name = as_pattern[2]
+        body = e[2]
+
+        # Transform to: when (__case_value.is_a?(TypeName) && (var = __case_value; true))
+        type_check = [:callm, :__case_value, :is_a?, [type_name]]
+        binding = [:do, [:assign, var_name, :__case_value], [:sexp, true]]
+        condition = [:and, type_check, binding]
+
+        # Replace :in with :when
+        e[0] = :when
+        e[1] = condition
+        # e[2] remains the body
+      end
+
       # Find :in nodes with :pattern children (constant-qualified patterns)
       if e[0] == :in && e[1].is_a?(Array) && e[1][0] == :pattern
         pattern = e[1]
@@ -41,27 +59,38 @@ class Compiler
         pattern_elements = pattern[2..-1]
         body = e[2]
 
-        # Build variable bindings for pattern_key elements
+        # Build variable bindings and value checks
         bindings = []
+        checks = []
+
         pattern_elements.each do |elem|
           if elem.is_a?(Array) && elem[0] == :pattern_key
+            # Keyword shorthand: a: binds key :a to variable a
             var_name = elem[1]
             # Create: var_name = __case_value[:var_name]
             bindings << [:assign, var_name, [:callm, :__case_value, :[], [[:sexp, var_name.inspect.to_sym]]]]
+          elsif elem.is_a?(Array) && elem[0] == :pair
+            # Full key-value: a: 0 checks __case_value[:a] == 0
+            key = elem[1]
+            expected_value = elem[2]
+            # Create: __case_value[key] == expected_value
+            checks << [:eq, [:callm, :__case_value, :[], [key]], expected_value]
           end
         end
 
-        # Create condition: __case_value.is_a?(ConstName) && (bindings; true)
+        # Create condition: __case_value.is_a?(ConstName) && checks && bindings
         type_check = [:callm, :__case_value, :is_a?, [const_name]]
+        condition = type_check
 
-        if bindings.empty?
-          # No bindings, just type check
-          condition = type_check
-        else
-          # Type check AND execute bindings
-          # Use :do block to execute bindings and return true
+        # Add value checks
+        checks.each do |check|
+          condition = [:and, condition, check]
+        end
+
+        # Add bindings
+        if !bindings.empty?
           binding_block = [:do] + bindings + [[:sexp, true]]
-          condition = [:and, type_check, binding_block]
+          condition = [:and, condition, binding_block]
         end
 
         # Replace :in with :when
