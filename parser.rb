@@ -44,6 +44,26 @@ class Parser < ParserBase
 
   # arglist ::= ("*" ws*)? name nolfws* ("," ws* arglist)?
   def parse_arglist(extra_stop_tokens = [])
+    # Check for argument forwarding: ... (Ruby 2.7+)
+    # This must come before checking for range operators
+    saved_pos = @scanner.position
+    if literal(".")
+      if literal(".")
+        if literal(".")
+          # This is ... argument forwarding
+          # Return special marker for argument forwarding
+          return [[:forward_args]]
+        else
+          # Not ..., backtrack
+          @scanner.unget(".")
+          @scanner.unget(".")
+        end
+      else
+        # Not .., backtrack
+        @scanner.unget(".")
+      end
+    end
+
     # Check for nested destructuring: |(a, b)|
     if literal("(")
       ws
@@ -215,15 +235,32 @@ class Parser < ParserBase
     return E[:when, cond, parse_opt_defexp]
   end
 
-  # case ::= "case" ws* condition? when* ("else" ws* defexp*) "end"
+  # in ::= "in" ws* pattern (nolfws* (":" | "then" | ";"))? ws* defexp*
+  # Pattern matching branch for case statements (Ruby 3.0+)
+  # For now, parse pattern like a condition - actual pattern matching not implemented
+  def parse_in
+    pos = position
+    keyword(:in) or return
+    ws
+    pattern = parse_condition or expected("pattern for 'in'")
+    nolfws
+    literal(COLON) || keyword(:then) || literal(SEMICOLON)
+    ws
+    # Use :in instead of :when to distinguish pattern matching branches
+    return E[:in, pattern, parse_opt_defexp]
+  end
+
+  # case ::= "case" ws* condition? (when|in)* ("else" ws* defexp*) "end"
   # When condition is omitted, each when tests its expressions as booleans
+  # Ruby 3.0+ supports 'in' branches for pattern matching
   def parse_case
     pos = position
     keyword(:case) or return
     ws
     cond = parse_condition  # Condition is optional
     nolfws; literal(";"); ws  # Consume optional ; after condition
-    whens = kleene { parse_when }
+    # Parse both 'when' and 'in' branches
+    branches = kleene { parse_when || parse_in }
     ws
     elses = nil  # FIXME: Self-hosted compiler doesn't initialize local vars to nil.
                  # Without this, elses contains garbage when there's no else clause.
@@ -235,7 +272,7 @@ class Parser < ParserBase
     keyword(:end) or expected("'end' for open 'case'")
     # Don't compact - cond can be nil for case-without-condition
     # Only compact the elses if nil
-    result = E[pos, :case, cond, whens]
+    result = E[pos, :case, cond, branches]
     result << elses if elses
     return result
   end
@@ -364,8 +401,10 @@ class Parser < ParserBase
     name = nil
     # Check for => regardless of whether exception class was provided
     if literal("=>")
-      ws
-      name = parse_name or expected("variable to hold exception")
+      # Parse assignable expression (allows self&.foo, @ivar, etc.)
+      # Similar to for loop variable parsing - allows complex lvalues
+      # Inhibit newline and statement keywords to stop at rescue body
+      name = @shunting.parse(["\n", :end, :rescue, :else, :elsif, :ensure]) or expected("variable to hold exception")
     end
     ws
     body = parse_opt_defexp
@@ -385,7 +424,7 @@ class Parser < ParserBase
   # Returns [exps, rescue_, ensure_body]
   def parse_rescue_else_ensure(exps = [])
     pos = position
-    rescue_ = nil
+    rescue_clauses = []
 
     # Parse expressions until we hit rescue or a terminator
     loop do
@@ -397,23 +436,51 @@ class Parser < ParserBase
         nolfws
         name = nil
         if literal("=>")
-          ws
-          name = parse_name or expected("variable to hold exception")
+          # Parse assignable expression (allows self&.foo, @ivar, etc.)
+          # Similar to for loop variable parsing - allows complex lvalues
+          # Inhibit newline and statement keywords to stop at rescue body
+          name = @shunting.parse(["\n", :end, :rescue, :else, :elsif, :ensure]) or expected("variable to hold exception")
         end
         ws
         body = parse_opt_defexp
-        rescue_ = E[pos, :rescue, c, name, body]
-        break
+        rescue_clauses << E[pos, :rescue, c, name, body]
+        # Don't break - continue to parse more rescue clauses
+      else
+        # Use parse_exp to handle protected, class bodies, etc.
+        exp = parse_exp
+        break if !exp
+        exps << exp
       end
-      exp = parse_defexp
-      break if !exp
-      exps << exp
     end
 
-    # If we don't have rescue yet, try to parse it (it's optional)
-    if !rescue_
-      rescue_ = parse_rescue
+    # Parse additional rescue clauses if we already have some
+    while rescue_clauses.size > 0
+      ws
+      if keyword(:rescue)
+        pos = position
+        nolfws
+        c = parse_name
+        nolfws
+        name = nil
+        if literal("=>")
+          name = @shunting.parse(["\n", :end, :rescue, :else, :elsif, :ensure]) or expected("variable to hold exception")
+        end
+        ws
+        body = parse_opt_defexp
+        rescue_clauses << E[pos, :rescue, c, name, body]
+      else
+        break
+      end
     end
+
+    # If we didn't parse any rescue in the loop, try parse_rescue
+    if rescue_clauses.empty?
+      single_rescue = parse_rescue
+      rescue_clauses << single_rescue if single_rescue
+    end
+
+    # Combine multiple rescue clauses into one if needed
+    rescue_ = rescue_clauses.empty? ? nil : (rescue_clauses.size == 1 ? rescue_clauses[0] : [:rescues] + rescue_clauses)
 
     # Parse optional else clause (only valid if rescue exists)
     else_body = nil
@@ -459,7 +526,9 @@ class Parser < ParserBase
     pos = position
     # Inhibit ; and newline at statement level - they're separators, not :do operator
     # Inside parentheses, ; and newline will still work as :do operator (see shunting.rb)
-    ret = @shunting.parse([";", "\n"])
+    # Also inhibit case statement keywords (when, in, else, end) to prevent them from
+    # being consumed as operators when they should start new branches
+    ret = @shunting.parse([";", "\n", :when, :in, :else, :end, :elsif, :ensure, :rescue])
     if ret.is_a?(Array)
       ret = E[pos] + ret
     end
@@ -636,6 +705,18 @@ class Parser < ParserBase
     args = parse_args || []
     literal(";")
 
+    # Check for endless method definition: def name(args) = expr
+    # This is Ruby 3.0+ syntax for single-expression methods
+    nolfws
+    if literal("=")
+      ws
+      # Parse the expression (method body) - use parse_condition to get full expression
+      # parse_condition handles operators and complex expressions properly
+      expr = parse_condition or expected("expression for endless method definition")
+      # Endless methods can't have rescue/ensure, so return simple defm node
+      return E[pos, :defm, name, args, [expr]]
+    end
+
     # Parse method body - parse_block_exps will naturally stop at keywords like rescue/ensure/end
     exps = parse_block_exps
     #STDERR.puts exps.inspect
@@ -649,8 +730,10 @@ class Parser < ParserBase
       nolfws
       name_var = nil
       if literal("=>")
-        ws
-        name_var = parse_name or expected("variable to hold exception")
+        # Parse assignable expression (allows self&.foo, @ivar, etc.)
+        # Similar to for loop variable parsing - allows complex lvalues
+        # Inhibit newline and statement keywords to stop at rescue body
+        name_var = @shunting.parse(["\n", :end, :rescue, :else, :elsif, :ensure]) or expected("variable to hold exception")
       end
       ws
       # parse_opt_defexp will naturally stop at ensure/end keywords
@@ -744,9 +827,18 @@ class Parser < ParserBase
     end
     ws
     error("A module can not have a super class") if @scanner.peek == ?<
-    exps = kleene { parse_exp }
+    # Parse module body with optional rescue/ensure
+    exps, rescue_, ensure_body = parse_rescue_else_ensure([])
     keyword(:end) or expected("expression or \'end\'")
-    return E[pos, :module, name, :Object, exps]
+
+    # If rescue or ensure present, wrap body in a block node
+    # This ensures compiler sees: [:module, name, :Object, [:block, [], exps, rescue, ensure]]
+    if rescue_ || ensure_body
+      body = E[pos, :block, [], exps, rescue_, ensure_body]
+      return E[pos, :module, name, :Object, body]
+    else
+      return E[pos, :module, name, :Object, exps]
+    end
   end
 
   # class ::= ("class" ws* (name|'<<') ws* (< ws* superclass)? ws* name ws* exp* "end"
@@ -820,9 +912,18 @@ class Parser < ParserBase
       # Invalid superclasses (like strings, integers) will raise TypeError at runtime
       superclass = parse_subexp or expected("superclass")
     end
-    exps = kleene { parse_exp }
+    # Parse class body with optional rescue/ensure
+    exps, rescue_, ensure_body = parse_rescue_else_ensure([])
     keyword(:end) or expected("expression or 'end'")
-    return E[pos, :class, name, superclass || :Object, exps]
+
+    # If rescue or ensure present, wrap body in a block node
+    # This ensures compiler sees: [:class, name, superclass, [:block, [], exps, rescue, ensure]]
+    if rescue_ || ensure_body
+      body = E[pos, :block, [], exps, rescue_, ensure_body]
+      return E[pos, :class, name, superclass || :Object, body]
+    else
+      return E[pos, :class, name, superclass || :Object, exps]
+    end
   end
 
   # alias ::= "alias" ws* new_name ws* old_name

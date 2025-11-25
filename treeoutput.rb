@@ -6,7 +6,7 @@ module OpPrec
   class TreeOutput
     include AST
 
-    attr_reader :vstack
+    attr_accessor :vstack
 
     def initialize
       reset
@@ -39,12 +39,43 @@ module OpPrec
       if elem.is_a?(Array) && elem[0] == :ternalt
         # foo: 42 becomes [:ternalt, foo, 42] but should be [:pair, :foo, 42]
         # {a:} becomes [:ternalt, a, nil] but should be [:pair, :a, a] (keyword argument shorthand)
-        # Convert symbol name to symbol literal
-        key_sym = elem[1].is_a?(Symbol) ? elem[1] : elem[1].to_sym
+
+        # elem[1] can be:
+        # - A simple symbol like :foo
+        # - A constant reference that needs to stay as-is
+        # - Another ternalt (nested case)
+        key = elem[1]
+
+        # Handle nested ternalt - shouldn't normally happen but be defensive
+        if key.is_a?(Array) && key[0] == :ternalt
+          # Don't convert nested ternalt in key position - leave as-is
+          # This happens in pattern matching with complex patterns
+          # Debug: uncomment to see what's being passed
+          # STDERR.puts "DEBUG: Nested ternalt in convert_ternalt_to_pair: #{elem.inspect}"
+          return elem
+        end
+
+        # For simple symbols or strings, convert to symbol literal
+        # For complex expressions (arrays), leave unchanged (pattern matching)
+        if key.is_a?(Symbol)
+          key_sym = key
+        elsif key.is_a?(String)
+          # String keys like "foo": value → convert to symbol
+          key_sym = key.to_sym
+        elsif key.is_a?(Array)
+          # Complex key expression - likely pattern matching or invalid syntax
+          # Return elem unchanged - not a valid hash key
+          return elem
+        else
+          # Unexpected key type (numbers, etc) - not valid for shorthand syntax
+          # Return elem unchanged
+          return elem
+        end
+
         value = elem[2]
         # If no value provided (keyword argument shorthand), use the key name as the value
         if value.nil?
-          value = elem[1]  # Use the variable name as the value
+          value = key  # Use the variable name as the value
         end
         return E[:pair, E[:sexp, key_sym.inspect.to_sym], value]
       end

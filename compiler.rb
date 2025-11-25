@@ -42,7 +42,7 @@ class Compiler
   @@keywords = Set[
                    :do, :class, :defun, :defm, :if, :unless,
                    :assign, :while, :until, :index, :bindex, :let, :case, :ternif,
-                   :hash, :return,:sexp, :module, :rescue, :raise, :incr, :decr, :block,
+                   :hash, :return,:sexp, :module, :rescue, :rescues, :raise, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :stackframe, :stackpointer, :deref, :include, :addr,
@@ -592,7 +592,8 @@ class Compiler
   def compile_whens(compare_exp, whens)
     exp = whens.first
 
-    if exp[0] == :when
+    # Handle both :when and :in branches (pattern matching uses :in)
+    if exp[0] == :when || exp[0] == :in
       test_values = exp[1]
 
       body = exp[2] # body to be executed, if compare_exp === test_value
@@ -764,13 +765,16 @@ class Compiler
     end
 
     # transform "foo.bar = baz" into "foo.bar=(baz)"
+    # Also handle "foo&.bar = baz" (safe navigation in assignment context)
     # Also handle "foo[idx] = baz" -> "foo.[]=(idx, baz)"
-    if left.is_a?(Array) && left[0] == :callm
+    if left.is_a?(Array) && (left[0] == :callm || left[0] == :safe_callm)
       obj = left[1]
       method = left[2]
       setter_method = (method.to_s + "=").to_sym
+      # Use regular callm even for safe_callm - in assignment context they're equivalent
+      callm_method = :callm
 
-      if left.size == 3  # no arguments: foo.bar = baz
+      if left.size == 3  # no arguments: foo.bar = baz or foo&.bar = baz
         return compile_callm(scope, obj, setter_method, right)
       else  # has arguments: foo[idx] = baz or foo.method(arg) = baz
         args = left[3] || []
@@ -931,12 +935,109 @@ class Compiler
   #
   # Parser returns: [:block, args, exps, rescue_clause, ensure_body]
   # For begin blocks: args=[], exps=body, rescue_clause=[:rescue, ...] or nil, ensure_body=... or nil
+  # rescue_clause can also be [:rescues, r1, r2, r3...] for multiple rescue clauses
   def compile_block(scope, args, exps, rescue_clause = nil, ensure_body = nil)
+    # Handle multiple rescue clauses with dedicated method
+    if rescue_clause && rescue_clause[0] == :rescues
+      return compile_begin_rescues(scope, exps, rescue_clause[1..-1], ensure_body)
+    end
+
     if rescue_clause || ensure_body
       compile_begin_rescue(scope, exps, rescue_clause, ensure_body)
     else
       compile_do(scope, *exps)
     end
+  end
+
+  # Compile begin block with multiple rescue clauses
+  # rescue_clauses = [[:rescue, c1, v1, b1], [:rescue, c2, v2, b2], ...]
+  # Transforms into nested rescues with conditional checks
+  def compile_begin_rescues(scope, exps, rescue_clauses, ensure_body = nil)
+    # Start with the last rescue clause and work backwards
+    # Build nested structure: if exception.is_a?(RN) then ... elsif ... else raise end
+
+    # Transform multiple rescues into a single rescue with conditional body
+    # begin
+    #   <exps>
+    # rescue => __exc
+    #   if __exc.is_a?(R1)
+    #     v1 = __exc
+    #     <b1>
+    #   elsif __exc.is_a?(R2)
+    #     v2 = __exc
+    #     <b2>
+    #   elsif ...
+    #   else
+    #     raise __exc
+    #   end
+    # ensure
+    #   <ensure_body>
+    # end
+
+    # Build the conditional chain from the rescue clauses
+    cond_body = build_rescue_conditional(rescue_clauses)
+
+    # Create a single catch-all rescue clause with the conditional body
+    rescue_clause = [:rescue, nil, :__exc__, cond_body]
+
+    compile_begin_rescue(scope, exps, rescue_clause, ensure_body)
+  end
+
+  # Build conditional chain for multiple rescue clauses
+  # Returns array of statements to execute in rescue handler
+  def build_rescue_conditional(rescue_clauses)
+    return [] if rescue_clauses.empty?
+
+    # Start with the last rescue clause
+    last = rescue_clauses.last
+    last_class = last[1]
+    last_var = last[2]
+    last_body = last[3]
+
+    # Build else clause: raise __exc__
+    else_clause = [:raise, :__exc__]
+
+    # Build then-branch for last rescue
+    # Wrap multiple statements in :do node for compile_if
+    last_statements = (last_var ? [[:assign, last_var, :__exc__]] : []) + (last_body || [])
+    last_then = last_statements.size == 1 ? last_statements[0] : ([:do] + last_statements)
+
+    last_cond = if last_class
+      [:if,
+       [:callm, :__exc__, :is_a?, [last_class]],
+       last_then,
+       else_clause]
+    else
+      # No class means catch all
+      last_then
+    end
+
+    # Work backwards through remaining rescue clauses
+    result = last_cond
+    (rescue_clauses.size - 2).downto(0) do |i|
+      r = rescue_clauses[i]
+      r_class = r[1]
+      r_var = r[2]
+      r_body = r[3]
+
+      # Build then-branch: wrap multiple statements in :do
+      statements = (r_var ? [[:assign, r_var, :__exc__]] : []) + (r_body || [])
+      then_branch = statements.size == 1 ? statements[0] : ([:do] + statements)
+
+      # Build: if __exc.is_a?(r_class); then_branch; else <result> end
+      result = if r_class
+        [:if,
+         [:callm, :__exc__, :is_a?, [r_class]],
+         then_branch,
+         result]  # result is already a single expression
+      else
+        # No class means catch all - should be last, but handle it anyway
+        then_branch
+      end
+    end
+
+    # Return as array of statements
+    [result]
   end
 
   # Compile begin...rescue...else...ensure...end block
@@ -970,9 +1071,10 @@ class Compiler
     # If we pass nil directly, get_arg treats it as an empty string constant (bug!)
     rescue_class_arg = rescue_class.nil? ? :nil : rescue_class
 
-    # Build variable list for let() - include rescue_var if specified
+    # Build variable list for let() - include rescue_var only if it's a simple symbol
+    # Complex lvalues like self.foo or @ivar will be assigned via compile_assign later
     let_vars = [:__handler, :__exc]
-    let_vars << rescue_var if rescue_var
+    let_vars << rescue_var if rescue_var && rescue_var.is_a?(Symbol)
 
     # Use let() to create local variables for handler, exception, and optional rescue var
     let(scope, *let_vars) do |lscope|
