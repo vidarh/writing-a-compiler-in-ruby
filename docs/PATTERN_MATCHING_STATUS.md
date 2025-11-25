@@ -136,17 +136,25 @@ All rescue-related features working:
 - Complex lvalues in rescue clauses (`self.foo`, `self&.foo`)
 
 ### pattern_matching_spec.rb
-**Status**: ⚠️ **ASSEMBLY FAIL** (parses fully, code generation issue)
+**Status**: ⚠️ **ASSEMBLY FAIL** (parses fully, pre-existing closure bug)
 
 **Progress**:
 - Line 533: AS patterns - ✅ Fixed
 - Line 784: Hash patterns with full pairs - ✅ Fixed
 - Line 1032: Hash splat patterns - ✅ Fixed
-- Current: **Parses entire spec (1310 lines)**, fails at assembly due to variable scoping bug
+- Scoping: __case_value :let wrapping - ✅ Fixed
+- Current: **Parses entire spec (1310 lines)**, fails at assembly due to closure variable bug
 
-**Failure reason**: Code generation bug with `[:index, :__env__, N]` nodes being emitted as literal assembly instead of compiled. This is NOT a pattern matching bug - it's a pre-existing compiler issue with closure variable access.
+**Failure reason**: Pre-existing compiler bug with closure variable code generation. When pattern-bound variables are used in contexts that trigger the compiler's closure rewriting (e.g., inside blocks), the compiler transforms them into `[:index, :__env__, N]` nodes but then emits them as literal assembly: `movl $[:index, :__env__, 1], %eax` instead of compiling them to proper memory access instructions.
 
-**Example error**: Pattern-bound variables in `in Hash(a:, b:)` followed by `[a, b]` trigger assembly error because the compiler emits `movl $[:index, :__env__, 1], %eax` instead of proper variable access code.
+**What works**:
+- Simple pattern matching (no blocks): Compiles and runs correctly
+- All pattern types parse correctly
+- Variable scoping with __case_value works
+
+**What doesn't work**:
+- Pattern-bound variables used in block contexts (triggers closure bug)
+- Example: `it { case obj; in Hash(a:, b:); [a, b]; end }` - the `a` and `b` variables trigger the closure bug when accessed inside the block
 
 **Spec coverage**: 150+ pattern matching test cases covering Ruby 3.0+ features (all now parse successfully)
 
