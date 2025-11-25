@@ -75,6 +75,14 @@ class Compiler
             expected_value = elem[2]
             # Create: __case_value[key] == expected_value
             checks << [:eq, [:callm, :__case_value, :[], [key]], expected_value]
+          elsif elem.is_a?(Array) && elem[0] == :hash_splat
+            # Hash splat: ** or **rest
+            # In pattern matching, this allows additional keys beyond those checked
+            # If a variable is provided, it should capture remaining keys
+            # For now, we just ignore it (allows extra keys by default)
+            # TODO: Implement proper rest binding if variable name provided
+            rest_var = elem[1]
+            # Future: bind remaining keys to rest_var if needed
           end
         end
 
@@ -121,6 +129,29 @@ class Compiler
         condition = type_check
         checks.each do |check|
           condition = [:and, condition, check]
+        end
+
+        # Replace :in with :when
+        e[0] = :when
+        e[1] = condition
+        # e[2] remains the body
+      end
+
+      # Handle bare hash splat pattern: in ** or in **rest
+      # This matches any hash
+      if e[0] == :in && e[1].is_a?(Array) && e[1][0] == :hash_splat
+        hash_splat = e[1]
+        rest_var = hash_splat[1]
+        body = e[2]
+
+        # Match any hash
+        type_check = [:callm, :__case_value, :is_a?, [:Hash]]
+        condition = type_check
+
+        # If rest_var is provided, bind it to the matched hash
+        if rest_var
+          binding = [:do, [:assign, rest_var, :__case_value], [:sexp, true]]
+          condition = [:and, condition, binding]
         end
 
         # Replace :in with :when

@@ -259,7 +259,8 @@ class Parser < ParserBase
             patterns << E[:pattern_key, name]
           else
             # Full form: a: value
-            value = parse_subexp
+            # Use shunting with stop tokens to avoid consuming comma
+            value = @shunting.parse([',', ')', ']'])
             if !value
               expected("value after ':' in pattern")
             end
@@ -285,6 +286,26 @@ class Parser < ParserBase
           end
         end
       else
+        # Check for hash splat: ** or **rest
+        # Need to handle this specially before parse_subexp because
+        # bare ** has no operand and would fail in shunting yard
+        if literal('**')
+          ws
+          rest_var = parse_name
+          if rest_var
+            patterns << E[:hash_splat, rest_var]
+          else
+            patterns << E[:hash_splat]
+          end
+          ws
+          if literal(',')
+            ws
+            next
+          else
+            break
+          end
+        end
+
         # Try to parse other pattern forms
         exp = parse_subexp
         break if !exp
@@ -380,6 +401,18 @@ class Parser < ParserBase
         # Bare name - variable binding pattern (e.g., "in a")
         # Just return the name as-is
         return name
+      end
+    end
+
+    # Check for bare hash splat pattern: in ** or in **rest
+    # This pattern matches any hash
+    if literal('**')
+      ws
+      rest_var = parse_name
+      if rest_var
+        return E[pos, :hash_splat, rest_var]
+      else
+        return E[pos, :hash_splat]
       end
     end
 
