@@ -16,6 +16,41 @@ class Compiler
   # Transforms [:in, [:pattern, ConstName, [:pattern_key, :a], ...], body]
   # Into: [:when, condition_with_bindings, body]
   def rewrite_pattern_matching(exp)
+    # First pass: Find and wrap case statements containing :in nodes
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+
+      if e[0] == :case && e.size >= 3 && e[2].is_a?(Array)
+        # Check if any branch is an :in node
+        has_in = e[2].any? { |branch| branch.is_a?(Array) && branch[0] == :in }
+
+        if has_in
+          value_expr = e[1]
+          case_branches = e[2]
+          else_clause = e[3] if e.size > 3
+
+          # Create new case that uses __case_value
+          new_case = [:case, :__case_value, case_branches]
+          new_case << else_clause if else_clause
+
+          # Wrap in :let with proper :do block structure:
+          # [:let, [:__case_value], [:do, assign, case_stmt]]
+          e[0] = :let
+          e[1] = [:__case_value]
+          e[2] = [:do,
+            [:assign, :__case_value, value_expr],
+            new_case
+          ]
+          # Remove any extra elements
+          e.slice!(3..-1) if e.size > 3
+
+          # Skip further processing of this node to avoid infinite loop
+          next :skip
+        end
+      end
+    end
+
+    # Second pass: Transform :in nodes to :when nodes
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
 
