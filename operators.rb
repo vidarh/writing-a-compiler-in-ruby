@@ -138,8 +138,12 @@ Operators = {
 
   # Bitwise operators (in Ruby precedence order: & then ^ then |)
   # Note: & is defined above as context-sensitive
+  # ^ is also context-sensitive: infix for XOR, prefix for pin operator in patterns
 
-  "^"         => Oper.new( 10, :"^",      :infix, 2, 2, :left),
+  "^"         => {
+    :infix_or_postfix => Oper.new( 10, :"^",      :infix, 2, 2, :left),
+    :prefix           => Oper.new( 20, :pin, :prefix)
+  },
   "|"         => Oper.new(  9, :"|",      :infix, 2, 2, :left),
 
   "<"         => Oper.new(  8, :"\<",       :infix),
@@ -152,6 +156,7 @@ Operators = {
   "<=>"       => Oper.new(  8, :"<=>",      :infix),
   "=~"        => Oper.new(  8, :"=~",       :infix),   # Pattern match
   "!~"        => Oper.new(  8, :"!~",       :infix),   # Negative pattern match
+  "in"        => Oper.new(  8, :in,       :infix),   # Pattern matching (Ruby 3.0+)
 
   "+"         => {
     :infix_or_postfix  => Oper.new( 14, :+,      :infix, 2, 2, :left),

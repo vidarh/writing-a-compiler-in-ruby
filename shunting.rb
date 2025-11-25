@@ -95,6 +95,18 @@ module OpPrec
       #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}" if ENV['DEBUG_PARSER']
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
 
+      # Handle argument forwarding: ... when used standalone in function calls
+      # If we see ... with empty value stack inside foo(...), it's argument forwarding, not endless range
+      # Check: @is_call_context means we're inside foo(), vstack.empty? means no args yet
+      if op && op.sym == :exclusive_range &&
+         @out.vstack.empty? &&
+         @is_call_context
+        # This is argument forwarding in a method call: foo(...)
+        # Push :forward_args value and return
+        @out.value(:forward_args)
+        return :infix_or_postfix
+      end
+
       # Handle keyword argument shorthand: {a:, b:} where : is followed by ,
       # When we see comma in a hash and last operator is :ternalt, check if last token was :
       # If last token was :, then :ternalt has no right value and needs nil
@@ -104,6 +116,25 @@ module OpPrec
          ostack.last && ostack.last.sym == :ternalt &&
          src.lasttoken && src.lasttoken[0] == ":"
         @out.value(nil)
+      end
+
+      # Handle keyword argument shorthand in function calls: foo(a:, b:) where : is followed by ,
+      # Similar to above but for parenthesis context (ostack.first.sym == nil)
+      if op && op.sym == :comma &&
+         !ostack.empty? && ostack.first && ostack.first.sym == nil &&
+         ostack.last && ostack.last.sym == :ternalt &&
+         src.lasttoken && src.lasttoken[0] == ":"
+        @out.value(nil)
+      end
+
+      # Handle bare splat in patterns: [*, x] where * has no name
+      # When we see comma/close-bracket/semicolon after * and last token was literally *, push :_ placeholder
+      # This handles pattern matching syntax like "in [*, 9, *post]", "{a: [*, 9]}", and "in *;"
+      # We check if lasttoken was * to ensure no variable was consumed between * and the operator
+      if op && (op.sym == :comma || op.sym == :do || (op.is_a?(Hash) && op[:infix_or_postfix] && op[:infix_or_postfix].type == :rp)) &&
+         !ostack.empty? && ostack.last && ostack.last.sym == :splat &&
+         src.lasttoken && src.lasttoken[0] == "*"
+        @out.value(:_)
       end
 
       # begin is always a complete expression that produces a value
@@ -324,10 +355,21 @@ module OpPrec
            token == :end)
 
           src.unget(token)
-          # If we're in prefix position with a minarity 0 operator, it needs nil
+          # If we're in prefix position with a minarity 0 operator, it needs a value
           # This handles cases like "literal("(") or return\n" where return has no argument
+          # For bare splat in patterns (in *;), push :_ instead of nil
           if opstate == :prefix && ostack.last && ostack.last.type == :prefix && ostack.last.minarity == 0
-            @out.value(nil)
+            if ostack.last.sym == :splat
+              @out.value(:_)
+            else
+              @out.value(nil)
+            end
+          # Special case: bare splat followed by inhibited token (in *; or in * \n)
+          # Check if last token was * and splat operator is on stack
+          elsif opstate == :prefix && ostack.last && ostack.last.sym == :splat &&
+                src.lasttoken && src.lasttoken[0] == "*"
+            @out.value(:_)
+            opstate = :infix_or_postfix  # Mark that we provided a value
           end
           break
         end
@@ -337,9 +379,14 @@ module OpPrec
 
           # Handle prefix operators with minarity 0 when an infix operator arrives
           # Example: "break; 42" - the ; is infix, so break should close with nil
+          # For bare splat in patterns, push :_ instead of nil
           # Note: :lp types ([, {, () are not infix - they provide values to the prefix operator
           if opstate == :prefix && op && op.type == :infix && ostack.last && ostack.last.type == :prefix && ostack.last.minarity == 0
-            @out.value(nil)
+            if ostack.last.sym == :splat
+              @out.value(:_)
+            else
+              @out.value(nil)
+            end
           end
 
           # This makes me feel dirty, but it reflects the grammar:

@@ -235,14 +235,143 @@ class Parser < ParserBase
     return E[:when, cond, parse_opt_defexp]
   end
 
+  # Parse pattern contents inside Hash[...] or Array[...]
+  # Handles special pattern syntax like a:, b: (keyword pattern bindings)
+  def parse_pattern_list
+    patterns = []
+
+    loop do
+      ws
+      break if @scanner.peek == ']' || @scanner.peek == ')'
+
+      # Parse a single pattern element
+      # Try to parse keyword pattern (a:, b:) or positional pattern
+      name = parse_name
+      if name
+        ws
+        if literal(':')
+          # Keyword pattern: a: binds to variable a
+          # Store as [:pattern_key, :a] meaning bind key :a to variable a
+          patterns << E[:pattern_key, name]
+          ws
+          if literal(',')
+            ws
+            next
+          else
+            break
+          end
+        else
+          # Just a name, could be a constant or variable
+          patterns << name
+          ws
+          if literal(',')
+            ws
+            next
+          else
+            break
+          end
+        end
+      else
+        # Try to parse other pattern forms
+        exp = parse_subexp
+        break if !exp
+        patterns << exp
+        ws
+        if literal(',')
+          ws
+          next
+        else
+          break
+        end
+      end
+    end
+
+    patterns
+  end
+
+  # Parse a bare hash pattern like: a: 1, b: 2
+  # Called when we've already consumed the first name and seen that it's followed by :
+  # first_name: the name we already consumed
+  # Returns a hash node
+  def parse_hash_pattern_after_name(first_name)
+    pairs = []
+
+    # Process first pair (name already consumed)
+    ws
+    literal(':') or expected("':' after hash pattern key")
+    ws
+    value = parse_subexp
+    if !value
+      expected("value after ':' in hash pattern")
+    end
+    pairs << E[:pair, E[:sexp, first_name.inspect.to_sym], value]
+
+    # Parse remaining pairs
+    loop do
+      ws
+      break unless literal(',')
+      ws
+      name = parse_name
+      break if !name
+      ws
+      literal(':') or expected("':' after hash pattern key")
+      ws
+      value = parse_subexp
+      if !value
+        expected("value after ':' in hash pattern")
+      end
+      pairs << E[:pair, E[:sexp, name.inspect.to_sym], value]
+    end
+
+    return E[:hash] + pairs
+  end
+
+  # Parse a pattern for pattern matching (Ruby 3.0+)
+  # Handles special syntax like Hash[a:, b:] and bare hash patterns like a: 1, b: 2
+  def parse_pattern
+    pos = position
+
+    # Try to parse a constant name followed by [ or (
+    name = parse_name
+    if name
+      ws
+      # Check for ConstantName[pattern] or ConstantName(pattern) syntax
+      if literal('[')
+        # Parse pattern list inside brackets using special pattern syntax
+        ws
+        pattern_contents = parse_pattern_list
+        ws
+        literal(']') or expected("']' to close pattern")
+        # Return as a pattern node: [:pattern, ConstantName, contents]
+        return E[pos, :pattern, name] + pattern_contents
+      elsif literal('(')
+        # Parse pattern list inside parentheses
+        ws
+        pattern_contents = parse_pattern_list
+        ws
+        literal(')') or expected("')' to close pattern")
+        return E[pos, :pattern, name] + pattern_contents
+      elsif @scanner.peek == ':'
+        # Bare hash pattern like a: 1, b: 2 (name already consumed)
+        return parse_hash_pattern_after_name(name)
+      else
+        # Bare name - variable binding pattern (e.g., "in a")
+        # Just return the name as-is
+        return name
+      end
+    end
+
+    # Fall back to regular condition parsing for other patterns
+    parse_condition
+  end
+
   # in ::= "in" ws* pattern (nolfws* (":" | "then" | ";"))? ws* defexp*
   # Pattern matching branch for case statements (Ruby 3.0+)
-  # For now, parse pattern like a condition - actual pattern matching not implemented
   def parse_in
     pos = position
     keyword(:in) or return
     ws
-    pattern = parse_condition or expected("pattern for 'in'")
+    pattern = parse_pattern or expected("pattern for 'in'")
     nolfws
     literal(COLON) || keyword(:then) || literal(SEMICOLON)
     ws

@@ -12,7 +12,98 @@ require 'scanner'
 class Compiler
   include AST
 
-  # For 'bare' blocks, or "Proc" objects created with 'proc', we 
+  # Rewrite pattern matching :in clauses into :when clauses with conditions
+  # Transforms [:in, [:pattern, ConstName, [:pattern_key, :a], ...], body]
+  # Into: [:when, condition_with_bindings, body]
+  def rewrite_pattern_matching(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+
+      # Find :in nodes with bare name patterns (e.g., in a)
+      if e[0] == :in && e[1].is_a?(Symbol)
+        var_name = e[1]
+        body = e[2]
+
+        # Transform to: when (var_name = __case_value; true) then body end
+        # This always matches and binds the value to the variable
+        binding = [:do, [:assign, var_name, :__case_value], [:sexp, true]]
+
+        # Replace :in with :when
+        e[0] = :when
+        e[1] = binding
+        # e[2] remains the body
+      end
+
+      # Find :in nodes with :pattern children (constant-qualified patterns)
+      if e[0] == :in && e[1].is_a?(Array) && e[1][0] == :pattern
+        pattern = e[1]
+        const_name = pattern[1]
+        pattern_elements = pattern[2..-1]
+        body = e[2]
+
+        # Build variable bindings for pattern_key elements
+        bindings = []
+        pattern_elements.each do |elem|
+          if elem.is_a?(Array) && elem[0] == :pattern_key
+            var_name = elem[1]
+            # Create: var_name = __case_value[:var_name]
+            bindings << [:assign, var_name, [:callm, :__case_value, :[], [[:sexp, var_name.inspect.to_sym]]]]
+          end
+        end
+
+        # Create condition: __case_value.is_a?(ConstName) && (bindings; true)
+        type_check = [:callm, :__case_value, :is_a?, [const_name]]
+
+        if bindings.empty?
+          # No bindings, just type check
+          condition = type_check
+        else
+          # Type check AND execute bindings
+          # Use :do block to execute bindings and return true
+          binding_block = [:do] + bindings + [[:sexp, true]]
+          condition = [:and, type_check, binding_block]
+        end
+
+        # Replace :in with :when
+        e[0] = :when
+        e[1] = condition
+        # e[2] remains the body
+      end
+
+      # Find :in nodes with bare :hash patterns (e.g., in a: 1, b: 2)
+      if e[0] == :in && e[1].is_a?(Array) && e[1][0] == :hash
+        hash_pattern = e[1]
+        pairs = hash_pattern[1..-1]
+        body = e[2]
+
+        # Build conditions for each key-value pair
+        # Each pair is [:pair, [:sexp, :key], value]
+        checks = []
+        pairs.each do |pair|
+          key = pair[1]
+          expected_value = pair[2]
+          # Create: __case_value[key] == expected_value
+          checks << [:eq, [:callm, :__case_value, :[], [key]], expected_value]
+        end
+
+        # Combine all checks with && (and)
+        # Start with type check: __case_value.is_a?(Hash)
+        type_check = [:callm, :__case_value, :is_a?, [:Hash]]
+        condition = type_check
+        checks.each do |check|
+          condition = [:and, condition, check]
+        end
+
+        # Replace :in with :when
+        e[0] = :when
+        e[1] = condition
+        # e[2] remains the body
+      end
+    end
+    exp
+  end
+
+  # For 'bare' blocks, or "Proc" objects created with 'proc', we
   # replace the standard return with ":preturn", which ensures the
   # return is forced to exit the defining scope, instead of "just"
   # exiting the block itself and then Proc#call.
@@ -104,6 +195,38 @@ class Compiler
     return seen
   end
 
+
+  # Convert :ternalt to :pair for method call keyword arguments
+  # In method calls, :ternalt nodes need to be converted to :pair nodes
+  # Hash/array contexts are handled by treeoutput.rb, but method args are not
+  # Ternary operators (?:) use :ternalt inside :ternif and should NOT be converted
+  # foo(a: 42) => [:call, [:foo, [:ternalt, :a, 42]]] => [:call, [:foo, [:pair, [:sexp, :a], 42]]]
+  # foo(a:) => [:call, [:foo, [:ternalt, :a, nil]]] => [:call, [:foo, [:pair, [:sexp, :a], :a]]]
+  def convert_ternalt_in_calls(exp)
+    # Walk the tree and convert :ternalt to :pair only inside :call nodes
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      # Only process :call nodes to convert their :ternalt arguments
+      if e.is_a?(Array) && e[0] == :call && e[2].is_a?(Array)
+        # e[2] is the arguments array
+        e[2].each do |arg|
+          if arg.is_a?(Array) && arg[0] == :ternalt
+            # Convert [:ternalt, key, value] to [:pair, [:sexp, :key], value]
+            key = arg[1]
+            value = arg[2]
+            # If no value provided (keyword argument shorthand), use the key name as the value
+            if value.nil?
+              value = key
+            end
+            # key must be a symbol for keyword arguments
+            if key.is_a?(Symbol)
+              arg.replace(E[:pair, E[:sexp, key.inspect.to_sym], value])
+            end
+          end
+        end
+      end
+    end
+  end
 
   # Rewrite defined? operator to return appropriate string or false
   # This must happen BEFORE rewrite_strconst so strings get properly handled
@@ -1121,6 +1244,7 @@ class Compiler
     # Pre-register constants after for/destruct rewrites create assignments
     register_constants(exp, @global_scope)
 
+    convert_ternalt_in_calls(exp)  # Convert :ternalt to :pair for method call keyword arguments
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_defined(exp)  # Must run before rewrite_strconst

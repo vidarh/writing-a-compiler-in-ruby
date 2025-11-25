@@ -55,7 +55,8 @@ class Compiler
                    :bitand, :bitor, :bitxor, # Bitwise operators
                    :mulfull, # Widening multiply - returns both low and high words
                   :div64, # 64-bit division - divides EDX:EAX by operand
-                  :unwind # Exception stack unwinding
+                  :unwind, # Exception stack unwinding
+                  :pattern # Pattern matching (Ruby 3.0+)
                   ]
 
   Keywords = @@keywords
@@ -1592,6 +1593,7 @@ class Compiler
   def compile exp
     alloc_vtable_offsets(exp)
     scan_and_register_constants(exp)  # Pre-scan to register all constants
+    rewrite_pattern_matching(exp)     # Transform pattern matching to when clauses
     compile_main(exp)
     # after the main function, we ouput all functions and constants
     # used and defined so far.
