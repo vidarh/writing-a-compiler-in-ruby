@@ -328,6 +328,50 @@ class Compiler
     end
   end
 
+  # Group keyword argument :pair and :hash_splat nodes into a :hash in method calls
+  # After convert_ternalt_in_calls, we have [:pair, ...] nodes that need to be grouped
+  # foo(a: 1, b: 2) => [:call, :foo, [[:pair, ...], [:pair, ...]]]
+  #   becomes => [:call, :foo, [[:hash, [:pair, ...], [:pair, ...]]]]
+  # foo(x, a: 1) => [:call, :foo, [x, [:pair, ...]]]
+  #   becomes => [:call, :foo, [x, [:hash, [:pair, ...]]]]
+  # foo(**h) => [:call, :foo, [[:hash_splat, h]]]
+  #   becomes => [:call, :foo, [h]] (just use h directly as hash)
+  def group_keyword_arguments(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      # Only process :call and :callm nodes
+      if e.is_a?(Array) && (e[0] == :call || e[0] == :callm)
+        args_index = e[0] == :call ? 2 : 3
+        next unless e[args_index].is_a?(Array)
+
+        args = e[args_index]
+        new_args = []
+        pairs_and_splats = []
+
+        args.each do |arg|
+          if arg.is_a?(Array) && (arg[0] == :pair || arg[0] == :hash_splat)
+            pairs_and_splats << arg
+          else
+            # Non-keyword argument - flush any accumulated pairs
+            if !pairs_and_splats.empty?
+              new_args << E[:hash, *pairs_and_splats]
+              pairs_and_splats = []
+            end
+            new_args << arg
+          end
+        end
+
+        # Flush remaining pairs/splats at end
+        if !pairs_and_splats.empty?
+          new_args << E[:hash, *pairs_and_splats]
+        end
+
+        # Replace args array
+        e[args_index] = new_args
+      end
+    end
+  end
+
   # Rewrite defined? operator to return appropriate string or false
   # This must happen BEFORE rewrite_strconst so strings get properly handled
   def rewrite_defined(exp)
@@ -1361,6 +1405,7 @@ class Compiler
     register_constants(exp, @global_scope)
 
     convert_ternalt_in_calls(exp)  # Convert :ternalt to :pair for method call keyword arguments
+    group_keyword_arguments(exp)   # Group :pair and :hash_splat nodes into :hash
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_defined(exp)  # Must run before rewrite_strconst
@@ -1369,8 +1414,89 @@ class Compiler
     rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
+    rewrite_keyword_args(exp)   # Must run before rewrite_default_args
     rewrite_default_args(exp)
     rewrite_let_env(exp)
+  end
+
+  # Transform keyword arguments from method signature into hash extraction
+  # This turns:
+  #   def foo(a:, b: default_val)
+  #     body
+  #   end
+  # Into:
+  #   def foo(__kwargs)
+  #     a = __kwargs[:a] || raise(ArgumentError.new("missing keyword: :a"))
+  #     b = __kwargs[:b] || default_val
+  #     body
+  #   end
+  #
+  # This must run BEFORE rewrite_default_args and rewrite_let_env
+  def rewrite_keyword_args(exp)
+    exp.depth_first(:defm) do |e|
+      args = e[2]
+      next unless args.is_a?(Array)
+
+      # Check if any args are keyword arguments
+      has_kwargs = args.any? { |arg| arg.is_a?(Array) && [:keyreq, :key, :keyrest].include?(arg[1]) }
+      next unless has_kwargs
+
+      # Collect regular args and keyword args
+      regular_args = []
+      kwarg_extractions = []
+      has_keyrest = false
+      keyrest_name = nil
+
+      args.each do |arg|
+        if arg.is_a?(Array)
+          name = arg[0]
+          type = arg[1]
+          default = arg[2]
+
+          if type == :keyreq
+            # Required keyword argument
+            kwarg_extractions << [:assign, name,
+              [:or,
+                [:callm, :__kwargs, :[], [[:sexp, name.inspect.to_sym]]],
+                [:call, :raise, [[:callm, :ArgumentError, :new, ["missing keyword: :#{name}".to_sym]]]]
+              ]
+            ]
+          elsif type == :key
+            # Optional keyword argument with default
+            kwarg_extractions << [:assign, name,
+              [:or,
+                [:callm, :__kwargs, :[], [[:sexp, name.inspect.to_sym]]],
+                default
+              ]
+            ]
+          elsif type == :keyrest
+            # **kwargs - captures remaining keyword arguments
+            has_keyrest = true
+            keyrest_name = name
+            # For now, just assign the whole hash
+            kwarg_extractions << [:assign, name, :__kwargs] if name
+          else
+            # Regular argument
+            regular_args << arg
+          end
+        else
+          # Symbol argument (no type annotation)
+          regular_args << arg
+        end
+      end
+
+      # Replace args with regular args + __kwargs
+      new_args = regular_args + [:__kwargs]
+
+      # Prepend keyword argument extractions to body
+      body = e[3]
+      body = [] unless body.is_a?(Array)
+      new_body = kwarg_extractions + body
+
+      # Update method definition
+      e[2] = new_args
+      e[3] = new_body
+    end
   end
 
   # Transform default arguments from method signature into method body
