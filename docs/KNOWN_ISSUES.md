@@ -2245,3 +2245,38 @@ obj::FOO = 1  # Error: Expected argument on left hand side of assignment
 
 ---
 
+
+## Pattern Matching with Nested Closures (CRITICAL)
+
+**Issue**: Pattern-bound variables inside closures are not properly captured in `__env__` if they need to be accessed by nested closures.
+
+**Root cause**: The transformation pipeline order is:
+1. `preprocess` → `rewrite_let_env` → `find_vars` + `rewrite_env_vars`
+2. `compile` → `rewrite_pattern_matching` (creates variable bindings)
+
+Since `find_vars` runs BEFORE `rewrite_pattern_matching`, it doesn't see pattern-bound variables and won't add them to `__env__`. The fix in transform.rb:704 skips rewriting `:pattern_key` variable names to prevent literal `[:index, :__env__, N]` in assembly, but this means pattern-bound variables won't be captured for nested closures.
+
+**Example that fails**:
+```ruby
+result = nil
+1.times {
+  case {x: 42}
+  in {x:}
+    1.times { result = x }  # ERROR: undefined method 'x'
+  end
+}
+puts result  # Should print 42, but fails
+```
+
+**What works**:
+- Pattern matching at closure top level (no nested closures)
+- Pattern-bound variables used directly in the same closure
+
+**What doesn't work**:
+- Pattern-bound variables accessed from nested closures
+- Pattern-bound variables passed to methods that create closures
+
+**Potential fix**: Need to either:
+1. Run `rewrite_pattern_matching` before `rewrite_let_env` (major reordering)
+2. Have `rewrite_pattern_matching` insert proper `[:index, :__env__, N]` nodes directly
+3. Add a second pass after pattern matching to identify captured pattern variables
