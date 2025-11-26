@@ -195,6 +195,19 @@ class Compiler
   def compile_call(scope, func, args, block = nil, pos = nil)
     return compile_yield(scope, args, block) if func == :yield
 
+    # Handle visibility methods (private, protected, public) at compile time
+    # These are no-ops since visibility isn't enforced in this compiler
+    # But we need to handle them here because method calls in class bodies
+    # don't work correctly (self/%esi not set up properly)
+    if [:private, :protected, :public].include?(func)
+      if scope.is_a?(ModuleScope)
+        # In class/module body - just return nil (visibility not enforced)
+        @e.movl("nil", :eax)
+        return Value.new([:subexpr])
+      end
+      # Fall through to regular method call in other contexts
+    end
+
     # Handle 'include ModuleName' as compile-time module inclusion
     # Works in:
     # - ClassScope/ModuleScope (class/module body) - includes into that class/module
