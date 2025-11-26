@@ -105,6 +105,41 @@ module Tokens
           if result
             ret = result
             buf = ""
+          # Check for simple interpolation #$var, #@ivar, #@@cvar
+          elsif s.peek == ?$ || s.peek == ?@
+            # Initialize ret as [:concat] if not already done
+            ret = [:concat] if !ret
+            ret << buf
+            buf = ""
+
+            # Parse the variable
+            var_start = s.peek
+            s.get  # consume $ or @
+
+            # For class variables, consume second @
+            if var_start == ?@ && s.peek == ?@
+              s.get
+              prefix = "@@"
+            elsif var_start == ?@
+              prefix = "@"
+            else
+              prefix = "$"
+            end
+
+            # Read variable name
+            var_name = ""
+            while s.peek && ((?a..?z).member?(s.peek) || (?A..?Z).member?(s.peek) ||
+                            (?0..?9).member?(s.peek) || s.peek == ?_)
+              var_name << s.get
+            end
+
+            # If no variable name found, treat as literal # followed by $ or @
+            if var_name.empty?
+              buf << "#" << var_start.chr
+            else
+              # Add the variable reference to interpolation
+              ret << (prefix + var_name).to_sym
+            end
           else
             buf << e
           end
