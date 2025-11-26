@@ -733,6 +733,12 @@ def skip(message = nil)
   $current_test_has_failure = false
 end
 
+# suppress_warning helper used by some specs
+# In MRI this temporarily suppresses warnings, but we don't have warnings
+def suppress_warning
+  yield
+end
+
 # Context is an alias for describe
 def context(description, &block)
   describe(description, &block)
