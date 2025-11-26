@@ -137,7 +137,8 @@ run_single_spec() {
         # The binary name is based on the temp file name
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
         # Run spec and capture output using script to force line buffering via PTY
-        script -q -c "./out/${TEMP_SPEC_NAME}" /tmp/spec_output_$$ < /dev/null > /dev/null 2>&1
+        # Use timeout to prevent hanging specs (30s timeout)
+        timeout 30 script -q -c "./out/${TEMP_SPEC_NAME}" /tmp/spec_output_$$ < /dev/null > /dev/null 2>&1
         # Determine exit code based on output: if summary line exists, it completed
         if grep -q "passed.*failed.*skipped" /tmp/spec_output_$$; then
             # Completed - check if any failures
@@ -422,7 +423,8 @@ elif [ -f "$TARGET" ]; then
         echo "Running spec..."
         echo "================================"
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
-        ./out/${TEMP_SPEC_NAME}
+        # Use timeout to prevent hanging specs (30s timeout)
+        timeout 30 ./out/${TEMP_SPEC_NAME}
         EXIT_CODE=$?
         # rm -f "$TEMP_SPEC"
 
