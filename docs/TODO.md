@@ -2,7 +2,7 @@
 
 **Purpose**: Outstanding tasks prioritized by impact and difficulty. See KNOWN_ISSUES.md for detailed bug descriptions and RUBYSPEC_CRASH_ANALYSIS.md for crash categorization.
 
-## Test Status (2025-11-26 - Post Phase 0)
+## Test Status (2025-11-26 - Post Compile-Time Method Handling)
 
 **Selftest**: ✅ **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Language Specs**: 78 files
@@ -11,16 +11,33 @@
 - 💥 **CRASHED**: 51 files (65%) - segfaults, timeouts, or early exits
 - 🎉 **COMPILE FAIL**: 0 files (0%) - **ALL SPECS NOW COMPILE!**
 
-**Individual test results**: 166 passed / 801 failed / 16 skipped (Total: 983 tests)
-- **Pass rate**: 16.9% (up from 16.2%)
+**Individual test results**: 200 passed / 833 failed / 17 skipped (Total: 1050 tests)
+- **Pass rate**: 19% (up from 18%)
+- **Tests fixed**: +2 tests (198→200)
 - **Expected failures** (known limitations): ~632 tests
   - Regexp not implemented: 507 failures
   - eval() not supported (AOT): ~100 failures
   - Float not implemented: ~17 failures
   - Command execution: ~8 failures
-- **Fixable failures**: ~169 tests (17% of failures)
+- **Fixable failures**: ~118 tests (16% of failures)
 
-**Phase 0 Results** (2025-11-26):
+**Recent Improvements** (2025-11-26):
+
+**Compile-Time Method Handling** (+2 tests):
+- Handle visibility methods (private, protected, public) at compile time in class/module bodies
+- Handle attr methods (attr, attr_reader, attr_writer, attr_accessor) at compile time
+- Handle module_function, prepend, extend at compile time
+- These methods are no-ops since visibility isn't enforced - just return nil
+- Fixes crashes where these methods were called at runtime but not found
+
+**Parser Fixes** (+16 tests, +2.3% pass rate):
+- Fixed argument forwarding detection in shunting.rb (distinguish `(...)` from `[...]`)
+- Fixed convert_ternalt_in_calls to handle :callm nodes (keyword args in method calls work)
+- Added partial argument forwarding transformation (def(...) → def(*args, **kwargs, &block))
+- Fixed regression where `$:[0...idx]` was incorrectly parsed as argument forwarding
+- predefined_spec now compiles and runs successfully
+
+**Phase 0 Results** (earlier):
 - Stubbed 15+ methods: attr, prepend, extend, class_eval, module_function, catch, throw, redo, fixture, singleton_class, String#=~, Regexp#=~, Hash#pair, Hash#hash_splat
 - Added 30s timeout to run_rubyspec to prevent infinite hangs
 - +3 tests passing (163→166)
