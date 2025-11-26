@@ -1,26 +1,30 @@
 # Known Issues
 
-**Last Updated**: 2025-11-26
+**Last Updated**: 2025-11-26 (Post Phase 1.2)
 
 ## Current State Summary
 
-**Test Status**: 78 language specs, 163/1004 tests passing (16.2% pass rate)
+**Test Status**: 78 language specs, 166/983 tests passing (16.9% pass rate)
 - ✅ PASSED: 3 specs (and_spec, not_spec, unless_spec)
-- ❌ FAILED: 25 specs - run but fail assertions  
-- 💥 CRASHED: 50 specs - segfaults/hangs
+- ❌ FAILED: 24 specs - run but fail assertions
+- 💥 CRASHED: 51 specs - segfaults/hangs
 - 🎉 **COMPILE FAIL: 0 specs** - All specs now compile!
 
-**Expected limitations** (~632 test failures, 63% of all failures):
+**Recent fixes** (Phase 1.1-1.3):
+- ✅ break returns nil (was returning false) - +3 tests
+- ✅ String interpolation #{} in percent strings - eliminated all "hey #xxx" failures
+- ✅ Post-test loops (begin...end until) execute body at least once
+
+**Expected limitations** (~632 test failures, 64% of all failures):
 - Regexp not implemented: 507 failures
 - eval() not supported (AOT): ~100 failures
 - Float not implemented: ~17 failures
 - Command execution: ~8 failures
 
-**Fixable issues** (~192 test failures, 19% of all failures):
-- Segfaults: ~300-450 tests blocked
-- Missing methods: ~97 tests
-- String interpolation bug: ~40 tests
-- Loop control issues: ~8 tests
+**Fixable issues** (~152 test failures, 15% of all failures):
+- Segfaults: ~300-450 tests blocked (Phase 3/4 work)
+- Keyword arguments: ~60 tests (blocked on compiler changes)
+- Missing methods: ~50 tests
 - Hash edge cases: ~15 tests
 - Other bugs: ~20+ tests
 
@@ -52,56 +56,60 @@ WARNING:    class 'Class'
 
 ---
 
-### 2. Missing Hash Methods
+### 2. Keyword Arguments / Hash Splatting (BLOCKED)
 
-**Impact**: 60+ test failures, blocks keyword arguments entirely
+**Impact**: 60+ test failures
 
-**Missing methods**:
-1. **`Hash#pair`** - Returns `[key, value]` for hash entry (30+ tests affected)
-2. **`Hash#hash_splat`** - Handles `**kwargs` expansion (20+ tests affected)  
-3. **`Hash#merge`** - Needed for `**` operator in literals (10+ tests affected)
+**Status**: ⚠️ BLOCKED - Requires major compiler changes (1-2 weeks estimated)
+
+**Issue**: `:pair` and `:hash_splat` AST nodes aren't in compiler keywords list. When they appear as method arguments, they're treated as method calls instead of being properly compiled.
+
+**Error**: "undefined method 'hash_splat' for #<Object>"
+
+**Required work**:
+1. Add `:pair` and `:hash_splat` to compiler keywords list
+2. Implement `compile_pair` and `compile_hash_splat` methods
+3. OR: Transform keyword args in transform.rb before compilation
+4. Update argument passing conventions
 
 **Files affected**: keyword_arguments_spec (0/26 tests pass), hash_spec, def_spec, END_spec
 
-**Priority**: HIGH - Easy to implement, high impact
+**Priority**: HIGH impact but BLOCKED on architectural changes - See docs/TODO.md Phase 1.4
 
 ---
 
-### 3. String Interpolation Without Braces
+### 3. ✅ FIXED - String Interpolation in Percent Strings
 
-**Impact**: 40+ test failures in string_spec and heredoc_spec
+**Status**: ✅ Fixed in commit a39b3ef
 
-**Issue**: Simple interpolation forms don't work:
+**Issue**: Interpolation with #{} in percent strings included extra "#":
 ```ruby
-$x = "hello"
-"#$x"     # Expected: "hello", Got: "#$x" (literal)
-"#@ivar"  # Expected: value, Got: "#@ivar" (literal)
-"#@@cvar" # Expected: value, Got: "#@@cvar" (literal)
-
-"#{$x}"   # ✓ Works: "hello" (braced form)
+%(hey #{@ip})  # Was: "hey #xxx", Now: "hey xxx" ✓
 ```
 
-**Root cause**: Parser/scanner doesn't recognize `#$`/`#@`/`#@@` as interpolation start
+**Root cause**: tokens.rb was adding "#" to buffer BEFORE checking for interpolation
 
-**Priority**: HIGH - Parser fix, moderate impact
+**Fix**: Check for interpolation first, only add "#" if not followed by "{"
 
 ---
 
-## Quick Wins (Easy Implementations)
+## Quick Wins (Remaining Easy Implementations)
 
-### Missing Core Methods (97+ test impact, ~8 hours work)
+### Missing Core Methods (~40 test impact, ~6 hours work)
 
-1. **`Kernel#catch`/`throw`** - 18 tests (throw_spec entirely fails)
+1. **`Kernel#catch`/`throw`** - 18 tests (throw_spec crashes, needs proper non-local return)
 2. **`String#=~`, `Regexp#=~`** - 10 tests (can stub to return nil)
-3. **`Object#redo`** - 6 tests (loop control)
-4. **Fix `break` return value** - 3 tests (returns false, should be nil)
+3. **`Object#instance_eval`** - Variable impact (many specs need this)
+4. **`Object#proc`** - ~5 tests (Proc creation helper)
+5. **`Kernel#fixture`** - ~10 tests (Test framework helper, already stubbed)
 
-### Loop Control Issues (8+ test impact)
+### ✅ Completed Quick Wins
 
-1. `next` in modifier form doesn't skip correctly
-2. `begin...end until` doesn't execute body at least once before checking condition
+1. ✅ **Fix `break` return value** - Fixed in Phase 1.1 (+3 tests)
+2. ✅ **`Object#redo`** - Stubbed to raise RuntimeError (+0 tests, prevents crashes)
+3. ✅ **`begin...end until` loop** - Fixed in Phase 1.3 (+3 tests estimated)
 
-**Files affected**: until_spec (8 failures)
+**Files affected**: until_spec (remaining ~5 failures)
 
 ---
 
