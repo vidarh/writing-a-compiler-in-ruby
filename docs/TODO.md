@@ -184,12 +184,12 @@
 
 After stubs are working, implement full functionality:
 
-### 1.1 Fix break Return Value (15 minutes, 3 tests)
+### 1.1 ✅ COMPLETE - Fix break Return Value (15 minutes, 3 tests)
 
 **Issue**: `break` with no arguments returns `false` instead of `nil`
-**Fix**: Change default break value from false to nil in compiler
-**File**: compile_control.rb or similar
-**Impact**: +3 tests (until_spec)
+**Fix**: Changed default break value from false to nil in compile_control.rb lines 256-260, 279
+**Status**: ✅ Fixed - break now correctly returns nil
+**Impact**: +3 tests (until_spec improved 18→21 passed)
 
 ### 1.2 String Interpolation Bug (2-3 hours, 40+ tests)
 
@@ -206,15 +206,21 @@ $x = "hello"
 **Files affected**: string_spec (21 failures), heredoc_spec (10 failures)
 **Impact**: +40 tests
 
-### 1.3 Loop Control Issues (2-3 hours, 8+ tests)
+### 1.3 ✅ PARTIAL - Loop Control Issues (2-3 hours, 8+ tests)
 
 **Issues**:
-1. `next` in modifier form doesn't work correctly
-2. `begin...end until condition` doesn't execute body at least once
+1. ~~`next` in modifier form doesn't work correctly~~ - Actually working, tests pass
+2. ✅ `begin...end until condition` doesn't execute body at least once - FIXED
 
+**Fix**: Modified compile_until in compile_control.rb (lines 191-228)
+- Detect post-test loops by [:block, [], ...] pattern
+- Extract body from body[2] (statements array)
+- Generate: loop_label: body; if !cond goto loop_label
+
+**Status**: ✅ Post-test loops fixed
 **File**: compile_control.rb
-**Files affected**: until_spec (8 failures)
-**Impact**: +8 tests
+**Files affected**: until_spec
+**Impact**: Fixes specific semantic bug where `begin; body; end until cond` must execute body at least once
 
 ### 1.4 Implement Hash Methods Fully (2 hours, 60+ tests)
 
