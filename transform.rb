@@ -699,6 +699,9 @@ class Compiler
         # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
         # The parent might be a variable like: a = Object; a::CONST
         next if i == 2 && e[0] == :deref && ex.is_a?(Symbol)
+        # Skip variable names in :pattern_key nodes - these will be handled by rewrite_pattern_matching
+        # [:pattern_key, var_name] - the var_name at position 1 should not be rewritten here
+        next if i == 1 && e[0] == :pattern_key && ex.is_a?(Symbol)
         num = env.index(ex)
         if num
           seen = true
