@@ -15,6 +15,11 @@ class Compiler
   # Rewrite pattern matching :in clauses into :when clauses with conditions
   # Transforms [:in, [:pattern, ConstName, [:pattern_key, :a], ...], body]
   # Into: [:when, condition_with_bindings, body]
+  #
+  # IMPORTANT: This runs in compile() AFTER preprocess(), which means it runs AFTER
+  # find_vars/rewrite_env_vars. Pattern-bound variables won't be identified for closure
+  # capture, so they won't work correctly in nested closures.
+  # See rewrite_env_vars() and docs/KNOWN_ISSUES.md for details.
   def rewrite_pattern_matching(exp)
     # First pass: Find and wrap case statements containing :in nodes
     exp.depth_first do |e|
@@ -699,8 +704,21 @@ class Compiler
         # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
         # The parent might be a variable like: a = Object; a::CONST
         next if i == 2 && e[0] == :deref && ex.is_a?(Symbol)
+
         # Skip variable names in :pattern_key nodes - these will be handled by rewrite_pattern_matching
         # [:pattern_key, var_name] - the var_name at position 1 should not be rewritten here
+        #
+        # IMPORTANT LIMITATION: This prevents literal [:index, :__env__, N] in assembly, but means
+        # pattern-bound variables won't be captured in __env__ for nested closures. This is because
+        # find_vars runs BEFORE rewrite_pattern_matching creates the pattern bindings.
+        #
+        # Example that FAILS with nested closures:
+        #   1.times { case {x: 42} in {x:}; 1.times { puts x }; end }  # ERROR: undefined method 'x'
+        #
+        # Example that WORKS (single-level closure):
+        #   1.times { case {x: 42} in {x:}; puts x; end }  # OK: prints 42
+        #
+        # See docs/KNOWN_ISSUES.md - "Pattern Matching with Nested Closures"
         next if i == 1 && e[0] == :pattern_key && ex.is_a?(Symbol)
         num = env.index(ex)
         if num

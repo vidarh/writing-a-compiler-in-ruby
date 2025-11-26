@@ -1594,7 +1594,12 @@ class Compiler
   def compile exp
     alloc_vtable_offsets(exp)
     scan_and_register_constants(exp)  # Pre-scan to register all constants
-    rewrite_pattern_matching(exp)     # Transform pattern matching to when clauses
+
+    # Transform pattern matching to when clauses
+    # NOTE: This runs AFTER preprocess(), so pattern-bound variables won't be captured
+    # in __env__ for nested closures. See docs/KNOWN_ISSUES.md and transform.rb:rewrite_pattern_matching
+    rewrite_pattern_matching(exp)
+
     compile_main(exp)
     # after the main function, we ouput all functions and constants
     # used and defined so far.
