@@ -210,6 +210,13 @@ class Object
     end
     nil
   end
+
+  # singleton_class - Get object's singleton class
+  # Stub: Returns the regular class (not correct but prevents crashes)
+  # Full implementation would require singleton class support
+  def singleton_class
+    self.class
+  end
 end
 
 # BasicObject defined after Object to avoid circular dependency

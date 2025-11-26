@@ -86,4 +86,30 @@ class Kernel
   def require_relative(path)
     raise LoadError.new("Dynamic require_relative not supported in AOT compiler: #{path}")
   end
+
+  # catch - Catch thrown values
+  # Stub: Just yields the block without actual catching
+  # Full implementation would require non-local return mechanism
+  def catch(tag)
+    yield
+  end
+
+  # throw - Throw to catch
+  # Stub: No-op (does not actually throw)
+  # Full implementation would require non-local return mechanism
+  def throw(tag, value=nil)
+    nil
+  end
+
+  # redo - Restart loop iteration
+  # Stub: Not implementable without control flow changes
+  def redo
+    raise NotImplementedError.new("redo not supported in current compiler")
+  end
+
+  # fixture - Test framework helper
+  # Stub: Returns path to fixture file
+  def fixture(name)
+    "fixtures/#{name}"
+  end
 end

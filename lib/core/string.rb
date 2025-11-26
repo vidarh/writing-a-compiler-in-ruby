@@ -695,6 +695,13 @@ class String
   def force_encoding(encoding)
     encoding
   end
+
+  # Match string against pattern
+  # Stub: Returns nil (regexp not implemented)
+  # Full implementation would perform regex matching
+  def =~(pattern)
+    nil
+  end
 end
 
 # FIXME: This is an interesting bootstrapping problem

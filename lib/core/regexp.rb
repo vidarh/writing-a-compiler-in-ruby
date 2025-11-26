@@ -10,4 +10,11 @@ class Regexp
   # FIXME: If initialize is missing, we fail here for some reason.
   def initialize arg
   end
+
+  # Match regexp against string
+  # Stub: Returns nil (regexp not implemented)
+  # Full implementation would perform regex matching
+  def =~(string)
+    nil
+  end
 end
