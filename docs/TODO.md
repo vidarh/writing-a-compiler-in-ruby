@@ -191,20 +191,19 @@ After stubs are working, implement full functionality:
 **Status**: ✅ Fixed - break now correctly returns nil
 **Impact**: +3 tests (until_spec improved 18→21 passed)
 
-### 1.2 String Interpolation Bug (2-3 hours, 40+ tests)
+### 1.2 ✅ COMPLETE - String Interpolation Bug (1 hour)
 
-**Issue**: Simple interpolation without braces is broken:
+**Issue**: Interpolation in percent strings included extra "#" character:
 ```ruby
-$x = "hello"
-"#$x"     # Expected: "hello", Got: "#$x" (literal)
-"#@ivar"  # Expected: value, Got: "#@ivar" (literal)
-"#@@cvar" # Expected: value, Got: "#@@cvar" (literal)
+%(hey #{@ip})  # Expected: "hey xxx", Got: "hey #xxx"
 ```
 
-**Root cause**: Parser doesn't recognize `#$`/`#@`/`#@@` as interpolation
-**Files**: string.rb or scanner.rb
-**Files affected**: string_spec (21 failures), heredoc_spec (10 failures)
-**Impact**: +40 tests
+**Root cause**: tokens.rb was adding "#" to buffer BEFORE checking for interpolation
+**Fix**: Check for interpolation first, only add "#" to buffer if not followed by "{"
+**Files**: tokens.rb (3 locations), quoted.rb (1 location)
+**Status**: ✅ Fixed - all "hey #xxx" failures eliminated
+**Commit**: a39b3ef
+**Impact**: Fixes all #{} interpolation in percent strings
 
 ### 1.3 ✅ PARTIAL - Loop Control Issues (2-3 hours, 8+ tests)
 
