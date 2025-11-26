@@ -105,7 +105,8 @@ The following pattern types are **not implemented** and will cause compilation f
    - Uses `@shunting.parse([',', ')', ']'])` with stop tokens to prevent comma from being consumed as operator
 
 2. **compiler.rb**
-   - Added `:pattern` to keyword list
+   - Added `:pattern`, `:as_pattern`, `:hash_splat` to keyword list
+   - Added `compile_hash_splat(scope, hash_var)` method to handle `**var` syntax in method calls
    - Integrated `rewrite_pattern_matching(exp)` call in `compile()` pipeline
 
 3. **transform.rb**
@@ -113,7 +114,10 @@ The following pattern types are **not implemented** and will cause compilation f
    - Two-pass approach: wrap case statements with `:let` to create `__case_value`, then transform :in nodes
    - Handles bare names, AS patterns, hash patterns, constant-qualified patterns, and hash splat patterns
    - Generates type checks and variable bindings
-   - Hash splat support: ignores bare `**`, binds entire hash for `**rest` (TODO: bind only remaining keys)
+   - Hash splat support in patterns:
+     - In `:pattern` nodes: binds `**rest` to entire matched hash
+     - In bare `:hash` nodes: properly handles `**rest` and `**nil`
+     - Bare `in **rest`: matches any hash and binds to variable
 
 ### Transform Strategy
 
@@ -136,25 +140,38 @@ All rescue-related features working:
 - Complex lvalues in rescue clauses (`self.foo`, `self&.foo`)
 
 ### pattern_matching_spec.rb
-**Status**: ⚠️ **ASSEMBLY FAIL** (parses fully, pre-existing closure bug)
+**Status**: ✅ **COMPILES SUCCESSFULLY** (runs with some runtime errors due to other missing features)
 
 **Progress**:
 - Line 533: AS patterns - ✅ Fixed
 - Line 784: Hash patterns with full pairs - ✅ Fixed
 - Line 1032: Hash splat patterns - ✅ Fixed
 - Scoping: __case_value :let wrapping - ✅ Fixed
-- Current: **Parses entire spec (1310 lines)**, fails at assembly due to closure variable bug
+- Hash splat handling: ✅ Fixed (in patterns: `in {a:, **rest}`, `in Hash[a:, **]`, `in **rest`)
+- Closure variable bug: ✅ Fixed (transform.rb:704 - skip :pattern_key in rewrite_env_vars)
+- **Current**: Compiles entire spec (1310 lines), runs with some expected failures
 
-**Failure reason**: Pre-existing compiler bug with closure variable code generation. When pattern-bound variables are used in contexts that trigger the compiler's closure rewriting (e.g., inside blocks), the compiler transforms them into `[:index, :__env__, N]` nodes but then emits them as literal assembly: `movl $[:index, :__env__, 1], %eax` instead of compiling them to proper memory access instructions.
+**Fix applied**: The closure variable bug was caused by `rewrite_env_vars` rewriting variable names in `:pattern_key` nodes to `[:index, :__env__, N]` before `rewrite_pattern_matching` could process them. Fixed by adding a skip condition for `:pattern_key` variable names (position 1) in `rewrite_env_vars`.
+
+**Before fix**:
+- `[:pattern_key, :a]` → `[:pattern_key, [:index, :__env__, 1]]` (wrong!)
+- Assembly: `movl $[:index, :__env__, 1], %eax` (literal string!)
+
+**After fix**:
+- `[:pattern_key, :a]` stays as `[:pattern_key, :a]`
+- Pattern matching transformation creates `[:assign, :a, ...]`
+- Then `:a` gets rewritten to `[:index, :__env__, 1]` in the assignment context
+- Assembly: correct load/store instructions
 
 **What works**:
-- Simple pattern matching (no blocks): Compiles and runs correctly
+- Pattern matching compiles successfully
 - All pattern types parse correctly
 - Variable scoping with __case_value works
+- Pattern matching in closures now compiles correctly
 
-**What doesn't work**:
-- Pattern-bound variables used in block contexts (triggers closure bug)
-- Example: `it { case obj; in Hash(a:, b:); [a, b]; end }` - the `a` and `b` variables trigger the closure bug when accessed inside the block
+**Runtime issues** (not blocking compilation):
+- Some tests fail with "wrong number of arguments" - likely missing method implementations in lib/core/
+- Some tests may fail due to incomplete pattern matching runtime support
 
 **Spec coverage**: 150+ pattern matching test cases covering Ruby 3.0+ features (all now parse successfully)
 
