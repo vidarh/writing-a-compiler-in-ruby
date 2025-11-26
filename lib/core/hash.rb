@@ -319,7 +319,7 @@ class Hash
   # Stub: Return first entry
   def pair
     if @first
-      [@first[0], @first[1]]
+      [@data[@first], @data[@first + 1]]
     else
       nil
     end
