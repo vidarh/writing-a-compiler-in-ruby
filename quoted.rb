@@ -161,7 +161,8 @@ module Tokens
               # Add the variable reference to interpolation
               ret << (prefix + var_name).to_sym
             end
-          else
+          elsif s.peek != ?{
+            # Only add # to buffer if not followed by { (which would be interpolation)
             buf << e
           end
         else

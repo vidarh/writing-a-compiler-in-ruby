@@ -440,7 +440,6 @@ module Tokens
               buf << c if depth > 0
             elsif c == "#"
               # Check for interpolation #{ (only if not the closing delimiter)
-              buf << "#"
               if @s.peek == "{"
                 # Use Quoted.handle_interpolation helper
                 result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
@@ -448,6 +447,9 @@ module Tokens
                   ret = result
                   buf = ""
                 end
+              else
+                # Not interpolation, add literal "#" to buffer
+                buf << "#"
               end
             else
               buf << c
@@ -507,7 +509,6 @@ module Tokens
                 buf << c if depth > 0
               elsif c == "#"
                 # Check for interpolation #{ (only if not the closing delimiter)
-                buf << "#"
                 if @s.peek == "{"
                   # Use Quoted.handle_interpolation helper
                   result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
@@ -515,6 +516,9 @@ module Tokens
                     ret = result
                     buf = ""
                   end
+                else
+                  # Not interpolation, add literal "#" to buffer
+                  buf << "#"
                 end
               else
                 buf << c
@@ -606,7 +610,6 @@ module Tokens
                 buf << c.chr if depth > 0
               elsif needs_interpolation && c == "#"
                 # Check for interpolation #{ (only for types that support it, and only if not the delimiter)
-                buf << "#"
                 if @s.peek == "{"
                   # Use Quoted.handle_interpolation helper
                   result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
@@ -614,6 +617,9 @@ module Tokens
                     ret = result
                     buf = ""
                   end
+                else
+                  # Not interpolation, add literal "#" to buffer
+                  buf << "#"
                 end
               else
                 buf << c.chr
