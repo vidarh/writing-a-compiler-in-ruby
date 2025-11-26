@@ -252,10 +252,12 @@ class Compiler
 
     if br
       # Simple break to a label (e.g., from a while loop)
-      # Compile the value if present and put it in %eax
+      # Compile the value if present and put it in %eax, otherwise use nil
       if value
         ret = compile_eval_arg(scope, value)
         @e.movl(ret, :eax) if ret != :eax
+      else
+        @e.movl("nil", :eax)
       end
       @e.jmp(br)
     else
@@ -273,6 +275,8 @@ class Compiler
         @e.save_result(ret)
         @e.movl(:eax, :ecx)  # Save break value in %ecx
         @e.popl(:eax)  # Restore target stackframe to %eax
+      else
+        @e.movl("nil", :ecx)  # Default break value is nil
       end
 
       # Jump to test first to avoid doing leave twice
@@ -293,10 +297,8 @@ class Compiler
       # Done unwinding
       @e.local(l_done)
 
-      # Restore break value from %ecx to %eax if we had one
-      if value
-        @e.movl(:ecx, :eax)
-      end
+      # Restore break value from %ecx to %eax (always set, defaults to nil)
+      @e.movl(:ecx, :eax)
 
       @e.movl("-4(%ebp)",:ebx)
       @e.ret
