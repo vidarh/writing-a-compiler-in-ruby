@@ -98,9 +98,9 @@ module OpPrec
       # Handle argument forwarding: ... when used standalone in function calls
       # If we see ... with only opening paren on ostack inside foo(...), it's argument forwarding, not endless range
       # Check: @is_call_context means we're inside foo()
-      #        ostack.size == 1 && ostack.first.type == :lp means we haven't parsed any args yet
+      #        ostack.size == 1 && ostack.first.type == :lp && ostack.first.sym == nil means we're inside (...), not [...]
       if op && op.sym == :exclusive_range &&
-         ostack.size == 1 && ostack.first && ostack.first.type == :lp &&
+         ostack.size == 1 && ostack.first && ostack.first.type == :lp && ostack.first.sym == nil &&
          @is_call_context
         # This is argument forwarding in a method call: foo(...)
         # Push :forward_args value and return
