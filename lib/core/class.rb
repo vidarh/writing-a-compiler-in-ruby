@@ -240,6 +240,41 @@ class Class
     end
   end
 
+  # attr - single name creates reader, name + true creates accessor
+  def attr name, setter=false
+    if setter
+      attr_accessor name
+    else
+      attr_reader name
+    end
+  end
+
+  # prepend - insert module methods before class methods
+  # Stub: For now, just include it (same as append)
+  def prepend mod
+    include mod
+  end
+
+  # class_eval - evaluate block in class context
+  # Stub: Just yield the block
+  def class_eval &block
+    if block
+      block.call
+    end
+  end
+
+  # module_function - make instance methods also available as module methods
+  # Stub: No-op for now
+  def module_function *names
+    nil
+  end
+
+  # extend - add module methods to an object's singleton class
+  # Stub: No-op for now (proper implementation needs singleton class support)
+  def extend mod
+    nil
+  end
+
   # Check if a module is included by checking if module's methods are in class vtable
   # This is an approximation - it checks if the methods match, not if include was actually called
   # But it's good enough for most specs and avoids bootstrap issues

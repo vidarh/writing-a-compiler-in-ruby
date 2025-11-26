@@ -315,4 +315,20 @@ class Hash
     true
   end
 
+  # pair - return first key-value pair as array
+  # Stub: Return first entry
+  def pair
+    if @first
+      [@first[0], @first[1]]
+    else
+      nil
+    end
+  end
+
+  # hash_splat - return self for ** operator
+  # Stub: Just return self
+  def hash_splat
+    self
+  end
+
 end
