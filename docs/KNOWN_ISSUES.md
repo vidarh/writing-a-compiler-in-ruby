@@ -1,5 +1,177 @@
 # Known Issues
 
+**Last Updated**: 2025-11-26
+
+## Current State Summary
+
+**Test Status**: 78 language specs, 163/1004 tests passing (16.2% pass rate)
+- ✅ PASSED: 3 specs (and_spec, not_spec, unless_spec)
+- ❌ FAILED: 25 specs - run but fail assertions  
+- 💥 CRASHED: 50 specs - segfaults/hangs
+- 🎉 **COMPILE FAIL: 0 specs** - All specs now compile!
+
+**Expected limitations** (~632 test failures, 63% of all failures):
+- Regexp not implemented: 507 failures
+- eval() not supported (AOT): ~100 failures
+- Float not implemented: ~17 failures
+- Command execution: ~8 failures
+
+**Fixable issues** (~192 test failures, 19% of all failures):
+- Segfaults: ~300-450 tests blocked
+- Missing methods: ~97 tests
+- String interpolation bug: ~40 tests
+- Loop control issues: ~8 tests
+- Hash edge cases: ~15 tests
+- Other bugs: ~20+ tests
+
+## Critical Issues Blocking Most Tests
+
+### 1. Segmentation Faults (HIGHEST PRIORITY)
+
+**Impact**: Blocks 50 spec files (64%), prevents ~450+ tests from running
+
+**Symptoms**: Specs compile successfully but crash during execution, often after warnings like:
+```
+WARNING:    Method: 'attr'
+WARNING:    symbol address = 0x57cdbff0
+WARNING:    class 'Class'
+```
+
+**Affected areas**:
+- Block/lambda/proc execution
+- Method dispatch for attr/private/create_lambda
+- Possible infinite loops or stack corruption
+
+**Investigation needed**:
+1. Use gdb/valgrind on simple failing spec (lambda_spec, loop_spec)
+2. Check method lookup/dispatch for special methods
+3. Review block/lambda/proc memory management
+4. Look for stack overflow in recursive calls
+
+**Files affected** (35+ specs): alias, array, break, case, class, hash, if, lambda, loop, proc, return, string, while, yield, and many more
+
+---
+
+### 2. Missing Hash Methods
+
+**Impact**: 60+ test failures, blocks keyword arguments entirely
+
+**Missing methods**:
+1. **`Hash#pair`** - Returns `[key, value]` for hash entry (30+ tests affected)
+2. **`Hash#hash_splat`** - Handles `**kwargs` expansion (20+ tests affected)  
+3. **`Hash#merge`** - Needed for `**` operator in literals (10+ tests affected)
+
+**Files affected**: keyword_arguments_spec (0/26 tests pass), hash_spec, def_spec, END_spec
+
+**Priority**: HIGH - Easy to implement, high impact
+
+---
+
+### 3. String Interpolation Without Braces
+
+**Impact**: 40+ test failures in string_spec and heredoc_spec
+
+**Issue**: Simple interpolation forms don't work:
+```ruby
+$x = "hello"
+"#$x"     # Expected: "hello", Got: "#$x" (literal)
+"#@ivar"  # Expected: value, Got: "#@ivar" (literal)
+"#@@cvar" # Expected: value, Got: "#@@cvar" (literal)
+
+"#{$x}"   # ✓ Works: "hello" (braced form)
+```
+
+**Root cause**: Parser/scanner doesn't recognize `#$`/`#@`/`#@@` as interpolation start
+
+**Priority**: HIGH - Parser fix, moderate impact
+
+---
+
+## Quick Wins (Easy Implementations)
+
+### Missing Core Methods (97+ test impact, ~8 hours work)
+
+1. **`Kernel#catch`/`throw`** - 18 tests (throw_spec entirely fails)
+2. **`String#=~`, `Regexp#=~`** - 10 tests (can stub to return nil)
+3. **`Object#redo`** - 6 tests (loop control)
+4. **Fix `break` return value** - 3 tests (returns false, should be nil)
+
+### Loop Control Issues (8+ test impact)
+
+1. `next` in modifier form doesn't skip correctly
+2. `begin...end until` doesn't execute body at least once before checking condition
+
+**Files affected**: until_spec (8 failures)
+
+---
+
+## Medium Priority Issues
+
+### Hash Edge Cases (15+ test impact)
+
+1. `{=> value}` should create `{nil => value}`, creates `{}`
+2. `**nil` in hash literal should expand to `{}` or raise TypeError
+3. Missing `Hash#to_hash` for splatting
+
+### BEGIN/END Blocks (14+ test impact)
+
+- BEGIN blocks: BEGIN_spec crashes immediately
+- END blocks: END_spec has 14 failures
+
+### Missing Utility Methods (20+ test impact)
+
+1. `Kernel#fixture` - Test framework helper (~10 tests)
+2. `Object#singleton_class` - Reflection (~2 tests)
+3. `Object#instance_eval` - Dynamic evaluation (variable impact)
+4. `Object#proc` - Proc creation (~5 tests)
+
+---
+
+## Known Limitations (Cannot Fix - 632 test failures)
+
+These are fundamental architectural constraints:
+
+1. **Regular Expressions Not Implemented** (507 failures)
+   - All regexp/* specs fail
+   - match_spec fails (uses `=~` operator)
+   - Cannot implement without major work
+
+2. **eval() Not Supported** (~100 failures)
+   - AOT (ahead-of-time) compilation model
+   - Cannot evaluate strings as code at runtime
+   - Many specs use `eval()` to test syntax errors
+
+3. **Float Type Not Implemented** (~17 failures)
+   - numbers_spec: Float, Rational, Complex literals fail
+   - Exponent notation (`1e5`) not supported
+
+4. **Command Execution Not Supported** (~8 failures)
+   - Backticks: `` `command` ``
+   - `%x{command}` syntax
+   - execution_spec: All command execution tests fail
+
+**Maximum achievable pass rate**: ~80-85% (800-850 tests) even with all bugs fixed
+
+---
+
+## Recent Fixes (2025-11-26)
+
+✅ **Pattern Matching** - Now compiles successfully!
+- Fixed closure variable capture bug (transform.rb:704)
+- All language specs now compile (0 COMPILE FAIL)
+- Known limitation: pattern-bound variables don't work in nested closures
+- See issue #XX below for details
+
+---
+
+## Detailed Issue Documentation
+
+The sections below contain detailed documentation of individual bugs, organized by category.
+
+---
+
+# Known Issues
+
 ## 1. super() Uses Object's Class Instead of Method's Defining Class (CRITICAL BUG)
 
 **Problem**: `super` incorrectly uses the object's class to find the superclass, rather than the defining class of the current method. This causes infinite recursion when a subclass calls a superclass method that uses `super`.
