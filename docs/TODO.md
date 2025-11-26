@@ -221,9 +221,9 @@ After stubs are working, implement full functionality:
 **Files affected**: until_spec
 **Impact**: Fixes specific semantic bug where `begin; body; end until cond` must execute body at least once
 
-### 1.4 ⚠️ BLOCKED - Keyword Arguments / Hash Splatting (Est: 1-2 weeks, 60+ tests)
+### 1.4 Keyword Arguments / Hash Splatting (Est: 1-2 weeks, 60+ tests)
 
-**Status**: Requires major compiler changes, significantly more complex than initially estimated
+**Status**: Requires compiler changes, significantly more complex than initially estimated
 
 **Issue**: Methods with keyword arguments fail at runtime:
 - `foo(a: 1, b: 2)` generates `[:call, :foo, [[:pair, [:sexp, :a], 1], [:pair, [:sexp, :b], 2]]]`

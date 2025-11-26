@@ -56,11 +56,11 @@ WARNING:    class 'Class'
 
 ---
 
-### 2. Keyword Arguments / Hash Splatting (BLOCKED)
+### 2. Keyword Arguments / Hash Splatting
 
 **Impact**: 60+ test failures
 
-**Status**: ⚠️ BLOCKED - Requires major compiler changes (1-2 weeks estimated)
+**Status**: Requires compiler changes (1-2 weeks estimated)
 
 **Issue**: `:pair` and `:hash_splat` AST nodes aren't in compiler keywords list. When they appear as method arguments, they're treated as method calls instead of being properly compiled.
 
