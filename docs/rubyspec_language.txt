@@ -22,3 +22,76 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/ensure_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] rubyspec/language/execution_spec.rb (P:0 F:8 S:0 T:8)
 [34m[CRASH] rubyspec/language/file_spec.rb (P:0 F:3 S:0 T:3)
+[34m[CRASH] rubyspec/language/for_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/hash_spec.rb (P:12 F:20 S:6 T:38)
+[31m[FAIL] rubyspec/language/heredoc_spec.rb (P:6 F:10 S:0 T:16)
+[34m[CRASH] rubyspec/language/if_spec.rb (P:27 F:2 S:0 T:29)
+[34m[CRASH] rubyspec/language/keyword_arguments_spec.rb (P:0 F:26 S:0 T:26)
+[34m[CRASH] rubyspec/language/lambda_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/line_spec.rb (P:0 F:1 S:0 T:1)
+[34m[CRASH] rubyspec/language/loop_spec.rb (P:2 F:1 S:0 T:3)
+[34m[CRASH] rubyspec/language/magic_comment_spec.rb (P:0 F:0 S:0 T:0)
+[31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
+[34m[CRASH] rubyspec/language/metaclass_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/method_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/next_spec.rb (P:0 F:0 S:0 T:0)
+[32m[PASS] rubyspec/language/not_spec.rb (P:10 F:0 S:0 T:10)
+[34m[CRASH] rubyspec/language/numbered_parameters_spec.rb (P:0 F:20 S:0 T:20)
+[31m[FAIL] rubyspec/language/numbers_spec.rb (P:5 F:17 S:0 T:22)
+[34m[CRASH] rubyspec/language/optional_assignments_spec.rb (P:0 F:0 S:0 T:0)
+[31m[FAIL] rubyspec/language/order_spec.rb (P:0 F:10 S:0 T:10)
+[34m[CRASH] rubyspec/language/or_spec.rb (P:4 F:1 S:0 T:5)
+[34m[CRASH] rubyspec/language/pattern_matching_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/precedence_spec.rb (P:6 F:4 S:0 T:10)
+[31m[FAIL] rubyspec/language/predefined/data_spec.rb (P:0 F:16 S:1 T:17)
+[34m[CRASH] rubyspec/language/predefined_spec.rb (P:0 F:0 S:0 T:0)
+[31m[FAIL] rubyspec/language/predefined/toplevel_binding_spec.rb (P:0 F:10 S:0 T:10)
+[34m[CRASH] rubyspec/language/private_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/proc_spec.rb (P:10 F:11 S:0 T:21)
+[34m[CRASH] rubyspec/language/range_spec.rb (P:0 F:1 S:0 T:1)
+[34m[CRASH] rubyspec/language/redo_spec.rb (P:0 F:2 S:0 T:2)
+[31m[FAIL] rubyspec/language/regexp/anchors_spec.rb (P:0 F:28 S:0 T:28)
+[31m[FAIL] rubyspec/language/regexp/back-references_spec.rb (P:0 F:35 S:1 T:36)
+[31m[FAIL] rubyspec/language/regexp/character_classes_spec.rb (P:0 F:253 S:0 T:253)
+[31m[FAIL] rubyspec/language/regexp/empty_checks_spec.rb (P:0 F:8 S:0 T:8)
+[31m[FAIL] rubyspec/language/regexp/encoding_spec.rb (P:0 F:57 S:0 T:57)
+[34m[CRASH] rubyspec/language/regexp/escapes_spec.rb (P:0 F:8 S:0 T:8)
+[31m[FAIL] rubyspec/language/regexp/grouping_spec.rb (P:0 F:12 S:0 T:12)
+[34m[CRASH] rubyspec/language/regexp/interpolation_spec.rb (P:0 F:4 S:0 T:4)
+[31m[FAIL] rubyspec/language/regexp/modifiers_spec.rb (P:0 F:22 S:0 T:22)
+[31m[FAIL] rubyspec/language/regexp/repetition_spec.rb (P:0 F:27 S:1 T:28)
+[31m[FAIL] rubyspec/language/regexp_spec.rb (P:1 F:37 S:1 T:39)
+[31m[FAIL] rubyspec/language/regexp/subexpression_call_spec.rb (P:0 F:10 S:0 T:10)
+[34m[CRASH] rubyspec/language/rescue_spec.rb (P:0 F:0 S:0 T:0)
+[31m[FAIL] rubyspec/language/retry_spec.rb (P:0 F:5 S:0 T:5)
+[34m[CRASH] rubyspec/language/return_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/safe_navigator_spec.rb (P:0 F:7 S:0 T:7)
+[31m[FAIL] rubyspec/language/safe_spec.rb (P:0 F:2 S:0 T:2)
+[34m[CRASH] rubyspec/language/send_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/singleton_class_spec.rb (P:0 F:0 S:0 T:0)
+[31m[FAIL] rubyspec/language/source_encoding_spec.rb (P:0 F:12 S:0 T:12)
+[34m[CRASH] rubyspec/language/string_spec.rb (P:6 F:21 S:0 T:27)
+[34m[CRASH] rubyspec/language/super_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/language/symbol_spec.rb (P:2 F:5 S:0 T:7)
+[31m[FAIL] rubyspec/language/throw_spec.rb (P:0 F:18 S:0 T:18)
+[34m[CRASH] rubyspec/language/undef_spec.rb (P:0 F:0 S:0 T:0)
+[32m[PASS] rubyspec/language/unless_spec.rb (P:6 F:0 S:0 T:6)
+[31m[FAIL] rubyspec/language/until_spec.rb (P:18 F:13 S:0 T:31)
+[34m[CRASH] rubyspec/language/variables_spec.rb (P:0 F:4 S:0 T:4)
+[34m[CRASH] rubyspec/language/while_spec.rb (P:8 F:0 S:0 T:8)
+[34m[CRASH] rubyspec/language/yield_spec.rb (P:0 F:0 S:0 T:0)
+
+================================
+Summary:
+  Total spec files: 78
+  Passed: 3
+  Failed: 25
+  Crashed (no test output): 50
+  Failed to compile: 0
+
+Individual Test Cases:
+  Total tests: 1004
+  Passed: 163
+  Failed: 824
+  Skipped: 17
+  Pass rate: 16%
