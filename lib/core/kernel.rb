@@ -104,7 +104,7 @@ class Kernel
   # redo - Restart loop iteration
   # Stub: Not implementable without control flow changes
   def redo
-    raise NotImplementedError.new("redo not supported in current compiler")
+    raise RuntimeError.new("redo not supported in current compiler")
   end
 
   # fixture - Test framework helper
