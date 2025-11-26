@@ -303,13 +303,17 @@ class Compiler
   # foo(a: 42) => [:call, [:foo, [:ternalt, :a, 42]]] => [:call, [:foo, [:pair, [:sexp, :a], 42]]]
   # foo(a:) => [:call, [:foo, [:ternalt, :a, nil]]] => [:call, [:foo, [:pair, [:sexp, :a], :a]]]
   def convert_ternalt_in_calls(exp)
-    # Walk the tree and convert :ternalt to :pair only inside :call nodes
+    # Walk the tree and convert :ternalt to :pair only inside :call and :callm nodes
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
-      # Only process :call nodes to convert their :ternalt arguments
-      if e.is_a?(Array) && e[0] == :call && e[2].is_a?(Array)
-        # e[2] is the arguments array
-        e[2].each do |arg|
+      # Only process :call and :callm nodes to convert their :ternalt arguments
+      if e.is_a?(Array) && (e[0] == :call || e[0] == :callm)
+        # Get arguments array index (different for :call vs :callm)
+        args_index = e[0] == :call ? 2 : 3
+        next unless e[args_index].is_a?(Array)
+
+        # e[args_index] is the arguments array
+        e[args_index].each do |arg|
           if arg.is_a?(Array) && arg[0] == :ternalt
             # Convert [:ternalt, key, value] to [:pair, [:sexp, :key], value]
             key = arg[1]
@@ -1414,9 +1418,84 @@ class Compiler
     rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
+    rewrite_forward_args(exp)    # Must run before rewrite_keyword_args
     rewrite_keyword_args(exp)   # Must run before rewrite_default_args
     rewrite_default_args(exp)
     rewrite_let_env(exp)
+  end
+
+  # Transform argument forwarding (...) into explicit parameter capture and forwarding
+  # This turns:
+  #   def foo(...)
+  #     bar(...)
+  #   end
+  # Into:
+  #   def foo(*__fwd_args__, **__fwd_kwargs__, &__fwd_block__)
+  #     bar(*__fwd_args__, **__fwd_kwargs__, &__fwd_block__)
+  #   end
+  def rewrite_forward_args(exp)
+    exp.depth_first(:defm) do |e|
+      args = e[2]
+      next unless args.is_a?(Array)
+
+      # Check if this method uses argument forwarding
+      has_forward_args = args.any? { |arg| arg.is_a?(Array) && arg[0] == :forward_args }
+      next unless has_forward_args
+
+      # Replace [:forward_args] with explicit parameters
+      # Handle cases like def(x, ...) or def(...)
+      new_args = []
+      args.each do |arg|
+        if arg.is_a?(Array) && arg[0] == :forward_args
+          # Replace with: *__fwd_args__, **__fwd_kwargs__, &__fwd_block__
+          new_args << [:__fwd_args__, :rest]
+          new_args << [:__fwd_kwargs__, :keyrest]
+          new_args << [:__fwd_block__, :block]
+        else
+          new_args << arg
+        end
+      end
+
+      e[2] = new_args
+
+      # Transform forward_args in method calls within the body
+      # Find all :call and :callm nodes with [:forward_args] argument
+      body = e[3]
+      next unless body.is_a?(Array)
+
+      body.depth_first do |node|
+        next unless node.is_a?(Array)
+        next unless node[0] == :call || node[0] == :callm
+
+        # Get argument list index (different for :call vs :callm)
+        args_index = node[0] == :call ? 2 : 3
+        call_args = node[args_index]
+        next unless call_args.is_a?(Array)
+
+        # Replace :forward_args with splat forwarding
+        if call_args.include?(:forward_args)
+          # Replace [:forward_args] with proper forwarding:
+          # *__fwd_args__ => [:splat, :__fwd_args__]
+          # **__fwd_kwargs__ => [:hash, [:hash_splat, :__fwd_kwargs__]]
+          # &__fwd_block__ => handled via block parameter, not in args
+          new_call_args = call_args.map do |arg|
+            if arg == :forward_args
+              # Return array of arguments to be flattened in
+              [[:splat, :__fwd_args__], [:hash, [:hash_splat, :__fwd_kwargs__]]]
+            else
+              arg
+            end
+          end.flatten(1)  # Flatten one level to merge the arrays
+
+          node[args_index] = new_call_args
+
+          # For :call nodes, block is separate; for :callm it's also separate
+          # We need to set the block parameter if there's a block
+          # But actually, blocks are passed differently - they're not in the args array
+          # TODO: Handle block forwarding properly
+        end
+      end
+    end
   end
 
   # Transform keyword arguments from method signature into hash extraction
@@ -1436,6 +1515,10 @@ class Compiler
     exp.depth_first(:defm) do |e|
       args = e[2]
       next unless args.is_a?(Array)
+
+      # Skip methods with forwarding parameters (rewrite_forward_args handles these)
+      has_forwarding = args.any? { |arg| arg.is_a?(Array) && (arg[0] == :__fwd_args__ || arg[0] == :__fwd_kwargs__ || arg[0] == :__fwd_block__) }
+      next if has_forwarding
 
       # Check if any args are keyword arguments
       has_kwargs = args.any? { |arg| arg.is_a?(Array) && [:keyreq, :key, :keyrest].include?(arg[1]) }

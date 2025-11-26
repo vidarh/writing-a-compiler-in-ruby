@@ -96,10 +96,11 @@ module OpPrec
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
 
       # Handle argument forwarding: ... when used standalone in function calls
-      # If we see ... with empty value stack inside foo(...), it's argument forwarding, not endless range
-      # Check: @is_call_context means we're inside foo(), vstack.empty? means no args yet
+      # If we see ... with only opening paren on ostack inside foo(...), it's argument forwarding, not endless range
+      # Check: @is_call_context means we're inside foo()
+      #        ostack.size == 1 && ostack.first.type == :lp means we haven't parsed any args yet
       if op && op.sym == :exclusive_range &&
-         @out.vstack.empty? &&
+         ostack.size == 1 && ostack.first && ostack.first.type == :lp &&
          @is_call_context
         # This is argument forwarding in a method call: foo(...)
         # Push :forward_args value and return
