@@ -283,16 +283,37 @@ module OpPrec
         return :break
       elsif op && op.type == :lp
         reduce(ostack, op)
-        opstate = shunt_subexpr([op], src, possible_func)
-        ostack << (op.sym == :array ? Operators["#index#"] : @opcall) if possible_func
-
         # Handling function calls and a[1] vs [1]
         #
-        # - If foo is a method, then "foo [1]" is "foo([1])"
-        # - If foo is a local variable, then "foo [1]" is "foo.[](1)"
-        # - foo[1] is always foo.[](1)
-        # So we need to know if there's whitespace, and we then higher up need to know if
-        # if's a method. Fuck the Ruby grammar
+        # - "foo[1]" (no space) → always foo.[](1) (indexing)
+        # - "foo [1]" (with space) → depends on context:
+        #   - If foo is result of method call (obj.method), then method([1]) (argument)
+        #   - Otherwise foo.[](1) (indexing)
+        #
+        # Check if [ with whitespace after a method call should be an argument
+        treat_as_argument = false
+        if op.sym == :array && @had_ws_before_this_token && possible_func
+          last_val = @out.vstack.last
+          is_method_call = last_val.is_a?(Array) && (last_val[0] == :callm || last_val[0] == :safe_callm)
+          # If it's "obj.method []" with space, treat [] as argument, not indexing
+          if is_method_call
+            treat_as_argument = true
+            should_index = false
+          else
+            should_index = true
+          end
+        else
+          should_index = possible_func
+        end
+
+        opstate = shunt_subexpr([op], src, should_index)
+        if treat_as_argument
+          # Push @opcall2 to make this a method call with the array as argument
+          ostack << @opcall2
+        elsif should_index
+          ostack << (op.sym == :array ? Operators["#index#"] : @opcall)
+        end
+
         reduce(@ostack, @opcall2) if @ostack[-1].nil? || @ostack[-1].sym != :call
       elsif op
         reduce(ostack, op)
@@ -317,6 +338,9 @@ module OpPrec
       src.each do |t,o,keyword|
         op = o
         token = t
+        # Save whitespace state at start of iteration - this tells us if there was
+        # whitespace before THIS token (not after the previous one)
+        @had_ws_before_this_token = @tokenizer.had_ws_before_token
 
         # Inside () parentheses, newlines act as statement separators
         # Insert implicit ; when we see a new token after a newline

@@ -66,6 +66,10 @@ class TokenizerAdapter
     @tokenizer.last_ws_consumed_newline
   end
 
+  def had_ws_before_token
+    @tokenizer.scanner.had_ws_before_token
+  end
+
   def scanner
     @tokenizer.scanner
   end

@@ -7,6 +7,7 @@
 class Scanner
   attr_reader :col, :lineno, :filename # @filename holds the name of the file the parser reads from
   attr_reader :last_ws_consumed_newline # Tracks if the last ws() call consumed a newline
+  attr_reader :had_ws_before_token # Tracks if whitespace was consumed before the current token
 
 #  Position = Struct.new(:filename, :lineno, :col)
 
@@ -53,6 +54,7 @@ class Scanner
     @lineno = 1
     @col = 1
     @last_ws_consumed_newline = false
+    @had_ws_before_token = false
 
     # set filename if io is an actual file (instead of STDIN)
     # otherwhise, indicate it comes from a stream
@@ -144,6 +146,7 @@ class Scanner
   # ws ::= ([\t\b\r ] | '#' [~\n]* '\n' | '\\' '\n')*
   def ws
     @last_ws_consumed_newline = false
+    @had_ws_before_token = false
     while (c = peek) && (WS.member?(c.ord) || c == "\\")
       if c == "\\"
         # Check if it's line continuation: backslash followed by newline
@@ -151,6 +154,7 @@ class Scanner
         if peek == LF
           get  # consume the newline
           @last_ws_consumed_newline = true
+          @had_ws_before_token = true
         else
           # Not line continuation, put the backslash back
           unget("\\")
@@ -158,6 +162,7 @@ class Scanner
         end
       else
         get
+        @had_ws_before_token = true  # Track that whitespace was consumed
         @last_ws_consumed_newline = true if c.ord == 10  # Track newline consumption
         if c == C
           while (c = get) && c != LF do; end
@@ -171,13 +176,20 @@ class Scanner
   NOLFWS = [9,13,32]
 
   def nolfws
-    while (c = peek) && NOLFWS.member?(c.ord) do get; end
+    @had_ws_before_token = false
+    had_any = false
+    while (c = peek) && NOLFWS.member?(c.ord)
+      get
+      had_any = true
+    end
     # Check if we stopped at a newline that's followed by . (method chaining)
     # If so, skip the newline and continue as if it were whitespace
     if peek == LF && peek_past_newline_is_dot?
       get  # consume the newline
+      had_any = true
       nolfws  # recursively skip more whitespace
     end
+    @had_ws_before_token = had_any
   end
 
   # Helper: Check if there's a . at the start of the next line (after newline + spaces)

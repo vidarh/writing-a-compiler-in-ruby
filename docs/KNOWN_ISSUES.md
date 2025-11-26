@@ -170,6 +170,22 @@ These are fundamental architectural constraints:
 - Known limitation: pattern-bound variables don't work in nested closures
 - See issue #XX below for details
 
+## ✅ FIXED: Parser Bug: `obj.method []` Incorrectly Parsed as Indexing
+
+**Status**: Fixed in commit [pending]
+
+**Problem**: `obj.method []` was parsed as `(obj.method)[]` instead of `obj.method([])`
+
+**Solution**:
+- Added whitespace tracking to Scanner (`@had_ws_before_token`)
+- Modified `ws()` and `nolfws()` to track whitespace consumption
+- Updated shunting.rb to check whitespace before `[` and treat it as argument when after method call
+
+**Files Modified**:
+- scanner.rb: Added `@had_ws_before_token` tracking
+- tokenizeradapter.rb: Exposed whitespace flag
+- shunting.rb: Check whitespace + method call context to decide if `[` is argument or indexing
+
 ---
 
 ## Detailed Issue Documentation
