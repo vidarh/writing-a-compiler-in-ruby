@@ -449,6 +449,10 @@ class Compiler
     # as String may not have been initialized yet
     compile_exp(cscope, [:assign, [:index, :self, 2], fq_name.to_s])
 
+    # Set up %esi to point to the class object so method calls in class body work
+    # Without this, calls like `private :method_name` fail because %esi isn't set
+    reload_self(cscope)
+
     exps.each do |e|
       addr = compile_do(cscope, *e)
     end

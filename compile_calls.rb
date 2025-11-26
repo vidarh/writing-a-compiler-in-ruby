@@ -195,11 +195,12 @@ class Compiler
   def compile_call(scope, func, args, block = nil, pos = nil)
     return compile_yield(scope, args, block) if func == :yield
 
-    # Handle visibility methods and attr at compile time
+    # Handle visibility methods, attr, and module_function at compile time
     # These are no-ops since visibility isn't enforced and attr_* are stubs
     # But we need to handle them here because method calls in class bodies
     # don't work correctly (self/%esi not set up properly)
-    if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor].include?(func)
+    # module_function makes methods both module methods and private instance methods
+    if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor, :module_function].include?(func)
       if scope.is_a?(ModuleScope)
         # In class/module body - just return nil
         @e.movl("nil", :eax)
@@ -357,6 +358,17 @@ class Compiler
     if method == :defined? && ob == :self
       @e.comment("defined?() - stubbed to nil")
       return compile_exp(scope, :nil)
+    end
+
+    # Handle visibility methods, attr, and module_function at compile time in class/module bodies
+    # These are no-ops since visibility isn't enforced and attr_* are stubs
+    # This handles the case where the call is to self (e.g., "module_function" in module body)
+    if ob == :self && scope.is_a?(ModuleScope)
+      if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor, :module_function].include?(method)
+        @e.comment("Compile-time: #{method} in class/module body - no-op")
+        @e.movl("nil", :eax)
+        return Value.new([:subexpr])
+      end
     end
 
     @e.comment("callm #{ob.inspect}.#{method.inspect}")
