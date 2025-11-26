@@ -195,13 +195,13 @@ class Compiler
   def compile_call(scope, func, args, block = nil, pos = nil)
     return compile_yield(scope, args, block) if func == :yield
 
-    # Handle visibility methods (private, protected, public) at compile time
-    # These are no-ops since visibility isn't enforced in this compiler
+    # Handle visibility methods and attr at compile time
+    # These are no-ops since visibility isn't enforced and attr_* are stubs
     # But we need to handle them here because method calls in class bodies
     # don't work correctly (self/%esi not set up properly)
-    if [:private, :protected, :public].include?(func)
+    if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor].include?(func)
       if scope.is_a?(ModuleScope)
-        # In class/module body - just return nil (visibility not enforced)
+        # In class/module body - just return nil
         @e.movl("nil", :eax)
         return Value.new([:subexpr])
       end
