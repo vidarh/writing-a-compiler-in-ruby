@@ -116,10 +116,12 @@ module Tokens
             var_start = s.peek
             s.get  # consume $ or @
 
-            # For class variables, consume second @
+            # For class variables, check if second @ exists
+            second_at = false
             if var_start == ?@ && s.peek == ?@
               s.get
               prefix = "@@"
+              second_at = true
             elsif var_start == ?@
               prefix = "@"
             else
@@ -128,14 +130,33 @@ module Tokens
 
             # Read variable name
             var_name = ""
-            while s.peek && ((?a..?z).member?(s.peek) || (?A..?Z).member?(s.peek) ||
-                            (?0..?9).member?(s.peek) || s.peek == ?_)
-              var_name << s.get
+
+            # For global variables, handle special single-character names (common ones only)
+            if prefix == "$" && s.peek
+              next_char = s.peek
+              # Only handle safe common special globals: $!, $@, $$, and digits $0-$9
+              # Others like $", $`, $', etc can cause assembly issues
+              if next_char == ?! || next_char == ?@ || next_char == ?$ || (?0..?9).member?(next_char)
+                var_name << s.get
+              else
+                # Regular alphanumeric variable name
+                while s.peek && ((?a..?z).member?(s.peek) || (?A..?Z).member?(s.peek) ||
+                                (?0..?9).member?(s.peek) || s.peek == ?_)
+                  var_name << s.get
+                end
+              end
+            else
+              # Instance/class variables: alphanumeric + underscore only
+              while s.peek && ((?a..?z).member?(s.peek) || (?A..?Z).member?(s.peek) ||
+                              (?0..?9).member?(s.peek) || s.peek == ?_)
+                var_name << s.get
+              end
             end
 
-            # If no variable name found, treat as literal # followed by $ or @
+            # If no variable name found, treat as literal # followed by $ or @  (and @@ for class vars)
             if var_name.empty?
               buf << "#" << var_start.chr
+              buf << "@" if second_at
             else
               # Add the variable reference to interpolation
               ret << (prefix + var_name).to_sym
