@@ -182,33 +182,79 @@ class Compiler
 
   # Compiles an until loop (inverse of while).
   # Takes the current scope, a condition expression as well as the body of the function.
+  #
+  # Handles two forms:
+  # 1. Normal: until cond; body; end  (pre-test loop)
+  # 2. Post-test: begin; body; end until cond  (post-test loop - body runs at least once)
+  #
+  # The parser marks post-test loops with (block () ...) wrapper around the body.
   def compile_until(scope, cond, body)
-    # Same structure as compile_while but with jmp_on_true instead of jmp_on_false
-    @e.evict_all
-    break_label = @e.get_local
-    normal_exit = @e.get_local
-    loop_label = @e.local
+    # Check if this is a post-test loop (begin...end until)
+    # Parser marks these with [:block, [], body_statements]
+    is_post_test = body.is_a?(Array) && body[0] == :block && body[1].is_a?(Array) && body[1].empty?
 
-    var = compile_eval_arg(scope, cond)
-    compile_jmp_on_true(scope, var, normal_exit)  # Jump on true (opposite of while)
-    # Handle bare symbols/values in body - evaluate them directly
-    if body.is_a?(Array)
-      compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+    if is_post_test
+      # Post-test loop: execute body THEN check condition
+      # Loop structure: loop: body; if !cond goto loop; exit
+      @e.evict_all
+      break_label = @e.get_local
+      loop_label = @e.local
+
+      # Execute body first (extract from [:block, [], [...]] wrapper)
+      # body[2] is an array of statements
+      body_stmts = body[2]
+      if body_stmts.is_a?(Array)
+        body_stmts.each do |stmt|
+          if stmt.is_a?(Array)
+            compile_exp(ControlScope.new(scope, break_label, loop_label), stmt)
+          else
+            compile_eval_arg(ControlScope.new(scope, break_label, loop_label), stmt)
+          end
+        end
+      end
+
+      # Now check condition - jump back to loop_label if still false (until = while not)
+      @e.evict_all
+      var = compile_eval_arg(scope, cond)
+      compile_jmp_on_false(scope, var, loop_label)  # Loop while condition is false
+
+      # Normal exit (fall through): set %eax to nil
+      nilval = compile_eval_arg(scope, :nil)
+      @e.movl(nilval, :eax) if nilval != :eax
+
+      # Break label: %eax already has the break value
+      @e.local(break_label)
+
+      return Value.new([:subexpr])
     else
-      compile_eval_arg(ControlScope.new(scope, break_label, loop_label), body)
+      # Pre-test loop: check condition THEN execute body (normal until)
+      # Same structure as compile_while but with jmp_on_true instead of jmp_on_false
+      @e.evict_all
+      break_label = @e.get_local
+      normal_exit = @e.get_local
+      loop_label = @e.local
+
+      var = compile_eval_arg(scope, cond)
+      compile_jmp_on_true(scope, var, normal_exit)  # Jump on true (opposite of while)
+      # Handle bare symbols/values in body - evaluate them directly
+      if body.is_a?(Array)
+        compile_exp(ControlScope.new(scope, break_label, loop_label), body)
+      else
+        compile_eval_arg(ControlScope.new(scope, break_label, loop_label), body)
+      end
+      @e.evict_all
+      @e.jmp(loop_label)
+
+      # Normal exit: set %eax to nil
+      @e.local(normal_exit)
+      nilval = compile_eval_arg(scope, :nil)
+      @e.movl(nilval, :eax) if nilval != :eax
+
+      # Break label: %eax already has the break value
+      @e.local(break_label)
+
+      return Value.new([:subexpr])
     end
-    @e.evict_all
-    @e.jmp(loop_label)
-
-    # Normal exit: set %eax to nil
-    @e.local(normal_exit)
-    nilval = compile_eval_arg(scope, :nil)
-    @e.movl(nilval, :eax) if nilval != :eax
-
-    # Break label: %eax already has the break value
-    @e.local(break_label)
-
-    return Value.new([:subexpr])
   end
 
   # "next" acts differently in a control structure vs. block
