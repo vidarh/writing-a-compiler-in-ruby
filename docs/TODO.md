@@ -2,28 +2,30 @@
 
 **Purpose**: Outstanding tasks prioritized by impact and difficulty. See KNOWN_ISSUES.md for detailed bug descriptions and RUBYSPEC_CRASH_ANALYSIS.md for crash categorization.
 
-## Test Status (2025-11-26 - Current)
+## Test Status (2025-11-26 - Post Phase 0)
 
 **Selftest**: ✅ **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Language Specs**: 78 files
 - ✅ **PASSED**: 3 files (4%) - and_spec, not_spec, unless_spec
-- ❌ **FAILED**: 25 files (32%) - tests run but fail assertions
-- 💥 **CRASHED**: 50 files (64%) - segfaults, hangs, or early exits
+- ❌ **FAILED**: 24 files (31%) - tests run but fail assertions
+- 💥 **CRASHED**: 51 files (65%) - segfaults, timeouts, or early exits
 - 🎉 **COMPILE FAIL**: 0 files (0%) - **ALL SPECS NOW COMPILE!**
 
-**Individual test results**: 163 passed / 824 failed / 17 skipped (Total: 1004 tests)
-- **Pass rate**: 16.2%
+**Individual test results**: 166 passed / 801 failed / 16 skipped (Total: 983 tests)
+- **Pass rate**: 16.9% (up from 16.2%)
 - **Expected failures** (known limitations): ~632 tests
   - Regexp not implemented: 507 failures
   - eval() not supported (AOT): ~100 failures
   - Float not implemented: ~17 failures
   - Command execution: ~8 failures
-- **Fixable failures**: ~192 tests (19% of failures)
+- **Fixable failures**: ~169 tests (17% of failures)
 
-**Recent achievement**: Pattern matching now compiles successfully (2025-11-26)
-- Fixed closure variable capture bug in pattern matching
-- All language specs now compile (0 COMPILE FAIL)
-- Known limitation: pattern-bound variables don't work in nested closures
+**Phase 0 Results** (2025-11-26):
+- Stubbed 15+ methods: attr, prepend, extend, class_eval, module_function, catch, throw, redo, fixture, singleton_class, String#=~, Regexp#=~, Hash#pair, Hash#hash_splat
+- Added 30s timeout to run_rubyspec to prevent infinite hangs
+- +3 tests passing (163→166)
+- delegation_spec: CRASH→FAIL (unblocked 23 tests)
+- Fixed critical selftest-c regression (NotImplementedError→RuntimeError)
 
 **Crash Analysis Complete**: See docs/RUBYSPEC_CRASH_ANALYSIS.md
 - Category A (Missing Methods): 18 specs - EASY
