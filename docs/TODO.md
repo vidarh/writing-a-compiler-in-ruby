@@ -221,14 +221,32 @@ After stubs are working, implement full functionality:
 **Files affected**: until_spec
 **Impact**: Fixes specific semantic bug where `begin; body; end until cond` must execute body at least once
 
-### 1.4 Implement Hash Methods Fully (2 hours, 60+ tests)
+### 1.4 ⚠️ BLOCKED - Keyword Arguments / Hash Splatting (Est: 1-2 weeks, 60+ tests)
 
-After stubs prove the concept, implement proper:
-- `Hash#pair` - Proper iteration support
-- `Hash#hash_splat` - Correct expansion logic
-- `Hash#merge` - Full merge semantics
+**Status**: Requires major compiler changes, significantly more complex than initially estimated
 
-**Impact**: +30 additional tests (beyond stub fixes)
+**Issue**: Methods with keyword arguments fail at runtime:
+- `foo(a: 1, b: 2)` generates `[:call, :foo, [[:pair, [:sexp, :a], 1], [:pair, [:sexp, :b], 2]]]`
+- `foo(**h)` generates `[:call, :foo, [[:hash_splat, h]]]`
+- These `:pair` and `:hash_splat` AST nodes aren't in the keywords list
+- `compile_args_nosplat` calls `compile_eval_arg` on them
+- They fall through to line 1317 and are treated as method calls
+- Results in: "undefined method 'hash_splat' for #<Object>"
+
+**Required changes**:
+1. Add `:pair` and `:hash_splat` to compiler keywords list
+2. Implement `compile_pair` and `compile_hash_splat` methods
+3. OR: Transform keyword args to hash in transform.rb before compilation
+4. Handle `**nil`, `**{}`, and regular keyword arguments uniformly
+5. Update argument passing conventions to support keyword arguments
+
+**Files affected**:
+- compiler.rb (keywords list, compile_exp dispatch)
+- compile_calls.rb (argument compilation)
+- transform.rb (possibly transform :pair/:hash_splat before compilation)
+
+**Specs affected**: keyword_arguments_spec, hash_spec, def_spec, END_spec
+**Impact**: ~60+ tests, but requires significant architectural work
 
 ### 1.5 Implement catch/throw Fully (2-3 hours, 18 tests)
 
