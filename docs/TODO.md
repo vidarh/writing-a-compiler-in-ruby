@@ -1,6 +1,6 @@
 # Ruby Compiler TODO
 
-**Purpose**: Outstanding tasks prioritized by impact and difficulty. See KNOWN_ISSUES.md for detailed bug descriptions.
+**Purpose**: Outstanding tasks prioritized by impact and difficulty. See KNOWN_ISSUES.md for detailed bug descriptions and RUBYSPEC_CRASH_ANALYSIS.md for crash categorization.
 
 ## Test Status (2025-11-26 - Current)
 
@@ -25,254 +25,376 @@
 - All language specs now compile (0 COMPILE FAIL)
 - Known limitation: pattern-bound variables don't work in nested closures
 
-## Priority 1: CRITICAL - Fix Segmentation Faults (HIGHEST IMPACT)
+**Crash Analysis Complete**: See docs/RUBYSPEC_CRASH_ANALYSIS.md
+- Category A (Missing Methods): 18 specs - EASY
+- Category B (Lambda/Block Segfaults): 16 specs - HARD
+- Category C (Startup Segfaults): 5 specs - VERY HARD
+- Category D (Exception Framework): 11 specs - MEDIUM (single-point fix)
 
-**Impact**: Blocks 50 spec files (64% of all specs), prevents ~450+ tests from running
-**Difficulty**: Medium to High - requires debugging
+---
 
-### Issue: Method Dispatch/Lambda/Proc Causes Crashes
+## Phase 0: SUPER-QUICK STUBS (2-4 hours, 30+ specs unblocked)
 
-Many specs compile successfully but crash during execution, often after printing warnings like:
-```
-WARNING:    Method: 'attr'
-WARNING:    symbol address = 0x57cdbff0
-WARNING:    class 'Class'
-```
+**Strategy**: Implement minimal method stubs first to unblock tests, then add full implementations later.
+**Impact**: Convert 18 "missing method" crashes to running tests (Category A)
+**Effort**: ~5-15 minutes per method
 
-**Affected specs** (35+ files):
-- alias_spec.rb, array_spec.rb, break_spec.rb, case_spec.rb, class_spec.rb
-- class_variable_spec.rb, constants_spec.rb, delegation_spec.rb, defined_spec.rb, ensure_spec.rb
-- hash_spec.rb, if_spec.rb, keyword_arguments_spec.rb, lambda_spec.rb, line_spec.rb
-- loop_spec.rb, magic_comment_spec.rb, metaclass_spec.rb, method_spec.rb, module_spec.rb
-- next_spec.rb, numbered_parameters_spec.rb, optional_assignments_spec.rb, or_spec.rb
-- pattern_matching_spec.rb, precedence_spec.rb, predefined_globals_spec.rb, private_spec.rb
-- proc_spec.rb, return_spec.rb, rescue_spec.rb, safe_navigator_spec.rb, send_spec.rb
-- string_spec.rb, super_spec.rb, singleton_class_spec.rb, while_spec.rb, yield_spec.rb
+### 0.1 Fix Exception Framework (30 minutes, 11 specs)
 
-**Common patterns**:
-1. Crash after warning about attr/private/create_lambda methods
-2. Segfaults during block/lambda/proc execution
-3. Possible infinite loops or stack corruption
-4. Some specs timeout (hang indefinitely)
+**Issue**: "Unhandled exception: wrong number of arguments (given 0, expected 1)"
+**Root cause**: Exception constructor expects wrong number of arguments
 
-**Investigation steps**:
-1. Use gdb/valgrind on a simple failing spec (e.g., lambda_spec)
-2. Check method lookup/dispatch for attr/private/lambda
-3. Review block/lambda/proc memory management
-4. Look for stack overflow in recursive calls
+**Files affected** (Category D from crash analysis):
+- BEGIN_spec, ensure_spec, if_spec, next_spec, pattern_matching_spec
+- line_spec, magic_comment_spec, method_spec, numbered_parameters_spec
+- or_spec, predefined_globals_spec
 
-**Estimated impact if fixed**: +300 to +450 test passes (30-45% pass rate)
+**Fix**: Check Exception.new and StandardError.new - likely needs to accept 0 or 1 argument
+**Location**: lib/core/exception.rb or similar
+**Priority**: HIGHEST - Single fix unblocks 11 specs (22% of crashes)
 
-## Priority 2: EASY WINS - Missing Core Methods (HIGH IMPACT, LOW EFFORT)
+### 0.2 Stub Missing Visibility Methods (30 minutes, 6 specs)
 
-These can be implemented quickly with significant test impact:
+**Methods to stub**:
+1. **`Module#private`** - Mark methods as private
+   - Stub: Accept method names, do nothing (visibility not enforced anyway)
+   - Files affected: break_spec, defined_spec, private_spec
+   - Priority: HIGH
 
-### 2.1 Hash Methods (60+ test impact)
+2. **`Module#attr`** - Create attribute accessor
+   - Stub: `define_method(name) { instance_variable_get("@#{name}") }`
+   - Files affected: alias_spec
+   - Priority: MEDIUM
 
-**Files affected**: keyword_arguments_spec, hash_spec, def_spec, END_spec
+3. **`Module#prepend`** - Prepend module to class
+   - Stub: Similar to `include` but prepends instead of appends
+   - Files affected: constants_spec, optional_assignments_spec
+   - Priority: MEDIUM
 
-1. **`Hash#pair`** - Highest priority
-   - Used extensively in keyword argument handling
-   - Likely returns `[key, value]` for a hash entry
+4. **`Module#extend`** - Extend object with module methods
+   - Stub: Add module methods as singleton methods
+   - Files affected: class_variable_spec
+   - Priority: MEDIUM
+
+**Implementation**: Add to lib/core/module.rb or lib/core/class.rb
+**Estimated time**: 5-10 minutes each = 30 minutes total
+**Impact**: +6 specs unblocked
+
+### 0.3 Stub Metaprogramming Methods (45 minutes, 7 specs)
+
+**Methods to stub**:
+1. **`Module#class_eval`** - Evaluate code in class context
+   - Stub: `yield` the block (basic version)
+   - Files affected: delegation_spec
+   - Priority: HIGH
+
+2. **`Class#create_lambda`** (likely custom test method)
+   - Stub: `lambda { |*args| yield(*args) }`
+   - Files affected: lambda_spec
+   - Priority: HIGH
+
+3. **`Module#module_function`** - Make methods both instance and module methods
+   - Stub: Do nothing (or copy methods)
+   - Files affected: send_spec
+   - Priority: MEDIUM
+
+4. **Test helper methods**: `msg`, `x`, `v`, `meth`, `object`
+   - These appear to be spec-specific helpers defined in test files
+   - May need to check why they're not being found
+   - Files affected: rescue_spec, return_spec, yield_spec, undef_spec, assignments_spec
+   - Priority: LOW (investigate first)
+
+**Implementation**: Add to lib/core/module.rb, lib/core/class.rb, or lib/core/kernel.rb
+**Estimated time**: 5-10 minutes each = 45 minutes total
+**Impact**: +7 specs unblocked (potentially more with helper methods)
+
+### 0.4 Stub Missing Core Methods (1 hour, ~50 tests)
+
+**Hash methods** (highest priority):
+1. **`Hash#pair`** - Return [key, value] pair
+   - Stub: `def pair; [keys.first, values.first]; end`
+   - Full impl later: Proper iteration support
+   - Files affected: keyword_arguments_spec, hash_spec, def_spec, END_spec
    - Impact: ~30 tests
 
-2. **`Hash#hash_splat`** - High priority
-   - Used for `**kwargs` expansion
+2. **`Hash#hash_splat`** - Handle **kwargs
+   - Stub: `def hash_splat; self; end`
+   - Full impl later: Proper expansion logic
    - Impact: ~20 tests
 
-3. **`Hash#merge`** - Medium priority
-   - Needed for `**` operator in hash literals
+3. **`Hash#merge`** - Merge hashes
+   - Stub: `def merge(other); dup.update(other); end` (if update exists)
+   - Or: Copy keys manually
    - Impact: ~10 tests
 
-**Estimated effort**: 2-4 hours total
-**Estimated impact**: +60 tests passing
+**Control flow methods**:
+4. **`Kernel#catch`** - Catch thrown values
+   - Stub: `def catch(tag); yield; end` (no actual catching)
+   - Full impl later: Proper catch/throw mechanism
+   - Files affected: throw_spec
+   - Impact: ~18 tests
 
-### 2.2 Catch/Throw (18+ test impact)
+5. **`Kernel#throw`** - Throw to catch
+   - Stub: `def throw(tag, value=nil); end` (no-op)
+   - Full impl later: Actual non-local return
+   - Impact: ~18 tests
 
-**File affected**: throw_spec (all 18 tests fail)
+**String methods**:
+6. **`String#=~`** - Match against pattern
+   - Stub: `def =~(pattern); nil; end`
+   - Full impl: When regexp is implemented
+   - Files affected: match_spec
+   - Impact: ~10 tests
 
-- **`Kernel#catch(symbol, &block)`** - Execute block, catch throw
-- **`Kernel#throw(symbol, value=nil)`** - Exit to matching catch
+7. **`Regexp#=~`** - Match string
+   - Stub: `def =~(string); nil; end`
+   - Impact: ~10 tests
 
-**Estimated effort**: 1-2 hours
-**Estimated impact**: +18 tests passing
+**Loop control**:
+8. **`Kernel#redo`** - Restart loop iteration
+   - Stub: Raise NotImplementedError with clear message
+   - Full impl later: Proper loop restart
+   - Files affected: until_spec, loop_spec
+   - Impact: ~6 tests
 
-### 2.3 String/Regexp Matching (10+ test impact)
+**Utility methods**:
+9. **`Object#singleton_class`** - Get singleton class
+   - Stub: Return class (not correct but won't crash)
+   - Full impl later: Proper singleton class support
+   - Impact: ~2 tests
 
-**File affected**: match_spec (10 failures)
+10. **`Kernel#fixture`** - Test framework helper
+    - Stub: `def fixture(name); "fixtures/#{name}"; end`
+    - Impact: ~10 tests
 
-- **`String#=~(pattern)`** - Return match position or nil
-- **`Regexp#=~(string)`** - Return match position or nil
+**Estimated time**: 5-10 minutes each = 1 hour total
+**Impact**: +50-60 tests passing
 
-Note: Since Regexp is not implemented, these can stub to:
-- Return nil (no match)
-- Or raise NotImplementedError with clear message
+### Phase 0 Total Impact
+- **Time**: 2-4 hours
+- **Specs unblocked**: 30+ specs (from Category A + D)
+- **Tests fixed**: 100+ tests
+- **New pass rate**: ~26-30% (260-300 tests)
 
-**Estimated effort**: 30 minutes (stub implementation)
-**Estimated impact**: +10 tests passing (or better error messages)
+---
 
-### 2.4 Loop Control (6+ test impact)
+## Phase 1: EASY WINS - Full Implementations (4-6 hours, 20+ tests)
 
-**Files affected**: until_spec, loop_spec
+After stubs are working, implement full functionality:
 
-- **`Object#redo`** - Restart current iteration of loop without re-evaluating condition
-
-**Estimated effort**: 1 hour
-**Estimated impact**: +6 tests passing
-
-### 2.5 Fix break Return Value (3 test impact)
-
-**File affected**: until_spec
+### 1.1 Fix break Return Value (15 minutes, 3 tests)
 
 **Issue**: `break` with no arguments returns `false` instead of `nil`
-
 **Fix**: Change default break value from false to nil in compiler
+**File**: compile_control.rb or similar
+**Impact**: +3 tests (until_spec)
 
-**Estimated effort**: 15 minutes
-**Estimated impact**: +3 tests passing
-
-**Total Priority 2 impact**: +97 tests (10% pass rate increase) in ~8 hours work
-
-## Priority 3: String Interpolation Bug (40+ test impact)
-
-**Files affected**: string_spec (21 failures), heredoc_spec (10 failures)
+### 1.2 String Interpolation Bug (2-3 hours, 40+ tests)
 
 **Issue**: Simple interpolation without braces is broken:
-- `"#$var"` → outputs literal `"#$var"` instead of variable value
-- `"#@var"` → outputs literal `"#@var"` instead of instance variable
-- `"#@@var"` → outputs literal `"#@@var"` instead of class variable
-
-**Works correctly**: `"#{expr}"` (braced interpolation)
-
-**Examples**:
 ```ruby
 $x = "hello"
-"#$x"     # Expected: "hello", Got: "#$x"
-"#{$x}"   # Works: "hello"
+"#$x"     # Expected: "hello", Got: "#$x" (literal)
+"#@ivar"  # Expected: value, Got: "#@ivar" (literal)
+"#@@cvar" # Expected: value, Got: "#@@cvar" (literal)
 ```
 
-**Root cause**: Parser doesn't recognize `#$var` / `#@var` / `#@@var` as interpolation
+**Root cause**: Parser doesn't recognize `#$`/`#@`/`#@@` as interpolation
+**Files**: string.rb or scanner.rb
+**Files affected**: string_spec (21 failures), heredoc_spec (10 failures)
+**Impact**: +40 tests
 
-**Estimated effort**: 2-3 hours (parser fix in string.rb or scanner.rb)
-**Estimated impact**: +40 tests passing
-
-## Priority 4: Loop Control Issues (8+ test impact)
-
-**File affected**: until_spec (8 failures)
+### 1.3 Loop Control Issues (2-3 hours, 8+ tests)
 
 **Issues**:
 1. `next` in modifier form doesn't work correctly
-   ```ruby
-   x = 0
-   until x > 3
-     x += 1
-     next if x == 2  # Doesn't skip properly
-     sum += x
-   end
-   # Expected: sum = 7 (1+3+4), Got: different result
-   ```
-
 2. `begin...end until condition` doesn't execute body at least once
-   ```ruby
-   x = 0
-   begin
-     x += 1
-   end until x > 5
-   # Should execute body once before checking condition
-   ```
 
-**Estimated effort**: 2-3 hours
-**Estimated impact**: +8 tests passing
+**File**: compile_control.rb
+**Files affected**: until_spec (8 failures)
+**Impact**: +8 tests
 
-## Priority 5: Hash Edge Cases (15+ test impact)
+### 1.4 Implement Hash Methods Fully (2 hours, 60+ tests)
 
-**File affected**: hash_spec
+After stubs prove the concept, implement proper:
+- `Hash#pair` - Proper iteration support
+- `Hash#hash_splat` - Correct expansion logic
+- `Hash#merge` - Full merge semantics
+
+**Impact**: +30 additional tests (beyond stub fixes)
+
+### 1.5 Implement catch/throw Fully (2-3 hours, 18 tests)
+
+After stub proves concept, implement proper non-local return mechanism
+**Files**: lib/core/kernel.rb, compiler (similar to break/next handling)
+**Impact**: throw_spec fully passes
+
+### Phase 1 Total Impact
+- **Time**: 4-6 hours (after Phase 0 complete)
+- **Tests fixed**: 70+ additional tests
+- **New pass rate**: ~35-40% (350-400 tests)
+
+---
+
+## Phase 2: MEDIUM DIFFICULTY (4-8 hours)
+
+### 2.1 Hash Edge Cases (2-3 hours, 15 tests)
 
 **Issues**:
-1. Empty hash keys: `{=> value}` should create `{nil => value}`, creates `{}`
-2. `**nil` in hash literal should expand to `{}` or raise TypeError
+1. Empty hash keys: `{=> value}` should create `{nil => value}`
+2. `**nil` in hash literal should expand to `{}`
 3. Missing `Hash#to_hash` for splatting
 
-**Estimated effort**: 2-3 hours
-**Estimated impact**: +15 tests passing
+**Files affected**: hash_spec
+**Impact**: +15 tests
 
-## Priority 6: BEGIN/END Blocks (14+ test impact)
+### 2.2 BEGIN/END Blocks (4-6 hours, 14+ tests)
 
 **Files affected**: BEGIN_spec (crashes), END_spec (14 failures)
+**Impact**: +14 tests
 
-**Issue**: BEGIN and END blocks not implemented
+### 2.3 Missing Utility Methods - Full Implementations (2-3 hours, 10+ tests)
 
-**Estimated effort**: 4-6 hours (moderate complexity)
-**Estimated impact**: +14 tests passing (BEGIN_spec may also work)
+Implement full versions of:
+- `Object#instance_eval` - Evaluate block in object's context
+- `Object#proc` - Create Proc from block
+- Test-specific methods after investigation
 
-## Priority 7: Missing Utility Methods (20+ test impact)
+**Impact**: +10-20 tests
 
-**Files affected**: Various
+### Phase 2 Total Impact
+- **Time**: 8-12 hours
+- **Tests fixed**: 40+ additional tests
+- **New pass rate**: ~40-45% (400-450 tests)
 
-Low-hanging fruit, can be stubbed:
+---
 
-1. **`Kernel#fixture`** - Used by test framework (toplevel_binding_spec, END_spec)
-   - Can stub to return file path for test fixtures
-   - Impact: ~10 tests
+## Phase 3: HARD - Lambda/Block Segfaults (1-2 weeks)
 
-2. **`Object#singleton_class`** - Return object's singleton class
-   - Impact: ~2 tests (execution_spec)
+**Category B from crash analysis**: 16 specs crash in lambda/block execution
 
-3. **`Object#instance_eval`** - Evaluate block in object's context
-   - Impact: Variable (keyword_arguments_spec)
+### Investigation Priority Order
 
-4. **`Object#proc`** - Create Proc from block
-   - Impact: ~5 tests (order_spec)
+**B1. Global Variable in Closure (3-5 hours)** - Highest priority common pattern
+- **Symptoms**: Many specs crash at `rubyspec_helper.rb:744` during `$spec_shared_method = nil`
+- **Specs**: loop, range, symbol, while
+- **Root cause**: Global variable assignment from within closure/lambda
+- **Investigation**:
+  1. Check how global variables are accessed in closures
+  2. Verify `__env__` doesn't interfere with global scope
+  3. Test simple case: `1.times { $x = 42 }`
 
-5. **`Object#do`** - Unknown method (order_spec issue?)
-   - Impact: ~10 tests (may be parser bug, not real method)
+**B2. NULL Pointer Dereferencing (2-4 hours)** - Clear error pattern
+- **Symptoms**: Crash at address `0x00000000` (NULL)
+- **Specs**: block_spec, safe_navigator_spec, variables_spec
+- **Root cause**: Uninitialized variable or bad pointer in block
+- **Investigation**:
+  1. Check closure environment allocation
+  2. Verify all closure variables initialized
+  3. Use valgrind to track uninitialized memory
 
-**Estimated effort**: 3-4 hours total (mostly stubs)
-**Estimated impact**: +20 tests passing
+**B3. Lambda Execution Crashes (5-10 hours)** - Complex debugging
+- **Specs**: array_spec (line 205), case_spec (line 242), proc_spec (line 155)
+- **Investigation**:
+  1. Examine specific test lines that crash
+  2. Create minimal reproducers
+  3. Debug with gdb to find exact failure point
+
+**B4. Invalid Memory Access (5-10 hours)** - Memory corruption
+- **Symptoms**: Crashes at invalid addresses like `0x68726164`, `0x00000015`
+- **Specs**: loop_spec, range_spec, symbol_spec
+- **Investigation**:
+  1. Run under valgrind to detect memory corruption
+  2. Check array/string bounds
+  3. Review garbage collector interaction
+
+### Phase 3 Total Impact
+- **Time**: 1-2 weeks
+- **Specs fixed**: 16 specs
+- **Tests fixed**: 150-200 tests
+- **New pass rate**: ~55-65% (550-650 tests)
+
+---
+
+## Phase 4: VERY HARD - Startup Segfaults (1-2 weeks)
+
+**Category C from crash analysis**: 5 specs crash before test code runs
+
+**Specs**:
+- class_spec.rb - Crash in `_start`
+- metaclass_spec.rb - Crash in `_start`
+- singleton_class_spec.rb - Crash in `_start`
+- file_spec.rb - Crash loading rubygems.rb during spec_setup
+- super_spec.rb - Crash in main() at line 799
+
+**Investigation**:
+1. Check class hierarchy initialization
+2. Review global initialization order
+3. Debug with gdb from `_start`
+4. Check if static initializers cause issues
+
+### Phase 4 Total Impact
+- **Time**: 1-2 weeks
+- **Specs fixed**: 5 specs
+- **Tests fixed**: 50-100 tests
+- **New pass rate**: ~60-70% (600-700 tests)
+
+---
 
 ## Summary: Realistic Improvement Plan
 
-### Phase 1: Quick Wins (1-2 days, ~8-10 hours)
-- Priority 2: Missing methods (+97 tests)
-- Fix break return value (+3 tests)
-- **Total**: +100 tests → **26% pass rate**
+### Recommended Execution Order
 
-### Phase 2: Parser Fixes (2-3 days)
-- Priority 3: String interpolation (+40 tests)
-- Priority 4: Loop control (+8 tests)
-- **Total**: +148 tests → **31% pass rate**
+**Week 1: Quick Wins**
+- Phase 0: Stub methods (2-4 hours) → 26-30% pass rate
+- Phase 1: Full implementations (4-6 hours) → 35-40% pass rate
+- **Total**: 6-10 hours → +200-240 tests
 
-### Phase 3: Hash & Utilities (2-3 days)
-- Priority 5: Hash edge cases (+15 tests)
-- Priority 7: Utility methods (+20 tests)
-- **Total**: +183 tests → **34% pass rate**
+**Week 2: Medium Difficulty**
+- Phase 2: Hash edges, BEGIN/END, utilities → 40-45% pass rate
+- **Total**: 8-12 hours → +40 tests
 
-### Phase 4: BEGIN/END (1-2 days)
-- Priority 6: BEGIN/END blocks (+14 tests)
-- **Total**: +197 tests → **36% pass rate**
+**Week 3-4: Hard Debugging**
+- Phase 3: Lambda/block segfaults → 55-65% pass rate
+- **Total**: 1-2 weeks → +150-200 tests
 
-### Phase 5: Critical Investigation (1-2 weeks)
-- Priority 1: Fix segfaults (+300-450 tests)
-- **Total**: +500-650 tests → **50-65% pass rate**
+**Week 5-6: Very Hard**
+- Phase 4: Startup segfaults → 60-70% pass rate
+- **Total**: 1-2 weeks → +50-100 tests
 
-**Realistic near-term goal** (without segfault fixes): **35-40% pass rate** (350-400 tests)
-**Optimistic long-term goal** (with segfault fixes): **50-65% pass rate** (500-650 tests)
+### Expected Outcomes
 
-## Known Limitations (Cannot Fix)
+**Realistic near-term (1 week)**: 35-40% pass rate (350-400 tests)
+**Optimistic mid-term (1 month)**: 55-65% pass rate (550-650 tests)
+**Maximum achievable**: 80-85% pass rate (800-850 tests)
 
-These are fundamental architectural limitations documented in KNOWN_ISSUES.md:
+---
 
-1. **Regexp not implemented** - 507 test failures (65% of all failures)
-2. **eval() not supported** - ~100 test failures (AOT compiler limitation)
-3. **Float not implemented** - 17 test failures
-4. **Backticks/command execution** - 8 test failures
+## Known Limitations (Cannot Fix - 632 tests)
 
-**Total unfixable**: ~632 tests (63% of failures)
+These are fundamental architectural constraints:
 
-These limitations mean maximum achievable pass rate is approximately **80-85%** (800-850 tests) even with all bugs fixed.
+1. **Regular Expressions Not Implemented** (507 failures, 65% of all failures)
+2. **eval() Not Supported** (~100 failures, AOT compiler limitation)
+3. **Float Type Not Implemented** (~17 failures)
+4. **Command Execution Not Supported** (~8 failures, backticks/`%x{}`)
 
-## Not Prioritized (Low Impact)
+**Maximum achievable pass rate**: ~80-85% (800-850 tests) even with all bugs fixed
 
-- Character escape sequences - 2 test failures
-- Timeout/infinite loops (def_spec, assignments_spec) - 2+ files but needs investigation
-- Pattern matching nested closures - Known limitation, documented
+---
+
+## Testing Commands
+
+```bash
+make selftest        # Must pass
+make selftest-c      # Must pass
+./run_rubyspec rubyspec/language/         # Language specs
+make spec            # Custom specs
+```
+
+## References
+
+- **KNOWN_ISSUES.md** - Detailed bug documentation
+- **RUBYSPEC_CRASH_ANALYSIS.md** - Comprehensive crash categorization
+- **DEBUGGING_GUIDE.md** - Debugging techniques
+- **ARCHITECTURE.md** - System architecture
