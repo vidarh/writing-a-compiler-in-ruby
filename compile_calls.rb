@@ -208,12 +208,13 @@ class Compiler
       # Fall through to regular method call in other contexts
     end
 
-    # Handle 'include ModuleName' as compile-time module inclusion
+    # Handle 'include' and 'prepend' as compile-time module inclusion
     # Works in:
     # - ClassScope/ModuleScope (class/module body) - includes into that class/module
     # - GlobalScope (top level) - includes into Object
     # Other scopes (LocalVarScope, etc.) - treat as regular method call
-    if func == :include
+    # Note: prepend is treated same as include (ordering difference not implemented)
+    if func == :include || func == :prepend
       if scope.is_a?(ModuleScope) || scope.is_a?(GlobalScope)
         # args is array of module names, but we only support single module for now
         mod_name = args.is_a?(Array) ? args[0] : args
@@ -227,6 +228,15 @@ class Compiler
       else
         # Not in class/module/global scope - fall through to regular method call
         # This allows include to work as a method in other contexts (e.g., RSpec matchers)
+      end
+    end
+
+    # Handle 'extend' at compile time - no-op for now
+    # (proper implementation would add module methods to singleton class)
+    if func == :extend
+      if scope.is_a?(ModuleScope)
+        @e.movl("nil", :eax)
+        return Value.new([:subexpr])
       end
     end
 
