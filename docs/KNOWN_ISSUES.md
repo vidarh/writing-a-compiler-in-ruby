@@ -2618,3 +2618,32 @@ END
 **Related**: Similar behavior was reported with "11 elsif branch" methods causing crashes, though that issue appeared transient.
 
 **Priority**: LOW - Basic regexp support works. POSIX classes are a nice-to-have feature.
+
+---
+
+## 57. Named Captures Integration Causes Self-Hosting Crash
+
+**Status**: ⚠️ BLOCKED BY COMPILER BUG
+
+**Problem**: Similar to issue #56 (POSIX classes), adding named capture support `(?<name>...)` to the regexp engine causes selftest-c to crash during self-hosting.
+
+**What was implemented**:
+- Parsing named captures in Regexp#initialize via `__parse_named_captures`
+- Regexp#names returns array of capture names
+- Regexp#named_captures returns hash of name => [indices]
+- MatchData#[] supports symbol/string access for named captures
+- MatchData#named_captures returns hash of name => value
+
+**What works**:
+- All named capture features work correctly when compiled with MRI-compiled compiler
+- Code passes all functionality tests
+
+**What doesn't work**:
+- When the compiled compiler tries to compile test/selftest.rb, it segfaults
+- This is the same pattern as POSIX class integration (#56)
+
+**Root Cause**: Unknown. Appears to be the same underlying compiler bug that affects POSIX class integration. Something about certain code patterns (possibly nested control flow, method calls in loops, or specific combinations) triggers a bug during self-hosting.
+
+**Workaround**: Named captures `(?<name>...)` are not supported. Use numbered captures `(...)` with `m[1]`, `m[2]` instead.
+
+**Priority**: LOW - Numbered captures work fine. Named captures are a convenience feature.
