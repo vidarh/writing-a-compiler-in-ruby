@@ -14,30 +14,29 @@ This document outlines a phased approach to implementing regular expression supp
 | Phase 1: Literal Matching | ✅ COMPLETE | Exact string matching |
 | Phase 2: Metacharacters | ✅ COMPLETE | `.`, `^`, `$`, escape sequences |
 | Phase 3: Character Classes | ✅ COMPLETE | `[abc]`, `[a-z]`, `[^abc]`, `\d`, `\w`, `\s` |
-| Phase 4: Quantifiers | ⚡ PARTIAL | `*`, `+`, `?` done; `{n,m}` and non-greedy pending |
-| Phase 5: Groups/Alternation | ❌ NOT STARTED | `(...)`, `|`, captures |
+| Phase 4: Quantifiers | ✅ COMPLETE | `*`, `+`, `?`, `{n,m}`, non-greedy `*?`, `+?`, `??` |
+| Phase 5: Groups/Alternation | ⚡ PARTIAL | `(...)` grouping, `|` alternation done; captures pending |
 | Phase 6: NFA/DFA | ❌ NOT STARTED | Performance optimization |
 | Phase 7: Ruby-Specific | ❌ NOT STARTED | Lookahead, backreferences, etc. |
 
 **Test Results**:
-- Regexp core specs: 38% (61/160 passing)
-- Language specs: 22% (212/947 passing)
+- Regexp core specs: 37% (60/160 passing)
+- Language specs: 21% (206/963 passing)
 - Both selftest and selftest-c pass
 
 ---
 
 ## TODO: Next Steps (Priority Order)
 
-1. `{n}`, `{n,}`, `{n,m}` range quantifiers - needed for many specs
-2. Non-greedy quantifiers `*?`, `+?`, `??` - common in real patterns
-3. Grouping `(...)` without captures - enables complex patterns
-4. Alternation `|` - very common feature
-5. Capture groups with MatchData#[] support - needed for $1, $2, etc.
-6. Case-insensitive matching (IGNORECASE flag) - used by many patterns
-7. Word boundaries `\b`, `\B` - useful for word matching
-8. String#scan using regexp - common Ruby method
-9. String#gsub using regexp - very common Ruby method
-10. String#split with regexp - frequently used
+1. Capture groups with MatchData#[] support - needed for $1, $2, etc.
+2. Case-insensitive matching (IGNORECASE flag) - used by many patterns
+3. Word boundaries `\b`, `\B` - useful for word matching
+4. String#scan using regexp - common Ruby method
+5. String#gsub using regexp - very common Ruby method
+6. String#split with regexp - frequently used
+7. Multiline mode (MULTILINE flag)
+8. Named captures (?<name>...)
+9. Backreferences \1, \2, etc.
 
 ---
 
