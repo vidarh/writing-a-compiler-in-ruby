@@ -122,6 +122,59 @@ class Regexp
   def match_from(pattern, pi, text, ti, tlen)
     plen = pattern.length
 
+    # Handle alternation first (lowest precedence)
+    # Look for top-level | (not inside groups or character classes)
+    if pi == 0 && plen > 0
+      alt_positions = []
+      scan_i = 0
+      depth = 0
+      in_class = false
+      while scan_i < plen
+        c = pattern[scan_i]
+        if c == 92  # '\' - skip escaped char
+          scan_i += 1
+        elsif c == 91 && !in_class  # '[' - start character class
+          in_class = true
+        elsif c == 93 && in_class  # ']' - end character class
+          in_class = false
+        elsif c == 40 && !in_class  # '(' - increase depth
+          depth = depth + 1
+        elsif c == 41 && !in_class  # ')' - decrease depth
+          depth = depth - 1
+        elsif c == 124 && depth == 0 && !in_class  # '|' at top level
+          alt_positions << scan_i
+        end
+        scan_i = scan_i + 1
+      end
+
+      # If we have alternatives, try each one
+      if alt_positions.length > 0
+        # Try first alternative
+        start = 0
+        i = 0
+        while i <= alt_positions.length
+          if i < alt_positions.length
+            alt_end = alt_positions[i]
+          else
+            alt_end = plen
+          end
+          # Extract alternative manually (String#[start,len] not supported)
+          alt = ""
+          j = start
+          while j < alt_end
+            alt << pattern[j]
+            j = j + 1
+          end
+          # Try this alternative
+          result = match_from(alt, 0, text, ti, tlen)
+          return result if result
+          start = alt_end + 1
+          i = i + 1
+        end
+        return nil  # No alternative matched
+      end
+    end
+
     # Skip start anchor if present at beginning
     if pi == 0 && pi < plen && pattern[pi] == 94  # '^'
       pi += 1
