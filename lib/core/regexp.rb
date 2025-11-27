@@ -41,35 +41,161 @@ class Regexp
   end
 
   # Match regexp against string
-  # Phase 1: Literal string matching only (no metacharacters)
+  # Phase 2: Supports literal matching plus basic metacharacters (. ^ $)
   def =~(string)
     return nil if string.nil?
     text = string.to_s
-    pattern = @source
-    plen = pattern.length
     tlen = text.length
 
     # Handle empty pattern
-    return 0 if plen == 0
+    return 0 if @source.length == 0
 
-    # Simple substring search
+    # Check for start anchor
+    anchored_start = (@source[0] == 94)  # '^'
+    # Check for end anchor
+    anchored_end = (@source[@source.length - 1] == 36)  # '$'
+
+    # If anchored at start, only try position 0
+    if anchored_start
+      result = match_at(text, 0, tlen)
+      return result ? 0 : nil
+    end
+
+    # Try matching at each position
     i = 0
-    while i <= tlen - plen
-      # Compare at position i
-      match = true
-      j = 0
-      while j < plen
-        # Compare character codes (str[i] returns Integer in this compiler)
-        if text[i + j] != pattern[j]
-          match = false
-          break
-        end
-        j += 1
-      end
-      return i if match
+    while i <= tlen
+      result = match_at(text, i, tlen)
+      return i if result
       i += 1
     end
     nil
+  end
+
+  # Try to match pattern at position pos in text
+  # Returns true if match succeeds, false otherwise
+  def match_at(text, pos, tlen)
+    pattern = @source
+    plen = pattern.length
+    pi = 0  # pattern index
+    ti = pos  # text index
+
+    # Skip start anchor if present
+    if pi < plen && pattern[pi] == 94  # '^'
+      # Start anchor - must be at position 0
+      return false if pos != 0
+      pi += 1
+    end
+
+    while pi < plen
+      pc = pattern[pi]  # pattern character code
+
+      # Check for end anchor
+      if pc == 36  # '$'
+        # End anchor - must be at end of string
+        return ti == tlen
+      end
+
+      # Handle escape sequences
+      if pc == 92  # '\'
+        pi += 1
+        return false if pi >= plen  # Incomplete escape
+        ec = pattern[pi]  # escaped char
+        return false if ti >= tlen
+
+        # Handle special escapes
+        if ec == 100  # 'd' - digit
+          return false unless char_digit?(text[ti])
+        elsif ec == 68  # 'D' - non-digit
+          return false if char_digit?(text[ti])
+        elsif ec == 119  # 'w' - word char
+          return false unless char_word?(text[ti])
+        elsif ec == 87  # 'W' - non-word char
+          return false if char_word?(text[ti])
+        elsif ec == 115  # 's' - whitespace
+          return false unless char_space?(text[ti])
+        elsif ec == 83  # 'S' - non-whitespace
+          return false if char_space?(text[ti])
+        else
+          # Escaped character - match literally
+          return false if text[ti] != ec
+        end
+        ti += 1
+        pi += 1
+
+      # Handle '[' - character class
+      elsif pc == 91  # '['
+        return false if ti >= tlen
+        pi += 1
+        # Check for negation
+        negated = false
+        if pi < plen && pattern[pi] == 94  # '^'
+          negated = true
+          pi += 1
+        end
+        # Find matching ']' and check if char matches
+        matched = false
+        tc = text[ti]
+        while pi < plen && pattern[pi] != 93  # ']'
+          cc = pattern[pi]
+          # Check for range a-z
+          if pi + 2 < plen && pattern[pi + 1] == 45  # '-'
+            range_end = pattern[pi + 2]
+            if range_end != 93  # not ']'
+              if tc >= cc && tc <= range_end
+                matched = true
+              end
+              pi += 3
+              next
+            end
+          end
+          # Single character
+          if tc == cc
+            matched = true
+          end
+          pi += 1
+        end
+        pi += 1 if pi < plen  # skip ']'
+        # Apply negation
+        matched = !matched if negated
+        return false unless matched
+        ti += 1
+
+      # Handle '.' - any character except newline
+      elsif pc == 46  # '.'
+        return false if ti >= tlen
+        # '.' matches any char except newline (10)
+        return false if text[ti] == 10
+        ti += 1
+        pi += 1
+      else
+        # Literal character
+        return false if ti >= tlen
+        return false if text[ti] != pc
+        ti += 1
+        pi += 1
+      end
+    end
+
+    # Pattern exhausted - success
+    true
+  end
+
+  # Helper: is character a digit (0-9)?
+  def char_digit?(c)
+    c >= 48 && c <= 57  # '0'-'9'
+  end
+
+  # Helper: is character a word char (a-z, A-Z, 0-9, _)?
+  def char_word?(c)
+    (c >= 97 && c <= 122) ||  # a-z
+    (c >= 65 && c <= 90) ||   # A-Z
+    (c >= 48 && c <= 57) ||   # 0-9
+    c == 95                    # _
+  end
+
+  # Helper: is character whitespace?
+  def char_space?(c)
+    c == 32 || c == 9 || c == 10 || c == 13 || c == 12  # space, tab, newline, CR, FF
   end
 
   # Match method - returns MatchData or nil
