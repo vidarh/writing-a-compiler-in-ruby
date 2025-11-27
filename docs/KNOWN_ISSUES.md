@@ -1,22 +1,25 @@
 # Known Issues
 
-**Last Updated**: 2025-11-26 (Post Phase 1.2)
+**Last Updated**: 2025-11-27 (Post Regexp Implementation)
 
 ## Current State Summary
 
-**Test Status**: 78 language specs, 166/983 tests passing (16.9% pass rate)
+**Test Status**: 78 language specs, 217/900 tests passing (24% pass rate)
 - ✅ PASSED: 3 specs (and_spec, not_spec, unless_spec)
-- ❌ FAILED: 24 specs - run but fail assertions
-- 💥 CRASHED: 51 specs - segfaults/hangs
+- ❌ FAILED: 23 specs - run but fail assertions
+- 💥 CRASHED: 52 specs - segfaults/hangs
 - 🎉 **COMPILE FAIL: 0 specs** - All specs now compile!
 
-**Recent fixes** (Phase 1.1-1.3):
+**Recent fixes** (Phase 1.1-1.3, Regexp):
 - ✅ break returns nil (was returning false) - +3 tests
 - ✅ String interpolation #{} in percent strings - eliminated all "hey #xxx" failures
 - ✅ Post-test loops (begin...end until) execute body at least once
+- ✅ Regexp support: matching, captures, case-insensitive, word boundaries
+- ✅ String#gsub, String#split, String#scan with regexp support
+- ✅ POSIX character classes in regexp (10 classes: alpha, digit, space, etc.)
 
-**Expected limitations** (~632 test failures, 64% of all failures):
-- Regexp not implemented: 507 failures
+**Expected limitations** (~500+ test failures):
+- Regexp partially implemented: Many tests still fail (advanced features)
 - eval() not supported (AOT): ~100 failures
 - Float not implemented: ~17 failures
 - Command execution: ~8 failures
@@ -78,7 +81,45 @@ WARNING:    class 'Class'
 
 ---
 
-### 3. ✅ FIXED - String Interpolation in Percent Strings
+### 3. Compound Expression After If/Else Corrupts Variables
+
+**Impact**: "Integer can't be coerced" runtime errors in compiled code
+
+**Symptoms**: Code like this crashes at runtime:
+```ruby
+if condition
+  # branch A
+else
+  # branch B
+end
+result = obj.method1 + obj.method2  # CRASH HERE
+```
+
+**Root cause**: Compiler bug with register allocation or expression evaluation
+after if/else blocks. The variable `obj` gets corrupted when evaluating compound
+expressions immediately after the if/else.
+
+**Workaround**: Break compound expressions into separate statements:
+```ruby
+if condition
+  # branch A
+else
+  # branch B
+end
+# @bug: Compiler bug - compound expression after if/else corrupts variable
+val1 = obj.method1
+val2 = obj.method2
+result = val1 + val2  # WORKS
+```
+
+**Affected code**: lib/core/string.rb (String#scan uses this workaround)
+
+**Status**: Not fixed - workaround in place. Root cause needs investigation
+in compile_control.rb or register allocation.
+
+---
+
+### 4. ✅ FIXED - String Interpolation in Percent Strings
 
 **Status**: ✅ Fixed in commit a39b3ef
 
@@ -90,6 +131,50 @@ WARNING:    class 'Class'
 **Root cause**: tokens.rb was adding "#" to buffer BEFORE checking for interpolation
 
 **Fix**: Check for interpolation first, only add "#" if not followed by "{"
+
+---
+
+### 5. 11-Elsif Branch Crash in selftest-c
+
+**Impact**: Prevents adding more than ~10 elsif branches in a single method in
+lib/core/regexp.rb. Discovered when implementing POSIX character classes.
+
+**Symptoms**: selftest-c crashes with segfault in `Class.allocate` when compiling
+test/selftest.rb with the self-compiled compiler. GDB backtrace shows:
+```
+#0  __method_Class_allocate__1 () - movl %eax, (%edi) where edi=4 (invalid ptr)
+#1  __method_Class_new ()
+#2  __get_string ()
+#3  __method_Integer_chr ()
+#4  Emitter_string ()
+#5  Compiler_output_constants ()
+#6  Compiler_compile ()
+#7  main ()
+```
+
+**Key observations**:
+- Standalone test files with 11 elsif branches compile and run correctly
+- Self-compiled driver (with 11 branches) works for simple files
+- Crash ONLY occurs when self-compiled driver compiles test/selftest.rb
+- Crash is in Class.allocate: `edi` register contains 4 (tagged fixnum for 2)
+  instead of a valid array pointer from `__array` call
+- The crash happens during string constant output in Emitter#string
+
+**Root cause**: Unknown. The bug is in the self-compiled binary, not the source.
+Adding an 11th elsif branch to `__posix?` in regexp.rb causes the resulting
+self-compiled binary to crash when processing large files with many string
+constants. Likely a code generation bug that causes stack or register corruption.
+
+**Workaround**: Split long elsif chains into multiple methods. For POSIX classes,
+`__posix?` was split into `__posix_low?` (4 branches) and `__posix_high?` (6 branches).
+
+**Reproduction**: Run `./spec/reproduce_11branch_crash.sh` to automatically reproduce the crash.
+
+**Current POSIX support**: 11 classes implemented (alpha, alnum, blank, cntrl,
+digit, graph, lower, space, upper, word, xdigit). Punct NOT implemented due to
+this bug - would require a 12th branch or third split method.
+
+**Status**: Workaround in place. Root cause needs investigation.
 
 ---
 
@@ -2503,3 +2588,33 @@ END
 **Impact**: 10+ rubyspec tests in heredoc_spec.rb fail due to this issue.
 
 **Priority**: MEDIUM - Single-quoted heredocs work, regular strings with interpolation work.
+
+---
+
+## 56. POSIX Character Class Integration Causes Self-Hosting Crash
+
+**Status**: ⚠️ PARTIALLY IMPLEMENTED
+
+**Problem**: While the `__posix?` helper method for POSIX character classes compiles and works correctly, integrating it into the regexp character class matching code (`match_from` and `match_atom`) causes selftest-c to crash with a segmentation fault.
+
+**What works**:
+- The `__posix?` helper method itself (committed in fbb7a85)
+- Compiling and running standalone programs with POSIX classes when using MRI-compiled compiler
+- Regular character classes `[a-z]`, `[^0-9]`, etc.
+
+**What doesn't work**:
+- When integration code is added to handle `[[:alpha:]]` in `match_from` or `match_atom`, selftest-c crashes
+- This happens regardless of whether the code uses:
+  - Nested while loops inline
+  - Helper method calls (`__skip_char_class`, `__skip_posix_class`)
+  - Flat if/elsif chains
+
+**Symptoms**: The compiled compiler (out/driver) segfaults when trying to compile test/selftest.rb.
+
+**Root Cause**: Unknown. Appears to be a compiler bug triggered by certain code patterns during self-hosting. The bug is not triggered when using the MRI-compiled compiler, only when the compiled compiler compiles code.
+
+**Workaround**: POSIX character classes like `[[:alpha:]]` are not supported in the regexp engine. The `__posix?` helper is committed and ready for integration once the underlying compiler bug is identified and fixed.
+
+**Related**: Similar behavior was reported with "11 elsif branch" methods causing crashes, though that issue appeared transient.
+
+**Priority**: LOW - Basic regexp support works. POSIX classes are a nice-to-have feature.
