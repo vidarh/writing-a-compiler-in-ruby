@@ -59,12 +59,13 @@ class Regexp
     if result
       start_pos = result[0]
       end_pos = result[1]
+      captures = result[2]
       # Adjust positions if we started at an offset
       if pos > 0
         start_pos = start_pos + pos
         end_pos = end_pos + pos
       end
-      MatchData.new(self, string.to_s, start_pos, end_pos)
+      MatchData.new(self, string.to_s, start_pos, end_pos, captures)
     else
       nil
     end
@@ -81,14 +82,19 @@ class Regexp
     result ? true : false
   end
 
-  # Internal match - returns [start_pos, end_pos] or nil
+  # Internal match - returns [start_pos, end_pos, captures] or nil
   def match_internal(string)
     return nil if string.nil?
     text = string.to_s
     tlen = text.length
 
+    # Initialize capture tracking
+    @match_captures = []
+    @next_capture_index = 0
+    @match_text = text  # Store text for capture extraction
+
     # Handle empty pattern
-    return [0, 0] if @source.length == 0
+    return [0, 0, []] if @source.length == 0
 
     # Check for start anchor
     anchored_start = (@source[0] == 94)  # '^'
@@ -96,15 +102,18 @@ class Regexp
     # If anchored at start, only try position 0
     if anchored_start
       end_pos = match_at(text, 0, tlen)
-      return end_pos ? [0, end_pos] : nil
+      return end_pos ? [0, end_pos, @match_captures] : nil
     end
 
     # Try matching at each position
     i = 0
     while i <= tlen
+      # Reset captures for each starting position
+      @match_captures = []
+      @next_capture_index = 0
       end_pos = match_at(text, i, tlen)
       if end_pos
-        return [i, end_pos]
+        return [i, end_pos, @match_captures]
       end
       i += 1
     end
@@ -479,14 +488,24 @@ class Regexp
 
     # Handle '(' - group
     elsif pc == 40  # '('
-      # Extract group content (between opening and closing parens)
+      # Check if this is a capturing group or non-capturing (?:...)
+      is_capturing = true
       group_start = pi + 1
-      # Skip special group markers like (?:, (?=, etc.
+      # Check for special group markers like (?:, (?=, etc.
       if group_start < pattern.length && pattern[group_start] == 63  # '?'
+        is_capturing = false  # Non-capturing or special group
         group_start += 1
         # Skip the type character (: = ! < etc)
         group_start += 1 if group_start < pattern.length
       end
+
+      # Assign capture index if this is a capturing group
+      capture_index = nil
+      if is_capturing && @match_captures
+        capture_index = @next_capture_index
+        @next_capture_index = @next_capture_index + 1
+      end
+
       # Find matching ')' to get group end
       depth = 1
       group_end = group_start
@@ -509,8 +528,25 @@ class Regexp
         group_content << pattern[gi]
         gi = gi + 1
       end
+
+      # Record start position for capture
+      capture_start = ti
+
       # Match the group content as a sub-pattern
       result = match_from(group_content, 0, text, ti, tlen)
+
+      # If matched and this is a capturing group, store the capture
+      if result && capture_index
+        # Build captured text manually
+        captured = ""
+        ci = capture_start
+        while ci < result
+          captured << text[ci]
+          ci = ci + 1
+        end
+        @match_captures[capture_index] = captured
+      end
+
       return result  # Returns new position or nil
 
     # Handle '.' - any character except newline
