@@ -679,7 +679,7 @@ module Tokens
               # %r{} - regexp literal
               # For now, convert to Regexp.new(string) call without interpolation or modifiers
               # TODO: Support interpolation and modifiers (i, m, x, o)
-              return [[:call, [:const, :Regexp], :new, [content]], nil]
+              return [[:callm, :Regexp, :new, content], nil]
             else
               # Unknown type - treat as modulo
               @s.unget(type.chr) if type
@@ -715,9 +715,19 @@ module Tokens
             end
             @s.get
             if c == ?/
-              # End of regexp, skip modifiers for now
+              # End of regexp - capture modifiers
+              # Regexp options: i=1, x=2, m=4, fixedencoding=16, noencoding=32
+              options = 0
               while @s.peek && (@s.peek == ?i || @s.peek == ?m || @s.peek == ?x || @s.peek == ?o || @s.peek == ?e || @s.peek == ?n || @s.peek == ?s || @s.peek == ?u)
-                @s.get
+                mod = @s.get
+                case mod
+                when ?i then options |= 1   # IGNORECASE
+                when ?x then options |= 2   # EXTENDED
+                when ?m then options |= 4   # MULTILINE
+                when ?u, ?e, ?s then options |= 16  # FIXEDENCODING
+                when ?n then options |= 32  # NOENCODING
+                # 'o' is ignored (once-only evaluation - not relevant for us)
+                end
               end
               # Finalize pattern
               if ret
@@ -726,7 +736,7 @@ module Tokens
               else
                 pattern = buf
               end
-              return [[:callm, :Regexp, :new, pattern], nil]
+              return [[:callm, :Regexp, :new, [pattern, options]], nil]
             elsif c == ?\\
               # Escape sequence
               buf << c.chr

@@ -921,6 +921,37 @@ class Compiler
 
       :skip
     end
+
+    # Handle top-level procs (those not inside any :defm)
+    # These need environment setup and lambda rewriting too
+    # This fixes blocks like: [1].each { |x| puts x } at top level
+    if rewrite_lambda(exp)
+      # If we found any procs at top level, we need to set up the environment
+      # Look for the first :do or :let that wraps top-level code and add __env__ and __tmp_proc
+      if exp[0] == :do
+        # Check if __env__ is already declared (avoid duplicates)
+        has_env = false
+        exp.each do |e|
+          if e.is_a?(Array) && e[0] == :let && e[1].is_a?(Array) && e[1].include?(:__env__)
+            has_env = true
+            break
+          end
+        end
+        if !has_env
+          # Wrap the top-level code in a let that declares __env__, __tmp_proc, and __closure__
+          # __closure__ must be 0 at top level since there's no enclosing closure
+          # __tmp_proc is used by rewrite_lambda to hold the temporary proc
+          inner = exp[1..-1].dup
+          exp.clear
+          exp << :do
+          let_body = E[:do,
+            E[:sexp, E[:assign, :__closure__, 0]],
+            E[:sexp, E[:assign, :__env__, E[:call, :__alloc_env, 2]]]]
+          inner.each { |e| let_body << e }
+          exp << E[:let, [:__closure__, :__tmp_proc, :__env__], let_body]
+        end
+      end
+    end
   end
 
   def rewrite_range(exp)

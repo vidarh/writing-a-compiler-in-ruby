@@ -317,32 +317,23 @@ a = (
 
 ---
 
-## 3. Top-Level Blocks/Lambdas
+## 3. Top-Level Blocks/Lambdas - FIXED
 
-**Problem**: Blocks and lambdas at top-level fail with "undefined method 'lambda'" or "undefined reference to '__env__'".
+**Status**: ✅ FIXED (2025-11-26)
+
+**Problem**: Blocks and lambdas at top-level were failing with "undefined method 'lambda'" or "undefined reference to '__env__'".
 
 ```ruby
-lambda { 42 }               # ✗ "undefined method 'lambda'" at top-level
-[1,2,3].each { |i| puts i } # ✗ Fails at top-level
-                            # ✓ Works inside methods
+lambda { 42 }               # ✓ Now works at top-level
+[1,2,3].each { |i| puts i } # ✓ Now works at top-level
 ```
 
-**Root Cause**: The `rewrite_lambda()` function in transform.rb is only called from `rewrite_let_env()`, which only processes `:defm` nodes (method definitions). Top-level code is not inside a `:defm`, so:
-1. Top-level `:lambda` nodes never get transformed into `:defun` + `__new_proc` calls
-2. Without transformation, compiler tries to compile `:lambda` as a method call to non-existent `lambda` method
-3. Even if manually transformed, top-level lacks `__env__`, `__tmp_proc`, and `__closure__` variables that lambdas require
+**Fix**: Modified `rewrite_let_env()` in transform.rb to also handle top-level procs:
+1. After processing all `:defm` nodes, call `rewrite_lambda(exp)` on the entire expression
+2. If top-level procs are found, wrap the top-level code in a `:let` that declares `__closure__`, `__tmp_proc`, and `__env__`
+3. Initialize `__closure__` to 0 (no enclosing closure at top level) and allocate `__env__`
 
-**Workaround**: Wrap all test code in methods. RubySpecs already do this.
-
-**Impact**: Only affects top-level code, not actual program code.
-
-**Recent Findings (2025-11-12)**:
-- Classes defined inside lambdas at top-level now **compile successfully** (nil ClassScope bug fixed)
-- But programs with top-level lambdas **segfault at runtime**, even with classes in methods calling lambdas
-- The issue appears during initialization, before any lambda code executes
-- Likely cause: Missing environment setup for lambdas that depend on rewrites only happening inside `:defm`
-
-**Possible Solution**: Compile the entire main block as if it's a method body, then call it. This would trigger the necessary rewrites for lambda support.
+**Previous Root Cause**: The `rewrite_lambda()` function was only called from within `rewrite_let_env()`'s `:defm` processing loop. Top-level code is not inside a `:defm`, so top-level procs were never transformed.
 
 ---
 
@@ -2476,3 +2467,39 @@ puts result  # Should print 42, but fails
 1. Run `rewrite_pattern_matching` before `rewrite_let_env` (major reordering)
 2. Have `rewrite_pattern_matching` insert proper `[:index, :__env__, N]` nodes directly
 3. Add a second pass after pattern matching to identify captured pattern variables
+
+---
+
+## 55. Heredoc String Interpolation Not Implemented
+
+**Status**: ❌ NOT IMPLEMENTED
+
+**Problem**: Double-quoted heredocs (`<<MARKER`, `<<"MARKER"`, `<<~MARKER`) do not expand `#{...}` interpolations. The interpolation syntax is kept as a literal string.
+
+```ruby
+$x = "world"
+puts <<END
+hello #{$x}
+END
+# Expected: "hello world\n"
+# Actual: "hello #{$x}\n"
+```
+
+**Root Cause**: Heredoc parsing in `tokens.rb` (lines 912-1016) reads the heredoc body as a plain string and returns it directly without calling the `handle_interpolation()` function from `quoted.rb` that processes `#{...}` syntax.
+
+**What works**:
+- Single-quoted heredocs (`<<'MARKER'`, `<<-'MARKER'`, `<<~'MARKER'`) - correctly preserved as literal
+- Regular double-quoted strings with interpolation: `"hello #{$x}"`
+
+**What doesn't work**:
+- Double-quoted heredocs: `<<MARKER`, `<<"MARKER"`, `<<~MARKER`
+- Any heredoc with `#{...}` interpolation
+
+**Potential fix**: Modify heredoc parsing in `tokens.rb` to:
+1. Check if heredoc is single-quoted (no interpolation) or double-quoted (interpolation)
+2. For double-quoted heredocs, process the body through `Quoted.handle_interpolation()` similar to regular strings
+3. Return the interpolated expression tree instead of a plain string constant
+
+**Impact**: 10+ rubyspec tests in heredoc_spec.rb fail due to this issue.
+
+**Priority**: MEDIUM - Single-quoted heredocs work, regular strings with interpolation work.

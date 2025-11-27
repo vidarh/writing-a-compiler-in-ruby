@@ -697,10 +697,10 @@ class String
   end
 
   # Match string against pattern
-  # Stub: Returns nil (regexp not implemented)
-  # Full implementation would perform regex matching
+  # Delegates to pattern's =~ method
   def =~(pattern)
-    nil
+    return nil if pattern.nil?
+    pattern =~ self
   end
 end
 
