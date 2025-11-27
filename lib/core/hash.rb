@@ -331,4 +331,13 @@ class Hash
     self
   end
 
+  # Duplicate this hash
+  def dup
+    result = Hash.new(@defval)
+    each do |k, v|
+      result[k] = v
+    end
+    result
+  end
+
 end
