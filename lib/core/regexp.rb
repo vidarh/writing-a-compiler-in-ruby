@@ -549,10 +549,12 @@ class Regexp
 
       return result  # Returns new position or nil
 
-    # Handle '.' - any character except newline
+    # Handle '.' - any character except newline (unless MULTILINE mode)
     elsif pc == 46  # '.'
       return nil if ti >= tlen
-      return nil if text[ti] == 10  # newline
+      # In multiline mode (/m), '.' matches newlines too
+      multiline = (options & MULTILINE) != 0
+      return nil if !multiline && text[ti] == 10  # newline
       return ti + 1
     else
       # Literal character

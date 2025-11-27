@@ -29,14 +29,15 @@ This document outlines a phased approach to implementing regular expression supp
 ## TODO: Next Steps (Priority Order)
 
 1. ~~Capture groups with MatchData#[] support~~ ✅ DONE
-2. Case-insensitive matching (IGNORECASE flag) - used by many patterns
-3. Word boundaries `\b`, `\B` - useful for word matching
-4. String#scan using regexp - common Ruby method
-5. String#gsub using regexp - very common Ruby method
-6. String#split with regexp - frequently used
-7. Multiline mode (MULTILINE flag)
+2. ~~Case-insensitive matching (IGNORECASE flag)~~ ✅ DONE
+3. ~~Word boundaries `\b`, `\B`~~ ✅ DONE
+4. ~~String#scan using regexp~~ ✅ DONE
+5. ~~String#gsub using regexp~~ ✅ DONE
+6. ~~String#split with regexp~~ ✅ DONE
+7. ~~Multiline mode (MULTILINE flag)~~ ✅ DONE
 8. Named captures (?<name>...)
 9. Backreferences \1, \2, etc.
+10. POSIX character classes (blocked by self-hosting bug #56)
 
 ---
 
