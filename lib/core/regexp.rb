@@ -376,6 +376,10 @@ class Regexp
       if quant_max != -1 && match_count >= quant_max
         break
       end
+      # Stop if no progress (empty match) - prevents infinite loop
+      if new_ti == current_ti
+        break
+      end
       current_ti = new_ti
       new_ti = match_atom(pattern, atom_start, text, current_ti, tlen)
     end

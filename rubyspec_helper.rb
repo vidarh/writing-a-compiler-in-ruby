@@ -872,6 +872,51 @@ def ruby_exe(code, options = nil)
   ""  # Return empty string to avoid nil errors
 end
 
+# STUB: have_private_instance_method matcher
+# We don't track private method visibility, so always fail
+def have_private_instance_method(method_name, include_super = true)
+  HavePrivateInstanceMethodMatcher.new(method_name)
+end
+
+class HavePrivateInstanceMethodMatcher
+  def initialize(method_name)
+    @method_name = method_name
+  end
+
+  def match?(actual)
+    # We don't track private methods, always return false
+    false
+  end
+
+  def failure_message(actual)
+    "Expected #{actual} to have private instance method #{@method_name}"
+  end
+end
+
+# STUB: have_public_instance_method matcher
+def have_public_instance_method(method_name, include_super = true)
+  HavePublicInstanceMethodMatcher.new(method_name)
+end
+
+class HavePublicInstanceMethodMatcher
+  def initialize(method_name)
+    @method_name = method_name
+  end
+
+  def match?(actual)
+    # Check if the class responds to instance_methods and has this method
+    if actual.respond_to?(:instance_methods)
+      actual.instance_methods.include?(@method_name)
+    else
+      false
+    end
+  end
+
+  def failure_message(actual)
+    "Expected #{actual} to have public instance method #{@method_name}"
+  end
+end
+
 # Call this at end of spec file manually
 def print_spec_results
   puts
