@@ -162,20 +162,85 @@ class Regexp
       end
 
       # Check for quantifier after atom
-      # quant: 0=none, 1=star(*), 2=plus(+), 3=question(?)
+      # quant: 0=none, 1=star(*), 2=plus(+), 3=question(?), 4=range({n,m})
       quant = 0
+      quant_min = 0
+      quant_max = -1  # -1 means unlimited
+      quant_lazy = false
       quant_pi = atom_end
       if quant_pi < plen
         qc = pattern[quant_pi]
         if qc == 42  # '*'
           quant = 1
+          quant_min = 0
+          quant_max = -1
           pi = quant_pi + 1
         elsif qc == 43  # '+'
           quant = 2
+          quant_min = 1
+          quant_max = -1
           pi = quant_pi + 1
         elsif qc == 63  # '?'
           quant = 3
+          quant_min = 0
+          quant_max = 1
           pi = quant_pi + 1
+        elsif qc == 123  # '{' - range quantifier
+          # Parse {n}, {n,}, or {n,m}
+          save_pi = quant_pi + 1
+          pi = save_pi
+          # Parse first number
+          n1 = 0
+          has_n1 = false
+          while pi < plen && pattern[pi] >= 48 && pattern[pi] <= 57
+            n1 = n1 * 10 + (pattern[pi] - 48)
+            has_n1 = true
+            pi = pi + 1
+          end
+          if has_n1 && pi < plen && pattern[pi] == 125  # '}' - exact: {n}
+            quant = 4
+            quant_min = n1
+            quant_max = n1
+            pi = pi + 1
+          elsif pi < plen && pattern[pi] == 44  # ','
+            pi = pi + 1
+            if has_n1 && pi < plen && pattern[pi] == 125  # '}' - at least: {n,}
+              quant = 4
+              quant_min = n1
+              quant_max = -1
+              pi = pi + 1
+            else
+              # Parse second number: {n,m}
+              n2 = 0
+              has_n2 = false
+              while pi < plen && pattern[pi] >= 48 && pattern[pi] <= 57
+                n2 = n2 * 10 + (pattern[pi] - 48)
+                has_n2 = true
+                pi = pi + 1
+              end
+              if has_n2 && pi < plen && pattern[pi] == 125  # '}'
+                # Only valid if we have at least n1 or n2
+                if has_n1
+                  quant = 4
+                  quant_min = n1
+                  quant_max = n2
+                  pi = pi + 1
+                else
+                  # {,m} - treat as {0,m}
+                  quant = 4
+                  quant_min = 0
+                  quant_max = n2
+                  pi = pi + 1
+                end
+              else
+                # Malformed, treat { as literal
+                pi = atom_end
+              end
+            end
+          else
+            # Malformed (including {}), treat { as literal
+            pi = atom_end
+          end
         else
           pi = atom_end
         end
@@ -183,11 +248,17 @@ class Regexp
         pi = atom_end
       end
 
+      # Check for ? after quantifier (makes it non-greedy/lazy)
+      if quant != 0 && pi < plen && pattern[pi] == 63  # '?'
+        quant_lazy = true
+        pi = pi + 1
+      end
+
       if quant != 0
         # Handle quantified atom with backtracking
         # match_quantified recursively matches the rest of the pattern,
         # so we return its result directly
-        ti = match_quantified(pattern, atom_start, atom_end, quant, pi, text, ti, tlen)
+        ti = match_quantified(pattern, atom_start, atom_end, quant_min, quant_max, quant_lazy, pi, text, ti, tlen)
         return ti  # Either nil (no match) or the final position (match)
       else
         # Match single atom
@@ -200,46 +271,62 @@ class Regexp
     ti
   end
 
-  # Match a quantified atom (*, +, ?)
-  # Uses greedy matching with backtracking
-  # quant: 1=star(*), 2=plus(+), 3=question(?)
-  def match_quantified(pattern, atom_start, atom_end, quant, rest_pi, text, ti, tlen)
-    # Collect all possible match positions (greedy)
+  # Match a quantified atom (*, +, ?, {n,m})
+  # Uses greedy/lazy matching with backtracking
+  # quant_min: minimum repetitions required
+  # quant_max: maximum repetitions allowed (-1 = unlimited)
+  # lazy: if true, try shortest matches first (non-greedy)
+  def match_quantified(pattern, atom_start, atom_end, quant_min, quant_max, lazy, rest_pi, text, ti, tlen)
+    # Collect all possible match positions
     positions = []
-    positions << ti  # position 0 matches (for * and ?)
+    match_count = 0
 
-    # For '+' (2), must match at least once, so remove the 0-match position
-    if quant == 2
-      new_ti = match_atom(pattern, atom_start, text, ti, tlen)
-      return nil if new_ti.nil?
-      positions = []
-      positions << new_ti
-      ti = new_ti
+    # Position with 0 matches
+    if quant_min == 0
+      positions << ti
     end
 
-    # For '?' (3), can match 0 or 1 time
-    if quant == 3
-      new_ti = match_atom(pattern, atom_start, text, ti, tlen)
-      if new_ti
+    # Match as many as possible (up to quant_max)
+    current_ti = ti
+    new_ti = match_atom(pattern, atom_start, text, current_ti, tlen)
+    while new_ti
+      match_count = match_count + 1
+      # Only record positions at or above minimum
+      if match_count >= quant_min
         positions << new_ti
+      end
+      # Stop if we've reached max (unless unlimited)
+      if quant_max != -1 && match_count >= quant_max
+        break
+      end
+      current_ti = new_ti
+      new_ti = match_atom(pattern, atom_start, text, current_ti, tlen)
+    end
+
+    # If we couldn't reach minimum, fail
+    if match_count < quant_min
+      return nil
+    end
+
+    # Try positions - greedy tries longest first, lazy tries shortest first
+    if lazy
+      # Lazy: try shortest matches first (forward order)
+      i = 0
+      while i < positions.length
+        pos = positions[i]
+        result = match_from(pattern, rest_pi, text, pos, tlen)
+        return result if result
+        i = i + 1
       end
     else
-      # For '*' (1) and '+' (2), match as many as possible
-      new_ti = match_atom(pattern, atom_start, text, ti, tlen)
-      while new_ti
-        positions << new_ti
-        ti = new_ti
-        new_ti = match_atom(pattern, atom_start, text, ti, tlen)
+      # Greedy: try longest matches first (reverse order)
+      i = positions.length - 1
+      while i >= 0
+        pos = positions[i]
+        result = match_from(pattern, rest_pi, text, pos, tlen)
+        return result if result
+        i = i - 1
       end
-    end
-
-    # Try positions from longest to shortest (greedy backtracking)
-    i = positions.length - 1
-    while i >= 0
-      pos = positions[i]
-      result = match_from(pattern, rest_pi, text, pos, tlen)
-      return result if result
-      i = i - 1
     end
     nil
   end
