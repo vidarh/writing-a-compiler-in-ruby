@@ -580,6 +580,27 @@ class Regexp
     c == 32 || c == 9 || c == 10 || c == 13 || c == 12  # space, tab, newline, CR, FF
   end
 
+  # Helper: POSIX class match by first char of name
+  # n0 is first char of class name: a=alnum, d=digit, s=space, u=upper, l=lower, w=word,
+  # b=blank, c=cntrl, g=graph, x=xdigit, p=punct, P=print, A=ascii
+  def __posix?(n0, c)
+    if n0 == 97 then char_word?(c) && c != 95      # alnum
+    elsif n0 == 100 then char_digit?(c)            # digit
+    elsif n0 == 115 then char_space?(c)            # space
+    elsif n0 == 117 then c >= 65 && c <= 90        # upper
+    elsif n0 == 108 then c >= 97 && c <= 122       # lower
+    elsif n0 == 119 then char_word?(c)             # word
+    elsif n0 == 98 then c == 32 || c == 9          # blank
+    elsif n0 == 99 then c < 32 || c == 127         # cntrl
+    elsif n0 == 103 then c >= 33 && c <= 126       # graph
+    elsif n0 == 120 then char_digit?(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)  # xdigit
+    elsif n0 == 112 then (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126)  # punct
+    elsif n0 == 80 then c >= 32 && c <= 126        # print (P=80)
+    elsif n0 == 65 then c >= 0 && c <= 127         # ascii (A=65)
+    else false
+    end
+  end
+
   # === for case expressions
   def ===(string)
     !!(self =~ string)
