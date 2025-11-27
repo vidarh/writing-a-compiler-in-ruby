@@ -15,20 +15,20 @@ This document outlines a phased approach to implementing regular expression supp
 | Phase 2: Metacharacters | ✅ COMPLETE | `.`, `^`, `$`, escape sequences |
 | Phase 3: Character Classes | ✅ COMPLETE | `[abc]`, `[a-z]`, `[^abc]`, `\d`, `\w`, `\s` |
 | Phase 4: Quantifiers | ✅ COMPLETE | `*`, `+`, `?`, `{n,m}`, non-greedy `*?`, `+?`, `??` |
-| Phase 5: Groups/Alternation | ⚡ PARTIAL | `(...)` grouping, `|` alternation done; captures pending |
+| Phase 5: Groups/Alternation | ✅ COMPLETE | `(...)` grouping, `|` alternation, capture groups |
 | Phase 6: NFA/DFA | ❌ NOT STARTED | Performance optimization |
 | Phase 7: Ruby-Specific | ❌ NOT STARTED | Lookahead, backreferences, etc. |
 
 **Test Results**:
-- Regexp core specs: 37% (60/160 passing)
-- Language specs: 21% (206/963 passing)
+- Regexp core specs: 42% (66/154 passing)
+- Language specs: ~21% (pending full retest)
 - Both selftest and selftest-c pass
 
 ---
 
 ## TODO: Next Steps (Priority Order)
 
-1. Capture groups with MatchData#[] support - needed for $1, $2, etc.
+1. ~~Capture groups with MatchData#[] support~~ ✅ DONE
 2. Case-insensitive matching (IGNORECASE flag) - used by many patterns
 3. Word boundaries `\b`, `\B` - useful for word matching
 4. String#scan using regexp - common Ruby method
