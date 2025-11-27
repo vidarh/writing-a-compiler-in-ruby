@@ -99,7 +99,37 @@
 **Estimated time**: 5-10 minutes each = 30 minutes total
 **Impact**: +6 specs unblocked
 
-### 0.3 Stub Metaprogramming Methods (45 minutes, 7 specs)
+### 0.3 Support Trivial eval() (~100 tests)
+
+**Issue**: `eval()` calls with literal strings fail with "eval not supported in AOT compiler"
+
+**Workaround**: For `eval("literal string")` where the argument is a literal string (not a variable), we can:
+1. Parse the string contents at compile time
+2. Compile it into a lambda: `-> { (contents) }.call`
+3. Replace the `eval("...")` call with the lambda call
+
+**Example**:
+```ruby
+# Before transformation:
+eval("puts 'hello'")
+
+# After transformation:
+-> { puts 'hello' }.call
+```
+
+**Limitations**:
+- Only works for literal string arguments
+- Dynamic `eval(some_var)` still not supported
+- Binding context may differ (local variables)
+
+**Implementation**:
+- In parser/transform, detect `eval("literal")` calls
+- Parse the literal string as Ruby code
+- Wrap in `-> { ... }.call`
+
+**Priority**: MEDIUM (unblocks ~100 tests)
+
+### 0.4 Stub Metaprogramming Methods (45 minutes, 7 specs)
 
 **Methods to stub**:
 1. **`Module#class_eval`** - Evaluate code in class context

@@ -156,6 +156,30 @@ class Regexp
         pi += 1 if pi < plen  # skip ']'
         atom_end = pi
 
+      # Handle '(' - group
+      elsif pc == 40  # '('
+        pi += 1
+        # Skip special group markers like (?:, (?=, etc.
+        if pi < plen && pattern[pi] == 63  # '?'
+          pi += 1
+          # Skip the type character (: = ! < etc)
+          pi += 1 if pi < plen
+        end
+        # Find matching ')' with nesting
+        depth = 1
+        while pi < plen && depth > 0
+          c = pattern[pi]
+          if c == 92  # '\' - skip escaped char
+            pi += 1
+          elsif c == 40  # '('
+            depth = depth + 1
+          elsif c == 41  # ')'
+            depth = depth - 1
+          end
+          pi += 1
+        end
+        atom_end = pi
+
       # Handle '.' or literal
       else
         atom_end = pi + 1
@@ -395,6 +419,42 @@ class Regexp
       matched = !matched if negated
       return nil unless matched
       return ti + 1
+
+    # Handle '(' - group
+    elsif pc == 40  # '('
+      # Extract group content (between opening and closing parens)
+      group_start = pi + 1
+      # Skip special group markers like (?:, (?=, etc.
+      if group_start < pattern.length && pattern[group_start] == 63  # '?'
+        group_start += 1
+        # Skip the type character (: = ! < etc)
+        group_start += 1 if group_start < pattern.length
+      end
+      # Find matching ')' to get group end
+      depth = 1
+      group_end = group_start
+      while group_end < pattern.length && depth > 0
+        c = pattern[group_end]
+        if c == 92  # '\' - skip escaped char
+          group_end += 1
+        elsif c == 40  # '('
+          depth = depth + 1
+        elsif c == 41  # ')'
+          depth = depth - 1
+          break if depth == 0
+        end
+        group_end += 1
+      end
+      # Extract group content manually (String#[start,len] not supported)
+      group_content = ""
+      gi = group_start
+      while gi < group_end
+        group_content << pattern[gi]
+        gi = gi + 1
+      end
+      # Match the group content as a sub-pattern
+      result = match_from(group_content, 0, text, ti, tlen)
+      return result  # Returns new position or nil
 
     # Handle '.' - any character except newline
     elsif pc == 46  # '.'
