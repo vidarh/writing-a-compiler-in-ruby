@@ -40,49 +40,90 @@ class Regexp
     @options || 0
   end
 
-  # Match regexp against string
-  # Phase 2: Supports literal matching plus basic metacharacters (. ^ $)
+  # Match regexp against string - returns position of match or nil
+  # Phase 4: Supports literals, metacharacters, character classes, and basic quantifiers
   def =~(string)
+    result = match_internal(string)
+    result ? result[0] : nil
+  end
+
+  # Match method - returns MatchData or nil
+  def match(string, pos = 0)
+    return nil if string.nil?
+    text = string.to_s
+    if pos > 0
+      # Skip first pos characters
+      text = text[pos, text.length - pos]
+    end
+    result = match_internal(text)
+    if result
+      start_pos = result[0]
+      end_pos = result[1]
+      # Adjust positions if we started at an offset
+      if pos > 0
+        start_pos = start_pos + pos
+        end_pos = end_pos + pos
+      end
+      MatchData.new(self, string.to_s, start_pos, end_pos)
+    else
+      nil
+    end
+  end
+
+  # match? returns boolean - more efficient than match
+  def match?(string, pos = 0)
+    return false if string.nil?
+    text = string.to_s
+    if pos > 0
+      text = text[pos, text.length - pos]
+    end
+    result = match_internal(text)
+    result ? true : false
+  end
+
+  # Internal match - returns [start_pos, end_pos] or nil
+  def match_internal(string)
     return nil if string.nil?
     text = string.to_s
     tlen = text.length
 
     # Handle empty pattern
-    return 0 if @source.length == 0
+    return [0, 0] if @source.length == 0
 
     # Check for start anchor
     anchored_start = (@source[0] == 94)  # '^'
-    # Check for end anchor
-    anchored_end = (@source[@source.length - 1] == 36)  # '$'
 
     # If anchored at start, only try position 0
     if anchored_start
-      result = match_at(text, 0, tlen)
-      return result ? 0 : nil
+      end_pos = match_at(text, 0, tlen)
+      return end_pos ? [0, end_pos] : nil
     end
 
     # Try matching at each position
     i = 0
     while i <= tlen
-      result = match_at(text, i, tlen)
-      return i if result
+      end_pos = match_at(text, i, tlen)
+      if end_pos
+        return [i, end_pos]
+      end
       i += 1
     end
     nil
   end
 
   # Try to match pattern at position pos in text
-  # Returns true if match succeeds, false otherwise
+  # Returns end position if match succeeds, nil otherwise
   def match_at(text, pos, tlen)
-    pattern = @source
-    plen = pattern.length
-    pi = 0  # pattern index
-    ti = pos  # text index
+    match_from(@source, 0, text, pos, tlen)
+  end
 
-    # Skip start anchor if present
-    if pi < plen && pattern[pi] == 94  # '^'
-      # Start anchor - must be at position 0
-      return false if pos != 0
+  # Core matching engine with backtracking support
+  # Returns end text position if match succeeds, nil otherwise
+  def match_from(pattern, pi, text, ti, tlen)
+    plen = pattern.length
+
+    # Skip start anchor if present at beginning
+    if pi == 0 && pi < plen && pattern[pi] == 94  # '^'
       pi += 1
     end
 
@@ -91,93 +132,194 @@ class Regexp
 
       # Check for end anchor
       if pc == 36  # '$'
-        # End anchor - must be at end of string
-        return ti == tlen
+        return ti == tlen ? ti : nil
       end
+
+      # Parse the current atom and check for quantifier
+      atom_start = pi
+      atom_end = nil
 
       # Handle escape sequences
       if pc == 92  # '\'
         pi += 1
-        return false if pi >= plen  # Incomplete escape
-        ec = pattern[pi]  # escaped char
-        return false if ti >= tlen
-
-        # Handle special escapes
-        if ec == 100  # 'd' - digit
-          return false unless char_digit?(text[ti])
-        elsif ec == 68  # 'D' - non-digit
-          return false if char_digit?(text[ti])
-        elsif ec == 119  # 'w' - word char
-          return false unless char_word?(text[ti])
-        elsif ec == 87  # 'W' - non-word char
-          return false if char_word?(text[ti])
-        elsif ec == 115  # 's' - whitespace
-          return false unless char_space?(text[ti])
-        elsif ec == 83  # 'S' - non-whitespace
-          return false if char_space?(text[ti])
-        else
-          # Escaped character - match literally
-          return false if text[ti] != ec
-        end
-        ti += 1
-        pi += 1
+        return nil if pi >= plen  # Incomplete escape
+        atom_end = pi + 1
 
       # Handle '[' - character class
       elsif pc == 91  # '['
-        return false if ti >= tlen
         pi += 1
-        # Check for negation
-        negated = false
-        if pi < plen && pattern[pi] == 94  # '^'
-          negated = true
+        pi += 1 if pi < plen && pattern[pi] == 94  # skip '^'
+        # Find closing ']'
+        while pi < plen && pattern[pi] != 93
           pi += 1
         end
-        # Find matching ']' and check if char matches
-        matched = false
-        tc = text[ti]
-        while pi < plen && pattern[pi] != 93  # ']'
-          cc = pattern[pi]
-          # Check for range a-z
-          if pi + 2 < plen && pattern[pi + 1] == 45  # '-'
-            range_end = pattern[pi + 2]
-            if range_end != 93  # not ']'
-              if tc >= cc && tc <= range_end
-                matched = true
-              end
-              pi += 3
-              next
-            end
+        pi += 1 if pi < plen  # skip ']'
+        atom_end = pi
+
+      # Handle '.' or literal
+      else
+        atom_end = pi + 1
+      end
+
+      # Check for quantifier after atom
+      # quant: 0=none, 1=star(*), 2=plus(+), 3=question(?)
+      quant = 0
+      quant_pi = atom_end
+      if quant_pi < plen
+        qc = pattern[quant_pi]
+        if qc == 42  # '*'
+          quant = 1
+          pi = quant_pi + 1
+        elsif qc == 43  # '+'
+          quant = 2
+          pi = quant_pi + 1
+        elsif qc == 63  # '?'
+          quant = 3
+          pi = quant_pi + 1
+        else
+          pi = atom_end
+        end
+      else
+        pi = atom_end
+      end
+
+      if quant != 0
+        # Handle quantified atom with backtracking
+        # match_quantified recursively matches the rest of the pattern,
+        # so we return its result directly
+        ti = match_quantified(pattern, atom_start, atom_end, quant, pi, text, ti, tlen)
+        return ti  # Either nil (no match) or the final position (match)
+      else
+        # Match single atom
+        ti = match_atom(pattern, atom_start, text, ti, tlen)
+        return nil if ti.nil?
+      end
+    end
+
+    # Pattern exhausted - success, return end position
+    ti
+  end
+
+  # Match a quantified atom (*, +, ?)
+  # Uses greedy matching with backtracking
+  # quant: 1=star(*), 2=plus(+), 3=question(?)
+  def match_quantified(pattern, atom_start, atom_end, quant, rest_pi, text, ti, tlen)
+    # Collect all possible match positions (greedy)
+    positions = []
+    positions << ti  # position 0 matches (for * and ?)
+
+    # For '+' (2), must match at least once, so remove the 0-match position
+    if quant == 2
+      new_ti = match_atom(pattern, atom_start, text, ti, tlen)
+      return nil if new_ti.nil?
+      positions = []
+      positions << new_ti
+      ti = new_ti
+    end
+
+    # For '?' (3), can match 0 or 1 time
+    if quant == 3
+      new_ti = match_atom(pattern, atom_start, text, ti, tlen)
+      if new_ti
+        positions << new_ti
+      end
+    else
+      # For '*' (1) and '+' (2), match as many as possible
+      new_ti = match_atom(pattern, atom_start, text, ti, tlen)
+      while new_ti
+        positions << new_ti
+        ti = new_ti
+        new_ti = match_atom(pattern, atom_start, text, ti, tlen)
+      end
+    end
+
+    # Try positions from longest to shortest (greedy backtracking)
+    i = positions.length - 1
+    while i >= 0
+      pos = positions[i]
+      result = match_from(pattern, rest_pi, text, pos, tlen)
+      return result if result
+      i = i - 1
+    end
+    nil
+  end
+
+  # Match a single atom at position ti
+  # Returns new text position or nil
+  def match_atom(pattern, pi, text, ti, tlen)
+    pc = pattern[pi]
+
+    # Handle escape sequences
+    if pc == 92  # '\'
+      pi += 1
+      ec = pattern[pi]  # escaped char
+      return nil if ti >= tlen
+
+      # Handle special escapes
+      if ec == 100  # 'd' - digit
+        return nil unless char_digit?(text[ti])
+      elsif ec == 68  # 'D' - non-digit
+        return nil if char_digit?(text[ti])
+      elsif ec == 119  # 'w' - word char
+        return nil unless char_word?(text[ti])
+      elsif ec == 87  # 'W' - non-word char
+        return nil if char_word?(text[ti])
+      elsif ec == 115  # 's' - whitespace
+        return nil unless char_space?(text[ti])
+      elsif ec == 83  # 'S' - non-whitespace
+        return nil if char_space?(text[ti])
+      else
+        # Escaped character - match literally
+        return nil if text[ti] != ec
+      end
+      return ti + 1
+
+    # Handle '[' - character class
+    elsif pc == 91  # '['
+      return nil if ti >= tlen
+      pi += 1
+      # Check for negation
+      negated = false
+      if pattern[pi] == 94  # '^'
+        negated = true
+        pi += 1
+      end
+      # Check if char matches class
+      matched = false
+      tc = text[ti]
+      while pattern[pi] != 93  # ']'
+        cc = pattern[pi]
+        # Check for range a-z
+        if pattern[pi + 1] == 45 && pattern[pi + 2] != 93  # '-' not followed by ']'
+          range_end = pattern[pi + 2]
+          if tc >= cc && tc <= range_end
+            matched = true
           end
+          pi += 3
+        else
           # Single character
           if tc == cc
             matched = true
           end
           pi += 1
         end
-        pi += 1 if pi < plen  # skip ']'
-        # Apply negation
-        matched = !matched if negated
-        return false unless matched
-        ti += 1
-
-      # Handle '.' - any character except newline
-      elsif pc == 46  # '.'
-        return false if ti >= tlen
-        # '.' matches any char except newline (10)
-        return false if text[ti] == 10
-        ti += 1
-        pi += 1
-      else
-        # Literal character
-        return false if ti >= tlen
-        return false if text[ti] != pc
-        ti += 1
-        pi += 1
       end
-    end
+      # Apply negation
+      matched = !matched if negated
+      return nil unless matched
+      return ti + 1
 
-    # Pattern exhausted - success
-    true
+    # Handle '.' - any character except newline
+    elsif pc == 46  # '.'
+      return nil if ti >= tlen
+      return nil if text[ti] == 10  # newline
+      return ti + 1
+    else
+      # Literal character
+      return nil if ti >= tlen
+      return nil if text[ti] != pc
+      return ti + 1
+    end
   end
 
   # Helper: is character a digit (0-9)?
@@ -196,18 +338,6 @@ class Regexp
   # Helper: is character whitespace?
   def char_space?(c)
     c == 32 || c == 9 || c == 10 || c == 13 || c == 12  # space, tab, newline, CR, FF
-  end
-
-  # Match method - returns MatchData or nil
-  # Stub: Returns nil (regexp matching not yet implemented)
-  def match(string, pos = 0)
-    nil
-  end
-
-  # match? returns boolean
-  # Stub: Returns false (regexp matching not yet implemented)
-  def match?(string, pos = 0)
-    false
   end
 
   # === for case expressions
