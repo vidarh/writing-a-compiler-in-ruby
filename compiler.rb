@@ -1050,7 +1050,11 @@ class Compiler
     # Handle ensure-only blocks (no rescue)
     if !rescue_clause && ensure_body
       compile_do(scope, *exps)
+      # Save result before ensure clause (ensure might overwrite eax)
+      @e.pushl(:eax)
       compile_do(scope, *ensure_body)
+      # Restore result after ensure clause
+      @e.popl(:eax)
       return Value.new([:subexpr])
     end
 

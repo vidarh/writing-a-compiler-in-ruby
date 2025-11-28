@@ -902,7 +902,14 @@ class Compiler
         e[3].concat(prologue)
       end
 
-      e[3].concat(body)
+      # FIXME: When body is a single expression node (like :block from ensure),
+      # concat would flatten its contents incorrectly. Detect this case and wrap it.
+      # A single expression node has a keyword symbol as its first element.
+      if body.is_a?(Array) && body[0].is_a?(Symbol) && Compiler::Keywords.include?(body[0])
+        e[3] << body
+      else
+        e[3].concat(body)
+      end
 
       # FIXME: Compiler bug: Changing the below to "if !vars.empty?" causes seg fault.
       empty = vars.empty?
