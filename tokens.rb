@@ -383,7 +383,10 @@ module Tokens
         end
         buf = @s.expect(Atom)
         return [@s.get, Operators[":"]] if !buf
-        return [buf, Operators[buf.to_s]] if Operators.member?(buf.to_s)
+        # Don't check symbols (whose to_s starts with :) against operators
+        # This prevents empty symbol :"" (which has to_s ":") from matching ternary operator
+        s = buf.to_s
+        return [buf, Operators[s]] if s[0] != ?: && Operators.member?(s)
         if @keywords.member?(buf)
           return [buf,nil, :keyword]
         end

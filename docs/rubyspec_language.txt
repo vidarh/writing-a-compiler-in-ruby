@@ -72,7 +72,7 @@ Running all specs in ./rubyspec/language/...
 [31m[FAIL] ./rubyspec/language/source_encoding_spec.rb (P:0 F:12 S:0 T:12)
 [34m[CRASH] ./rubyspec/language/string_spec.rb (P:13 F:14 S:0 T:27)
 [34m[CRASH] ./rubyspec/language/super_spec.rb (P:0 F:0 S:0 T:0)
-[31m[FAIL] ./rubyspec/language/symbol_spec.rb (P:6 F:9 S:0 T:15)
+[31m[FAIL] ./rubyspec/language/symbol_spec.rb (P:6 F:10 S:0 T:16)
 [34m[CRASH] ./rubyspec/language/throw_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] ./rubyspec/language/undef_spec.rb (P:0 F:0 S:0 T:0)
 [32m[PASS] ./rubyspec/language/unless_spec.rb (P:6 F:0 S:0 T:6)
@@ -90,8 +90,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 931
+  Total tests: 932
   Passed: 240
-  Failed: 676
+  Failed: 677
   Skipped: 15
   Pass rate: 25%

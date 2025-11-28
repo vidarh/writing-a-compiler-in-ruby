@@ -140,10 +140,9 @@ module Tokens
       c = s.peek
       buf = Quoted.expect(s)
       if buf
-        # Handle empty string specially - need ":''".to_sym not ":".to_sym
-        if buf == ""
-          return ":''".to_sym
-        end
+        # Prefix with : to mark as symbol
+        # For empty string, ":".to_sym gives symbol with name ":"
+        # which when [1..-1] stripped gives ""
         bs = ":#{buf.to_s}"
         return bs.to_sym
       end
