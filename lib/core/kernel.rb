@@ -5,12 +5,28 @@ class Kernel
   end
 
   # Raise an exception
-  # Handles both String messages and Exception objects
-  def raise(msg_or_exc)
-    if msg_or_exc.is_a?(StandardError)
-      exc = msg_or_exc
+  # Handles multiple forms:
+  # - raise(exception_obj) - raise an existing exception
+  # - raise(string) - raise RuntimeError with message
+  # - raise(ExceptionClass) - raise exception class with no message
+  # - raise(ExceptionClass, message) - raise exception class with message
+  def raise(exc_or_msg = nil, msg = nil)
+    if exc_or_msg.nil?
+      # raise with nil - should re-raise $! but that's handled by compiler
+      exc = RuntimeError.new
+    elsif exc_or_msg.is_a?(Class)
+      # raise ExceptionClass or raise ExceptionClass, message
+      if msg
+        exc = exc_or_msg.new(msg)
+      else
+        exc = exc_or_msg.new
+      end
+    elsif exc_or_msg.is_a?(StandardError)
+      # raise existing_exception
+      exc = exc_or_msg
     else
-      exc = RuntimeError.new(msg_or_exc)
+      # raise "message" - assume string message
+      exc = RuntimeError.new(exc_or_msg)
     end
     $__exception_runtime.raise(exc)
     # Never returns
