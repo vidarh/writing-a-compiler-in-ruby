@@ -1,16 +1,20 @@
 # Known Issues
 
-**Last Updated**: 2025-11-27 (Post Regexp Implementation)
+**Last Updated**: 2025-11-28 (Post Ensure Block Fix)
 
 ## Current State Summary
 
-**Test Status**: 78 language specs, 217/900 tests passing (24% pass rate)
+**Test Status**: 78 language specs, 224/897 tests passing (24% pass rate)
 - ✅ PASSED: 3 specs (and_spec, not_spec, unless_spec)
 - ❌ FAILED: 23 specs - run but fail assertions
 - 💥 CRASHED: 52 specs - segfaults/hangs
 - 🎉 **COMPILE FAIL: 0 specs** - All specs now compile!
 
-**Recent fixes** (Phase 1.1-1.3, Regexp):
+**Recent fixes** (2025-11-28):
+- ✅ Ensure blocks in methods work correctly (commit 4855db0)
+  - Fixed transform.rb `rewrite_let_env` incorrectly flattening `:block` nodes
+  - Fixed compiler.rb to preserve return value around ensure clause
+  - ensure_spec: CRASH → 12 passed, 27 failed
 - ✅ break returns nil (was returning false) - +3 tests
 - ✅ String interpolation #{} in percent strings - eliminated all "hey #xxx" failures
 - ✅ Post-test loops (begin...end until) execute body at least once

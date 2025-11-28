@@ -2,24 +2,37 @@
 
 **Purpose**: Outstanding tasks prioritized by impact and difficulty. See KNOWN_ISSUES.md for detailed bug descriptions and RUBYSPEC_CRASH_ANALYSIS.md for crash categorization.
 
-## Test Status (2025-11-26 - Post Compile-Time Method Handling)
+## Test Status (2025-11-28 - Post Ensure Block Fix)
 
 **Selftest**: ✅ **ALL PASSING** (0 failures) - selftest and selftest-c both pass
 **Language Specs**: 78 files
 - ✅ **PASSED**: 3 files (4%) - and_spec, not_spec, unless_spec
-- ❌ **FAILED**: 24 files (31%) - tests run but fail assertions
-- 💥 **CRASHED**: 51 files (65%) - segfaults, timeouts, or early exits
+- ❌ **FAILED**: 23 files (29%) - tests run but fail assertions
+- 💥 **CRASHED**: 52 files (67%) - segfaults, timeouts, or early exits
 - 🎉 **COMPILE FAIL**: 0 files (0%) - **ALL SPECS NOW COMPILE!**
 
-**Individual test results**: 200 passed / 833 failed / 17 skipped (Total: 1050 tests)
-- **Pass rate**: 19% (up from 18%)
-- **Tests fixed**: +2 tests (198→200)
+**Individual test results**: 224 passed / 654 failed / 19 skipped (Total: 897 tests)
+- **Pass rate**: 24% (up from 19%)
+- **Tests fixed**: +24 tests (200→224)
 - **Expected failures** (known limitations): ~632 tests
-  - Regexp not implemented: 507 failures
+  - Regexp partially implemented: Many advanced features missing
   - eval() not supported (AOT): ~100 failures
   - Float not implemented: ~17 failures
   - Command execution: ~8 failures
-- **Fixable failures**: ~118 tests (16% of failures)
+- **Fixable failures**: ~100 tests (15% of failures)
+
+**Recent Improvements** (2025-11-28):
+
+**Kernel#proc and Kernel#lambda** (maintains tests, fixes "undefined method 'proc'" errors):
+- Added `Kernel#proc(&blk)` method that returns the block as a Proc
+- Added `Kernel#lambda(&blk)` method (creates regular Proc, lambda semantics not enforced)
+- Fixes if_spec failures caused by missing proc method
+
+**Ensure Block Fix** (+2 tests, ensure_spec: CRASH→12 passed):
+- Fixed `rewrite_let_env` in transform.rb incorrectly flattening single expression nodes
+- Fixed `compile_begin_rescue` to preserve return value around ensure clause
+- Methods with `ensure` blocks now compile and run correctly
+- Commit: 4855db0
 
 **Recent Improvements** (2025-11-26):
 

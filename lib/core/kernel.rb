@@ -128,4 +128,20 @@ class Kernel
   def fixture(name)
     "fixtures/#{name}"
   end
+
+  # proc - Create a Proc from a block
+  # Ruby's proc { } is equivalent to Proc.new { }
+  # The block is implicitly converted to a Proc when passed with &
+  # Note: Can't use 'block' as parameter name - it's a compiler keyword
+  def proc(&blk)
+    blk
+  end
+
+  # lambda - Create a lambda from a block
+  # lambda { } creates a Proc that enforces arity and returns from itself
+  # This stub creates a regular Proc (lambda semantics not fully enforced)
+  # Note: Can't use 'block' as parameter name - it's a compiler keyword
+  def lambda(&blk)
+    blk
+  end
 end
