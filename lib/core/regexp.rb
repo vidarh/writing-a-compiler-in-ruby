@@ -445,6 +445,23 @@ class Regexp
         return nil unless char_space?(text[ti])
       elsif ec == 83  # 'S' - non-whitespace
         return nil if char_space?(text[ti])
+      elsif ec >= 49 && ec <= 57  # '1'-'9' - backreference
+        group_idx = ec - 48
+        if @match_captures && group_idx <= @match_captures.length
+          captured = @match_captures[group_idx - 1]
+          if captured
+            cap_len = captured.length
+            ci = 0
+            while ci < cap_len
+              return nil if ti >= tlen
+              return nil if text[ti] != captured[ci]
+              ti = ti + 1
+              ci = ci + 1
+            end
+            return ti
+          end
+        end
+        return nil
       else
         # Escaped character - match literally
         return nil if text[ti] != ec

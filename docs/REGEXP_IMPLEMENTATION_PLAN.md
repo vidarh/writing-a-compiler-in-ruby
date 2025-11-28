@@ -6,7 +6,7 @@ This document outlines a phased approach to implementing regular expression supp
 
 ## Current Status
 
-**Last Updated**: 2025-11-27
+**Last Updated**: 2025-11-28
 
 | Phase | Status | Notes |
 |-------|--------|-------|
@@ -36,7 +36,7 @@ This document outlines a phased approach to implementing regular expression supp
 6. ~~String#split with regexp~~ ✅ DONE
 7. ~~Multiline mode (MULTILINE flag)~~ ✅ DONE
 8. Named captures (?<name>...) (blocked by self-hosting bug #57)
-9. Backreferences \1, \2, etc.
+9. ~~Backreferences \1, \2, etc.~~ ✅ DONE
 10. POSIX character classes (blocked by self-hosting bug #56)
 
 ---
