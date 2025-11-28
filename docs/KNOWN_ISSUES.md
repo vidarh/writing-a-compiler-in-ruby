@@ -182,6 +182,34 @@ this bug - would require a 12th branch or third split method.
 
 ---
 
+### 6. Postfix If Returns False Instead of Nil
+
+**Impact**: 1+ test failure in if_spec.rb
+
+**Symptoms**: Postfix if expression returns `false` instead of `nil` when condition is false:
+```ruby
+result = (123 if false)
+# Expected: result is nil
+# Actual: result is false
+```
+
+**Root cause**: In `compile_control.rb`, when there's no else arm, the code jumps to
+the else label but doesn't set `%eax` to nil. The condition evaluation result (`false`)
+remains in `%eax` and becomes the return value.
+
+**Technical details**: In `compile_if`:
+1. Condition is evaluated, result goes to `%eax` (in this case, `false`)
+2. Jump-on-false to `l_else_arm`
+3. At `l_else_arm`, nothing sets `%eax` when there's no else arm
+4. The `false` value remains as the return value
+
+**Attempted fix**: Adding explicit nil assignment at else label broke other code
+due to complex interactions with jumps and label placement. Needs more careful fix.
+
+**Status**: Not fixed. Documented for future work.
+
+---
+
 ## Quick Wins (Remaining Easy Implementations)
 
 ### Missing Core Methods (~40 test impact, ~6 hours work)
