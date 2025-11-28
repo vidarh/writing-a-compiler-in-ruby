@@ -81,6 +81,10 @@ bundle:
 rubyspec-integer:
 	./run_rubyspec rubyspec/core/integer/ 2>&1 | tee docs/rubyspec_integer.txt
 
+.PHONY: rubyspec-regexp
+rubyspec-regexp:
+	./run_rubyspec rubyspec/core/regexp/ 2>&1 | tee docs/rubyspec_regexp.txt
+
 .PHONY: rubyspec-language
 rubyspec-language:
 	./run_rubyspec rubyspec/language/ 2>&1 | tee docs/rubyspec_language.txt

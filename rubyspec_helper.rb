@@ -744,6 +744,28 @@ def context(description, &block)
   describe(description, &block)
 end
 
+# let - defines a memoized helper method for specs
+# Simple implementation: defines a method that caches its result
+# Cache is stored in a global hash keyed by method name
+$__let_cache = {}
+
+def let(name, &blk)
+  # Store the block for this name
+  $__let_blocks ||= {}
+  $__let_blocks[name] = blk
+
+  # Define a method that evaluates the block lazily and memoizes result
+  # Use Object.send(:define_method, ...) to define at top level
+  Object.send(:define_method, name) do
+    $__let_cache[name] ||= $__let_blocks[name].call
+  end
+end
+
+# Clear let cache between tests
+def clear_let_cache
+  $__let_cache = {}
+end
+
 # Global variable to pass method name to shared examples
 # WORKAROUND: Avoids needing instance_eval since @method is replaced with
 # $spec_shared_method during preprocessing (see run_rubyspec)
