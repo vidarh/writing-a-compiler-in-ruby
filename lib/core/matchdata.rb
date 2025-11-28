@@ -17,7 +17,7 @@ class MatchData
     end
   end
 
-  # The entire matched string
+  # The entire matched string or capture group by index/name
   def [](index)
     if index == 0
       # Build substring manually since String#[start, length] not supported
@@ -29,9 +29,23 @@ class MatchData
       end
       result
     elsif index.is_a?(Integer) && index > 0
-      # Return capture group
+      # Return capture group by index
       if index <= @captures.length
         @captures[index - 1]
+      else
+        nil
+      end
+    elsif index.is_a?(Symbol) || index.is_a?(String)
+      # Named capture access
+      name = index.to_s
+      named_map = @regexp.named_captures
+      if named_map && named_map[name]
+        group_idx = named_map[name][0]  # Get first group with this name
+        if group_idx && group_idx <= @captures.length
+          @captures[group_idx - 1]
+        else
+          nil
+        end
       else
         nil
       end
@@ -125,12 +139,25 @@ class MatchData
     @regexp
   end
 
-  # Named captures - stub
+  # Named capture names from the regexp
   def names
-    []
+    @regexp ? @regexp.names : []
   end
 
+  # Named captures with their matched values
   def named_captures
-    {}
+    result = {}
+    if @regexp
+      nc = @regexp.named_captures
+      nc.each do |name, indices|
+        idx = indices[0]
+        if idx && idx <= @captures.length
+          result[name] = @captures[idx - 1]
+        else
+          result[name] = nil
+        end
+      end
+    end
+    result
   end
 end

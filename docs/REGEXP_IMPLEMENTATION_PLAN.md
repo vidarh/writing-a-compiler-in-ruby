@@ -35,7 +35,7 @@ This document outlines a phased approach to implementing regular expression supp
 5. ~~String#gsub using regexp~~ ✅ DONE
 6. ~~String#split with regexp~~ ✅ DONE
 7. ~~Multiline mode (MULTILINE flag)~~ ✅ DONE
-8. Named captures (?<name>...) (blocked by self-hosting bug #57)
+8. Named captures (?<name>...) - partial: groups capture correctly by index, name-based access blocked by self-hosting bug
 9. ~~Backreferences \1, \2, etc.~~ ✅ DONE
 10. POSIX character classes (blocked by self-hosting bug #56)
 

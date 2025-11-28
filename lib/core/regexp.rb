@@ -508,12 +508,28 @@ class Regexp
       # Check if this is a capturing group or non-capturing (?:...)
       is_capturing = true
       group_start = pi + 1
-      # Check for special group markers like (?:, (?=, etc.
+      # Check for special group markers like (?:, (?=, (?<name>, etc.
       if group_start < pattern.length && pattern[group_start] == 63  # '?'
-        is_capturing = false  # Non-capturing or special group
         group_start += 1
-        # Skip the type character (: = ! < etc)
-        group_start += 1 if group_start < pattern.length
+        if group_start < pattern.length
+          type_char = pattern[group_start]
+          if type_char == 58  # ':' - non-capturing (?:...)
+            is_capturing = false
+            group_start += 1
+          elsif type_char == 60  # '<' - named capture (?<name>...)
+            # Named capture IS capturing - skip to after the '>'
+            is_capturing = true
+            group_start += 1
+            while group_start < pattern.length && pattern[group_start] != 62  # '>'
+              group_start += 1
+            end
+            group_start += 1 if group_start < pattern.length  # skip '>'
+          else
+            # Other special groups (lookahead, etc.) - non-capturing
+            is_capturing = false
+            group_start += 1
+          end
+        end
       end
 
       # Assign capture index if this is a capturing group
