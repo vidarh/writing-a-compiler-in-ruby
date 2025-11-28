@@ -56,6 +56,9 @@ module Tokens
             # Control: mask to lower 5 bits
             return (ch.ord & 0x1f).chr
           end
+        when '#'
+          # Escaped # - return special marker to prevent interpolation
+          return :escaped_hash
         else
           return e
         end
@@ -99,7 +102,9 @@ module Tokens
       ret = nil
       buf = ""
       while (e = escaped(s,q[0]));
-        if e == "#"
+        if e == :escaped_hash
+          buf << "#"
+        elsif e == "#"
           # Check for interpolation #{...}
           result = handle_interpolation(s, ret, buf, &block)
           if result

@@ -949,42 +949,117 @@ module Tokens
               @s.get if @s.peek == ?\n  # consume newline
 
               # Read heredoc body until we find the marker
-              body = ""
+              # For interpolated heredocs, handle #{} inline by calling the parser
               heredoc_start = @s.position
+              interpolate = (quote_char != ?')
+
+              result = nil  # Will be [:concat, ...] if interpolation found
+              buf = ""      # Current string buffer
+
               while true
                 line = ""
                 while @s.peek && @s.peek != ?\n
-                  line << @s.get.chr
+                  c = @s.get.chr
+
+                  # Handle interpolation for non-single-quoted heredocs
+                  if interpolate && c == "#" && @s.peek
+                    if @s.peek == ?{
+                      # #{} expression interpolation - call parser
+                      @s.get  # consume {
+                      result = [:concat] if !result
+                      result << (buf + line) if (buf + line) != ""
+                      buf = ""
+                      line = ""
+                      result << @parser.parse_defexp
+                      @s.expect("}")
+                    elsif @s.peek == ?$ || @s.peek == ?@
+                      # #$var or #@var interpolation
+                      result = [:concat] if !result
+                      result << (buf + line) if (buf + line) != ""
+                      buf = ""
+                      line = ""
+
+                      var_start = @s.get.chr
+                      # Check for @@
+                      if var_start == "@" && @s.peek == ?@
+                        @s.get
+                        prefix = "@@"
+                      elsif var_start == "@"
+                        prefix = "@"
+                      else
+                        prefix = "$"
+                      end
+
+                      var_name = ""
+                      if prefix == "$" && @s.peek
+                        # Special globals
+                        if @s.peek == ?! || @s.peek == ?@ || @s.peek == ?$ || (?0..?9).member?(@s.peek)
+                          var_name << @s.get.chr
+                        else
+                          while @s.peek && (ALPHA.member?(@s.peek) || DIGITS.member?(@s.peek) || @s.peek == ?_)
+                            var_name << @s.get.chr
+                          end
+                        end
+                      else
+                        while @s.peek && (ALPHA.member?(@s.peek) || DIGITS.member?(@s.peek) || @s.peek == ?_)
+                          var_name << @s.get.chr
+                        end
+                      end
+
+                      if var_name.empty?
+                        line << "#" << var_start
+                        line << "@" if prefix == "@@"
+                      else
+                        result << (prefix + var_name).to_sym
+                      end
+                    else
+                      line << c
+                    end
+                  else
+                    line << c
+                  end
                 end
 
                 # Check if this line is the closing marker
                 if line.strip == marker
                   # DON'T consume trailing newline - leave it for normal statement boundary handling
-                  # This ensures heredocs are treated identically to quoted strings
                   break
                 end
 
-                # Add this line to the body
-                body << line
+                # Add this line to the buffer
+                buf << line
                 if @s.peek == ?\n
-                  body << "\n"
+                  buf << "\n"
                   @s.get
                 elsif @s.peek == nil
                   raise CompilerError.new("Unterminated heredoc (expected #{marker.inspect})", heredoc_start)
                 end
               end
 
-              # Process body based on heredoc type
+              # Finalize result
+              if result
+                result << buf if buf != ""
+              else
+                result = buf
+              end
+
+              # Process squiggly heredoc indentation
               if squiggly
-                # <<~ removes leading whitespace
-                lines = body.split("\n", -1)
-                # Find minimum indentation (ignoring empty lines)
+                # For squiggly heredocs, we need to process the string parts
+                if result.is_a?(Array)
+                  # Process each string element for indentation
+                  all_strings = result[1..-1].select { |e| e.is_a?(String) }
+                  all_text = all_strings.join
+                else
+                  all_text = result
+                end
+
+                lines = all_text.split("\n", -1)
                 min_indent = nil
                 i = 0
                 while i < lines.length
                   l = lines[i]
                   if !l.strip.empty?
-                    # Count leading whitespace
                     ws_count = 0
                     j = 0
                     while j < l.length && (l[j] == " " || l[j] == "\t")
@@ -999,31 +1074,60 @@ module Tokens
                 end
                 min_indent = 0 if min_indent == nil
 
-                # Strip the minimum indentation from each line
-                result_lines = []
-                i = 0
-                while i < lines.length
-                  l = lines[i]
-                  if l.strip.empty?
-                    result_lines << l
-                  else
-                    # Remove min_indent characters from the start
-                    if l.length > min_indent
+                # Strip indentation from result
+                # For interpolated heredocs, only strip from line beginnings
+                if result.is_a?(Array)
+                  new_result = [:concat]
+                  at_line_start = true  # Track if we're at the beginning of a line
+                  result[1..-1].each do |elem|
+                    if elem.is_a?(String)
+                      new_str = ""
+                      i = 0
+                      while i < elem.length
+                        if at_line_start
+                          # Strip up to min_indent whitespace chars
+                          stripped = 0
+                          while stripped < min_indent && i < elem.length && (elem[i] == " " || elem[i] == "\t")
+                            stripped += 1
+                            i += 1
+                          end
+                          at_line_start = false
+                        end
+                        if i < elem.length
+                          c = elem[i]
+                          new_str << c
+                          at_line_start = true if c == "\n"
+                          i += 1
+                        end
+                      end
+                      new_result << new_str
+                    else
+                      # Non-string element (interpolation) - don't strip
+                      new_result << elem
+                      # Interpolation result is NOT at line start
+                      at_line_start = false
+                    end
+                  end
+                  result = new_result
+                else
+                  result_lines = []
+                  lines.each do |l|
+                    if l.strip.empty?
+                      result_lines << l
+                    elsif l.length > min_indent
                       result_lines << l[min_indent..-1]
                     else
                       result_lines << ""
                     end
                   end
-                  i += 1
+                  result = result_lines.join("\n")
                 end
-                body = result_lines.join("\n")
               end
 
               # Put back the rest of the line so it can be parsed
               @s.unget(rest_of_line) if rest_of_line && !rest_of_line.empty?
 
-              # Return the heredoc body as a string token
-              return [body, nil]
+              return [result, nil]
             else
               # Not a heredoc, put back the ~ or - if we consumed it
               @s.unget("~") if squiggly

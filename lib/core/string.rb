@@ -47,7 +47,16 @@ class String
   def inspect
     buf = 34.chr
     esc = 92.chr
+    prev_hash = false
     each_byte do |b|
+      if prev_hash
+        if b == 123 || b == 36 || b == 64
+          buf << esc << 35.chr
+        else
+          buf << 35.chr
+        end
+        prev_hash = false
+      end
       if b == 34
         buf << esc << 34.chr
       elsif b == 27
@@ -56,9 +65,16 @@ class String
         buf << esc << esc
       elsif b == 10
         buf << esc << 'n'
+      elsif b == 35
+        prev_hash = true
+      elsif b == 123 || b == 36 || b == 64
+        buf << b.chr
       else
         buf << b.chr
       end
+    end
+    if prev_hash
+      buf << 35.chr
     end
     buf << 34.chr
     buf
