@@ -11,15 +11,14 @@
 - 💥 **CRASHED**: 52 files (67%) - segfaults, timeouts, or early exits
 - 🎉 **COMPILE FAIL**: 0 files (0%) - **ALL SPECS NOW COMPILE!**
 
-**Individual test results**: 224 passed / 654 failed / 19 skipped (Total: 897 tests)
-- **Pass rate**: 24% (up from 19%)
-- **Tests fixed**: +24 tests (200→224)
-- **Expected failures** (known limitations): ~632 tests
-  - Regexp partially implemented: Many advanced features missing
-  - eval() not supported (AOT): ~100 failures
-  - Float not implemented: ~17 failures
-  - Command execution: ~8 failures
-- **Fixable failures**: ~100 tests (15% of failures)
+**Individual test results**: 222 passed / 649 failed / 18 skipped (Total: 889 tests)
+- **Pass rate**: 24%
+- **Features not yet implemented**: ~632 tests (all implementable, see below)
+  - Regexp partially implemented: ~507 failures (incremental work)
+  - eval() with literal strings: ~100 failures (partial support possible)
+  - Float not implemented: ~17 failures (needs Float class)
+  - Command execution: ~8 failures (needs shell support)
+- **Bug-related failures**: ~100 tests (fixable with debugging)
 
 **Recent Improvements** (2025-11-28):
 
@@ -448,20 +447,71 @@ Implement full versions of:
 
 **Realistic near-term (1 week)**: 35-40% pass rate (350-400 tests)
 **Optimistic mid-term (1 month)**: 55-65% pass rate (550-650 tests)
-**Maximum achievable**: 80-85% pass rate (800-850 tests)
+**With all features implemented**: 95%+ pass rate (850+ tests)
+
+Note: All "missing features" are implementable - see "Features To Implement" section below.
+The only true AOT limitation is dynamic `eval(variable)` - even literal-string eval can be supported.
 
 ---
 
-## Known Limitations (Cannot Fix - 632 tests)
+## Features To Implement (Currently Missing - ~632 tests)
 
-These are fundamental architectural constraints:
+These features need implementation. **None of these are fundamental AOT limitations** - they just require work:
 
-1. **Regular Expressions Not Implemented** (507 failures, 65% of all failures)
-2. **eval() Not Supported** (~100 failures, AOT compiler limitation)
-3. **Float Type Not Implemented** (~17 failures)
-4. **Command Execution Not Supported** (~8 failures, backticks/`%x{}`)
+### Implementable Features
 
-**Maximum achievable pass rate**: ~80-85% (800-850 tests) even with all bugs fixed
+1. **Regular Expressions** (~507 failures, 65% of all failures)
+   - **Status**: Partially implemented (basic matching works)
+   - **Remaining**: Character classes, backreferences, lookahead/lookbehind, modifiers
+   - **Difficulty**: MEDIUM - incremental improvements possible
+   - **Impact**: Largest single improvement opportunity
+
+2. **Float Type** (~17 failures)
+   - **Status**: Not implemented
+   - **Approach**: Add Float class with IEEE 754 representation
+   - **Difficulty**: MEDIUM - requires type tagging decisions and math library
+   - **Impact**: Enables numeric specs
+
+3. **Command Execution** (~8 failures, backticks/`%x{}`)
+   - **Status**: Not implemented
+   - **Approach**: Shell out via `fork`/`exec` or `system()` C call
+   - **Difficulty**: EASY - straightforward system calls
+   - **Impact**: Enables shell interaction
+
+4. **Rational/Complex** (~30 failures)
+   - **Status**: Not implemented
+   - **Approach**: Pure Ruby implementation possible
+   - **Difficulty**: EASY - just needs class definitions
+   - **Impact**: Enables numeric literal specs
+
+### Partial eval() Support (~100 failures)
+
+**Full `eval()` with dynamic strings** is the only truly hard AOT limitation.
+
+However, **partial eval of literal strings** is achievable:
+
+```ruby
+# This CAN be supported (string known at compile time):
+eval("puts 'hello'")
+eval("1 + 2")
+
+# This CANNOT be supported (dynamic string):
+eval(some_variable)
+eval("#{dynamic_code}")
+```
+
+**Implementation approach**:
+1. Detect `eval("literal string")` at compile time
+2. Parse the literal string as Ruby code
+3. Compile it inline or as a lambda: `-> { (parsed code) }.call`
+
+**Estimated impact**: ~70-80% of eval failures could be fixed
+**Difficulty**: MEDIUM - requires compile-time detection and transformation
+
+### Maximum Achievable Pass Rate
+
+With all features implemented: **95%+** (limited only by true dynamic eval)
+Current missing features are engineering work, not architectural blockers.
 
 ---
 
