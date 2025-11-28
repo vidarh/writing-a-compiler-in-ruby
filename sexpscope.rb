@@ -21,7 +21,7 @@ class SexpScope < Scope
   end
 
   def lvaroffset
-    0
+    @next ? @next.lvaroffset : 0
   end
 
   # @FIXME This works only due to a quirk of Ruby:

@@ -1318,7 +1318,14 @@ class Compiler
       return compile_call(scope, exp[1], exp[2],exp[3], pos) if (exp[0] == :call)
       return compile_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :callm)
       return compile_safe_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :safe_callm)
-      return compile_call(scope, exp[0], exp.rest, nil, pos) if (exp.is_a? Array)
+      # Only treat as function call if exp[0] is a Symbol (function name)
+      # If exp[0] is an array, it's a list of statements to execute in sequence
+      if exp.is_a?(Array) && exp[0].is_a?(Symbol)
+        return compile_call(scope, exp[0], exp.rest, nil, pos)
+      elsif exp.is_a?(Array) && exp[0].is_a?(Array)
+        # List of statements - compile each one in sequence (like compile_do)
+        return compile_do(scope, *exp)
+      end
     end
 
     warning("Somewhere calling #compile_exp when they should be calling #compile_eval_arg? #{exp.inspect}")
