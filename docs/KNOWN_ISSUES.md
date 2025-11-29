@@ -261,55 +261,30 @@ but breaks selftest-c. Self-compiled compiler crashes in same location:
 
 **Workaround**: Use explicit array literal on RHS: `a, b, c = [1, 2, 3]`
 
-**Status**: Fix is known but blocked on self-compilation crash.
+**Status**: Fix is known. Issue #8 (selftest-c crash) is now fixed, so this can be addressed.
 
-### 8. selftest-c Crashes When Adding New Methods or Aliases
+### 8. ✅ RESOLVED: selftest-c Crashes When Adding New Methods or Aliases
 
-**Impact**: Blocks adding new methods OR aliases to core classes
+**Status**: Fixed on 2025-11-29
 
-**Symptoms**: selftest-c crashes non-deterministically (~40-60% failure rate)
-when adding ANY new method or alias to core library files. The crash is in
-Array#<< during Array#sort in output_constants.
+**Root cause**: `klass_size` was calculated as `@vtableoffsets.max * PTR_SIZE` (bytes),
+but `__new_class_object` in `lib/core/class.rb` used this value as a slot count:
+1. `__array(size)` already multiplies by 4 to convert slots to bytes
+2. Loop indexing `(index ob i)` treats `size` as slot count
+3. For bootstrap classes with `ssize=0`, the second loop accessed `__base_vtable[size-1]`
+4. This read up to 4x past the end of `__base_vtable`, corrupting memory
 
-**CRITICAL UPDATE (2025-11-29)**: The previously documented workaround of using
-`alias` is INCORRECT. Both new methods AND aliases trigger the crash:
-- `def frozen?; true; end` in NilClass, TrueClass, FalseClass - CRASHES
-- `alias key? include?` in Hash - CRASHES
-- `alias find_all select` in Array - CRASHES
-- `alias id2name to_s` in Symbol - CRASHES
+**The fix**: Removed `* PTR_SIZE` from `klass_size` in `classcope.rb:227` and
+`compile_class.rb:141`. Now `klass_size` returns `@vtableoffsets.max` (slot count).
 
-**Key finding from git bisect**:
-- Commit 64e348a (Add frozen? to NilClass, TrueClass, FalseClass) introduced crash
-- Prior commit e13c871 (Symbol#frozen?) was stable
-- The difference: adding to singleton classes (nil/true/false) vs regular class
-
-**Crash mechanism**:
-- Adding ANY new vtable slot increases vtable_size
-- During self-compilation, Array objects get corrupted
-- GDB shows: `@ptr=0xa0` (160 - invalid pointer), should be valid heap address
-- Crash in `Array#<<`: `movl %eax, (%edi)` with edi=0xa0 (bad address)
-
-**Crash path**:
-`output_constants` → `.sort` call → `Array#partition` → `Array#<<` → CRASH
-
-**Root cause**: Unknown. Suspected vtable size mismatch between:
-1. The first-stage compiler (compiled by MRI with OLD vtable layout)
-2. The source code being compiled (with NEW vtable entries)
-
-The non-deterministic nature suggests heap corruption that sometimes affects
-critical data and sometimes doesn't, depending on memory layout.
-
-**Current workaround**: Do not add new methods or aliases to core classes.
-Only override existing methods from parent classes (e.g., Symbol overriding
-Object#frozen? would work if Object#frozen? already existed).
-
-**This is the root cause blocking**:
+**Previously blocked, now unblocked**:
+- ✅ `def frozen?` in NilClass, TrueClass, FalseClass, Object, Symbol, Regexp
+- ✅ `alias key? include?` and `alias has_key? include?` in Hash
+- ✅ `alias find_all select` in Array
+- ✅ `alias id2name to_s` in Symbol
 - Issue #6 (postfix if fix)
 - Issue #7 (parallel assignment fix)
-- Symbol#id2name implementation
-- Hash#key?, Hash#has_key? aliases
-- Object#frozen?, Regexp#frozen? implementations
-- Any new method additions to core classes
+- Any new method/alias additions to core classes
 
 ---
 

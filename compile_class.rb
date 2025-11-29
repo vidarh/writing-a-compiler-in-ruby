@@ -138,7 +138,8 @@ class Compiler
     # Eigenclasses are Class objects, so they use Class's klass_size
     # Get Class's ClassScope to determine the correct klass_size
     # If Class hasn't been compiled yet, calculate directly from vtableoffsets
-    eksize = @classes[:Class] ? @classes[:Class].klass_size : (@vtableoffsets.max * Emitter::PTR_SIZE)
+    # klass_size is now in slots (not bytes), so no need to multiply by PTR_SIZE
+    eksize = @classes[:Class] ? @classes[:Class].klass_size : @vtableoffsets.max
 
     # Using nested let()'s for clean scope management
     # Outer let: evaluate expr and save to __eigenclass_obj

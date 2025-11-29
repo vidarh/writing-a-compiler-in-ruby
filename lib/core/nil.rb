@@ -29,11 +29,9 @@ class NilClass
     self
   end
 
-  # NOTE: frozen? method removed - causes selftest-c crash (Issue #8)
-  # TODO: Re-add when vtable size issue is fixed
-  # def frozen?
-  #   true
-  # end
+  def frozen?
+    true
+  end
 
   def to_i
     0

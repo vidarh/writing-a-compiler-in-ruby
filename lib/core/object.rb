@@ -65,11 +65,9 @@ class Object
     false
   end
 
-  # NOTE: frozen? removed - triggers selftest-c crash (Issue #8)
-  # TODO: Re-add when vtable size issue is fixed
-  # def frozen?
-  #   false
-  # end
+  def frozen?
+    false
+  end
 
   def method_missing (sym, *args)
     receiver_info = self.inspect

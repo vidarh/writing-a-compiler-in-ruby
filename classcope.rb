@@ -219,8 +219,13 @@ class ModuleScope < Scope
   # is based on the amount of data needed at the start of
   # the class object as instance variables for the class
   # object.
+  # Returns the size of a class object in slots (not bytes).
+  # This is @vtableoffsets.max because vtable slot indices start at
+  # CLASS_IVAR_NUM and go up to max-1.
+  # NOTE: __array() multiplies by PTR_SIZE to get bytes, so klass_size
+  # should NOT be multiplied by PTR_SIZE here.
   def klass_size
-    @vtableoffsets.max * Emitter::PTR_SIZE
+    @vtableoffsets.max
   end
 
 

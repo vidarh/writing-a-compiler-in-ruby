@@ -50,18 +50,15 @@ class Symbol
     @name
   end
 
-  # NOTE: Alias and frozen? removed - triggers selftest-c crash (Issue #8)
-  # TODO: Re-add when vtable size issue is fixed
-  # alias id2name to_s
+  alias id2name to_s
 
   def to_sym
     self
   end
 
-  # NOTE: frozen? removed - triggers selftest-c crash (Issue #8)
-  # def frozen?
-  #   true
-  # end
+  def frozen?
+    true
+  end
 
   def inspect
     # FIXME: This is incomplete.
