@@ -224,8 +224,10 @@ underlying compiler bug related to code generation for the new AST structure.
 #7  __method_Compiler_output_vtable_names ()
 ```
 
-**Status**: Fix is known but blocked on self-compilation crash. Root cause of
-selftest-c crash needs investigation - likely a deeper code generation bug.
+**Status**: Fix is known but blocked on self-compilation crash. Tested again on
+2025-11-29 after Issue #8 was fixed - still crashes in same location. The crash
+is not related to klass_size; there's a deeper code generation bug when the
+compiler generates code for the 4-element if structure in certain contexts.
 
 ### 7. Parallel Assignment with Comma RHS Broken
 
