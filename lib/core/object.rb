@@ -154,8 +154,12 @@ class Object
         last = raw[-1]
         raw = raw.__get_raw
         %s(if (ne raw 0) (printf "%s" raw))
-        if last.ord != 10
-           %s(puts "")
+        if last
+          if last.ord != 10
+            %s(puts "")
+          end
+        else
+          %s(puts "")
         end
       else
         %s(puts "")
