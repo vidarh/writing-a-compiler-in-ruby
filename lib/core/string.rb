@@ -541,6 +541,11 @@ class String
     String.new(self)
   end
 
+  # Unary plus returns self for mutable strings, or a mutable copy for frozen
+  def +@
+    self
+  end
+
   # FIXME: Inefficient (should pre-alloc capacity)
   def + other
     dup.concat(other)
