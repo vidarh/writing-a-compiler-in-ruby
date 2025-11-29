@@ -263,6 +263,34 @@ but breaks selftest-c. Self-compiled compiler crashes in same location:
 
 **Status**: Fix is known but blocked on self-compilation crash.
 
+### 8. selftest-c Crashes with Complex Core Library Code
+
+**Impact**: Blocks multiple bug fixes (Issues #6, #7, Symbol#inspect, etc.)
+
+**Symptoms**: Any fix that adds loops or complex conditionals to core library
+files (`lib/core/*.rb`) causes selftest-c to crash, even when selftest passes.
+
+**Pattern observed**:
+- Simple methods returning literals in Object work: `def frozen?; false; end` ✓
+- Simple methods in Symbol accessing ivars fail: `def id2name; @name; end` ✗
+- Methods calling other methods fail: `def ===; other.is_a?(self); end` ✗
+- Complex methods fail: loops, while statements, multiple conditionals ✗
+
+**Crash locations vary but often involve**:
+- `Array#<<` during vtable output
+- `String#concat` during `Array#inspect`
+- Recursive inspection loops causing stack overflow
+
+**This is the root cause blocking**:
+- Issue #6 (postfix if fix)
+- Issue #7 (parallel assignment fix)
+- Symbol#inspect proper quoting
+- Likely many other potential fixes
+
+**Investigation needed**: The compiled compiler handles certain control flow
+patterns differently than MRI Ruby, causing crashes when compiling code that
+the MRI-compiled compiler handles correctly.
+
 ---
 
 ## Quick Wins (Remaining Easy Implementations)

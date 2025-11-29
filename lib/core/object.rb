@@ -65,6 +65,12 @@ class Object
     false
   end
 
+  # Stub: objects are not frozen by default
+  # Full implementation would track freeze state per object
+  def frozen?
+    false
+  end
+
   def method_missing (sym, *args)
     receiver_info = self.inspect
     raise "undefined method '#{sym.to_s}' for #{receiver_info}"
