@@ -193,20 +193,39 @@ result = (123 if false)
 # Actual: result is false
 ```
 
-**Root cause**: In `compile_control.rb`, when there's no else arm, the code jumps to
-the else label but doesn't set `%eax` to nil. The condition evaluation result (`false`)
-remains in `%eax` and becomes the return value.
+**Root cause**: Postfix if in `treeoutput.rb` produces a 3-element `:if` AST node
+`[:if, cond, body]` without an else branch. The regular parser produces 4-element
+nodes with explicit else: `[:if, cond, [:do, body], [:do, :nil]]`. When `compile_if`
+receives a 3-element node, no else branch is compiled, so `%eax` retains the
+condition value (`false`) instead of being set to `nil`.
 
-**Technical details**: In `compile_if`:
-1. Condition is evaluated, result goes to `%eax` (in this case, `false`)
-2. Jump-on-false to `l_else_arm`
-3. At `l_else_arm`, nothing sets `%eax` when there's no else arm
-4. The `false` value remains as the return value
+**Correct fix exists but breaks self-compilation**:
+```ruby
+# In treeoutput.rb, convert postfix if to full if structure:
+if o.sym == :if_mod
+  @vstack << E[:if, rightv, E[:do, leftv], E[:do, :nil]]
+  return
+end
+```
 
-**Attempted fix**: Adding explicit nil assignment at else label broke other code
-due to complex interactions with jumps and label placement. Needs more careful fix.
+**Problem with fix**: This change works correctly (returns nil) and passes selftest,
+but breaks selftest-c. The self-compiled compiler crashes in `output_vtable_names`
+→ `sort_by` → `Array#<<` when trying to compile test/selftest.rb. The crash is
+deep in array operations during vtable sorting, suggesting the fix exposes some
+underlying compiler bug related to code generation for the new AST structure.
 
-**Status**: Not fixed. Documented for future work.
+**GDB trace when fix is applied**:
+```
+#0  __method_Array___lt__lt () - movl %eax, (%edi)  [crash]
+#1  __method_Array___range_get ()
+#2  __method_Array___NDX ()
+#3  __method_Array_sort_by ()
+...
+#7  __method_Compiler_output_vtable_names ()
+```
+
+**Status**: Fix is known but blocked on self-compilation crash. Root cause of
+selftest-c crash needs investigation - likely a deeper code generation bug.
 
 ---
 
