@@ -715,6 +715,11 @@ class Regexp
     flags
   end
 
+  # Regexp literals are always frozen in Ruby
+  def frozen?
+    true
+  end
+
   # Option query methods
   def casefold?
     (options & IGNORECASE) != 0

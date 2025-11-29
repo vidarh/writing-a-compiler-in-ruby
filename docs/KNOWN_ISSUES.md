@@ -227,6 +227,42 @@ underlying compiler bug related to code generation for the new AST structure.
 **Status**: Fix is known but blocked on self-compilation crash. Root cause of
 selftest-c crash needs investigation - likely a deeper code generation bug.
 
+### 7. Parallel Assignment with Comma RHS Broken
+
+**Impact**: 3+ test failures in hash_spec.rb, likely many more throughout specs
+
+**Symptoms**: Parallel assignment with bare values on RHS assigns wrong values:
+```ruby
+a, b, c = 1, 2, 3
+# Expected: a=1, b=2, c=3
+# Actual: a=3, b=nil, c=nil
+```
+
+**Root cause**: When RHS is a comma expression `1, 2, 3`, it parses as a flat
+Ruby array `[1, 2, 3]` without an `:array` AST tag. Transform.rb wraps this
+in `Array()` call, but without the `:array` tag, it's interpreted as THREE
+separate arguments to Array() rather than ONE array argument.
+
+Parse tree difference:
+- `a, b, c = 1, 2, 3` → `(call Array ((sexp 3) (sexp 5) (sexp 7)))` - 3 args!
+- `a, b, c = [1, 2, 3]` → `(call Array (array (sexp 3) (sexp 5) (sexp 7)))` - 1 arg
+
+**Correct fix exists but breaks self-compilation**:
+```ruby
+# In transform.rb rewrite_destruct, wrap flat arrays in :array
+if r.is_a?(Array) && !r.empty? && !r[0].is_a?(Symbol)
+  r = [:array] + r
+end
+```
+
+**Problem with fix**: Same pattern as postfix if - fix works and passes selftest,
+but breaks selftest-c. Self-compiled compiler crashes in same location:
+`Array#<<` during vtable output operations.
+
+**Workaround**: Use explicit array literal on RHS: `a, b, c = [1, 2, 3]`
+
+**Status**: Fix is known but blocked on self-compilation crash.
+
 ---
 
 ## Quick Wins (Remaining Easy Implementations)
