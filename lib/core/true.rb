@@ -21,10 +21,11 @@ class TrueClass
     self
   end
 
-  # true is always frozen
-  def frozen?
-    true
-  end
+  # NOTE: frozen? method removed - causes selftest-c crash (Issue #8)
+  # TODO: Re-add when vtable size issue is fixed
+  # def frozen?
+  #   true
+  # end
 
   def & other
     other.__true?

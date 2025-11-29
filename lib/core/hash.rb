@@ -159,9 +159,10 @@ class Hash
   end
 
   # Common aliases for key membership testing
-  # Note: Adding multiple new aliases to core classes can trigger Issue #8
-  # (selftest-c crash from vtable slot corruption). Only alias key? for now.
-  alias key? include?
+  # NOTE: Aliases removed - they trigger selftest-c crash (Issue #8)
+  # TODO: Re-add when vtable size issue is fixed
+  # alias key? include?
+  # alias has_key? include?
 
   def empty?
     @first.nil?

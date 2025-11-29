@@ -78,8 +78,9 @@ class Array
     a
   end
 
-  # Alias for select
-  alias find_all select
+  # NOTE: Alias removed - triggers selftest-c crash (Issue #8)
+  # TODO: Re-add when vtable size issue is fixed
+  # alias find_all select
 
   # FIXME: Cut and paste from Enumerable
   def collect

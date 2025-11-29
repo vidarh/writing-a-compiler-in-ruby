@@ -715,10 +715,11 @@ class Regexp
     flags
   end
 
-  # Regexp literals are always frozen in Ruby
-  def frozen?
-    true
-  end
+  # NOTE: frozen? removed - triggers selftest-c crash (Issue #8)
+  # TODO: Re-add when vtable size issue is fixed
+  # def frozen?
+  #   true
+  # end
 
   # Option query methods
   def casefold?

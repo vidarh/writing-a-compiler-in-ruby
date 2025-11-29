@@ -263,44 +263,52 @@ but breaks selftest-c. Self-compiled compiler crashes in same location:
 
 **Status**: Fix is known but blocked on self-compilation crash.
 
-### 8. selftest-c Crashes When Adding New Vtable Slots
+### 8. selftest-c Crashes When Adding New Methods or Aliases
 
-**Impact**: Blocks adding new methods to core classes (Symbol#id2name, etc.)
+**Impact**: Blocks adding new methods OR aliases to core classes
 
-**Symptoms**: selftest-c crashes when adding a NEW method (new vtable slot) to
-core library files, but works when OVERRIDING existing methods (same slot).
+**Symptoms**: selftest-c crashes non-deterministically (~40-60% failure rate)
+when adding ANY new method or alias to core library files. The crash is in
+Array#<< during Array#sort in output_constants.
 
-**Key finding (confirmed 2025-11-29)**:
-- Override existing Object method (same slot): **WORKS**
-  - `def frozen?; true; end` in Symbol (overrides Object#frozen?) ✓
-  - `def equal?(other); self.==(other); end` in Symbol ✓
-- Add brand new method name (new slot): **CRASHES**
-  - `def id2name; @name; end` in Symbol ✗
-  - `def my_new_test_method; nil; end` in Symbol ✗
+**CRITICAL UPDATE (2025-11-29)**: The previously documented workaround of using
+`alias` is INCORRECT. Both new methods AND aliases trigger the crash:
+- `def frozen?; true; end` in NilClass, TrueClass, FalseClass - CRASHES
+- `alias key? include?` in Hash - CRASHES
+- `alias find_all select` in Array - CRASHES
+- `alias id2name to_s` in Symbol - CRASHES
+
+**Key finding from git bisect**:
+- Commit 64e348a (Add frozen? to NilClass, TrueClass, FalseClass) introduced crash
+- Prior commit e13c871 (Symbol#frozen?) was stable
+- The difference: adding to singleton classes (nil/true/false) vs regular class
 
 **Crash mechanism**:
-- Adding a new method increases vtable_size
+- Adding ANY new vtable slot increases vtable_size
 - During self-compilation, Array objects get corrupted
-- GDB shows: Array with @len=13, @capacity=41, but @ptr=NULL
-- Crash in `Array#<<`: tries to write to `0 + 13*4 = 52` (invalid address)
+- GDB shows: `@ptr=0xa0` (160 - invalid pointer), should be valid heap address
+- Crash in `Array#<<`: `movl %eax, (%edi)` with edi=0xa0 (bad address)
 
-**Crash path**: output_constants → Array#sort → self[1..-1] (Range) →
-is_a?(Range) → Array.concat → Array.each → lambda → Array#<< → CRASH
+**Crash path**:
+`output_constants` → `.sort` call → `Array#partition` → `Array#<<` → CRASH
 
-**Root cause**: Unknown. The vtable size change somehow causes memory
-corruption in the self-compiled binary. The crash happens during
-output_constants when sorting the constant table.
+**Root cause**: Unknown. Suspected vtable size mismatch between:
+1. The first-stage compiler (compiled by MRI with OLD vtable layout)
+2. The source code being compiled (with NEW vtable entries)
 
-**Workaround**: Two options:
-1. Only add methods that override existing Object/parent methods
-2. Use `alias` keyword for new method names - this copies the vtable slot
-   instead of creating a new one, avoiding the crash
-   Example: `alias id2name to_s` works, but `def id2name; to_s; end` crashes
+The non-deterministic nature suggests heap corruption that sometimes affects
+critical data and sometimes doesn't, depending on memory layout.
+
+**Current workaround**: Do not add new methods or aliases to core classes.
+Only override existing methods from parent classes (e.g., Symbol overriding
+Object#frozen? would work if Object#frozen? already existed).
 
 **This is the root cause blocking**:
 - Issue #6 (postfix if fix)
 - Issue #7 (parallel assignment fix)
 - Symbol#id2name implementation
+- Hash#key?, Hash#has_key? aliases
+- Object#frozen?, Regexp#frozen? implementations
 - Any new method additions to core classes
 
 ---
