@@ -263,33 +263,45 @@ but breaks selftest-c. Self-compiled compiler crashes in same location:
 
 **Status**: Fix is known but blocked on self-compilation crash.
 
-### 8. selftest-c Crashes with Complex Core Library Code
+### 8. selftest-c Crashes When Adding New Vtable Slots
 
-**Impact**: Blocks multiple bug fixes (Issues #6, #7, Symbol#inspect, etc.)
+**Impact**: Blocks adding new methods to core classes (Symbol#id2name, etc.)
 
-**Symptoms**: Any fix that adds loops or complex conditionals to core library
-files (`lib/core/*.rb`) causes selftest-c to crash, even when selftest passes.
+**Symptoms**: selftest-c crashes when adding a NEW method (new vtable slot) to
+core library files, but works when OVERRIDING existing methods (same slot).
 
-**Pattern observed**:
-- Simple methods returning literals in Object work: `def frozen?; false; end` ✓
-- Simple methods in Symbol accessing ivars fail: `def id2name; @name; end` ✗
-- Methods calling other methods fail: `def ===; other.is_a?(self); end` ✗
-- Complex methods fail: loops, while statements, multiple conditionals ✗
+**Key finding (confirmed 2025-11-29)**:
+- Override existing Object method (same slot): **WORKS**
+  - `def frozen?; true; end` in Symbol (overrides Object#frozen?) ✓
+  - `def equal?(other); self.==(other); end` in Symbol ✓
+- Add brand new method name (new slot): **CRASHES**
+  - `def id2name; @name; end` in Symbol ✗
+  - `def my_new_test_method; nil; end` in Symbol ✗
 
-**Crash locations vary but often involve**:
-- `Array#<<` during vtable output
-- `String#concat` during `Array#inspect`
-- Recursive inspection loops causing stack overflow
+**Crash mechanism**:
+- Adding a new method increases vtable_size
+- During self-compilation, Array objects get corrupted
+- GDB shows: Array with @len=13, @capacity=41, but @ptr=NULL
+- Crash in `Array#<<`: tries to write to `0 + 13*4 = 52` (invalid address)
+
+**Crash path**: output_constants → Array#sort → self[1..-1] (Range) →
+is_a?(Range) → Array.concat → Array.each → lambda → Array#<< → CRASH
+
+**Root cause**: Unknown. The vtable size change somehow causes memory
+corruption in the self-compiled binary. The crash happens during
+output_constants when sorting the constant table.
+
+**Workaround**: Two options:
+1. Only add methods that override existing Object/parent methods
+2. Use `alias` keyword for new method names - this copies the vtable slot
+   instead of creating a new one, avoiding the crash
+   Example: `alias id2name to_s` works, but `def id2name; to_s; end` crashes
 
 **This is the root cause blocking**:
 - Issue #6 (postfix if fix)
 - Issue #7 (parallel assignment fix)
-- Symbol#inspect proper quoting
-- Likely many other potential fixes
-
-**Investigation needed**: The compiled compiler handles certain control flow
-patterns differently than MRI Ruby, causing crashes when compiling code that
-the MRI-compiled compiler handles correctly.
+- Symbol#id2name implementation
+- Any new method additions to core classes
 
 ---
 

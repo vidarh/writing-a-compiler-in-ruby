@@ -50,6 +50,9 @@ class Symbol
     @name
   end
 
+  # Use alias which might not require a new vtable slot
+  alias id2name to_s
+
   def to_sym
     self
   end

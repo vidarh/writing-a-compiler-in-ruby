@@ -34,7 +34,7 @@ Running all specs in ./rubyspec/language/...
 [31m[FAIL] ./rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [34m[CRASH] ./rubyspec/language/metaclass_spec.rb (P:0 F:3 S:0 T:3)
 [34m[CRASH] ./rubyspec/language/method_spec.rb (P:0 F:0 S:0 T:0)
-[34m[CRASH] ./rubyspec/language/next_spec.rb (P:6 F:4 S:0 T:10)
+[34m[CRASH] ./rubyspec/language/next_spec.rb (P:5 F:3 S:0 T:8)
 [32m[PASS] ./rubyspec/language/not_spec.rb (P:10 F:0 S:0 T:10)
 [34m[CRASH] ./rubyspec/language/numbered_parameters_spec.rb (P:0 F:19 S:0 T:19)
 [31m[FAIL] ./rubyspec/language/numbers_spec.rb (P:5 F:17 S:0 T:22)
@@ -90,8 +90,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 933
-  Passed: 241
-  Failed: 676
+  Total tests: 931
+  Passed: 240
+  Failed: 675
   Skipped: 16
   Pass rate: 25%
