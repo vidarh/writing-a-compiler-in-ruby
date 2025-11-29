@@ -78,6 +78,9 @@ class Array
     a
   end
 
+  # Alias for select
+  alias find_all select
+
   # FIXME: Cut and paste from Enumerable
   def collect
     if block_given?
