@@ -54,6 +54,11 @@ class Symbol
     self
   end
 
+  # Symbols are always frozen in Ruby
+  def frozen?
+    true
+  end
+
   def inspect
     # FIXME: This is incomplete.
     # Ruby is massively annoying here - what gets printed without quotes depend
