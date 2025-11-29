@@ -240,7 +240,7 @@ class String
   end
 
   def ord
-    # FIXME: On empty string we're obliged to throw an ArgumentError
+    raise ArgumentError.new("Empty string") if empty?
 
     # FIXME: This is 1.8.x behaviour; for 1.9.x, String[] behaviur changes, and
     # we ned to change this accordingly.
