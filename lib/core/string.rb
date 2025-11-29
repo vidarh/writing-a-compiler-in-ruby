@@ -546,6 +546,13 @@ class String
     self
   end
 
+  # Unary minus returns a frozen copy (or self if already frozen)
+  def -@
+    # FIXME: We don't have frozen? / freeze implemented yet
+    # For now, just return a frozen duplicate
+    dup.freeze
+  end
+
   # FIXME: Inefficient (should pre-alloc capacity)
   def + other
     dup.concat(other)
