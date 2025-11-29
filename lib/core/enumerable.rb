@@ -131,18 +131,14 @@ module Enumerable
   end
 
 
-  def map(&block)
-    return self.collect(&block) # probably better to make an alias
-  end
+  alias map collect
 
 
   def max
   end
 
 
-  def member?(obj)
-    return self.include?(obj)
-  end
+  alias member? include?
 
 
   def min

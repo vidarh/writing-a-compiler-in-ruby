@@ -18,18 +18,14 @@ class Float
     "0.0"
   end
 
-  def inspect
-    to_s
-  end
+  alias inspect to_s
 
   def to_i
     # FIXME: Stub - proper float to int conversion not implemented
     0
   end
 
-  def to_int
-    to_i
-  end
+  alias to_int to_i
 
   def to_f
     self

@@ -9,9 +9,7 @@ class FalseClass
     "false"
   end
 
-  def inspect
-    to_s
-  end
+  alias inspect to_s
 
   def !
     true

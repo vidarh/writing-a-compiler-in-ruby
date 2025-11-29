@@ -77,9 +77,7 @@ class MatchData
     @captures.length + 1  # +1 for the full match
   end
 
-  def size
-    length
-  end
+  alias size length
 
   # Array of captures (including full match at index 0)
   def captures

@@ -71,10 +71,7 @@ class Hash
     @data[pos] ? true : false
   end
 
-  # Alias for has_key?
-  def key?(key)
-    has_key?(key)
-  end
+  alias key? has_key?
 
   def has_value?(value)
     each do |k,v|
@@ -83,9 +80,6 @@ class Hash
     false
   end
 
-  # Alias for has_value?
-  def value?(value)
-    has_value?(value)
-  end
+  alias value? has_value?
 
 end

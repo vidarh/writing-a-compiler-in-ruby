@@ -17,9 +17,7 @@ class Range
     end
   end
 
-  def inspect
-    to_s
-  end
+  alias inspect to_s
 
   def exclude_end?
     @exclude_end == true
@@ -47,9 +45,7 @@ class Range
     end
   end
 
-  def include? val
-    member?(val)
-  end
+  alias include? member?
 
   def === (val)
     member?(val)

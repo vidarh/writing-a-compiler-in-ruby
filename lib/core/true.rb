@@ -9,9 +9,7 @@ class TrueClass
     "true"
   end
 
-  def inspect
-    to_s
-  end
+  alias inspect to_s
 
   def == other
     %s(if (eq other true) true false)

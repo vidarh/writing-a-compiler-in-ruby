@@ -93,10 +93,7 @@ class Array
     end
   end
 
-  # Alias for collect
-  def map(&block)
-    collect(&block)
-  end
+  alias map collect
 
 
   # FIXME: Cut and paste from Enumerable
@@ -496,12 +493,7 @@ class Array
   end
 
 
-  def member?(val)
-    self.each do |v|
-      return true if v == val
-    end
-    return false
-  end
+  alias member? include?
 
 
   # Same as Array#each, but passes the index of the element

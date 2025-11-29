@@ -182,13 +182,8 @@ class Class
     %s(__get_string @name)
   end
 
-  def to_s
-    name
-  end
-
-  def inspect
-    name
-  end
+  alias to_s name
+  alias inspect name
 
   def !=  other
     !(self == other)

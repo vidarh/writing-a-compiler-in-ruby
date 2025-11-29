@@ -29,7 +29,7 @@ Running all specs in ./rubyspec/language/...
 [34m[CRASH] ./rubyspec/language/keyword_arguments_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] ./rubyspec/language/lambda_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] ./rubyspec/language/line_spec.rb (P:0 F:2 S:0 T:2)
-[34m[CRASH] ./rubyspec/language/loop_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] ./rubyspec/language/loop_spec.rb (P:4 F:5 S:0 T:9)
 [34m[CRASH] ./rubyspec/language/magic_comment_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] ./rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [34m[CRASH] ./rubyspec/language/metaclass_spec.rb (P:0 F:3 S:0 T:3)
@@ -40,7 +40,7 @@ Running all specs in ./rubyspec/language/...
 [31m[FAIL] ./rubyspec/language/numbers_spec.rb (P:5 F:17 S:0 T:22)
 [34m[CRASH] ./rubyspec/language/optional_assignments_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] ./rubyspec/language/order_spec.rb (P:0 F:10 S:0 T:10)
-[34m[CRASH] ./rubyspec/language/or_spec.rb (P:4 F:1 S:0 T:5)
+[34m[CRASH] ./rubyspec/language/or_spec.rb (P:6 F:1 S:1 T:8)
 [34m[CRASH] ./rubyspec/language/pattern_matching_spec.rb (P:2 F:28 S:0 T:30)
 [34m[CRASH] ./rubyspec/language/precedence_spec.rb (P:6 F:4 S:0 T:10)
 [31m[FAIL] ./rubyspec/language/predefined/data_spec.rb (P:0 F:16 S:1 T:17)
@@ -90,8 +90,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 931
-  Passed: 240
-  Failed: 675
-  Skipped: 16
-  Pass rate: 25%
+  Total tests: 943
+  Passed: 246
+  Failed: 680
+  Skipped: 17
+  Pass rate: 26%
