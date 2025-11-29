@@ -158,6 +158,11 @@ class Hash
     member?(key)
   end
 
+  # Common aliases for key membership testing
+  # Note: Adding multiple new aliases to core classes can trigger Issue #8
+  # (selftest-c crash from vtable slot corruption). Only alias key? for now.
+  alias key? include?
+
   def empty?
     @first.nil?
   end

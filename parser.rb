@@ -1111,13 +1111,14 @@ class Parser < ParserBase
   end
 
   # alias ::= "alias" ws* new_name ws* old_name
+  # Method names can be regular identifiers or operator method names like []=, +, etc.
   def parse_alias
     pos = position
     keyword(:alias) or return
     ws
-    new_name = expect(Atom) or expected("new method name")
+    new_name = expect(Methodname) or expected("new method name")
     ws
-    old_name = expect(Atom) or expected("old method name")
+    old_name = expect(Methodname) or expected("old method name")
     return E[pos, :alias, new_name, old_name]
   end
 
