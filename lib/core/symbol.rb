@@ -109,6 +109,13 @@ class Symbol
     to_s[i]
   end
 
+  # Returns a Proc that calls the method named by self on its first argument
+  # Used for: array.map(&:to_s) which becomes array.map(&:to_s.to_proc)
+  def to_proc
+    method_name = @name
+    Proc.new { |obj, *args| obj.__send__(method_name, *args) }
+  end
+
   # FIXME
   # The compiler should turn ":foo" into Symbol.__get_symbol("foo").
   # Alternatively, the compiler can do this _once_ at the start for
