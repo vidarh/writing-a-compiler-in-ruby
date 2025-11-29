@@ -29,6 +29,11 @@ class NilClass
     self
   end
 
+  # nil is always frozen
+  def frozen?
+    true
+  end
+
   def to_i
     0
   end

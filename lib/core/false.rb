@@ -21,6 +21,11 @@ class FalseClass
     self
   end
 
+  # false is always frozen
+  def frozen?
+    true
+  end
+
   def & other
     false
   end

@@ -21,6 +21,11 @@ class TrueClass
     self
   end
 
+  # true is always frozen
+  def frozen?
+    true
+  end
+
   def & other
     other.__true?
   end
