@@ -162,7 +162,7 @@ class Array
   # Pushes the given object on to the end of this array. This expression
   # returns the array itself, so several appends may be chained together.
   def <<(obj)
-    %s(if (le @len @capacity) (callm self __grow ((mul (add @len 1) 2))))
+    %s(if (ge @len @capacity) (callm self __grow ((mul (add @len 1) 2))))
     %s(assign (index @ptr @len) obj)
     %s(assign @len (add @len 1))
     self

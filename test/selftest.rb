@@ -637,6 +637,15 @@ end
 
 include AST
 
+def test_trigger_bug
+  # Testing that the Array#<< fix allows many string constants
+  expect_eq("test string 1", "test string 1", "String test 1")
+  expect_eq("test string 2", "test string 2", "String test 2")
+  expect_eq("test string 3", "test string 3", "String test 3")
+  expect_eq("test string 4", "test string 4", "String test 4")
+  expect_eq("test string 5", "test string 5", "String test 5")
+end
+
 def test_compiler
   e = Emitter.new
   c = Compiler.new(e)
@@ -787,6 +796,7 @@ test_destructuring
 test_depth_first
 test_string
 test_file
+test_trigger_bug
 test_compiler
 
 puts "DONE"
