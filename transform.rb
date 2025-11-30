@@ -1243,6 +1243,11 @@ class Compiler
         # be a problem?
         e[0] = :let
         e[1] = [:__destruct]
+        # If RHS is a flat array (comma expression like `1, 2, 3`), wrap it in :array
+        # Without this, `a, b, c = 1, 2, 3` passes 3 args to Array() instead of 1
+        if r.is_a?(Array) && !r.empty? && !r[0].is_a?(Symbol)
+          r = [:array] + r
+        end
         # Convert right-hand side to array using Array() for proper destructuring
         # Array() tries to_ary, then to_a, then wraps in array if neither exists
         # This handles cases like `x, y = 42` where 42 doesn't respond to to_a
