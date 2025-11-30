@@ -400,7 +400,21 @@ module OpPrec
         end
 
         if op
-          op = op[opstate] if op.is_a?(Hash)
+          if op.is_a?(Hash)
+            # For :: operator: treat as prefix when there's whitespace before it
+            # "puts ::Object" → puts(::Object) - prefix
+            # "puts::Object" → puts::Object - infix (namespace lookup)
+            if token == "::" && opstate == :infix_or_postfix && src.had_ws_before_token
+              op = op[:prefix]
+              # Also need to push the call operator since ::X is an argument
+              if possible_func && !@tokenizer.newline_before_current
+                reduce(ostack, @opcall2)
+                ostack << @opcall2
+              end
+            else
+              op = op[opstate]
+            end
+          end
 
           # Handle prefix operators with minarity 0 when an infix operator arrives
           # Example: "break; 42" - the ; is infix, so break should close with nil
