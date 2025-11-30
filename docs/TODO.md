@@ -26,26 +26,6 @@
 
 ---
 
-### 1.2 Scope Resolution (::) as Prefix
-
-**Impact**: class_spec and others using `::Constant`
-
-**Problem**: `::Object` parsed incorrectly.
-
-**Fix**: Detect when `::` should be prefix (after `(`, `,`, `=`, etc.).
-
----
-
-### 1.3 Block Parameters with Defaults
-
-**Impact**: Various block-using specs
-
-**Problem**: `{ |a=5| ... }` doesn't apply defaults correctly.
-
-**Fix**: output_functions.rb needs to calculate correct argument positions for lambdas.
-
----
-
 ## Priority 2: Medium Effort (Days)
 
 ### 2.1 Lambda/Block Segfaults
@@ -110,6 +90,8 @@
 - Array#<< growth condition - Fixed inverted condition causing memory exhaustion
 - Postfix if/unless returns nil - `(x if false)` now returns nil, not false
 - Parallel assignment - `a, b, c = 1, 2, 3` now works correctly
+- Scope resolution (::) as prefix - `::Object` now works after whitespace
+- Block params with defaults - `{ |a=99| }` now applies defaults correctly
 
 ---
 
