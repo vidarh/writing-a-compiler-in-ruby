@@ -14,21 +14,9 @@
 
 ---
 
-## Priority 1: Quick Wins (Hours)
+## Priority 1: Medium Effort (Days)
 
-### 1.1 Hash Spread Operator (**)
-
-**Impact**: hash_spec, keyword_arguments_spec
-
-**Problem**: `**h` in hash literal parsed as exponentiation.
-
-**Fix**: Context-sensitive parsing to treat `**` as prefix kwsplat inside `{...}`.
-
----
-
-## Priority 2: Medium Effort (Days)
-
-### 2.1 Lambda/Block Segfaults
+### 1.1 Lambda/Block Segfaults
 
 **Impact**: ~16 specs crash
 
@@ -41,7 +29,7 @@
 
 ---
 
-### 2.2 Classes in Lambdas
+### 1.2 Classes in Lambdas
 
 **Problem**: Classes defined in lambdas get wrong name prefix.
 
@@ -49,7 +37,7 @@
 
 ---
 
-### 2.3 super() Implementation
+### 1.3 super() Implementation
 
 **Impact**: super_spec, any deep class hierarchies
 
@@ -59,9 +47,9 @@
 
 ---
 
-## Priority 3: Larger Features
+## Priority 2: Larger Features
 
-### 3.1 Float Support
+### 2.1 Float Support
 
 **Impact**: ~17 test failures
 
@@ -69,7 +57,7 @@
 
 ---
 
-### 3.2 Command Execution
+### 2.2 Command Execution
 
 **Impact**: ~8 test failures
 
@@ -77,7 +65,7 @@
 
 ---
 
-### 3.3 Literal eval() Support
+### 2.3 Literal eval() Support
 
 **Impact**: ~100 test failures (partial)
 
@@ -92,6 +80,8 @@
 - Parallel assignment - `a, b, c = 1, 2, 3` now works correctly
 - Scope resolution (::) as prefix - `::Object` now works after whitespace
 - Block params with defaults - `{ |a=99| }` now applies defaults correctly
+- Break/next newline handling - `break\nputs x` parses as two statements
+- Hash spread operator (**) - `{**h, a: 1}` parses correctly (was exponentiation)
 
 ---
 

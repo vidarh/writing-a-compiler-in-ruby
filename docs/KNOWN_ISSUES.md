@@ -19,6 +19,8 @@
 3. **Parallel assignment** (cbd40e0) - `a, b, c = 1, 2, 3` now works correctly
 4. **Scope resolution (::) as prefix** (17eab49) - `::Object` now works after whitespace
 5. **Block params with defaults** (8ccfcbd) - `{ |a=99| }` correctly applies defaults
+6. **Break/next newline handling** (8c97401) - `break\nputs x` now parses as two statements
+7. **Hash spread operator (**)** - `{**h, a: 1}` now parses correctly (was exponentiation)
 
 ---
 
@@ -104,20 +106,7 @@ l.call  # Segfault
 
 ---
 
-### 5. Hash Spread Operator (**)
-
-**Problem**: `**` inside hash literals parsed as exponentiation instead of spread.
-
-```ruby
-h = {b: 2}
-{**h, a: 1}  # Parse error
-```
-
-**Workaround**: Manually merge hashes with `Hash#merge`.
-
----
-
-### 6. Compound Expression After If/Else
+### 5. Compound Expression After If/Else
 
 **Problem**: Compound expressions immediately after if/else can corrupt variables.
 
