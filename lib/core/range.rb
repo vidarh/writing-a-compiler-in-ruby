@@ -27,9 +27,13 @@ class Range
     @min
   end
 
+  alias begin first
+
   def last
     @max
   end
+
+  alias end last
 
   # FIXME: This is hopelessly inadequate, but
   # tolerable for the case where we only use integer
