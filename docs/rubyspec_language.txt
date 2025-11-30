@@ -23,9 +23,9 @@ Running all specs in rubyspec/language/...
 [31m[FAIL] rubyspec/language/execution_spec.rb (P:0 F:8 S:0 T:8)
 [34m[CRASH] rubyspec/language/file_spec.rb (P:0 F:3 S:0 T:3)
 [34m[CRASH] rubyspec/language/for_spec.rb (P:0 F:0 S:0 T:0)
-[31m[FAIL] rubyspec/language/hash_spec.rb (P:12 F:27 S:6 T:45)
+[31m[FAIL] rubyspec/language/hash_spec.rb (P:15 F:24 S:6 T:45)
 [31m[FAIL] rubyspec/language/heredoc_spec.rb (P:13 F:3 S:0 T:16)
-[31m[FAIL] rubyspec/language/if_spec.rb (P:35 F:20 S:1 T:56)
+[31m[FAIL] rubyspec/language/if_spec.rb (P:36 F:19 S:1 T:56)
 [34m[CRASH] rubyspec/language/keyword_arguments_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/lambda_spec.rb (P:0 F:0 S:0 T:0)
 [34m[CRASH] rubyspec/language/line_spec.rb (P:0 F:2 S:0 T:2)
@@ -34,7 +34,7 @@ Running all specs in rubyspec/language/...
 [31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [34m[CRASH] rubyspec/language/metaclass_spec.rb (P:0 F:3 S:0 T:3)
 [34m[CRASH] rubyspec/language/method_spec.rb (P:0 F:0 S:0 T:0)
-[34m[CRASH] rubyspec/language/next_spec.rb (P:5 F:3 S:0 T:8)
+[34m[CRASH] rubyspec/language/next_spec.rb (P:6 F:4 S:0 T:10)
 [32m[PASS] rubyspec/language/not_spec.rb (P:10 F:0 S:0 T:10)
 [34m[CRASH] rubyspec/language/numbered_parameters_spec.rb (P:0 F:19 S:0 T:19)
 [31m[FAIL] rubyspec/language/numbers_spec.rb (P:5 F:17 S:0 T:22)
@@ -47,7 +47,7 @@ Running all specs in rubyspec/language/...
 [34m[CRASH] rubyspec/language/predefined_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] rubyspec/language/predefined/toplevel_binding_spec.rb (P:0 F:10 S:0 T:10)
 [34m[CRASH] rubyspec/language/private_spec.rb (P:1 F:6 S:0 T:7)
-[34m[CRASH] rubyspec/language/proc_spec.rb (P:10 F:11 S:0 T:21)
+[34m[CRASH] rubyspec/language/proc_spec.rb (P:7 F:8 S:0 T:15)
 [34m[CRASH] rubyspec/language/range_spec.rb (P:0 F:1 S:0 T:1)
 [34m[CRASH] rubyspec/language/redo_spec.rb (P:0 F:2 S:0 T:2)
 [34m[CRASH] rubyspec/language/regexp/anchors_spec.rb (P:1 F:1 S:0 T:2)
@@ -90,8 +90,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 931
-  Passed: 240
-  Failed: 675
+  Total tests: 927
+  Passed: 242
+  Failed: 669
   Skipped: 16
-  Pass rate: 25%
+  Pass rate: 26%
