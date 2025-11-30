@@ -94,8 +94,8 @@ Operators = {
 #    :prefix => Oper.new(1, :while, 1, 0)
 #  },
 
-  "break" => Oper.new(22, :break, :prefix, 1, 0, :right, 3),
-  "next"  => Oper.new(22, :next,  :prefix, 1, 0, :right, 3),
+  "break" => Oper.new(6, :break, :prefix, 1, 0, :right, 3),
+  "next"  => Oper.new(6, :next,  :prefix, 1, 0, :right, 3),
   "defined?" => Oper.new(6, :defined?, :prefix, nil, nil, :right, 6),  # pri=6 to avoid premature = reduction (=has right_pri=5)
 
   # & is context-sensitive: prefix for block conversion, infix for bitwise AND

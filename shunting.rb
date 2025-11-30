@@ -359,6 +359,31 @@ module OpPrec
             possible_func = false  # Prevent next token from being treated as function argument
           end
         end
+        # Handle prefix operators with minarity 0 when newline-separated from next expression
+        # This handles "break\nputs" parsing as two statements, not break(puts)
+        if opstate == :prefix && newline_before && !is_closing_paren &&
+           ostack.last && ostack.last.type == :prefix && ostack.last.minarity == 0
+          # Push nil to satisfy prefix operator
+          if ostack.last.sym == :splat
+            @out.value(:_)
+          else
+            @out.value(nil)
+          end
+          # Check if we're inside parentheses (for multi-statement blocks)
+          is_paren = lp_on_entry && ostack.first && ostack.first.type == :lp && ostack.first.sym == nil
+          if is_paren
+            # Inside parentheses: insert implicit ; separator
+            do_op = Operators[";"]
+            reduce(ostack, do_op)
+            ostack << do_op
+            opstate = :prefix  # After ; we expect a new expression
+            possible_func = false  # Prevent next token from being treated as function argument
+          else
+            # At statement level: stop parsing, let outer parser handle next statement
+            src.unget(token)
+            break
+          end
+        end
         # Normally we stop when encountering a keyword, but it's ok to encounter
         # one as the second operand for an infix operator.
         # Also, keywords that have operator mappings (like if/while/rescue) should

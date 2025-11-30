@@ -34,13 +34,13 @@ Running all specs in rubyspec/language/...
 [31m[FAIL] rubyspec/language/match_spec.rb (P:2 F:10 S:0 T:12)
 [34m[CRASH] rubyspec/language/metaclass_spec.rb (P:0 F:3 S:0 T:3)
 [34m[CRASH] rubyspec/language/method_spec.rb (P:0 F:0 S:0 T:0)
-[34m[CRASH] rubyspec/language/next_spec.rb (P:6 F:4 S:0 T:10)
+[34m[CRASH] rubyspec/language/next_spec.rb (P:6 F:2 S:0 T:8)
 [32m[PASS] rubyspec/language/not_spec.rb (P:10 F:0 S:0 T:10)
 [34m[CRASH] rubyspec/language/numbered_parameters_spec.rb (P:0 F:19 S:0 T:19)
 [31m[FAIL] rubyspec/language/numbers_spec.rb (P:5 F:17 S:0 T:22)
 [34m[CRASH] rubyspec/language/optional_assignments_spec.rb (P:0 F:0 S:0 T:0)
 [31m[FAIL] rubyspec/language/order_spec.rb (P:0 F:10 S:0 T:10)
-[34m[CRASH] rubyspec/language/or_spec.rb (P:4 F:1 S:0 T:5)
+[34m[CRASH] rubyspec/language/or_spec.rb (P:6 F:1 S:1 T:8)
 [34m[CRASH] rubyspec/language/pattern_matching_spec.rb (P:2 F:28 S:0 T:30)
 [34m[CRASH] rubyspec/language/precedence_spec.rb (P:6 F:4 S:0 T:10)
 [31m[FAIL] rubyspec/language/predefined/data_spec.rb (P:0 F:16 S:1 T:17)
@@ -78,7 +78,7 @@ Running all specs in rubyspec/language/...
 [32m[PASS] rubyspec/language/unless_spec.rb (P:6 F:0 S:0 T:6)
 [34m[CRASH] rubyspec/language/until_spec.rb (P:23 F:5 S:0 T:28)
 [34m[CRASH] rubyspec/language/variables_spec.rb (P:0 F:4 S:0 T:4)
-[34m[CRASH] rubyspec/language/while_spec.rb (P:8 F:0 S:0 T:8)
+[34m[CRASH] rubyspec/language/while_spec.rb (P:10 F:0 S:0 T:10)
 [34m[CRASH] rubyspec/language/yield_spec.rb (P:0 F:0 S:0 T:0)
 
 ================================
@@ -90,8 +90,8 @@ Summary:
   Failed to compile: 0
 
 Individual Test Cases:
-  Total tests: 927
-  Passed: 242
-  Failed: 669
-  Skipped: 16
+  Total tests: 930
+  Passed: 246
+  Failed: 667
+  Skipped: 17
   Pass rate: 26%
