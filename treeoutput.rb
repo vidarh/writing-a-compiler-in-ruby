@@ -196,15 +196,14 @@ module OpPrec
       return @vstack << E[o.sym, leftv, rightv] if @@dont_rewrite
 
       if o.sym == :if_mod
-        o = Oper.new(2, :if, :prefix, 1, 0)
-        l = rightv
-        rightv = leftv
-        leftv  = l
+        # Convert postfix if to full if with explicit nil else branch
+        # This ensures `(x if false)` returns nil, not false
+        @vstack << E[:if, rightv, E[:do, leftv], E[:do, :nil]]
+        return
       elsif o.sym == :unless_mod
-        o = Oper.new(2, :unless, :prefix, 1, 0)
-        l = rightv
-        rightv = leftv
-        leftv  = l
+        # Convert postfix unless to full unless with explicit nil else branch
+        @vstack << E[:unless, rightv, E[:do, leftv], E[:do, :nil]]
+        return
       end
 
       if o.sym == :while_mod
