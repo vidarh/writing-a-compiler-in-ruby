@@ -241,6 +241,22 @@ class Hash
     a
   end
 
+  def keys
+    a = []
+    each do |k, v|
+      a << k
+    end
+    a
+  end
+
+  def values
+    a = []
+    each do |k, v|
+      a << v
+    end
+    a
+  end
+
   def each
     pos = 0
     capacity = @capacity * 2
