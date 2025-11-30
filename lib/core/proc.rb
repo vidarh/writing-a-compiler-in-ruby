@@ -25,6 +25,11 @@ class Proc
     @arity
   end
 
+  # Returns self - Procs are already procs
+  def to_proc
+    self
+  end
+
   def call *__copysplat
     %s(call @addr (@s @closure @env (splat __copysplat)))
 
