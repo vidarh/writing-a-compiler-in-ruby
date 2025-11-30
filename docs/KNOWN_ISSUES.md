@@ -17,6 +17,8 @@
 1. **Array#<< growth condition** (ba819c8) - Fixed inverted condition that caused memory exhaustion
 2. **Postfix if/unless returns nil** (2dee682) - `(x if false)` now returns nil, not false
 3. **Parallel assignment** (cbd40e0) - `a, b, c = 1, 2, 3` now works correctly
+4. **Scope resolution (::) as prefix** (17eab49) - `::Object` now works after whitespace
+5. **Block params with defaults** (8ccfcbd) - `{ |a=99| }` correctly applies defaults
 
 ---
 
@@ -45,10 +47,29 @@ C.new.foo  # Infinite loop: B#foo calls B#foo instead of A#foo
 
 **Symptoms**: Segfaults in closure execution, often with invalid memory addresses.
 
-**Categories**:
-- Global variable in closure: Crashes at `$spec_shared_method = nil`
-- NULL pointer: Crashes at address 0x00000000
-- Invalid addresses: Crashes at addresses like 0x68726164
+**Minimal Repro** (loop with break inside block called via .call):
+```ruby
+def outer(&b)
+  b.call
+end
+
+def test
+  x = 0
+  outer do
+    loop do
+      x += 1
+      break if x >= 2
+    end
+  end
+  puts x  # Never reached - segfault
+end
+test
+```
+
+**Root Cause Analysis**:
+- Break from block inside `loop` corrupts %ebx (numargs register)
+- Stack unwinding during break not restoring registers correctly
+- After return to caller, stack adjustment uses corrupt %ebx value
 
 **Affected specs**: block_spec, lambda_spec, proc_spec, loop_spec, and others
 
@@ -96,31 +117,7 @@ h = {b: 2}
 
 ---
 
-### 6. Scope Resolution (::) as Prefix
-
-**Problem**: `::Constant` parsed incorrectly when used as prefix.
-
-```ruby
-::Object.class  # Error: "Unable to resolve puts::Object"
-defined?(::A)   # Parse error
-```
-
-**Workaround**: Omit `::` prefix.
-
----
-
-### 7. Block Parameters with Defaults
-
-**Problem**: Default values on block parameters don't work correctly.
-
-```ruby
-[1, 2].each { |a=99| puts a }
-# Prints array twice instead of elements
-```
-
----
-
-### 8. Compound Expression After If/Else
+### 6. Compound Expression After If/Else
 
 **Problem**: Compound expressions immediately after if/else can corrupt variables.
 
