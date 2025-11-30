@@ -254,8 +254,30 @@ class Compiler
           body = E[:block, E[], body, rescue_clause, ensure_clause]
         end
 
-        # FIXME: Putting this inline further down appears to break.
-        len = args.length
+        # Calculate arity correctly:
+        # - Count required params (those without defaults)
+        # - If any optional params exist, arity is -(required_count + 1)
+        # - Otherwise arity is just the count
+        required_count = 0
+        has_optional = false
+        args.each do |a|
+          if a.is_a?(Array)
+            if a[1] == :default && a[2] != :nil
+              # Has a non-nil default - optional parameter
+              has_optional = true
+            elsif [:rest, :keyrest].include?(a[1])
+              # Splat or keyword rest - makes it variable arity
+              has_optional = true
+            elsif [:block].include?(a[1])
+              # Block parameter doesn't affect arity
+            else
+              required_count += 1
+            end
+          else
+            required_count += 1
+          end
+        end
+        len = has_optional ? -(required_count + 1) : required_count
 
         # Handle args that might already have default values from parser
         # Parser returns either symbols or [name, :default, value] tuples
@@ -593,7 +615,8 @@ class Compiler
           vars, env2= find_vars(n[2], scopes + [param_scope], env, freq, true, false, Set.new(param_names))
 
           # Clean out proc/lambda arguments from the %s(let ..) and the environment we're building
-          vars  -= n[1] if n[1]
+          # Use param_names (symbols) not n[1] (which may contain [:param, :default, value] tuples)
+          vars -= param_names
           # Don't remove params from env2 - if they're captured by nested lambdas,
           # they need to propagate up. The rewrite_env_vars will add initialization.
           env += env2
