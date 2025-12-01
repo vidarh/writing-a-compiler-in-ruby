@@ -196,8 +196,27 @@ class String
   end
 
   def []= pos, str
-    STDERR.puts("ERROR: String#[]= NOT IMPLEMENTED YET; Called with (#{pos},'#{str}')")
-    0/0
+    l = length
+    if pos < 0
+      pos = l + pos
+    end
+
+    if pos < 0 || pos >= l
+      return nil
+    end
+
+    # Get the byte value to store
+    if str.is_a?(Integer)
+      byte = str
+    else
+      byte = str.to_s.ord
+    end
+
+    # Store byte at position using bindex for byte-level access
+    %s(assign pos_raw (callm pos __get_raw))
+    %s(assign b (callm byte __get_raw))
+    %s(assign (bindex @buffer pos_raw) b)
+    str
   end
 
   def == other
@@ -729,6 +748,28 @@ class String
   def =~(pattern)
     return nil if pattern.nil?
     pattern =~ self
+  end
+
+  # Return a new string with characters in reverse order
+  def reverse
+    result = String.new
+    l = length
+    i = l - 1
+    while i >= 0
+      result << self[i]
+      i = i - 1
+    end
+    result
+  end
+
+  # Reverse the string in place
+  # Note: This modifies the original string buffer, which only works for
+  # dynamically allocated strings. String literals may be in read-only memory.
+  def reverse!
+    # Create a reversed copy and replace our buffer with it
+    rev = self.reverse
+    self.__set_raw(rev.__get_raw)
+    self
   end
 end
 
