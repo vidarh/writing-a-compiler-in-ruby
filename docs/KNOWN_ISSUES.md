@@ -19,6 +19,14 @@
    - Fix: Save %ebx to %edx before unwinding loop, restore after
    - Note: Break still exits DEFINER instead of YIELDER (not Ruby-compliant)
 
+2. **Super in deep hierarchies** - `super` now works correctly in A < B < C chains
+   - Root cause: Was using `self.class.superclass` instead of defining class's superclass
+   - Fix: Pass defining class name and look up its superclass directly
+
+3. **Hash with nil keys** - `{nil => value}[nil]` now works correctly
+   - Root cause: nil was used as both valid key AND empty slot marker
+   - Fix: Added special handling to iterate/lookup nil keys via linked list
+
 ## Previous Fixes (2025-11-30)
 
 1. **Array#<< growth condition** (ba819c8) - Fixed inverted condition that caused memory exhaustion
