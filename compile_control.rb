@@ -308,6 +308,9 @@ class Compiler
       @e.jmp(br)
     else
       # Handling lexical break from block/proc's.
+      # NOTE: This currently uses __env__[0] which is the DEFINER's frame.
+      # For correct Ruby semantics, break should return to the YIELDER's frame.
+      # See KNOWN_ISSUES.md "Break from Blocks - Wrong Return Target"
 
       # First, load the target stackframe from __env__[0]
       ret = compile_eval_arg(scope,[:index,:__env__,0])
@@ -324,6 +327,12 @@ class Compiler
       else
         @e.movl("nil", :ecx)  # Default break value is nil
       end
+
+      # Restore %ebx from current frame BEFORE unwinding
+      # After unwinding, %ebp will point to a different frame, so we must
+      # restore %ebx now while we still have access to our saved copy.
+      # We'll keep the restored value in %edx during unwinding.
+      @e.movl("-4(%ebp)", :edx)
 
       # Jump to test first to avoid doing leave twice
       l_test = @e.get_local + "_test"
@@ -346,7 +355,8 @@ class Compiler
       # Restore break value from %ecx to %eax (always set, defaults to nil)
       @e.movl(:ecx, :eax)
 
-      @e.movl("-4(%ebp)",:ebx)
+      # Restore %ebx from %edx (saved before unwinding)
+      @e.movl(:edx, :ebx)
       @e.ret
     end
     @e.evict_all

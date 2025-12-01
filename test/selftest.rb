@@ -729,7 +729,8 @@ def test_compiler
   end
 ')
   c.preprocess(prog)
-  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]], [:assign, [:index, :__env__, 1], :__closure__], [:callm, [:index, :__env__, 1], :call, nil]]",
+  # env layout: [0]=__stackframe__, [1]=__closure__, ...
+  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]], [:assign, [:index, :__env__, 1], :__closure__], [:callm, [:index, :__env__, 1], :call, []]]",
     "yield triggers a rewrite even with no arguments")
 
 end

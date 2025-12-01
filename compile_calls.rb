@@ -334,12 +334,31 @@ class Compiler
   # Compiles a super method call
   #
   def compile_super(scope, args, block = nil)
-    # FIXME: scope.method can be nil in some contexts (blocks, lambdas)
-    # For now, use a placeholder name if method is nil
-    method = scope.method ? scope.method.name : :__unknown__
+    # Walk up the scope chain to find an actual method (not a block/lambda)
+    # Blocks have string names like "__lambda_L229", methods have symbol names like :here
+    method = nil
+    s = scope
+    while s
+      if s.method && s.method.name.is_a?(Symbol)
+        method = s.method.name
+        break
+      end
+      s = s.is_a?(Scope) ? s.next : nil
+    end
+    method ||= :__unknown__
+
     @e.comment("super #{method.inspect}")
     trace(nil,"=> super #{method.inspect}\n")
-    ret = compile_callm(scope, :self, method, args, block, true)
+    # Pass the defining class name so we look up the right superclass
+    # (not self.class.superclass which would be wrong for deep hierarchies)
+    # For eigenclasses, fall back to runtime lookup since they don't have globals
+    cs = scope.class_scope
+    if cs.is_a?(EigenclassScope)
+      defining_class = :runtime
+    else
+      defining_class = cs.name
+    end
+    ret = compile_callm(scope, :self, method, args, block, defining_class)
     trace(nil,"<= super #{method.inspect}\n")
     ret
   end
@@ -413,14 +432,27 @@ class Compiler
 
       compile_callm_args(scope, ob, args) do
         if ob != :self
-          @e.load_indirect(@e.sp, :esi) 
+          @e.load_indirect(@e.sp, :esi)
         else
           @e.comment("Reload self?")
           reload_self(scope)
         end
 
-        load_class(scope) # Load self.class into %eax
-        load_super(scope) if do_load_super
+        if do_load_super && do_load_super != :runtime
+          # do_load_super is the defining class name - load its superclass directly
+          # This fixes super in deep hierarchies (A < B < C) where self.class.superclass
+          # would return the wrong class
+          @e.comment("Load defining class #{do_load_super} for super")
+          @e.load(:global, do_load_super.to_sym)
+          load_super(scope) # Load superclass from %eax
+        elsif do_load_super == :runtime
+          # Runtime lookup - used for eigenclasses where the class object is
+          # created at runtime and has no global symbol
+          load_class(scope) # Load self.class into %eax
+          load_super(scope) # Load superclass from %eax
+        else
+          load_class(scope) # Load self.class into %eax
+        end
 
         if off
           @e.callm(m)

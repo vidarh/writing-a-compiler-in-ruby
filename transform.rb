@@ -754,13 +754,15 @@ class Compiler
       end
 
       # We need to expand "yield" before we rewrite.
+      # yield becomes __closure__.call(args...)
+      # Proc#call sets @env[1] to caller's stackframe for break support.
       if e.is_a?(Array) && e[0] == :call && e[1] == :yield
         seen = true
-        args = e[2]
+        args = e[2] || []
         e[0] = :callm
         e[1] = :__closure__
         e[2] = :call
-        e[3] = args
+        e[3] = args.is_a?(Array) ? args : [args]
       end
 
       e.each_with_index do |ex, i|

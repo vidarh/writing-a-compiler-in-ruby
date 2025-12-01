@@ -1,4 +1,3 @@
-
 class Proc
   def initialize
     @addr = nil

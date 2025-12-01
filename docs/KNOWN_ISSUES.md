@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated**: 2025-11-30
+**Last Updated**: 2025-12-01
 
 ## Current State Summary
 
@@ -12,7 +12,14 @@
 - CRASHED: ~52 files (segfaults/hangs)
 - COMPILE FAIL: 0 files (all specs compile)
 
-## Recent Fixes (2025-11-30)
+## Recent Fixes (2025-12-01)
+
+1. **Break from blocks crash** - Top-level blocks with `break` no longer crash
+   - Root cause: After unwinding stack frames, %ebx was restored from wrong frame
+   - Fix: Save %ebx to %edx before unwinding loop, restore after
+   - Note: Break still exits DEFINER instead of YIELDER (not Ruby-compliant)
+
+## Previous Fixes (2025-11-30)
 
 1. **Array#<< growth condition** (ba819c8) - Fixed inverted condition that caused memory exhaustion
 2. **Postfix if/unless returns nil** (2dee682) - `(x if false)` now returns nil, not false
@@ -26,69 +33,92 @@
 
 ## Active Issues
 
-### 1. super() Uses Wrong Superclass (CRITICAL)
+### 1. super() Uses Wrong Superclass - FIXED (2025-12-01)
 
-**Impact**: Infinite recursion in class hierarchies deeper than 2 levels
+**Status**: Fixed for most cases
 
-**Problem**: `super` uses `obj.class.superclass` instead of the defining class's superclass.
+**Fixed**:
+- Deep class hierarchies (A < B < C) - now correctly uses defining class's superclass
+- Super inside blocks - correctly finds enclosing method name
+- Super with class methods
 
-```ruby
-class A; def foo; "A"; end; end
-class B < A; def foo; super; end; end
-class C < B; def foo; super; end; end
-C.new.foo  # Infinite loop: B#foo calls B#foo instead of A#foo
-```
-
-**Workaround**: Avoid `super` in deep hierarchies.
+**Remaining edge case**:
+- `define_method(:name) { super() }` - needs method name from define_method arg
 
 ---
 
-### 2. Lambda/Block Segfaults
+### 2. Break from Blocks - Wrong Return Target (Partially Fixed)
 
-**Impact**: ~16 specs crash during lambda/block execution
+**Status**: No longer crashes, but semantics are not Ruby-compliant
 
-**Symptoms**: Segfaults in closure execution, often with invalid memory addresses.
+**2025-12-01 Fix**: Fixed crash when break is called from top-level blocks.
+The issue was that after unwinding stack frames, %ebx was being restored from
+the wrong frame (target frame instead of source frame). Fix: Save %ebx to %edx
+before the unwinding loop, restore after.
 
-**Minimal Repro** (loop with break inside block called via .call):
+**Remaining Issue**: `break` behaves like `return` - exits the DEFINER instead of the YIELDER.
+
+In Ruby:
+- `break` should exit the method that YIELDED to the block
+- `return` should exit the method that DEFINED the block
+- Current implementation has `break` behaving like `return`
+
+**Example of wrong behavior**:
 ```ruby
-def outer(&b)
-  b.call
+def yielder
+  yield
+  puts "after yield"  # MRI: does NOT print (break exits yielder)
 end
 
 def test
-  x = 0
-  outer do
-    loop do
-      x += 1
-      break if x >= 2
-    end
-  end
-  puts x  # Never reached - segfault
+  yielder { break }
+  puts "after yielder"  # MRI: prints this
 end
 test
+# MRI output: "after yielder"
+# Our output: nothing (exits test entirely because break acts like return)
 ```
 
-**Root Cause Analysis**:
-- Break from block inside `loop` corrupts %ebx (numargs register)
-- Stack unwinding during break not restoring registers correctly
-- After return to caller, stack adjustment uses corrupt %ebx value
+**Root Cause**:
+- Blocks capture `__env__[0]` = frame pointer where block was CREATED
+- `break` unwinds to `__env__[0]` which is the CREATOR's frame
+- Should unwind to YIELDER's frame instead
+
+**What works**:
+- `return` from blocks (correctly returns from defining method)
+- `break` inside `while`/`until` loops (uses ControlScope, not __env__)
+- Break no longer crashes (fixed 2025-12-01)
+
+**What doesn't work correctly**:
+- `break` exits the definer instead of the yielder (wrong Ruby semantics)
+
+**Previous fix attempts** (documented for reference):
+
+1. **Two-slot env approach** (self-compilation crashes):
+   - Add `__breakframe__` at `__env__[1]`, keep `__stackframe__` at `__env__[0]`
+   - `Proc#call` sets `@env[1]` to `caller_stackframe` before calling block
+   - Break reads `__env__[1]` instead of `__env__[0]`
+   - **BLOCKED**: Self-compilation crashes due to env layout change
+
+2. **Global variable approach** (crashes):
+   - Store break target in global variable, set by `Proc#call`
+   - Causes crashes for unknown reasons
 
 **Affected specs**: block_spec, lambda_spec, proc_spec, loop_spec, and others
 
 ---
 
-### 3. Classes in Lambdas - Runtime Segfault
+### 3. Classes in Lambdas - FIXED (2025-12-01)
 
-**Status**: Compiles but segfaults at runtime
+**Status**: Now works correctly
 
-**Problem**: Classes defined inside lambdas get incorrect `Object__` prefix in assembly.
-
+Simple classes defined inside lambdas now compile and run correctly:
 ```ruby
 l = lambda do
   class Foo; def test; 42; end; end
   Foo.new.test
 end
-l.call  # Segfault
+l.call  # Returns 42
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Ruby Compiler TODO
 
-**Last Updated**: 2025-11-30
+**Last Updated**: 2025-12-01
 
 ## Test Status
 
@@ -16,34 +16,45 @@
 
 ## Priority 1: Medium Effort (Days)
 
-### 1.1 Lambda/Block Segfaults
+### 1.1 Break from Blocks - Wrong Return Target (Partially Fixed)
 
-**Impact**: ~16 specs crash
+**Status**: No longer crashes, but semantics not Ruby-compliant
 
-**Investigation areas**:
-1. Global variable in closure (`$var = nil` crashes)
-2. NULL pointer dereferences
-3. Invalid memory addresses
+**2025-12-01 Fix**: Fixed crash when break is called from top-level blocks.
+The issue was that after unwinding stack frames, %ebx was restored from the
+wrong frame. Fix: Save %ebx to %edx before unwinding, restore after.
+
+**Remaining issue**: `break` still exits DEFINER instead of YIELDER (wrong Ruby semantics).
+
+**Ruby semantics**:
+- `break` should exit the method that YIELDED to the block
+- `return` should exit the method that DEFINED the block
+- Current implementation has both behave like `return`
+
+**Previous fix attempts** (blocked):
+1. Two-slot env: Shifts `__closure__` index, crashes self-compilation
+2. Global variable: Crashes for unknown reasons
 
 **Specs**: block_spec, lambda_spec, proc_spec, loop_spec
 
 ---
 
-### 1.2 Classes in Lambdas
+### 1.2 Classes in Lambdas - FIXED
 
-**Problem**: Classes defined in lambdas get wrong name prefix.
-
-**Fix**: Scope-walking logic for class naming needs to handle lambda scopes.
+**Status**: Now works correctly. Classes defined in lambdas compile and run.
 
 ---
 
-### 1.3 super() Implementation
+### 1.3 super() Implementation - MOSTLY FIXED
 
-**Impact**: super_spec, any deep class hierarchies
+**Fixed cases**:
+- Deep class hierarchies (A < B < C) - super now correctly uses defining class
+- Super inside blocks (yields) - correctly finds enclosing method name
+- Super with class methods (self.foo) - works correctly
 
-**Problem**: Uses `obj.class.superclass` instead of method's defining class.
-
-**Fix**: Track defining class in method dispatch, use for super lookup.
+**Remaining edge case**:
+- `define_method(:name) { super() }` - super in define_method blocks needs
+  method name from define_method argument, not scope lookup
 
 ---
 
@@ -73,7 +84,13 @@
 
 ---
 
-## Recently Completed (2025-11-30)
+## Recently Completed (2025-12-01)
+
+- Break crash fix - Top-level blocks with break no longer crash (%ebx restore fix)
+- Super in deep hierarchies - Fixed to use defining class's superclass, not self.class.superclass
+- Super in blocks - Fixed to find enclosing method name, not block function name
+
+## Previously Completed (2025-11-30)
 
 - Array#<< growth condition - Fixed inverted condition causing memory exhaustion
 - Postfix if/unless returns nil - `(x if false)` now returns nil, not false

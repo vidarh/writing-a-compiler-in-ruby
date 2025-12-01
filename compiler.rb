@@ -45,7 +45,7 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :rescues, :raise, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :stackframe, :stackpointer, :deref, :include, :addr,
+                   :preturn, :stackframe, :caller_stackframe, :stackpointer, :deref, :include, :addr,
                    :protected, :array, :splat, :mod, :or_assign, :and_assign, :break, :next, :alias,
                    :mul_assign, :div_assign, :mod_assign, :pow_assign,
                    :and_bitwise_assign, :or_bitwise_assign, :xor_assign,
@@ -653,6 +653,14 @@ class Compiler
   def compile_stackframe(scope)
     @e.comment("Stack frame")
     Value.new([:reg,:ebp])
+  end
+
+  # Returns the caller's stack frame pointer (saved %ebp on stack)
+  # Used by Proc#call to capture the yielder's frame for break support
+  def compile_caller_stackframe(scope)
+    @e.comment("Caller's stack frame")
+    @e.movl("(%ebp)", :eax)
+    Value.new([:reg, :eax])
   end
 
   def compile_stackpointer(scope)
