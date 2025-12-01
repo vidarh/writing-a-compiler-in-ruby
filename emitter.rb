@@ -643,7 +643,10 @@ class Emitter
 
     pushl(:ebx)  # For numargs
     yield
-    popl(:ebx)   # Used in the case of splat args
+    # Use movl instead of popl to load saved ebx - this way we don't depend
+    # on esp being at the right position. This is needed because break inside
+    # expressions (like a[1] ||= (break if c)) can leave esp misaligned.
+    movl("-4(%ebp)", :ebx)
     leave
     ret
 
