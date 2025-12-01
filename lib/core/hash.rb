@@ -97,29 +97,42 @@ class Hash
   #
   def _find_slot(key)
     h = key.hash
-#    s = key.to_s
     pos = (h % @capacity) * 4
-#    %s(printf "key='%s'\n" (callm s __get_raw))
-#    %s(printf "hash=%ld,pos=%d\n" (callm h __get_raw) (callm pos __get_raw))
     cap = @capacity * 4
+    start = pos
 
-
-
+    # Special handling for nil keys: check if this slot contains the nil key
+    # by walking the linked list to see if it's actually populated
+    if key.nil?
+      return _find_nil_slot
+    end
 
     # This should always eventually end as we require
     # @capacity to be larger than @length, which should
     # mean that there should always be at least one
     # empty slot.
-    #
-    #puts "START FOR KEY: #{key}"
     while !(d = @data[pos]).nil? and !key.eql?(d)
-      #%s(__docnt)
       pos = (pos + 4)
       if pos >= cap
         pos -= cap
       end
     end
     pos
+  end
+
+  # Special method for finding nil key slot
+  # Walk the linked list since we can't distinguish nil key from empty slot
+  def _find_nil_slot
+    slot = @first
+    while slot
+      if @data[slot].nil? && @data[slot] != DELETED
+        return slot
+      end
+      slot = @data[slot + 2]
+    end
+    # Not found - return a slot for insertion based on nil's hash
+    h = nil.hash
+    (h % @capacity) * 4
   end
 
   def _find_insertion_slot(key)
@@ -151,6 +164,18 @@ class Hash
 
   def member? key
     pos = _find_slot(key)
+    # For nil keys, _find_nil_slot returns a slot from linked list or hash position
+    # Check if this slot is actually in the linked list
+    if key.nil?
+      slot = @first
+      while slot
+        if @data[slot].nil? && @data[slot] != DELETED
+          return true
+        end
+        slot = @data[slot + 2]
+      end
+      return false
+    end
     @data[pos] ? true : false
   end
 
@@ -167,7 +192,11 @@ class Hash
   end
 
   def [] key
-    pos  = _find_slot(key)
+    # Handle nil keys specially since nil is also used as empty slot marker
+    if key.nil?
+      return member?(nil) ? @data[_find_slot(nil) + 1] : @defval
+    end
+    pos = _find_slot(key)
     @data[pos] ? @data[pos + 1] : @defval
   end
 
@@ -258,13 +287,14 @@ class Hash
   end
 
   def each
-    pos = 0
-    capacity = @capacity * 2
     slot = @first
     while slot
-      if (key  = @data[slot]) && key != DELETED
+      key = @data[slot]
+      # Only skip DELETED entries, not nil keys
+      # (we iterate via linked list so all slots are valid)
+      if key != DELETED
         value = @data[slot + 1]
-        yield key,value
+        yield key, value
       end
       slot = @data[slot + 2]
     end
