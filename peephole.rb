@@ -1,4 +1,3 @@
-
 # # Very basic peephole optimizer
 #
 # This is *not* intended to be a general purpose peephole optimizer
@@ -112,6 +111,10 @@ class Peephole
     args = @prev[-1]
     last = @prev[-2]
 
+    if fold_adjacent_add_sub(last, args)
+      return
+    end
+
     # subl $0, reg
     if match([:subl, 0, Symbol], args)
       @prev.pop
@@ -123,139 +126,9 @@ class Peephole
       return
     end
 
-    if last
-      if last == [:pushl, :ebx] && args == [:movl, "-4(%ebp)", :eax]
-        @prev.pop
-        @prev << [:movl, :ebx, :eax]
-        return
-      end
+    return if handle_simple_patterns(last, args)
 
-      #if match([:movl, String, :eax], last) &&
-      #  match([:movl, :eax, String], args)
-      #  @prev.pop
-      #  @prev.pop
-      #  @prev << [:movl, last[1], args[2]]
-      #  return
-      #end
-
-      if last == [:pushl, :eax] &&
-        match([:popl, Symbol], args)
-        # @unsafe Only ok because we know the compiler treats %eax as scratch
-        @prev.pop
-        @prev.pop
-        @prev << [:movl, :eax, args[1]]
-        return
-      end
-
-      if match([:movl, Integer, :eax], last) &&
-         match([:cmpl, :eax, Symbol], args)
-          # @unsafe this optimization is ok only because we know the compiler treats
-          # %eax as a scratch register
-        @prev.pop
-        @prev.pop
-        @prev << [:cmpl, last[1], args[2]]
-        return
-      end
-
-      if last[0] == :pushl && args[0] == :popl && last[1] == args[1]
-        @prev.pop
-        @prev.pop
-        return
-      end
-
-      if args[0] == :subl &&
-        last[1].is_a?(Integer) &&
-        args[1].is_a?(Integer) && last[2] == args[2]
-
-        if last[0] == :addl &&
-          # addl x, dest
-          # subl y, dest
-          @prev.pop
-          @prev.pop
-          if last[1] > args[1]
-            @prev << [:addl, last[1] - args[1], args[2]]
-            return
-          elsif last[1] < args[1]
-            @prev << [:subl, args[1] - last[1], args[2]]
-          end
-          return
-        end
-
-        if last[0] == :subl
-          # subl x, dest
-          # subl y, dest
-          @prev.pop
-          @prev.pop
-          @prev << [:subl, args[1] + last[1], args[2]]
-          return
-        end
-      end
-
-      last2 = @prev[-3]
-      if last2
-
-        if last2[0] == :movl
-          if last2[2] == :eax
-            # movl ???, %eax
-
-            if last2[1].class == Symbol
-              src = last2[1]
-              if last[0] == :movl && last[1] == :eax
-                # movl reg, %eax
-                # movl %eax, dest
-                dest = last[2]
-
-                if args[0] == :movl && args[2] == :eax
-                  #movl reg, %eax
-                  #movl %eax, dest
-                  #movl ???, %eax
-                  #->
-                  #movl reg, dest
-                  #movl ???, %eax
-                  @prev.pop
-                  @prev.pop
-                  @prev.pop
-                  @prev << [:movl, src, dest]
-                  @prev << args
-                  return
-                end
-              end
-            end
-
-            if last2[1].class == Symbol || last2[1].is_a?(Integer)
-              val = last2[1]
-              # movl Int|Reg, %eax
-
-              if last[0] == :subl
-                if last[1] == :eax
-                  if last[2].class == Symbol
-                    reg = last[2]
-                    # movl $2, %eax
-                    # subl %eax, reg
-
-                    if args[0] == :movl
-                      if args[1] != :eax
-                        if args[2] == :eax
-                          # movl $2, %eax
-                          # subl %eax, reg
-                          # movl ???, %eax
-                          @prev.pop
-                          @prev.pop
-                          @prev.pop
-                          @prev << [:subl, val, reg]
-                          @prev << args
-                          return
-                        end
-                      end
-                    end
-                  end
-                end
-              end
-            end
-          end
-        end
-      end
-    end
+    handle_mov_chain(args, last, @prev[-3])
   end
 
   def emit(*args)
@@ -273,5 +146,114 @@ class Peephole
       @out.emit(*row)
     end
     @prev = []
+  end
+
+  # Helpers
+  def fold_adjacent_add_sub(last, args)
+    return false unless last
+    return false unless last[1].is_a?(Integer) && args[1].is_a?(Integer)
+    return false unless last[2] == args[2]
+
+    # addl x, dest / subl y, dest
+    if last[0] == :addl && args[0] == :subl
+      @prev.pop
+      @prev.pop
+      if last[1] > args[1]
+        @prev << [:addl, last[1] - args[1], args[2]]
+      elsif last[1] < args[1]
+        @prev << [:subl, args[1] - last[1], args[2]]
+      end
+      return true
+    end
+
+    # subl x, dest / subl y, dest
+    if last[0] == :subl && args[0] == :subl
+      @prev.pop
+      @prev.pop
+      @prev << [:subl, args[1] + last[1], args[2]]
+      return true
+    end
+
+    false
+  end
+
+  def handle_simple_patterns(last, args)
+    return false unless last
+
+    return true if handle_push_pop_patterns(last, args)
+    return true if handle_cmpl_immediate(last, args)
+
+    false
+  end
+
+  def handle_push_pop_patterns(last, args)
+    if last == [:pushl, :ebx] && args == [:movl, "-4(%ebp)", :eax]
+      @prev.pop
+      @prev << [:movl, :ebx, :eax]
+      return true
+    end
+
+    if last == [:pushl, :eax] && match([:popl, Symbol], args)
+      # @unsafe Only ok because we know the compiler treats %eax as scratch
+      @prev.pop
+      @prev.pop
+      @prev << [:movl, :eax, args[1]]
+      return true
+    end
+
+    if last[0] == :pushl && args[0] == :popl && last[1] == args[1]
+      @prev.pop
+      @prev.pop
+      return true
+    end
+
+    false
+  end
+
+  def handle_cmpl_immediate(last, args)
+    return false unless match([:movl, Integer, :eax], last)
+    return false unless match([:cmpl, :eax, Symbol], args)
+    # @unsafe this optimization is ok only because we know the compiler treats
+    # %eax as a scratch register
+    @prev.pop
+    @prev.pop
+    @prev << [:cmpl, last[1], args[2]]
+    true
+  end
+
+  def handle_mov_chain(args, last, last2)
+    return unless last2
+    return unless last2[0] == :movl && last2[2] == :eax
+
+    # movl reg, %eax; movl %eax, dest; movl ???, %eax -> movl reg, dest; movl ???, %eax
+    if last2[1].class == Symbol
+      src = last2[1]
+      if last && last[0] == :movl && last[1] == :eax
+        dest = last[2]
+        if args[0] == :movl && args[2] == :eax
+          @prev.pop
+          @prev.pop
+          @prev.pop
+          @prev << [:movl, src, dest]
+          @prev << args
+          return
+        end
+      end
+    end
+
+    # movl Int|Reg, %eax; subl %eax, reg; movl ???, %eax -> subl val, reg; movl ???, %eax
+    if last2[1].class == Symbol || last2[1].is_a?(Integer)
+      val = last2[1]
+      if last && last[0] == :subl && last[1] == :eax && last[2].class == Symbol
+        reg = last[2]
+        if args[0] == :movl && args[1] != :eax && args[2] == :eax
+          @prev.pop
+          @prev.pop
+          @prev.pop
+          @prev << [:subl, val, reg]
+          @prev << args
+        end
+      end
+    end
   end
 end

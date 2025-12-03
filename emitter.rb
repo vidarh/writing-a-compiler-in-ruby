@@ -611,8 +611,8 @@ class Emitter
     # Keep names under 60 chars to leave room for padding
     display_name = name.to_s
     if display_name.length > 60
-      # Truncate and add hash suffix for uniqueness
-      hash_suffix = display_name.hash.abs.to_s(16)[0..7]
+      # Truncate and add deterministic hash suffix for uniqueness
+      hash_suffix = stable_hash(display_name)
       display_name = display_name[0..50] + "..." + hash_suffix
     end
 
@@ -735,5 +735,14 @@ class Emitter
     popl(:ebp)
     ret()
     emit(".size", "main", ".-main")
+  end
+
+  # Deterministic hash for display names (avoid Ruby's randomized String#hash)
+  def stable_hash(str)
+    h = 5381
+    str.each_byte do |b|
+      h = ((h << 5) + h + b) & 0xffffffff
+    end
+    h.to_s(16)[0..7]
   end
 end
