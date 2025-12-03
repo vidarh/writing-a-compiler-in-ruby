@@ -111,6 +111,12 @@ class Peephole
     args = @prev[-1]
     last = @prev[-2]
 
+    if args[0] == :movb && args[1] == :eax
+      @prev.pop
+      @prev << [:movb, :al, args[2]]
+      return
+    end
+
     if fold_adjacent_add_sub(last, args)
       return
     end

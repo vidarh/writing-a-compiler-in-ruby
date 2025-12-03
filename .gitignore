@@ -9,6 +9,7 @@ publish
 *#
 .*
 vendor/*
+toolchain/
 features/inputs/*
 out/*
 test_*

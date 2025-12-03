@@ -71,6 +71,16 @@ buildc: Dockerfile
 buildc-nocache: Dockerfile
 	docker build --no-cache -t ${IMAGE} .
 
+fetch-glibc32:
+	docker run --rm -v ${PWD}/toolchain/32root:/host ${IMAGE} bash -lc "\
+	  set -e; \
+	  mkdir -p /host/lib /host/usr/lib32 /host/usr/lib/i386-linux-gnu /host/usr/lib/gcc/x86_64-linux-gnu/8; \
+	  cp -a /lib/i386-linux-gnu /host/lib/; \
+	  cp -a /usr/lib32/* /host/usr/lib32/; \
+	  cp -a /usr/lib/i386-linux-gnu /host/usr/lib/; \
+	  cp -a /usr/lib/gcc/x86_64-linux-gnu/8/32 /host/usr/lib/gcc/x86_64-linux-gnu/8/ \
+	"
+
 cli:
 	${DR} /bin/bash -l
 

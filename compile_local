@@ -1,0 +1,72 @@
+#!/usr/bin/ruby
+fname = ARGV[0]
+dir = File.dirname(__FILE__)
+
+bname = File.basename(fname).split(".")[0..-2].join(".")
+
+# If we want to pass the "-g" flag to gas, pass "-g",
+# and you will be able to debug at the assembler level.
+asmdebug = ARGV.include?("-g") ? "-g" : ""
+
+glibc_root = ENV["GLIBC32_ROOT"] || File.join(dir, "toolchain", "32root")
+usr32 = File.join(glibc_root, "usr", "lib32")
+lib32 = File.join(glibc_root, "lib", "i386-linux-gnu")
+usr_i386 = File.join(glibc_root, "usr", "lib", "i386-linux-gnu")
+gcc32 = File.join(glibc_root, "usr", "lib", "gcc", "x86_64-linux-gnu", "8", "32")
+dynamic_linker = File.join(lib32, "ld-linux.so.2")
+
+def fail!(msg)
+  STDERR.puts msg
+  exit(1)
+end
+
+unless File.exist?(File.join(lib32, "libc.so.6")) && File.exist?(File.join(usr32, "crt1.o"))
+  fail!("Missing 32-bit glibc in #{lib32}/#{usr32}. Run `make fetch-glibc32` first or set GLIBC32_ROOT.")
+end
+crt1 = File.join(usr32, "crt1.o")
+crti = File.join(usr32, "crti.o")
+crtn = File.join(usr32, "crtn.o")
+crtbegin = File.join(gcc32, "crtbegin.o")
+crtend = File.join(gcc32, "crtend.o")
+
+puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
+unless system("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} >out/#{bname}.s")
+  fail!("*** Compilation failed.")
+end
+
+unless File.exist?("out/tgc.o")
+  if system("gcc -Wall #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
+    puts "+++ Compiled tgc"
+  else
+    fail!("*** Compiling tgc failed.")
+  end
+end
+
+link_flags = [
+  "-m32",
+  "-nostdlib",
+  "-Wl,--dynamic-linker=#{dynamic_linker}",
+  "-Wl,-rpath,#{lib32}",
+  "-L#{usr32}",
+  "-L#{lib32}",
+  "-L#{usr_i386}",
+  "-L#{gcc32}"
+].join(" ")
+
+link_cmd = [
+  "gcc", asmdebug,
+  link_flags,
+  "-o", "out/#{bname}",
+  crt1, crti, crtbegin,
+  "out/#{bname}.s", "out/tgc.o",
+  File.join(lib32, "libc.so.6"),
+  File.join(usr32, "libc_nonshared.a"),
+  File.join(lib32, "libgcc_s.so.1"),
+  crtend, crtn
+].reject(&:empty?).join(" ")
+
+if system(link_cmd)
+  puts "+++ Compiled to out/#{bname} (host toolchain)"
+else
+  fail!("*** Assembly failed.")
+end
