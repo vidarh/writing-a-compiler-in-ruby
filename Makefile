@@ -5,7 +5,7 @@ all: compiler
 
 clean:
 	@rm -f *~ *.o *.s *\#
-	@rm -rf doc/
+	@rm -f tmp/* out/*
 
 out/driver: *.rb lib/core/*.rb *.c
 	./compile driver.rb -I . -g
