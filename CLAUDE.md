@@ -175,6 +175,8 @@ This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler 
 - `make rubyspec-language` - Run language specs (rubyspec/language/)
 - `make spec` - Run custom test cases (spec/ directory)
 
+**Slow targets:** The `make rubyspec-*` targets above are slow (many minutes each — they compile and run dozens of specs sequentially). They automatically write results to `docs/rubyspec_*.txt` via `tee`. **Read those files** for current spec status; only re-run the targets to validate actual code changes.
+
 **Test Hierarchy:**
 1. **selftest** - Self-hosting validation (MUST PASS before committing)
 2. **selftest-c** - Self-compilation validation (MUST PASS before committing)

@@ -14,6 +14,26 @@ See <http://www.hokstad.com/compiler>
 - **[docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md)** - Effective debugging patterns and techniques
 - **[docs/TODO.md](docs/TODO.md)** - Known issues and development roadmap
 
+@docs/improvement-planner.md
+
+## Vision for future development
+
+ * Feature-completeness: Pass the full rubyspec for *current* Ruby.
+ * Pure ruby: Replace the gc (currently only statically linked in C
+   component) with Ruby. Optionally/possibly replace libc dependency
+   with direct syscalls.
+ * Proper optimization (the peephole optimizer is a crude stopgap)
+ * Clean up separation of concerns and add x86-64 support and use that
+   as a path to proper multi-arch support.
+ * General cleanup. The code has gotten messy. Decompose into simpler
+   components. Make things simpler. Deduplicate.
+ * Restructure: Move source into src/
+ * Build in an assembler and linker. A Ruby prototype x86 -> ELF binary
+   assembler has shown we can drop the gas/ld dependency.
+ * Maybe support JIT one day, by allowing enough of the compiler to be
+   built in (path to supporting eval() fully; but distant future)
+
+
 ## Status as of May 14th 2023
 
  * The compiler self-hosts, but is slow and GC is disabled.
