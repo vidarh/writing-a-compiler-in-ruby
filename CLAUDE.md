@@ -155,6 +155,55 @@ Failing specs document bugs that need to be fixed:
 - `spec/ternary_operator_bug_spec.rb` - Documents ternary returning false instead of else-branch value
 - `spec/hash_literal_with_block_spec.rb` - Documents "undefined method 'pair'" error with hash args + blocks
 
+## CRITICAL RULE: Rubyspec Submodule Hygiene
+
+**NEVER modify, add, or commit changes to the `rubyspec/` submodule.**
+
+The rubyspec submodule must remain a pristine mirror of upstream ruby/spec:
+- ❌ **NEVER** modify tracked files inside `rubyspec/`
+- ❌ **NEVER** leave untracked files inside `rubyspec/` (no temp tests, no scratch scripts)
+- ❌ **NEVER** commit a dirty submodule pointer (unless deliberately tracking a new upstream release)
+- ❌ **NEVER** add workaround stubs, helper files, or fixtures inside the submodule
+- ✅ Keep the submodule at the committed upstream ref at all times
+
+**Project aspiration:** This compiler aspires to pass the unmodified upstream rubyspec suite. Any local modifications — even "helpful" ones — undermine this goal.
+
+**The custom runner (`run_rubyspec`) is a temporary, interim solution.** The long-term goal is migration to upstream mspec. Until then, all workarounds needed to run specs must live outside the submodule:
+- ✅ Put workarounds in `run_rubyspec` (the custom runner)
+- ✅ Put test support files in `spec/` or `lib/core/`
+- ✅ Put compiler stubs in the parent project, not inside `rubyspec/`
+- ❌ **NEVER** put workarounds inside the `rubyspec/` directory
+
+**If `git status` shows the rubyspec submodule as dirty, clean it before committing:**
+1. `cd rubyspec && git checkout .` — revert tracked file changes
+2. `cd rubyspec && git clean -fd` — remove untracked files
+3. Verify: `git diff rubyspec` should produce no output
+
+**Why this rule exists:**
+- The project must prove it can pass unmodified upstream specs
+- Local modifications create a false sense of compatibility
+- They prevent clean upgrades to newer upstream rubyspec releases
+- They hide bugs that should be fixed in the compiler or runtime
+
+## Git Workflow
+
+**Non-trivial changes should happen on feature branches, not directly on master.**
+
+- ✅ Create a feature branch for any change spanning multiple files or logical units
+- ✅ Commit work before starting new tasks — the working tree should be clean before starting new work
+- ✅ Make thematic commits: one logical change per commit, not a dump of everything
+- ✅ Write clear commit messages that explain the "why", not just the "what"
+- ❌ **NEVER** leave a large volume of uncommitted changes sitting in the working tree
+- ❌ **NEVER** mix unrelated changes in a single commit
+
+**Exception:** Quick single-line fixes or typo corrections can go directly on master.
+
+**Why this rule exists:**
+- A clean working tree prevents accidental data loss from `git checkout` or `git clean`
+- Thematic commits make `git log` useful for understanding what changed and why
+- Feature branches isolate work-in-progress from the stable master branch
+- Committing before starting new work ensures nothing is lost between sessions
+
 ## Project Overview
 
 This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler is designed to bootstrap itself - compile its own source code to native machine code. The project is experimental and self-hosting is achieved with various workarounds for missing functionality.
