@@ -86,6 +86,11 @@ class ParserBase
     end
   end
 
+  # Set the scanner used by the parser for ws/nolfws/position etc.
+  def scanner=(s)
+    @scanner = s
+  end
+
   protected
 
   # Protected accessor method for the scanner object.
