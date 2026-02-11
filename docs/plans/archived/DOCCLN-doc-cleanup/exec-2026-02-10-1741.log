@@ -1,0 +1,17 @@
+All work is complete. Here's a summary of what was done:
+
+**Files deleted (6)**:
+- `docs/DEVELOPMENT_RULES.md` — redundant with CLAUDE.md
+- `docs/RUBYSPEC_INTEGRATION.md` — fully implemented
+- `docs/RUBYSPEC_CRASH_ANALYSIS.md` — stale data from 2025-11-26
+- `docs/REJECTED_APPROACH_METHOD_CHAINING.md` — lessons captured in control_flow_as_expressions.md
+- `docs/KERNEL_MIGRATION_PLAN.md` — plan complete
+- `docs/INVESTIGATION_POSTFIX_IF_BUG.md` — resolved
+
+**Files edited (4)**:
+- `docs/control_flow_as_expressions.md` — updated 2 references to deleted file
+- `docs/KNOWN_ISSUES.md` — updated spec counts (Passed: 3, Failed: 28, Crashed: 47, 994 tests/272 passed/27%), removed 2 FIXED issues from Active Issues, renumbered 1-3, added super() edge case and classes-in-lambdas to Recent Fixes
+- `docs/TODO.md` — updated spec counts, removed FIXED section 1.2, collapsed section 1.3 to one bullet, condensed completed sections to brief one-liners
+- `docs/bignums.md` — rewritten from 1678 lines to 183 lines preserving: status, architecture/design decisions, memory layout, all 9 phases at summary level, key methods reference, known limitations, references
+
+**Test script**: `docs/plans/DOCCLN-doc-cleanup/verify.sh` — 34 checks, all passing

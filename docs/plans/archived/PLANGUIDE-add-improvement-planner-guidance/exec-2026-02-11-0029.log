@@ -1,0 +1,14 @@
+All done. Here's a summary of the changes made:
+
+**Rewrote `docs/improvement-planner.md`** to fix all issues identified in the user direction:
+
+1. **Removed results file references** — No more mention of `rubyspec_language.txt`, `rubyspec_integer.txt`, `rubyspec_regexp.txt`, or `spec.txt`
+2. **Removed subset-of-specs direction** — Now says "Choose a spec file or directory at random from anywhere in the spec tree. Do not limit yourself to any particular subdirectory."
+3. **Removed `bin/improve` reference** — Gone from the "Do NOT propose" section
+4. **Removed `.claude` prohibition** — The planner is now free to propose changes to project-specific `.claude`
+5. **Removed documentation-only plan prohibition** — That bullet was deleted
+6. **Broadened "DO propose"** — Now just says "Any improvement grounded in live test output and source analysis" instead of an over-constrained list of specific fix types
+
+**No changes needed to `README.md`** — the `@docs/improvement-planner.md` reference was already correct at line 17.
+
+**`tools/check_planguide.sh`** — Already existed and passes all 12 checks.

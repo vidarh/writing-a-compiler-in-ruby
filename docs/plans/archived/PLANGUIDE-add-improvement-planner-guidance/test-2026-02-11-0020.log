@@ -1,0 +1,10 @@
+## Test Adequacy Review Complete
+
+**Verdict: ADEQUATE**
+
+Key findings:
+- All 16 scenarios from `test.md` have corresponding checks in `tools/check_planguide.sh`
+- The test suite passes: **12/12 checks pass**, exit code 0
+- **Reversion testing confirmed**: Tests correctly fail when the guidance file is deleted, the README reference is removed, forbidden content is added, the `@` reference is embedded in a sentence, or CLAUDE.md is modified
+- **No external dependencies**: All checks use local shell commands only — no network, no compilation, no mocking needed
+- **One minor cosmetic issue**: The line-count check produces an ugly error when the file doesn't exist, but still correctly fails (non-blocking)

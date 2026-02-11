@@ -1,0 +1,17 @@
+## Verification Summary
+
+**8 of 9 criteria PASS. 1 criterion FAILS.**
+
+### Results
+
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| 1 | heredoc_spec.rb 14/16 passing | **PASS** | Ran `./run_rubyspec rubyspec/language/heredoc_spec.rb` — 14 passed, 2 failed (eval/NameError). |
+| 2 | selftest and selftest-c pass | **PASS** | Both ran with "Fails: 0". |
+| 3 | rubyspec_language.txt updated, no regression | **FAIL** | File is updated, but overall pass count dropped from 272 to 269. Regression is in `hash_spec.rb` (P:16→P:12 due to test pool change T:44→T:26), not caused by the heredoc implementation. However, the criterion says "no regression in overall pass count" and the number went down. |
+| 4 | tokens.rb has no own escape/interpolation handling | **PASS** | Heredoc section (lines 913-974) only reads the marker, saves rest_of_line, and dispatches to `Quoted.expect_heredoc`/`expect_heredoc_squoted`. No escape or interpolation code. |
+| 5 | Heredoc body read directly from scanner | **PASS** | `expect_heredoc` reads char-by-char from scanner `s` via `s.peek`/`s.get`. `heredoc_scan_indent` does a lookahead+unget for min indent, but the body is still processed from the scanner. |
+| 6 | Shared escape/interpolation code | **PASS** | Both `expect_dquoted` and `expect_heredoc` call the same `escaped()`, `handle_interpolation()`, and `handle_simple_interpolation()` methods. |
+| 7 | No special-casing by heredoc type | **PASS** | The escape call in `expect_heredoc` (line 369) is unconditional — not gated on `squiggly`. Only indent stripping differs. |
+| 8 | No unget of modified buffers | **PASS** | All `unget` calls push back characters read verbatim from the scanner. No constructed/modified content is pushed back. |
+| 9 | No BufferedScanner | **PASS** | No `BufferedScanner` or equivalent exists in any source file. Heredoc reading uses the real scanner. |

@@ -1,0 +1,11 @@
+## Summary
+
+**Verdict: ADEQUATE**
+
+All 14 testable scenarios from `test.md` have corresponding tests in `spec/heredoc_escape_spec.rb`. Key findings:
+
+- **13/13 custom tests pass** — covering basic escapes (`\n`, `\t`, `\\`, `\e`, `\r`), line continuation, interpolation interaction, single-quoted heredoc preservation, squiggly heredocs, and edge cases (unknown escapes, `\\` before newline, consecutive escapes)
+- **Rubyspec acceptance gate: 14/16** — up from 13/16 before the change, exactly as expected. The 2 remaining failures require `eval`/`NameError` (out of scope)
+- **No external dependencies** — all tests are self-contained compile-and-execute integration tests
+- **Tests would fail if reverted** — every test asserts specific byte values that differ from the pre-implementation behavior
+- **One noted concern**: The overall rubyspec-language pass count dropped from 272 to 269, but this is due to a rubyspec submodule update changing the test pool, not a regression from this implementation (the heredoc_spec itself improved P:13→P:14)

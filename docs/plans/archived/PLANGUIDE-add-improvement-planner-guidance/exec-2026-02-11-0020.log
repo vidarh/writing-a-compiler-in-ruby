@@ -1,0 +1,16 @@
+All tasks complete. Here's a summary of what was implemented:
+
+**Files created:**
+- **[docs/improvement-planner.md](docs/improvement-planner.md)** — 50-line guidance file with all required sections: test infrastructure overview, investigation workflow, validation requirements, "Do NOT propose" list, and "DO propose" list. Does not reference any untested skills.
+- **[tools/check_planguide.sh](tools/check_planguide.sh)** — Verification script checking all acceptance criteria (12 checks, all passing).
+
+**Files modified:**
+- **[README.md](README.md)** — Added bare `@docs/improvement-planner.md` reference line between the documentation list and the status section.
+
+**Acceptance criteria status:**
+- `docs/improvement-planner.md` exists with guidance for picking, running, and investigating specs
+- File includes "Do NOT propose" guidance excluding unvalidated proposals and meta-infrastructure
+- File includes "DO propose" guidance favoring compiler/library fixes grounded in live spec output
+- File does NOT contain `investigate-spec`, `validate-fix`, or `create-minimal-test`
+- README.md contains `@docs/improvement-planner.md` on its own line
+- No other project files were modified by this plan

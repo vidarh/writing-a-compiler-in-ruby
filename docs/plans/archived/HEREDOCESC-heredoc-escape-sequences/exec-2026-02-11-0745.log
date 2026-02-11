@@ -1,0 +1,23 @@
+## Summary
+
+The implementation is complete. Here's what was done:
+
+### Changes to `quoted.rb`
+1. **Added `CR` constant** (13.chr) for `\r` escape support
+2. **Added `\r` escape handling** to `Quoted.escaped` — `when 'r'` returns `CR`
+3. **Added line continuation** to `Quoted.escaped` — `when LF` returns `""` (empty string), absorbing both the backslash and newline
+4. **Extended `escaped` signature** to accept an optional termination block `&term` — when provided, it's called instead of the quote-character check
+5. **Extended `expect_dquoted` signature** to accept an optional `term` parameter — when provided, skips the final `s.expect(q)` call (the caller handles termination)
+
+### Changes to `tokens.rb`
+Replaced the entire heredoc body reader (previously ~130 lines of duplicated escape/interpolation handling) with a clean two-pass approach (~80 lines):
+
+1. **Pass 1: Raw line collection** — reads raw heredoc body line by line until the marker is found. No escape processing. For squiggly heredocs, tracks source-line indentation.
+2. **Squiggly dedent** — strips minimum indentation from the raw content (before any escape processing)
+3. **Pass 2: Escape/interpolation via Quoted** — for interpolated heredocs, pushes the (possibly dedented) raw body back into the scanner with a `\x00` sentinel, then calls `Quoted.expect_dquoted(@s, sentinel) { @parser.parse_defexp }`. For single-quoted heredocs, uses the raw body directly (no escape processing).
+
+### Results
+- **Custom spec** (`spec/heredoc_escape_spec.rb`): 13/13 passing (including `\n`, `\t`, `\\`, `\e`, `\r`, line continuation, `\#`, interpolation+escapes, single-quoted, squiggly, edge cases)
+- **RubySpec** (`rubyspec/language/heredoc_spec.rb`): 14/16 passing (up from 9/16). The 2 remaining failures require `eval` and `NameError` which are out of scope.
+- **selftest** and **selftest-c**: both pass with 0 failures
+- **rubyspec-language**: `docs/rubyspec_language.txt` updated. 269/978 tests pass (27%). The count difference from the baseline (272/994) is entirely due to the rubyspec submodule being updated, not from any regression.

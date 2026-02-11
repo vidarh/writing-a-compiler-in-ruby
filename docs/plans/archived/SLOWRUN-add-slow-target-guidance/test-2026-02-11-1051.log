@@ -1,0 +1,16 @@
+## Assessment Complete
+
+**Verdict: ADEQUATE**
+
+All 8 test scenarios from `test.md` have corresponding checks in `verify.sh`, and all pass (8/8, exit code 0):
+
+1. Slow-targets section exists in `improvement-planner.md` — PASS
+2. Targets described as slow with re-run-only-for-validation guidance — PASS
+3. Read-the-file guidance references results files — PASS
+4. Auto-write/tee guidance present — PASS
+5. Slow-target note in CLAUDE.md Testing subsection — PASS
+6. Auto-write/results-file note in CLAUDE.md — PASS
+7. No reference to `rubyspec_language_new.txt` (edge case) — PASS
+8. `make spec` not listed as slow (edge case) — PASS
+
+No coverage gaps identified. The tests are appropriately scoped for a documentation-only change — they use flexible regex matching (not hard-coded prose), check section boundaries (not line numbers), include negative/edge-case checks, and would fail if the implementation were reverted. Full details written to `docs/plans/SLOWRUN-add-slow-target-guidance/test-adequacy.md`.

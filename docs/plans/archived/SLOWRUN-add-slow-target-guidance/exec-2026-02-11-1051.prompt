@@ -1,0 +1,246 @@
+You are implementing an improvement plan. Read the plan spec below and carry out
+its Proposed Approach. Work through the Execution Steps checklist if present.
+Satisfy all Acceptance Criteria. Work in the directory: /home/vidarh/Desktop/Projects/Compiler
+
+## User direction takes absolute precedence
+
+The plan spec may contain a "User direction" blockquote near the top
+(starting with "> **User direction**"). This is the user's most recent
+instruction and it is ABSOLUTE LAW. It overrides everything else in
+the plan — the scope, the approach, the execution steps, the acceptance
+criteria. If anything in the plan contradicts the user direction, the
+plan is wrong and the user direction is right. Follow it exactly.
+Do not rationalize it away, reinterpret it, or treat it as optional.
+
+## Verify before fixing — do not trust the plan's diagnosis
+
+When the plan or user direction reports a problem ("X is failing",
+"Y is broken"), you MUST independently verify it before acting:
+
+1. REPRODUCE the reported problem first. Run the relevant code, read
+   the actual error output, check the actual state.
+2. DIAGNOSE the cause yourself from the evidence. Do NOT assume the
+   plan's explanation of WHY something is failing is correct — the plan
+   may contain stale analysis or an agent's guess that was wrong.
+3. Only THEN fix the actual cause you found.
+
+The plan may say "X is failing because of Y" — but Y may have been
+fixed already and the real cause is Z. If you blindly "fix Y" you will
+waste time and may introduce regressions. Always start from the actual
+symptoms, not the plan's theory.
+
+---BEGIN PLAN SPEC---
+SLOWRUN
+Created: 2026-02-11
+
+# Add Guidance for Slow Make Targets and Results File Usage
+
+[DOCUMENTATION] Add explicit instructions to [improvement-planner.md](../../improvement-planner.md) and [CLAUDE.md](../../../CLAUDE.md) telling agents when to run slow `make rubyspec-*` targets versus when to read the existing results files.
+
+## Goal Reference
+
+[COMPLANG](../../goals/COMPLANG-compiler-advancement.md)
+
+## Root Cause
+
+The `make rubyspec-language` target compiles and runs 78 spec files sequentially (each with a 30-second timeout), taking many minutes to complete. It writes results to [docs/rubyspec_language.txt](../../rubyspec_language.txt) automatically via `tee`. A previous agent session ran this target multiple times: once to "inspect the output," then again piping it to the file -- not realizing the Makefile target already writes to that file. This wasted significant wall-clock time.
+
+Neither [docs/improvement-planner.md](../../improvement-planner.md) nor [CLAUDE.md](../../../CLAUDE.md) documents that these targets are slow, that results files already exist and are readable, or that the targets should only be re-run to validate actual code changes. There is no guidance distinguishing "read the file to understand current state" from "run the target to validate a change."
+
+## Infrastructure Cost
+
+Zero. This edits two existing documentation files. No code, no build system changes.
+
+## Prior Plans
+
+- [PLANGUIDE](../archived/PLANGUIDE-add-improvement-planner-guidance/spec.md) -- IMPLEMENTED. Created `docs/improvement-planner.md`. That plan established the file but did not include guidance about slow targets or results file usage because the wasteful-rerun antipattern had not yet been observed. SLOWRUN adds a specific section to the file PLANGUIDE created, addressing a problem discovered after PLANGUIDE was implemented.
+
+## Scope
+
+**In scope:**
+- Add a "Slow Targets and Results Files" section to [docs/improvement-planner.md](../../improvement-planner.md) explaining: which `make` targets are slow, that they automatically write to `docs/rubyspec_*.txt`, that agents should read those files for current state, and that re-running targets is only warranted to validate code changes
+- Add a brief note to the Testing section of [CLAUDE.md](../../../CLAUDE.md) near the existing `make rubyspec-language` documentation, noting that these targets are slow and write to results files automatically
+
+**Out of scope:**
+- Changing any Makefile targets or build infrastructure
+- Adding new results files or spec suites
+- Modifying the run_rubyspec script
+
+## Expected Payoff
+
+- Eliminates multi-minute wasted runs where agents re-run `make rubyspec-*` just to read output that already exists in a file
+- Prevents the specific antipattern of piping `make rubyspec-language` output to a file the target already writes to
+- Saves significant wall-clock time per agent session (each `make rubyspec-language` run takes many minutes)
+- Makes the "read file for state, run target for validation" distinction explicit and discoverable
+
+## Proposed Approach
+
+1. Add a section to [docs/improvement-planner.md](../../improvement-planner.md) after the "Test Infrastructure" section, titled something like "Slow Targets and Results Files," covering: the `make rubyspec-*` targets are slow (compiling+running dozens of specs), they automatically write to `docs/rubyspec_*.txt` via `tee`, read those files to understand current spec state, only re-run targets when validating actual code changes, never pipe target output to the results file (the target does this already).
+2. Add a brief annotation in [CLAUDE.md](../../../CLAUDE.md) near the existing `make rubyspec-language` bullet in the Testing section, noting the slow runtime and automatic file output.
+
+## Acceptance Criteria
+
+- [ ] [docs/improvement-planner.md](../../improvement-planner.md) contains explicit guidance that `make rubyspec-*` targets are slow and should only be re-run to validate code changes, not to inspect current state
+- [ ] [docs/improvement-planner.md](../../improvement-planner.md) states that results files (`docs/rubyspec_*.txt`) should be read directly when the agent needs to understand current spec status
+- [ ] [docs/improvement-planner.md](../../improvement-planner.md) states that `make rubyspec-*` targets automatically write to `docs/rubyspec_*.txt` (so agents should never manually pipe output to those files)
+- [ ] [CLAUDE.md](../../../CLAUDE.md) contains a note near the `make rubyspec-language` documentation that these targets are slow and write results to files automatically
+
+## Implementation Details
+
+### File 1: [docs/improvement-planner.md](../../improvement-planner.md)
+
+**Insertion point:** After the "Test Infrastructure" section (line 18, after the `./run_rubyspec` paragraph) and before the "## Investigation Workflow" heading (line 20). Insert a new `## Slow Targets and Results Files` section between these two sections.
+
+**Content to add — a new H2 section covering:**
+- A table or list of the three slow `make` targets and their corresponding results files:
+  - `make rubyspec-integer` → [docs/rubyspec_integer.txt](../../rubyspec_integer.txt)
+  - `make rubyspec-regexp` → [docs/rubyspec_regexp.txt](../../rubyspec_regexp.txt)
+  - `make rubyspec-language` → [docs/rubyspec_language.txt](../../rubyspec_language.txt)
+- Each target compiles and runs dozens of spec files sequentially (each with a 30-second timeout), taking many minutes total
+- Each target automatically writes output to its results file via `tee` (visible in [Makefile](../../../Makefile) lines 92, 96, 100)
+- Clear guidance: **Read the `docs/rubyspec_*.txt` files** to understand current spec status — do NOT re-run the targets just to see results
+- Clear guidance: **Only re-run** `make rubyspec-*` targets to validate actual code changes
+- Explicit anti-pattern warning: never manually pipe target output to the results file (e.g., `make rubyspec-language > docs/rubyspec_language.txt`) — the target already does this via `tee`
+
+**Follow the existing file's style:** short paragraphs, bold for emphasis, numbered/bulleted lists matching the style of the "Test Infrastructure" section above.
+
+### File 2: [CLAUDE.md](../../../CLAUDE.md)
+
+**Insertion point:** In the `### Testing` subsection (lines 170–176), after the three `make rubyspec-*` bullet points (lines 174–176) and before the `**Test Hierarchy:**` block (line 178). Insert a brief note paragraph.
+
+**Content to add — a short paragraph or note covering:**
+- These `make rubyspec-*` targets are slow (many minutes each)
+- They automatically write results to `docs/rubyspec_*.txt` via `tee`
+- Read those files for current state; only re-run targets to validate code changes
+
+**Follow CLAUDE.md's existing style:** bold key phrases, concise bullet points, consistent with surrounding content.
+
+### Patterns to Follow
+
+- Both files use standard Markdown with `**bold**` for emphasis
+- [docs/improvement-planner.md](../../improvement-planner.md) uses H2 (`##`) for top-level sections and numbered/bulleted lists
+- [CLAUDE.md](../../../CLAUDE.md) uses H3 (`###`) for subsections within `## Build and Development Commands`, and `**bold:**` lead-ins for admonition blocks
+
+### Edge Cases
+
+- The file [docs/rubyspec_language_new.txt](../../rubyspec_language_new.txt) also exists but is not a standard results file from a Makefile target — do not reference it in the new guidance
+- The `make spec` target (project-specific specs in `spec/`) is fast and does NOT have a results file — do not include it in the slow-targets guidance
+- The `./run_rubyspec` command itself is documented separately in the Investigation Workflow section — the new guidance is specifically about the `make rubyspec-*` convenience targets
+
+## Execution Steps
+
+1. [ ] Add "Slow Targets and Results Files" section to [docs/improvement-planner.md](../../improvement-planner.md) — Insert a new `## Slow Targets and Results Files` section between the "## Test Infrastructure" section (after line 18) and the "## Investigation Workflow" section (line 20). Content: list the three slow targets and their results files, state that targets are slow, state that they auto-write via `tee`, instruct to read files for current state, instruct to only re-run for validation, warn against manually piping output to results files.
+
+2. [ ] Add slow-target note to [CLAUDE.md](../../../CLAUDE.md) — Insert a brief note after the `make rubyspec-*` bullet points (after line 176) and before the `**Test Hierarchy:**` block (line 178). Content: note that these targets are slow (many minutes), auto-write to `docs/rubyspec_*.txt`, and should only be re-run to validate code changes (read the files for current state).
+
+3. [ ] Verify acceptance criteria — Re-read both files to confirm all four acceptance criteria are met: (a) improvement-planner.md says targets are slow / only re-run for validation, (b) improvement-planner.md says to read results files for current state, (c) improvement-planner.md says targets auto-write to files (don't manually pipe), (d) CLAUDE.md has a note near the rubyspec targets about slow runtime and auto-file-output.
+
+---
+*Status: APPROVED (implicit via --exec)*
+---END PLAN SPEC---
+
+A test specification exists at /home/vidarh/Desktop/Projects/Compiler/docs/plans/SLOWRUN-add-slow-target-guidance/test.md. Read it — it defines
+the automated test suite you MUST write as part of this implementation.
+
+Implement the plan. Do not ask questions — make reasonable choices.
+
+If the plan has an "## Execution Steps" section with a checklist, work through
+the steps in order. Check off each step as you complete it.
+
+IMPORTANT: If the plan contains unchecked acceptance criteria with FAIL notes,
+a prior execution attempt failed verification. Focus on fixing the FAILed
+criteria. Do not redo work that already passed unless it is broken.
+
+Do NOT write to /home/vidarh/Desktop/Projects/Compiler/docs/plans/SLOWRUN-add-slow-target-guidance/log.md or to the spec file at /home/vidarh/Desktop/Projects/Compiler/docs/plans/SLOWRUN-add-slow-target-guidance/spec.md.
+The log and spec are managed by the orchestrator, not by you.
+Focus exclusively on implementing the plan in the target project.
+
+IMPORTANT: .cache/ is for regenerable cache data ONLY. NEVER write scripts,
+non-deterministic research results, or any content that cannot be wiped and
+recreated to .cache/. Scripts go in bin/. Persistent data goes in docs/ or
+the target project directory.
+
+## File placement rules — NEVER litter the project root
+
+Do NOT create loose files or directories in the root of /home/vidarh/Desktop/Projects/Compiler.
+This is a coordination project, not a dumping ground. All files MUST go
+in the appropriate subdirectory:
+- Scripts → bin/
+- Documentation, guides, setup notes → docs/
+- Plan artifacts → the plan's own directory under docs/plans/
+- Data files for other projects → that project's own directory
+
+If the plan targets a different project (e.g., ACT, compiler, Novelator),
+implementation files belong in THAT project's directory, not here.
+Desktop/ may only contain links, dashboard fragments, or references.
+
+NEVER create top-level .md files, data files, setup guides, or quickstart
+documents in the project root. If you find yourself writing to a path like
+`/home/vidarh/Desktop/Projects/Compiler/SOMETHING.md` (not inside a subdirectory), STOP — that file
+belongs in docs/ or in the target project.
+
+## Overcorrection guard
+
+When implementing changes based on constraints or feedback:
+- Change ONLY what is specifically described as wrong. Do not remove working
+  functionality that is not mentioned in the feedback.
+- Do NOT invent broader constraints than what was stated. "Don't write to X"
+  means exactly that — not "don't write anywhere" or "don't create files."
+- If a constraint is ambiguous, interpret it NARROWLY (the specific thing
+  mentioned), not broadly (everything remotely related).
+- Before removing any existing code or functionality, ask: "Was this
+  specifically identified as a problem?" If not, leave it alone.
+
+## Automated test suite is a mandatory deliverable
+
+If test.md exists in the plan directory, read it for the test specification.
+Your implementation is NOT complete until:
+
+1. You have written the automated test suite (per test.md or covering your changes)
+2. The test suite runs and passes WITHOUT network access or live services
+3. External dependencies (APIs, databases, services) are mocked/stubbed
+4. The test suite covers the SPECIFIC changes you made — not just the happy path
+5. Error paths are tested (connection failures, malformed data, missing resources)
+
+If the code is too tightly coupled to external services to mock, you MUST
+refactor it first to support dependency injection or a swappable backend.
+Needing real data or live services to run tests is a design bug — fix the design.
+
+"Tests pass" is insufficient — the tests must actually exercise your code paths.
+If you modified a method, there must be tests for that method's OTHER behaviors
+too, not just the new behavior.
+
+## Follow instructions exactly
+
+When the plan or test.md specifies how to invoke a deliverable, use that
+EXACT command. Do NOT substitute `ruby bin/X` for `bin/X`. Do NOT invent
+alternative invocations.
+
+If you get errors (500s, crashes, unexpected output), they are REAL errors.
+Do NOT dismiss them as "expected." Investigate them. If your experience
+differs from what the user reported, assume YOUR testing method is wrong —
+not the user. Check: did you use the exact command? The exact arguments?
+
+## Dangerous execution: system-level code
+
+If the plan modifies code that interfaces with system-level resources (terminals,
+signals, process groups, file descriptors, network sockets, servers), you MUST:
+1. Run the full test suite BEFORE making any changes to establish a baseline
+2. Run the full test suite AFTER each individual change
+3. If tests fail after a change, revert immediately — do NOT layer more changes
+   on top of a broken state
+4. NEVER launch the modified program directly (e.g. `ruby rsh.rb`, `./server`)
+   — only run the test suite. Broken system-level code can crash the user's machine.
+5. If the test suite itself interacts with terminal/process control, run it with
+   output capture and timeouts to prevent runaway processes.
+
+## Non-interactive execution
+
+You are running NON-INTERACTIVELY. You cannot pause for user confirmation.
+If the plan contains instructions like "STOP AFTER THIS", "wait for user
+confirmation", or "do not proceed to Phase N without approval", you MUST
+still complete your execution — but limit your scope to the FIRST phase only.
+Do NOT attempt subsequent phases that require user confirmation gates.
+If the plan is structured as Phase 1 → STOP → Phase 2, execute Phase 1 ONLY.
+
+IMPORTANT: Use markdown link format for all file, plan, goal, and project references.

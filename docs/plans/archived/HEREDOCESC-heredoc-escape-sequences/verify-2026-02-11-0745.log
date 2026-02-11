@@ -1,0 +1,14 @@
+## Verification Summary
+
+**5 of 6 acceptance criteria PASS. 1 FAILS.**
+
+| # | Criterion | Verdict |
+|---|-----------|---------|
+| 1 | `heredoc_spec.rb` shows 14/16 passing, 2 remaining are eval/NameError | **PASS** — Verified: 14 passed, 2 failed (eval + NameError), exactly as expected |
+| 2 | `make selftest` and `make selftest-c` both pass | **PASS** — Both ran with 0 failures |
+| 3 | `rubyspec_language.txt` updated with 272+ passes | **FAIL** — Current result is 269 passed (down from 272). The heredoc fix itself gained +1 pass (13→14 in heredoc_spec), but hash_spec.rb lost 4 passes (16→12) due to the rubyspec submodule being updated to a newer commit that restructured/added hash specs. The regression is not caused by the heredoc code change. |
+| 4 | Heredoc body reader has no own escape/interpolation handling | **PASS** — tokens.rb heredoc reader (lines 911-1057) only does raw line collection, marker detection, dedent, and then delegates to `Quoted.expect_dquoted`. No escape `case` statements, no `#{}` handling, no `#$var`/`#@var` code in the heredoc reader. |
+| 5 | No special-casing of escape handling by heredoc type | **PASS** — Both squiggly and regular heredocs go through the same `Quoted.expect_dquoted` call (line 1041). The only difference is dedent applied to raw content before escape processing. |
+| 6 | Dedent before escape processing | **PASS** — Code clearly shows: Pass 1 collects raw body → dedent on raw_body (lines 1001-1033) → Pass 2 feeds dedented content to `Quoted.expect_dquoted` (lines 1035-1045). |
+
+**Recommendation:** The failing criterion (#3) is due to the rubyspec submodule update, not the heredoc implementation. The heredoc change itself is net-positive (+1 pass). To resolve, either: (a) revert the rubyspec submodule to the original commit and re-run, or (b) update the criterion's baseline to reflect the new test corpus (269 is the correct count for this submodule version, with the heredoc fix contributing +1).

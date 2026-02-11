@@ -1,0 +1,303 @@
+
+
+I'll start by reading the test specification and the relevant source files to understand what needs to be done.Now let me see the full heredoc reading loop context, including what comes after line 1024.Good. Now I have a clear picture. Let me set up the todo list and start implementing.Now let me first verify the current state — run the heredoc_spec to see the baseline.Good — baseline is 13 passed, 3 failed. The backslash test is the one at "allows HEREDOC with <<~'identifier', no interpolation, with backslash". Now let me implement the escape handling.Now I need to insert an `elsif` branch between the interpolation block (ending at line 1020) and the `else` at line 1021. The new branch handles backslash escapes when `interpolate` is true.Now let me write the test suite. Let me check if spec/ directory exists and see the format of existing specs.Let me look at an existing spec for format reference.Let me look at a simpler one for the require_relative path.Good, the format uses `require_relative '../rubyspec/spec_helper'`. Now let me write the test suite.Now let me run selftest to verify the compiler still works correctly.Selftest passes. Now let me run selftest-c.Both selftest and selftest-c pass. Now let me run the rubyspec heredoc test and the custom spec.The backslash test is still failing but with a different error now! Previously it was `"a\nb\\\nc\n"` (raw backslash and newline), now it's `"a\nb      c\n"` (spaces instead of joining). Let me look at the rubyspec fixture to understand what's happening.I see — the `backslash` method at line 32-38 uses `<<~HERE` (unquoted, so it IS interpolated). The test expects `"a\nbc\n"` — line continuation should join `b\` with `c` on the next line. But the problem is that after my line continuation removes the backslash+newline, the squiggly dedent processing still sees the indentation on the `c` line. After `b\<newline>`, the inner loop continues, reading `      c` (the spaces + `c` from the next line).
+
+The issue is that the line continuation consumes the newline but then the inner loop continues reading the next line — which starts with leading spaces. Those spaces become part of `line`. That's actually correct behavior from the tokenizer's perspective — the continuation joins lines. But for squiggly heredocs, the dedent processing happens later and operates on newline-separated lines.
+
+The expected output is `"a\nbc\n"` — meaning `b\<newline>      c` should become `bc` after line continuation + dedent. But what happens is:
+1. Line continuation joins `b` with `      c` → `b      c` (all on one line in the buffer)
+2. Squiggly dedent strips 6 chars from each line → strips from `      a` to `a`, from `b      c` to `      c` (it strips from the start of the line)
+
+Wait, let me think again. The lines going into the buffer are:
+- `      a\n` (6 spaces + a)
+- `      b      c\n` (6 spaces + b + 6 spaces + c, because continuation joined them)
+- Then marker
+
+Squiggly dedent finds min indent = 6, strips 6 chars from start of each line:
+- `a\n`
+- `b      c\n`
+
+That gives `"a\nb      c\n"` which is exactly what we see. But Ruby expects `"a\nbc\n"`.
+
+The issue is that in Ruby, line continuation happens AFTER the raw heredoc content is assembled (including indentation). The squiggly heredoc stripping also happens after. So Ruby's processing order is:
+1. Read raw lines (with indentation)
+2. Process escape sequences (including line continuation)
+3. Apply squiggly dedent
+
+But in our implementation, escape processing happens during reading (in the inner loop), which means the newline that separates lines is consumed before it reaches the dedent logic.
+
+Actually, let me reconsider. In Ruby, the processing order for `<<~HERE` with `b\<newline>      c`:
+- Raw content: `"      a\n      b\\\n      c\n"` 
+- After escape processing: `"      a\n      bc\n"` — wait, the `\<newline>` consumes the newline AND the leading whitespace of the next line? No...
+
+Actually in Ruby, `\<newline>` only consumes the backslash and the newline. The next line's leading whitespace is NOT consumed. So the result would be `"      a\n      b      c\n"`. Then after squiggly dedent (remove 6 spaces from each line): `"a\nb      c\n"`.
+
+But the expected test result is `"a\nbc\n"`. Let me check what Ruby actually does.So Ruby produces `"a\nbc\n"`. That means after `b\<newline>`, Ruby also consumes the leading whitespace on the next line. Let me verify:So in a non-squiggly heredoc, `b\<newline>  c` gives `b  c` — the leading spaces are preserved. The line continuation only consumes the backslash and newline, not the indentation on the next line.
+
+For the squiggly case with `<<~HERE` and uniform 2-space indent:
+- `  a\n  b\<newline>  c\n` → after escape: `  a\n  b  c\n` → after dedent (2 spaces): `a\nb  c\n`
+
+But the rubyspec fixture uses 6-space indent and the test expects `"a\nbc\n"`. Let me look more carefully at the fixture:
+
+```
+      a
+      b\
+      c
+```
+
+That's 6 spaces before each. After escape processing: `      a\n      b      c\n`. After dedent (6 spaces): `a\nb      c\n`. But Ruby gives `"a\nbc\n"`.
+
+Wait, let me re-check with the actual fixture indentation:OK, Ruby gives `"a\nbc\n"`. So in Ruby, `<<~HERE` with 6-space indent:
+- `      a\n      b\<newline>      c\n`
+- After escape processing of `\<newline>`: `      a\n      b      c\n` 
+- After dedent (6 spaces): `a\nb      c\n`
+
+That would be `"a\nb      c\n"`, but Ruby gives `"a\nbc\n"`. So Ruby's squiggly heredoc processing must happen BEFORE escape processing, or the escape processing for squiggly heredocs handles dedent differently.
+
+Actually, I think Ruby processes things differently. Let me check: maybe Ruby does the dedent first, then escape processing.So it's literally `a\nbc\n` — 5 bytes. The dedent + line continuation produces `bc` with no spaces.
+
+Let me think about this differently. Maybe Ruby's order is:
+1. Dedent (remove common leading whitespace)
+2. Process escape sequences
+
+After dedent with 6-space removal:
+- `a\n` 
+- `b\<newline>`
+- `c\n`
+
+Then escape processing on `b\<newline>`: line continuation joins with next line → `bc\n`.
+
+That gives `"a\nbc\n"` — which matches!
+
+So the correct order in a squiggly heredoc is: dedent first, then escape processing. But in our compiler, escape processing happens during tokenization (in the inner loop), before the squiggly dedent logic.
+
+However, this is tricky. The plan says to handle escapes in the inner character-reading loop, which happens before squiggly dedent. For non-squiggly heredocs, this is fine. For squiggly heredocs, we need to either:
+1. Defer escape processing to after dedent (complex)
+2. Handle line continuation specially for squiggly heredocs
+
+Actually, wait. Let me re-read the rubyspec test more carefully to understand what it actually tests.And the fixture method `backslash` uses `<<~HERE` (not `<<~'HERE'`), which IS interpolated. The test name says "no interpolation" but the heredoc is actually double-quoted (unquoted defaults to double-quoted).
+
+So the test expects: `"a\nbc\n"`. With the fixture content being 6 spaces of indent before each line.
+
+The key insight: Ruby processes squiggly heredoc content by first dedenting, THEN processing escape sequences. Our compiler's approach of processing escapes during reading (before dedent) produces incorrect results for this case.
+
+I have two options:
+1. Don't process escapes during reading — instead, store them raw and process them after dedent (complex refactor)
+2. Process escapes during reading but handle the line continuation case specially for squiggly heredocs
+
+Actually, let me think about this more carefully. The escape processing during reading is mostly fine — `\n`, `\t`, `\e`, `\\`, `\#` all produce single characters that don't interact with indentation. The only problematic escape is `\<newline>` (line continuation), because it consumes the newline that separates lines, and then the next line's indentation becomes part of the current line.
+
+For squiggly heredocs, when we encounter line continuation, we could consume the newline AND strip the leading whitespace from the next line (up to the common indent level). But we don't know the common indent level yet at this point.
+
+Alternatively, for `\<newline>` in squiggly heredocs, we could just consume the newline and all leading whitespace/tab characters. Let me check if that matches Ruby's behavior:With 2-space base indent, `b\<newline>    c` (4-space indent on c line): after dedent (2 spaces), the c-line becomes `  c`. Then line continuation: `b  c`. So result is `"a\nb  c\n"`.
+
+This confirms: Ruby does dedent first, then line continuation. Not "consume all whitespace after newline."
+
+Since our compiler processes escapes during reading (before dedent), we need to handle this differently. The simplest approach: for line continuation in the inner loop, consume the newline but DON'T continue reading the next line in the same `line` variable. Instead, just end the current inner loop iteration (the newline is consumed, so the outer loop handles the next line). Then the dedent processing handles each line's indentation properly, and the line continuation (backslash removal + newline removal) is already done.
+
+Wait, but that won't join the lines. The issue is: line continuation should join two lines. If we just remove the backslash and newline, we end up with two separate lines in the buffer: `      b` and `      c`, which after dedent become `b` and `c` (separate lines). But the expected result is `bc` (one line).
+
+Hmm, but actually — if we look at what Ruby does: dedent first gives `a\nb\<newline>c\n`, then escape processing gives `a\nbc\n`. So the newline after `b\` is the actual character that gets consumed by line continuation. The dedented content still has the `\<newline>` sequence.
+
+So the real solution is: we should NOT process `\<newline>` during tokenization for heredocs. Instead, we should defer it to after dedent processing. For `\n`, `\t`, etc., we can process them during tokenization since they don't interact with dedent. But `\<newline>` is special — it needs to happen after dedent.
+
+Actually, let me reconsider the architecture. The simplest approach:
+1. During tokenization, process all escapes EXCEPT `\<newline>` — for `\<newline>`, store the backslash literally and consume the newline (effectively treating it as a regular character on the line)
+2. No wait, that's wrong too — if we store the backslash and DON'T consume the newline, then the line breaks naturally, and after dedent, `\<newline>` still exists in the content and can be post-processed.
+
+Actually, the cleanest approach: for `\<newline>` (backslash followed by newline), DON'T consume anything — just put the backslash in the line and let the inner loop end naturally when it hits the newline. Then after squiggly dedent processing, do a pass to handle `\<newline>` (line continuation) in the final string.
+
+Let me think about non-squiggly heredocs too. For `<<HERE` (no squiggly), we want `\<newline>` to work as line continuation immediately. But for `<<~HERE`, we need it deferred.
+
+OK, here's my approach:
+1. In the inner loop, for `\<newline>`: if squiggly, store `\\` literally and let the newline end the inner loop naturally. If not squiggly, consume the newline and continue (current behavior).
+2. After squiggly dedent processing, do a post-pass to resolve `\<newline>` sequences in the result.
+
+Wait, that's messy. Let me look at what approach would be simplest.
+
+Actually, looking at this again — for ALL heredocs (squiggly or not), the simplest correct approach is:
+1. During tokenization, process all escape sequences EXCEPT `\<newline>`.
+2. For `\<newline>`, just put the backslash in the buffer and let the newline end the inner loop naturally.
+3. After all heredoc processing (including squiggly dedent), do a final pass to remove `\<newline>` sequences (line continuation).
+
+But step 3 is complex because the result could be a string or a `[:concat, ...]` array with interpolated parts. We'd need to process line continuation in each string segment.
+
+Let me try a different approach: what if I process `\<newline>` during tokenization but for squiggly heredocs, I also consume the leading whitespace on the continued line?OK so for non-squiggly heredocs, `\<newline>` just removes the backslash and newline, keeping all whitespace on the next line. That's what my current implementation does, and it's correct for non-squiggly.
+
+For squiggly, Ruby effectively: dedent → then line-continuation. Let me try the approach of storing a placeholder during tokenization and resolving it after dedent.
+
+Actually, the simplest approach: don't handle `\<newline>` during tokenization at all. Instead, store the backslash literally. The inner loop hits the newline and breaks. Then after all processing (including squiggly dedent), do a final string replacement of `\\\n` → `""` in the result.
+
+Let me check: does the inner loop condition `@s.peek != ?\n` prevent reading the newline? Yes — when `@s.peek == ?\n`, the inner loop exits. Then the outer loop code at line 1033-1039 appends `line` + `\n` to `buf`. So the backslash would be at the end of `line`, and `\n` gets appended by the outer loop.
+
+So the approach:
+1. For `\<newline>`: DON'T process it in the inner loop. Just append the backslash to `line` (it's the `else` branch, which already appends `c`). The inner loop exits when it sees `\n`.
+2. After all heredoc processing (including squiggly dedent), process the result string(s) to remove `\<newline>` sequences.
+
+Wait but I need to be more careful. For the `else` case in my escape handler, when we see `\\` followed by peek being `\n`, the inner loop condition would have already NOT entered the loop since peek is `\n`. Actually no — the inner loop checks `@s.peek != ?\n` BEFORE reading. So when we're in the inner loop and we read `\\`, we've already consumed it with `@s.get`. At that point `@s.peek` is `\n`. My code currently handles this in the `\<newline>` case — it consumes the newline and continues.
+
+Let me restructure. For the `\<newline>` case specifically, I should NOT consume the newline. Instead, I should put the backslash back into the line:
+
+Actually, a cleaner approach: handle `\<newline>` differently.
+
+For the line continuation case (`@s.peek == ?\n`):
+- Don't consume the newline
+- Append the backslash to `line` 
+- The inner loop will exit (peek is `\n`)
+- The outer loop appends `\n` to buf
+- We end up with `...\\\n...` in the buffer
+
+Then, after ALL heredoc processing (including squiggly dedent), do a post-processing pass to remove `\\\n` sequences.
+
+But wait — we also process `\\` (double backslash) to produce a single backslash. So after escape processing, `\\` becomes `\`. If someone has `\\\n` in a heredoc, that's `\\` + `\n` which should be `\` + newline (NOT line continuation). And `\\\<newline>` should be `\` + line continuation = `\` with lines joined.
+
+The problem with doing a post-pass on `\\\n` is that we've already processed `\\` → `\` during tokenization, so we can't distinguish between a literal `\` followed by `\n` (from `\\\n`) and a line continuation marker.
+
+OK, I need a different approach. Let me use a placeholder character. When we encounter `\<newline>` (line continuation), instead of consuming the newline, I'll:
+1. NOT append anything to `line` (consume the backslash by not emitting it)
+2. NOT consume the newline — let the inner loop exit naturally
+3. But mark that the NEXT line should be joined with the current line
+
+Actually, there's an even simpler approach. Let me modify the behavior: when we see `\` and peek is `\n`:
+1. Consume the newline (`@s.get`)  
+2. Skip whitespace on the next line if we're in a squiggly heredoc? No, that changes non-squiggly behavior...
+
+Let me just use a special marker. I'll insert a rare/unused character as a "line continuation marker" in the buffer, then after squiggly dedent processing, replace it.
+
+Actually, the cleanest approach: Instead of handling `\<newline>` inline at all, I'll mark it with a sentinel that survives through dedent processing, then resolve it after.
+
+Let me use a different strategy. I'll use a two-byte sentinel string that's unlikely to appear in real content. After reading and dedent processing, I'll replace the sentinel with nothing.
+
+Actually wait — let me re-examine the problem. The issue is ONLY with squiggly heredocs. For non-squiggly heredocs, my current code works perfectly. Let me modify the approach:
+
+For `\<newline>`:
+- If NOT squiggly: consume newline, output nothing (current behavior) — CORRECT
+- If squiggly: don't consume the newline, but DON'T output the backslash either. Instead, append a special marker to `line`. Then after dedent, replace the marker+newline with nothing.
+
+Actually, I just realized something simpler. I can do the line continuation post-processing on the result, but I need to use a marker that won't be confused with actual content. Let me use a sentinel byte.
+
+Let me look at the heredoc result processing code more carefully to understand what happens after the inner/outer loops.Now I have a clear picture of the dedent code. Here's my plan for handling `\<newline>`:
+
+**Approach**: Use a marker character in the buffer during tokenization, then resolve it after squiggly dedent. For non-squiggly heredocs, handle line continuation immediately.
+
+I'll use a null byte (`\0`) as the marker since it can't appear in normal Ruby source. When we encounter `\<newline>`:
+- If NOT squiggly: consume newline, output nothing (line continuation happens immediately)
+- If squiggly: consume the newline, but put `\0` marker at the end of `line`. When the outer loop appends `line + \n` to buf, the buf will contain `...\0\n...`. But wait, the outer loop already consumed the newline... 
+
+Actually, let me re-read my current code. When `\<newline>` is handled: `@s.get` consumes the newline. Then the inner loop continues because `@s.peek` is now the first char of the next line (not `\n`). So the inner loop keeps going and reads the next line's content into the same `line`. This is what causes the problem — the next line's indentation becomes part of `line`.
+
+New approach for squiggly:
+When we see `\` and peek is `\n` in a squiggly heredoc:
+1. Don't consume the newline
+2. Don't output the backslash  
+3. The inner loop exits (peek is `\n`)
+4. `line` is `"      b"` (without the backslash)
+5. Outer loop appends `line + "\n"` to buf → buf has `"      b\n"`
+6. After dedent, we get `"b\n"`
+7. Then we need a post-pass to join this with the next line
+
+That doesn't join lines though. The `\n` is still there.
+
+Let me try yet another approach. What if, for squiggly heredocs, I use a different marker to indicate "this newline should be removed during post-processing"?
+
+Approach:
+1. For `\<newline>` when squiggly: don't consume the newline, don't output the backslash. Instead, append a sentinel character (e.g., `\x01`) to `line`. The inner loop exits. Outer loop appends `line + "\n"`. The buffer now has `"...b\x01\n      c\n..."`. 
+2. After squiggly dedent: `"...b\x01\nc\n..."` (indent removed from `c` line).
+3. Post-pass: replace `\x01\n` with nothing → `"...bc\n..."`.
+
+This preserves the correct behavior! Let me implement this.
+
+For non-squiggly heredocs, I keep the current behavior (consume newline, output nothing).Now let me update the `\<newline>` handling to use the sentinel approach for squiggly heredocs:Now I need to add the post-processing step after squiggly dedent to remove the sentinel+newline sequences. Let me find where the squiggly processing ends.I need to add the post-processing of the sentinel after the squiggly dedent block (line 1153-1154), but it should also work for the Array case. Let me add it right after the `if squiggly` block ends:Wait, but I need to check — will `gsub` with the 0x01 character work correctly in this compiler? The `1.chr` produces a string with the byte 0x01. And `gsub` should be able to match it. But let me also check that the `result.map` on the array works correctly — the first element of the array is `:concat`, which is a symbol, so the `is_a?(String)` check will skip it.
+
+Let me verify by running the heredoc spec now.14 passed, 2 failed! The backslash test now passes. The 2 remaining failures are the eval and NameError tests (out of scope). Now let me run the custom specs and selftest.Two failures. Let me analyze them:
+
+1. **`\r` test**: Expected `"arb\n"` but got `"ab\n"`. The issue is that `\r` (CR) followed by `b` - the `\r` moves the cursor back and `b` overwrites `a`. Wait, the expected value should be `"a\rb\n"` with an actual CR byte. But the output says "arb" which means the CR is being treated as character `r`. Let me check — actually looking more carefully, it says `Expected "arb\n"`. That looks like the expected value has `a` + `r` + `b` — meaning the spec itself has a bug. Let me look at the test.
+
+Actually wait, the `\r` in my test file IS being processed by `Quoted.escaped` during compilation of the test file itself. Since `\r` resolves to CR (0x0D) in double-quoted strings... does the compiler handle `\r`? Let me check.
+
+Looking at `quoted.rb`, the `escaped` method handles `\n`, `\t`, `\e`, but NOT `\r`. So `\r` in a double-quoted string goes to the `else` branch and just returns `r`. That means in the test file, `"a\rb\n"` actually becomes `"arb\n"` because the compiler doesn't handle `\r` in strings either.
+
+So the test is actually comparing correctly — both the heredoc and the expected string should produce the same output. The heredoc has `\r` which my code converts to CR (`"\r"` = 13.chr), but the expected string `"a\rb\n"` is compiled to `"arb\n"` because `Quoted.escaped` doesn't handle `\r` either.
+
+Since the compiler's existing string handling doesn't support `\r`, my heredoc escape code for `\r` produces a different result than string literals. I should match the existing behavior. Let me remove the `\r` case from my escape handler (or rather, let it fall through to the `else` which strips the backslash).
+
+Wait, actually the plan says: `\r` → Append CR (13.chr). But if the existing double-quoted string handling doesn't process `\r`, then adding it only to heredocs would be inconsistent. The plan even notes "Not in `Quoted.escaped` — add explicitly". But the test compares heredoc output to string literal output, and they need to match.
+
+I have two choices:
+1. Remove `\r` from heredoc escape handling (match existing compiler behavior)
+2. Add `\r` to both `Quoted.escaped` AND heredoc handling
+
+The plan scope says `\r` is in scope for heredocs. But making the test work requires either fixing `Quoted.escaped` too (out of plan scope) or writing the test differently. Since `\r` isn't handled by `Quoted.escaped`, I should either skip `\r` or handle it consistently. Let me remove `\r` from the heredoc handler to maintain consistency, and update the test.
+
+2. **Squiggly `\n` test**: Expected `"a\nb\n"` but got `"        a\nb\n"`. The issue is that the `\n` inside the heredoc body becomes a literal newline, which splits the line. But then the dedent processing may not work correctly since the `\n` is inline rather than being an actual line break from the source.
+
+Wait, the test is:
+```ruby
+s = <<~HERE
+  a\nb
+HERE
+```
+
+The `\n` in the heredoc body becomes a literal LF during tokenization. So `line` becomes `"        a" + LF + "b"` — but wait, the inner loop reads until `@s.peek == ?\n`. The `\n` escape produces an LF that gets appended to `line`, but it's data in the `line` string, not in the scanner. The scanner still sees the rest of the line. So `line` = `"        a\nb"`. Then the outer loop appends `line + "\n"` to buf. Then dedent processes it.
+
+The dedent splits on `"\n"` and gets `["        a", "b", ""]`. The min indent from the original lines is 8 (or whatever the indent is). But `"b"` has 0 spaces, so min_indent becomes 0. No dedent happens.
+
+This is a fundamental issue — when `\n` is processed during tokenization, it creates a "fake" line boundary that confuses dedent. Ruby processes escapes AFTER dedent.
+
+Hmm, this is the same class of problem as the line continuation issue. The fix: for squiggly heredocs, defer `\n` processing (and any escape that generates `\n`) to after dedent.
+
+Actually wait — let me think about this differently. The test I wrote has `\n` inside a squiggly heredoc. In Ruby:Ruby produces `"a\nb\n"`. So in Ruby, the escape processing happens after dedent. The order is:
+1. Read raw content (with backslash escapes as-is)
+2. Apply squiggly dedent
+3. Process escape sequences
+
+This means my approach of processing escapes during tokenization is fundamentally wrong for squiggly heredocs. ALL escape processing should happen after dedent for squiggly heredocs.
+
+OK, let me rethink. The plan's approach of processing escapes in the inner loop works for non-squiggly heredocs. For squiggly heredocs, I need to defer ALL escape processing to after dedent.
+
+New approach:
+- For **non-squiggly** interpolated heredocs: process escapes in the inner loop (current code)
+- For **squiggly** interpolated heredocs: DON'T process escapes in the inner loop. Store backslashes literally. After dedent, do an escape-processing pass on the result strings.
+
+Let me implement this:I need to modify the escape branch to skip escape processing for squiggly heredocs and instead store the backslash literally:Now I need to replace the post-processing sentinel code with a proper escape-processing pass. Let me find and update that:Now I need to replace the sentinel post-processing with a full escape-processing pass. I need a helper method that processes escape sequences in a string, matching the behavior of non-squiggly heredocs.Now I need to add the `process_heredoc_escapes` method. Let me find a good place for it — it should be in the `Tokenizer` class in tokens.rb. Let me find where the heredoc method is defined to place the helper nearby.The heredoc code is inline in the main tokenization method, not a separate method. Let me add the helper method right before the `end` of the `Tokenizer` class. Let me find that.I'll add the helper method before the end of the `Tokenizer` class (before line 1266):Now let me also handle the `\#` case for squiggly heredocs — currently in squiggly heredocs, the backslash is stored literally. But `\#` should prevent interpolation. Let me check: in the inner loop for squiggly heredocs, when we see `\`, we store it literally. Then on the next iteration, `#` is read and the interpolation code checks for `#{`. So `\#` becomes `\` in `line` followed by `#` on the next iteration which triggers interpolation.
+
+That's a problem. For squiggly heredocs, `\#` should prevent interpolation. But since we're deferring escape processing, the `#` after `\` will be seen as interpolation.
+
+Let me check: in the interpolation check, `c == "#"` — but the preceding `\` has already been appended to `line`, not consumed from the scanner. So `c` will be `#` and interpolation will trigger. The `\` is already in `line` and won't prevent the `#` from being seen.
+
+I need to handle `\#` specially even in squiggly heredocs — consume both the backslash and `#`, and store `#` literally (preventing interpolation). Let me also handle `\\` specially (consume both, store both as `\\` so the post-processing handles it correctly).
+
+Wait, actually there are two escape sequences that interact with tokenization:
+1. `\#` — prevents interpolation (must be handled during tokenization)
+2. `\\` — produces single backslash (if stored as `\\`, post-processing handles it; but if the second `\` is consumed by the tokenizer seeing another escape sequence, that's wrong)
+
+For squiggly heredocs, I need to handle `\#` during tokenization (to prevent interpolation) but defer everything else. Let me also think about `\\` — if I store `\\` literally, the post-processing will see `\` followed by `\` and produce a single `\`. That's correct.
+
+But if I DON'T handle `\\` during tokenization, the second `\` will trigger the escape handler again on the next iteration. The inner loop reads `\` → goes to escape handler → stores `\` literally. Then reads next `\` → goes to escape handler again → stores `\` literally. So we get `\\` in `line`. Post-processing sees `\\` and produces `\`. That's correct!
+
+What about `\\#`? First `\` → escape handler → stores `\`. Second `\` → escape handler → stores `\`. Then `#` → interpolation handler. But we wanted `\\#` to mean `\` + `#` (the `\\` produces `\`, and the `#` is literal interpolation, not escaped). Hmm wait, in Ruby `\\#` means `\` followed by interpolation. Let me check:So `\\#{x}` in Ruby produces `\hi` — the `\\` becomes `\` and `#{x}` is interpolated. That means `\\` must be consumed during tokenization (to prevent the second `\` from being treated as an escape prefix). And `\#` must also be consumed during tokenization.
+
+So for squiggly heredocs, I need to handle at minimum:
+- `\\` → store single `\` (prevents second `\` from being escape prefix)
+- `\#` → store single `#` (prevents interpolation)
+
+And defer everything else. Let me update the squiggly branch:Wait, but if we consume `\\` to produce a single `\`, and then the post-processing sees that single `\` and tries to process it as an escape... that's a problem. The post-processing pass won't know that `\\` was already consumed.
+
+Let me think about this differently. For `\\` in squiggly heredocs:
+- During tokenization: consume both `\` characters, output `\\` (two chars) so post-processing sees it as an escaped backslash
+- Post-processing: sees `\\` → outputs single `\`
+
+Hmm, but that means I need to output `\\` for the post-processing to handle. But if I output `\\`, each `\` might get picked up by the tokenizer again... no, because the characters are in `line` (a string buffer), not in the scanner.
+
+Let me reconsider. The flow is:
+1. Scanner reads `\` → enters escape branch
+2. Scanner peeks `\` → it's `\\`
+3. We consume the second `\` and store... what?
+
+If we store `\\` (two backslash chars) in `line`, then post-processing sees `\\` and correctly produces `\`. Good.
+
+If we store just `\` in `line`, then post-processing sees `\` followed by whatever comes next and might incorrectly treat it as an escape. Bad.
+
+So for `\\`, I should store `\\` (both characters). Let me update:Now let me test again:Good, still 14 passed. Now let me fix the test file — I need to remove the `\r` test (since the compiler doesn't handle `\r` in string literals either) and fix the squiggly heredoc test. Let me also run the custom specs to see their status:All 13 custom specs pass! Including the `\r` test — it appears the compiler does handle `\r` in the expected value string correctly since both sides (heredoc and string literal) now produce the same result.
+
+Now let me run selftest and selftest-c to make sure nothing is broken:Both pass. Now let me run `make rubyspec-language` to update docs and check for regressions:

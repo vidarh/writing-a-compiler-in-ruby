@@ -1,0 +1,12 @@
+Implementation complete. Here's a summary of what was done:
+
+**File 1: `docs/improvement-planner.md`** — Added a new `## Slow Targets and Results Files` section between "Test Infrastructure" and "Investigation Workflow". It contains:
+- A table mapping the three slow `make rubyspec-*` targets to their results files
+- Explanation that each target is slow (compiles/runs dozens of specs sequentially)
+- Statement that targets automatically write output via `tee`
+- Three clear rules: read files for current state, only re-run for validation, never manually pipe output
+- Note that `make spec` is fast and excluded from this guidance
+
+**File 2: `CLAUDE.md`** — Added a `**Slow targets:**` paragraph in the Testing section (after the `make rubyspec-*` bullets, before `**Test Hierarchy:**`) noting that these targets are slow, auto-write to `docs/rubyspec_*.txt` via `tee`, and should only be re-run to validate code changes.
+
+**File 3: `docs/plans/SLOWRUN-add-slow-target-guidance/verify.sh`** — Verification script with 8 checks covering all acceptance criteria and edge cases. All 8 checks pass.

@@ -1,0 +1,16 @@
+## Verification Summary
+
+**All 6 acceptance criteria PASS.**
+
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| 1 | `docs/improvement-planner.md` exists with guidance for picking, running, and investigating specs | PASS | File exists (50 lines), contains "Pick a spec" (L22), "Run it live" (L23), "Identify the root cause" (L24), "Read the source" (L25), "Propose a fix plan" (L26) |
+| 2 | "Do NOT propose" guidance excludes unvalidated proposals and automation plans | PASS | `### Do NOT propose` heading at L36; lists "not grounded in live spec output" (L38), "Automation-for-automation's-sake" (L39) |
+| 3 | "DO propose" guidance favors compiler/library fixes grounded in live output | PASS | `### DO propose` heading at L45; lists "Compiler or `lib/core/` fixes...validated by running the spec live" (L47) |
+| 4 | File does NOT reference existing skills | PASS | `grep` for `investigate-spec`, `validate-fix`, `create-minimal-test` returns zero matches |
+| 5 | README.md contains `@docs/improvement-planner.md` reference | PASS | Line 17 of README.md: `@docs/improvement-planner.md` on its own line (verified with `grep -qx`) |
+| 6 | No other files are modified | PASS | `git diff HEAD` shows no changes to CLAUDE.md, Makefile, `.claude/skills/`, or `rubyspec/` (rubyspec submodule dirty state is pre-existing) |
+
+**Test suite:** `bash tools/check_planguide.sh` — 12/12 checks passed, exit code 0.
+
+**Test adequacy:** ADEQUATE per independent assessment — all 16 test scenarios covered with successful reversion testing.

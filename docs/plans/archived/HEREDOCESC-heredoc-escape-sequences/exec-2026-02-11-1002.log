@@ -1,0 +1,8 @@
+Committed as `cf78732`. The HEREDOCESC plan is complete:
+
+- **quoted.rb**: New `expect_heredoc`, `expect_heredoc_squoted`, `heredoc_at_marker?`, `heredoc_scan_indent`, and `handle_simple_interpolation` methods. Extended `escaped()` with line continuation (`\<newline>`) and `\r`. All escape/interpolation code is shared between regular quoted strings and heredocs.
+- **tokens.rb**: Replaced ~165 lines of duplicated heredoc body code with a 5-line dispatch to the new Quoted methods.
+- **parserbase.rb**: Added `scanner=` setter.
+- **heredoc_spec.rb**: 14/16 passes (up from 13/16 — the backslash escape test now passes).
+- **selftest** and **selftest-c**: Both pass with 0 failures.
+- **No regressions** in rubyspec-language (269 individual test passes).

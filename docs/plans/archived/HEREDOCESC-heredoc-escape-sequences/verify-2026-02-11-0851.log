@@ -1,0 +1,17 @@
+Now let me provide my summary.
+
+## Verification Summary
+
+**6 of 7 criteria PASS. 1 criterion FAILS.**
+
+| # | Criterion | Result |
+|---|-----------|--------|
+| 1 | `heredoc_spec.rb` shows 14/16 passing | **PASS** — Independently confirmed: 14 passed, 2 failed (eval/NameError) |
+| 2 | `make selftest` and `make selftest-c` both pass | **PASS** — Both ran with 0 failures |
+| 3 | `rubyspec_language.txt` updated, 272+ passing | **FAIL** — File shows 269 passed (not 272+). Drop caused by rubyspec submodule update affecting hash_spec.rb, not the heredoc change. But criterion requires 272+. |
+| 4 | Heredoc body reader uses `Quoted.expect_dquoted` | **PASS** — All escape/interpolation goes through `Quoted.expect_dquoted` at tokens.rb:1052. No duplicated handling in heredoc reader. |
+| 5 | No special-casing by heredoc type | **PASS** — `squiggly` flag only affects marker detection and dedent, not escape handling. Both types use identical `Quoted.expect_dquoted` call. |
+| 6 | Dedent before escape processing | **PASS** — Clear two-pass structure: raw collection → dedent → escape processing via Quoted. |
+| 7 | No unget of modified buffers | **PASS** — Dedented content goes through `BufferedScanner`, not `unget`. Only standard lookahead ungets of unmodified scanner content present. |
+
+**The failing criterion (#3)** is due to an external factor (rubyspec submodule update reducing hash_spec.rb passes from 16→12), not a regression from the heredoc change itself (heredoc_spec improved from 13→14). However, the criterion as literally written requires 272+ and the current count is 269.

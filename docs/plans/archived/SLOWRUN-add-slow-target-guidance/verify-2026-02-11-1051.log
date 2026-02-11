@@ -1,0 +1,17 @@
+## Verification Summary
+
+**All 4 acceptance criteria PASS.**
+
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| 1 | improvement-planner.md: targets slow / re-run only for validation | **PASS** | Lines 22-24 say "slow", lines 42-44 say "Only re-run...to validate actual code changes" |
+| 2 | improvement-planner.md: read results files for current state | **PASS** | Lines 39-41: "Read the results files...to understand current spec status. Do NOT re-run..." |
+| 3 | improvement-planner.md: auto-write via tee / no manual piping | **PASS** | Lines 33-35: "automatically writes...via `tee`"; lines 45-48: "Never manually pipe" |
+| 4 | CLAUDE.md: slow-target note near rubyspec targets | **PASS** | Line 178: "Slow targets:" paragraph placed directly after rubyspec bullet points, mentions slow runtime, auto-write via tee, and read-files-not-rerun guidance |
+
+**Additional edge case checks:**
+- `rubyspec_language_new.txt` is NOT referenced in improvement-planner.md — correct
+- `make spec` is explicitly called "fast" and excluded from slow-targets guidance — correct
+- Verification script (`verify.sh`) passes 8/8
+
+**Verdict: PLAN COMPLETE — all acceptance criteria independently verified.**

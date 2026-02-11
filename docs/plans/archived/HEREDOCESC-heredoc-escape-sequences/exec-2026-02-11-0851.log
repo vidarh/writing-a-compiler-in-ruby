@@ -1,0 +1,32 @@
+All tasks are complete. Here's the summary:
+
+## Implementation Complete
+
+**Bug fixed**: BufferedScanner's `peek`/`get` were falling through to the real scanner when the buffer was empty. This caused the tokenizer's multi-character operator lookahead (reading 2-3 chars in `get_raw`) to accidentally read from the real scanner, then `unget` those characters back into the BufferedScanner's buffer — creating duplicate characters.
+
+**Fix**: Changed `peek` and `get` to return `nil` when the buffer is empty instead of delegating to the real scanner. The `term` callback (`buf_empty?`) stops the `Quoted.escaped` loop before exhaustion, so this is safe.
+
+### Test Results
+
+| Test | Result |
+|------|--------|
+| `make selftest` | 0 failures |
+| `make selftest-c` | 0 failures |
+| `spec/heredoc_escape_spec.rb` | **13/13 pass** |
+| `rubyspec/language/heredoc_spec.rb` | **14/16 pass** (2 remaining failures: eval/NameError, out of scope) |
+| `make rubyspec-language` | 269 passes (no regression from our changes; heredoc improved 13→14) |
+
+### Files Modified
+
+- **`scanner.rb`** — Added `BufferedScanner` class; `peek`/`get` return nil when buffer empty
+- **`quoted.rb`** — Handle nil `q` parameter for heredoc term-based termination
+- **`tokens.rb`** — Heredoc body processing uses `BufferedScanner` + `Quoted.expect_dquoted` instead of duplicated loop
+- **`parserbase.rb`** — Added `scanner=` setter for BufferedScanner swapping
+- **`docs/rubyspec_language.txt`** — Updated via `make rubyspec-language`
+
+### Acceptance Criteria
+
+- No `unget` of modified/constructed buffers
+- Heredoc bodies flow through `Quoted.expect_dquoted` (no separate handling)
+- Dedent happens before escape processing
+- All selftests pass
