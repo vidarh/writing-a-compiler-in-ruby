@@ -28,7 +28,10 @@ Where this goal was discovered:
 
 ## Potential Plans
 
+**Note:** This goal leans heavily on `docs/control_flow_as_expressions.md` and specific spec files, which may be outdated — the parser has evolved since these were written. A good first plan would be to validate the current state: run the referenced spec files, check whether the documented failures still reproduce, and update or retire stale documents accordingly. This prevents wasted effort on problems that may already be partially or fully solved.
+
 Ideas for incremental plans that would advance this goal:
+- Validate referenced documents and specs against current compiler state: run each listed spec, confirm which failures still reproduce, and update docs/control_flow_as_expressions.md to reflect current reality
 - Analyze how nested shunting yard instances are created during parsing and design a context-passing mechanism (parameter or state flag) to distinguish expression-value from statement-sequence contexts
 - Prototype adding `if`/`unless` to @escape_tokens with a targeted fix for the body-parsing issue that caused Attempt 1 to fail
 - Implement the user's suggested approach: make the shunting yard recognize control flow keywords in first-value position, then remove control flow from parse_defexp
