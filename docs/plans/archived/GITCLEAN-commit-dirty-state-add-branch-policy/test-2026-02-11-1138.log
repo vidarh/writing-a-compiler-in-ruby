@@ -1,0 +1,13 @@
+## Test Adequacy Assessment Complete
+
+**Verdict: ADEQUATE**
+
+Key findings:
+
+- **All 32 scenarios** from `test.md` have corresponding checks in `verify.sh` — no gaps
+- **Quick run results**: 33 passed, 2 failed, 2 skipped (exit code 1)
+- The **2 failures** (scenarios 2a/2b — clean working tree) are caused by post-execution artifacts: the plan framework's own log files (`exec-*.log`, `exec-*.prompt`, `spec.*-post-exec.md`) and a minor goals file edit, all created *after* the plan completed. The execution log confirms all 37 checks passed at execution time with 0 failures.
+- **No external dependencies** — all checks use local git/POSIX tools, with `SKIP_SELFTEST` gate for Docker-dependent compiler builds
+- **Tests would fail if reverted** — each major deliverable (deleted docs, new tools, CLAUDE.md policies, commit structure) has targeted assertions that would break if undone
+
+Results written to `docs/plans/GITCLEAN-commit-dirty-state-add-branch-policy/test-adequacy.md`.

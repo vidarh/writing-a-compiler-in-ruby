@@ -1,0 +1,27 @@
+All tasks complete. Here's a summary of what was done:
+
+## Execution Summary
+
+### Phase 1: Rubyspec Submodule Cleanup
+- Reviewed `compiler_stubs.rb` — not used by any code outside the submodule, safe to delete
+- Reverted 3 modified tracked files (`git checkout .` inside rubyspec)
+- Removed 21 untracked files/directories (`git clean -fd` + `git clean -fdx` for ignored `*~` files)
+- Reset submodule HEAD back to committed ref `6267cc7`
+- Verified: `git diff rubyspec` empty, `git status --porcelain` inside rubyspec empty
+
+### Phase 2: Thematic Commits (5 commits + 1 policy commit)
+1. **Doc cleanup** — 5 deleted docs, 4 condensed docs (9 files, -3200 lines)
+2. **Peephole optimizer** — generalized mov removal, updated plan and tests (3 files)
+3. **Planning infrastructure** — plans/, goals/, exploration/, improvement-planner docs (110 files)
+4. **Project config** — CLAUDE.md slow-target note, README vision section (2 files)
+5. **New tools/specs** — asm_diff_counts, check_planguide, heredoc spec, test results (5 files)
+6. **CLAUDE.md policies** — Rubyspec Submodule + Git Workflow sections (1 file, +49 lines)
+
+### Phase 3: CLAUDE.md Policy Additions
+- **Rubyspec Submodule Hygiene** — forbids modifications, states unmodified upstream aspiration, notes run_rubyspec as temporary/interim, requires workarounds outside submodule
+- **Git Workflow** — requires feature branches for non-trivial changes, thematic commits, clean working tree before new work
+
+### Verification
+- `verify.sh` passes all 37 checks (0 failed, 0 skipped)
+- `make selftest` and `make selftest-c` both pass
+- Working tree is clean
