@@ -28,6 +28,14 @@ Where this goal was discovered:
 
 ## Potential Plans
 
+**GC Replacement Complexity Warning:** Replacing the C GC with Ruby is the hardest part of this goal, and the reason it has not been done. The fundamental problem is that a Ruby GC *itself produces garbage during execution* — the GC's own object allocations create new objects that need to be managed. This cannot be meaningfully tested under MRI (which has its own GC handling Ruby allocations transparently). Two possible approaches have been identified:
+
+1. **Mark-on-create during GC:** Ensure any object allocated during a GC run is immediately marked as reachable. **Concern:** It is vital to ensure that the average number of objects created during a GC run does not exceed the average number of objects collected. This is not a given without careful design — an unbounded GC allocation rate would cause memory to grow without bound.
+
+2. **Arena allocator for GC temporaries:** Switch the GC's own allocations to an arena allocator, so all GC-internal allocations are freed in bulk when the GC run completes. **Risk:** Care must be taken that no references to arena-allocated objects escape the GC run. Any objects that *should* survive the GC (i.e., are reachable from the program) must be allocated using the regular allocator, not the arena.
+
+Plans attempting to address the GC replacement are highly valuable, but **must** account for these self-referential allocation problems. Naive prototyping will not surface the real difficulties.
+
 Ideas for incremental plans that would advance this goal:
 - Prototype a simple mark-and-sweep GC in Ruby, test it under MRI, then compile it with the compiler
 - Build on the existing "Ruby prototype x86 -> ELF binary assembler" mentioned in README.md to create a minimal working assembler
