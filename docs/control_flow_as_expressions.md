@@ -144,7 +144,7 @@ The `while` loop's shunting yard instance incorrectly tried to parse the `if` at
 
 Implemented manual checking for `.` tokens after control structures.
 
-**Why rejected**: Only handles one specific case (method chaining), leaving all other expression contexts broken. The proper fix (shunting yard) would handle ALL contexts automatically. See REJECTED_APPROACH_METHOD_CHAINING.md for full analysis.
+**Why rejected**: Only handles one specific case (method chaining), leaving all other expression contexts broken. The proper fix (shunting yard) would handle ALL contexts automatically. (Full analysis was in REJECTED_APPROACH_METHOD_CHAINING.md, removed — retained in git history; lessons captured in Attempt 3 section above.)
 
 ## Lessons from Session 46
 
@@ -178,6 +178,6 @@ This is **complex parser architecture work** that requires:
 ## References
 
 - TODO.md:80-82 - Task tracking
-- REJECTED_APPROACH_METHOD_CHAINING.md - Why hack was rejected
+- REJECTED_APPROACH_METHOD_CHAINING.md (removed — retained in git history)
 - Session 45 commit e64156e - Partial solution (expression context only)
 - Session 46 - Failed architectural attempt

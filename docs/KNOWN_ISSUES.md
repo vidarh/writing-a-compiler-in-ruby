@@ -1,16 +1,18 @@
 # Known Issues
 
-**Last Updated**: 2025-12-01
+**Last Updated**: 2026-02-10
 
 ## Current State Summary
 
 **Selftest**: All passing (selftest and selftest-c)
 
-**Language Specs**: ~78 files
-- PASSED: 3 files (and_spec, not_spec, unless_spec)
-- FAILED: ~23 files (run but fail assertions)
-- CRASHED: ~52 files (segfaults/hangs)
-- COMPILE FAIL: 0 files (all specs compile)
+**Language Specs**: 78 files
+- Passed: 3 files (and_spec, not_spec, unless_spec)
+- Failed: 28 files (run but fail assertions)
+- Crashed: 47 files (segfaults/hangs)
+- Compile fail: 0 files (all specs compile)
+
+**Individual Test Cases**: 994 total, 272 passed, 705 failed, 17 skipped, 27% pass rate
 
 ## Recent Fixes (2025-12-01)
 
@@ -22,10 +24,13 @@
 2. **Super in deep hierarchies** - `super` now works correctly in A < B < C chains
    - Root cause: Was using `self.class.superclass` instead of defining class's superclass
    - Fix: Pass defining class name and look up its superclass directly
+   - Remaining edge case: `super()` in `define_method` blocks still unsupported (needs method name from define_method arg)
 
 3. **Hash with nil keys** - `{nil => value}[nil]` now works correctly
    - Root cause: nil was used as both valid key AND empty slot marker
    - Fix: Added special handling to iterate/lookup nil keys via linked list
+
+4. **Classes in lambdas** - Simple classes defined inside lambdas now compile and run correctly
 
 ## Previous Fixes (2025-11-30)
 
@@ -41,27 +46,13 @@
 
 ## Active Issues
 
-### 1. super() Uses Wrong Superclass - FIXED (2025-12-01)
-
-**Status**: Fixed for most cases
-
-**Fixed**:
-- Deep class hierarchies (A < B < C) - now correctly uses defining class's superclass
-- Super inside blocks - correctly finds enclosing method name
-- Super with class methods
-
-**Remaining edge case**:
-- `define_method(:name) { super() }` - needs method name from define_method arg
-
----
-
-### 2. Break from Blocks - Wrong Return Target (Partially Fixed)
+### 1. Break from Blocks - Wrong Return Target (Partial)
 
 **Status**: No longer crashes, but semantics are not Ruby-compliant
 
-**2025-12-01 Fix**: Fixed crash when break is called from top-level blocks.
+**2025-12-01 Update**: Resolved crash when break is called from top-level blocks.
 The issue was that after unwinding stack frames, %ebx was being restored from
-the wrong frame (target frame instead of source frame). Fix: Save %ebx to %edx
+the wrong frame (target frame instead of source frame). Solution: Save %ebx to %edx
 before the unwinding loop, restore after.
 
 **Remaining Issue**: `break` behaves like `return` - exits the DEFINER instead of the YIELDER.
@@ -95,7 +86,7 @@ test
 **What works**:
 - `return` from blocks (correctly returns from defining method)
 - `break` inside `while`/`until` loops (uses ControlScope, not __env__)
-- Break no longer crashes (fixed 2025-12-01)
+- Break no longer crashes (resolved 2025-12-01)
 
 **What doesn't work correctly**:
 - `break` exits the definer instead of the yielder (wrong Ruby semantics)
@@ -116,22 +107,7 @@ test
 
 ---
 
-### 3. Classes in Lambdas - FIXED (2025-12-01)
-
-**Status**: Now works correctly
-
-Simple classes defined inside lambdas now compile and run correctly:
-```ruby
-l = lambda do
-  class Foo; def test; 42; end; end
-  Foo.new.test
-end
-l.call  # Returns 42
-```
-
----
-
-### 4. Keyword Arguments - Partial Support
+### 2. Keyword Arguments - Partial Support
 
 **Status**: Basic keyword args work, advanced features segfault
 
@@ -144,7 +120,7 @@ l.call  # Returns 42
 
 ---
 
-### 5. Compound Expression After If/Else
+### 3. Compound Expression After If/Else
 
 **Problem**: Compound expressions immediately after if/else can corrupt variables.
 

@@ -1,16 +1,18 @@
 # Ruby Compiler TODO
 
-**Last Updated**: 2025-12-01
+**Last Updated**: 2026-02-10
 
 ## Test Status
 
 **Selftest**: All passing (selftest and selftest-c)
 
-**Language Specs**: ~78 files
-- PASSED: 3 files (4%)
-- FAILED: ~23 files (29%)
-- CRASHED: ~52 files (67%)
-- COMPILE FAIL: 0 files
+**Language Specs**: 78 files
+- Passed: 3 files (4%)
+- Failed: 28 files (36%)
+- Crashed: 47 files (60%)
+- Compile fail: 0 files
+
+**Individual Test Cases**: 994 total, 272 passed, 705 failed, 17 skipped, 27% pass rate
 
 ---
 
@@ -39,22 +41,9 @@ wrong frame. Fix: Save %ebx to %edx before unwinding, restore after.
 
 ---
 
-### 1.2 Classes in Lambdas - FIXED
+### 1.2 super() in define_method
 
-**Status**: Now works correctly. Classes defined in lambdas compile and run.
-
----
-
-### 1.3 super() Implementation - MOSTLY FIXED
-
-**Fixed cases**:
-- Deep class hierarchies (A < B < C) - super now correctly uses defining class
-- Super inside blocks (yields) - correctly finds enclosing method name
-- Super with class methods (self.foo) - works correctly
-
-**Remaining edge case**:
-- `define_method(:name) { super() }` - super in define_method blocks needs
-  method name from define_method argument, not scope lookup
+**Remaining edge case**: `define_method(:name) { super() }` needs method name from define_method argument, not scope lookup. Main super() implementation is complete.
 
 ---
 
@@ -84,21 +73,10 @@ wrong frame. Fix: Save %ebx to %edx before unwinding, restore after.
 
 ---
 
-## Recently Completed (2025-12-01)
+## Completed
 
-- Break crash fix - Top-level blocks with break no longer crash (%ebx restore fix)
-- Super in deep hierarchies - Fixed to use defining class's superclass, not self.class.superclass
-- Super in blocks - Fixed to find enclosing method name, not block function name
-
-## Previously Completed (2025-11-30)
-
-- Array#<< growth condition - Fixed inverted condition causing memory exhaustion
-- Postfix if/unless returns nil - `(x if false)` now returns nil, not false
-- Parallel assignment - `a, b, c = 1, 2, 3` now works correctly
-- Scope resolution (::) as prefix - `::Object` now works after whitespace
-- Block params with defaults - `{ |a=99| }` now applies defaults correctly
-- Break/next newline handling - `break\nputs x` parses as two statements
-- Hash spread operator (**) - `{**h, a: 1}` parses correctly (was exponentiation)
+- Break crash fix, super in deep hierarchies, super in blocks, classes in lambdas (2025-12-01)
+- Array#<< growth, postfix if/unless nil, parallel assignment, :: prefix, block param defaults, break/next newlines, hash spread (2025-11-30)
 
 ---
 
