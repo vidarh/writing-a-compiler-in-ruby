@@ -29,4 +29,15 @@ class PeepholeFixtureTest < Minitest::Test
     input = [[:movl, :ebx, :eax], [:movl, :eax, :ecx]]
     assert_equal input, render(input)
   end
+
+  def test_mov_reg_to_same_reg_is_removed
+    input = [[:movl, :ebx, :ebx]]
+    assert_equal [], render(input)
+  end
+
+  def test_movb_same_reg_is_removed
+    input = [[:movb, :al, :al]]
+    assert_equal [], render(input)
+  end
+
 end

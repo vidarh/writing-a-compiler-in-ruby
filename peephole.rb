@@ -127,12 +127,12 @@ class Peephole
       return
     end
 
-    if args == [:movl, :eax, :eax]
+    if [:movl, :movb].include?(args[0]) && args[1] == args[2]
       @prev.pop
       return
     end
 
-    return if handle_simple_patterns(last, args)
+    handle_simple_patterns(last, args)
 
     handle_mov_chain(args, last, @prev[-3])
   end
@@ -187,7 +187,6 @@ class Peephole
     return false unless last
 
     return true if handle_push_pop_patterns(last, args)
-    return true if handle_cmpl_immediate(last, args)
 
     false
   end
@@ -199,14 +198,6 @@ class Peephole
       return true
     end
 
-    if last == [:pushl, :eax] && match([:popl, Symbol], args)
-      # @unsafe Only ok because we know the compiler treats %eax as scratch
-      @prev.pop
-      @prev.pop
-      @prev << [:movl, :eax, args[1]]
-      return true
-    end
-
     if last[0] == :pushl && args[0] == :popl && last[1] == args[1]
       @prev.pop
       @prev.pop
@@ -214,17 +205,6 @@ class Peephole
     end
 
     false
-  end
-
-  def handle_cmpl_immediate(last, args)
-    return false unless match([:movl, Integer, :eax], last)
-    return false unless match([:cmpl, :eax, Symbol], args)
-    # @unsafe this optimization is ok only because we know the compiler treats
-    # %eax as a scratch register
-    @prev.pop
-    @prev.pop
-    @prev << [:cmpl, last[1], args[2]]
-    true
   end
 
   def handle_mov_chain(args, last, last2)
@@ -258,8 +238,10 @@ class Peephole
           @prev.pop
           @prev << [:subl, val, reg]
           @prev << args
+          return
         end
       end
     end
   end
+
 end
