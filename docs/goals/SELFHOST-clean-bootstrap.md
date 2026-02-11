@@ -29,6 +29,8 @@ Where this goal was discovered:
 
 Ideas for incremental plans that would advance this goal:
 - Audit all `@bug` and `FIXME` markers in compiler source, classify by root cause, and prioritize by which fixes unblock the most workarounds
+
+**Note:** Many `@bug` and `FIXME` markers are likely outdated — the compiler has advanced significantly since they were added. A good first plan would be to systematically validate which ones are still relevant: for each marker, write a `spec/` test for the supposedly broken construct. If the spec passes, attempt rewriting the compiler code to remove the workaround, then verify with `make selftest` and `make selftest-c`. This approach turns stale markers into either confirmed fixes (workaround removed) or confirmed bugs (spec documents the failure), both of which are progress.
 - Re-enable begin/rescue in the compiler source (currently commented out for bootstrap) by fixing exception handling
 - Eliminate the most common category of workaround (e.g., string handling, method call patterns) with a targeted compiler fix
 - Add a CI-style check that compares compiler2 and compiler3 assembly output and flags any divergence
