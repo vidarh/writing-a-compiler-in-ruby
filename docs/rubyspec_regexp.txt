@@ -1,0 +1,45 @@
+DEBUG: Starting run_rubyspec for rubyspec/core/regexp/
+Running all specs in rubyspec/core/regexp/...
+================================
+
+[31m[FAIL] rubyspec/core/regexp/case_compare_spec.rb (P:4 F:2 S:0 T:6)
+[32m[PASS] rubyspec/core/regexp/casefold_spec.rb (P:1 F:0 S:0 T:1)
+grep: (standard input): binary file matches
+[34m[CRASH] rubyspec/core/regexp/compile_spec.rb (P:1 F:0 S:0 T:1)
+[31m[FAIL] rubyspec/core/regexp/encoding_spec.rb (P:4 F:11 S:0 T:15)
+[31m[FAIL] rubyspec/core/regexp/eql_spec.rb (P:3 F:2 S:0 T:5)
+[31m[FAIL] rubyspec/core/regexp/equal_value_spec.rb (P:3 F:2 S:0 T:5)
+[34m[CRASH] rubyspec/core/regexp/escape_spec.rb (P:0 F:4 S:0 T:4)
+[31m[FAIL] rubyspec/core/regexp/fixed_encoding_spec.rb (P:6 F:2 S:0 T:8)
+[31m[FAIL] rubyspec/core/regexp/hash_spec.rb (P:1 F:2 S:0 T:3)
+[34m[CRASH] rubyspec/core/regexp/initialize_spec.rb (P:0 F:0 S:0 T:0)
+[32m[PASS] rubyspec/core/regexp/inspect_spec.rb (P:8 F:0 S:0 T:8)
+[31m[FAIL] rubyspec/core/regexp/last_match_spec.rb (P:1 F:8 S:0 T:9)
+[34m[CRASH] rubyspec/core/regexp/linear_time_spec.rb (P:0 F:0 S:0 T:0)
+[34m[CRASH] rubyspec/core/regexp/match_spec.rb (P:4 F:20 S:0 T:24)
+[31m[FAIL] rubyspec/core/regexp/named_captures_spec.rb (P:2 F:3 S:1 T:6)
+[31m[FAIL] rubyspec/core/regexp/names_spec.rb (P:2 F:3 S:1 T:6)
+grep: (standard input): binary file matches
+[34m[CRASH] rubyspec/core/regexp/new_spec.rb (P:1 F:0 S:0 T:1)
+[31m[FAIL] rubyspec/core/regexp/options_spec.rb (P:8 F:1 S:0 T:9)
+[34m[CRASH] rubyspec/core/regexp/quote_spec.rb (P:0 F:4 S:0 T:4)
+[31m[FAIL] rubyspec/core/regexp/source_spec.rb (P:6 F:2 S:0 T:8)
+[34m[CRASH] rubyspec/core/regexp/timeout_spec.rb (P:0 F:0 S:0 T:0)
+[31m[FAIL] rubyspec/core/regexp/to_s_spec.rb (P:7 F:3 S:0 T:10)
+[31m[FAIL] rubyspec/core/regexp/try_convert_spec.rb (P:3 F:1 S:0 T:4)
+[34m[CRASH] rubyspec/core/regexp/union_spec.rb (P:1 F:16 S:0 T:17)
+
+================================
+Summary:
+  Total spec files: 24
+  Passed: 2
+  Failed: 13
+  Crashed (no test output): 9
+  Failed to compile: 0
+
+Individual Test Cases:
+  Total tests: 154
+  Passed: 66
+  Failed: 86
+  Skipped: 2
+  Pass rate: 42%
