@@ -112,23 +112,18 @@ class Compiler
     @e.pushl(compile_eval_arg(scope,left))
     
     res = compile_eval_arg(scope,right)
-    # FIXME @bug
-    # block_given? does not work in nested
-    # lambdas
+    # @bug: block_given? inside nested blocks causes segfault
+    # (confirmed 2026-02-14). Workaround: capture to local before
+    # entering nested block. See spec/bug_block_given_nested_spec.rb
     bg = block_given?
     @e.with_register(:edx) do |dividend|
-      xdividend = dividend
       @e.with_register do |divisor|
-        # FIXME: @bug
-        # dividend gets set incorrectly due to a compiler
-        # bug in handling of nested lambdas, so using xdividend above instead.
-
         @e.movl(res,divisor)
-        # We need the dividend in %eax *and* sign extended into %edx, so 
+        # We need the dividend in %eax *and* sign extended into %edx, so
         # it doesn't matter which one of them we pop it into:
         @e.popl(@e.result)
-        @e.movl(@e.result, xdividend)
-        @e.sarl(31, xdividend)
+        @e.movl(@e.result, dividend)
+        @e.sarl(31, dividend)
         @e.idivl(divisor)
 
         if bg
