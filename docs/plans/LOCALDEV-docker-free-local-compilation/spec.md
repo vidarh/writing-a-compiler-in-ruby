@@ -82,15 +82,15 @@ The current `compile_local` hardcodes GCC 8 paths (`gcc/x86_64-linux-gnu/8/32`).
 
 ## Acceptance Criteria
 
-1. `bin/setup-i386-toolchain` exists and successfully populates `toolchain/32root/` on a Debian/Ubuntu x86-64 system without Docker.
-2. `./compile driver.rb -I . -g` succeeds with the local toolchain (no Docker running) and produces a working `out/driver`.
-3. `./compile2 driver.rb -I . -g` succeeds with the local toolchain and produces a working `out/driver2`.
-4. `make selftest` passes using the unified `./compile` with local toolchain.
-5. `make selftest-c` passes using the unified `./compile` and `./compile2` with local toolchain.
-6. `./compile` falls back to Docker gracefully when `toolchain/32root/` is missing and Docker is available.
-7. `compile_local` and `compile2_local` are deleted (their logic is merged into `compile` and `compile2`).
-8. The unified `compile` script auto-detects the host GCC version rather than hardcoding GCC 8.
-9. `run_rubyspec` works without modification (it calls `./compile` which now handles mode selection).
+- [x] `bin/setup-i386-toolchain` exists and successfully populates `toolchain/32root/` on a Debian/Ubuntu x86-64 system without Docker.
+- [x] `./compile driver.rb -I . -g` succeeds with the local toolchain (no Docker running) and produces a working `out/driver`.
+- [x] `./compile2 driver.rb -I . -g` succeeds with the local toolchain and produces a working `out/driver2`.
+- [x] `make selftest` passes using the unified `./compile` with local toolchain.
+- [x] `make selftest-c` passes using the unified `./compile` and `./compile2` with local toolchain.
+- [x] `./compile` falls back to Docker gracefully when `toolchain/32root/` is missing and Docker is available.
+- [x] `compile_local` and `compile2_local` are deleted (their logic is merged into `compile` and `compile2`).
+- [x] The unified `compile` script auto-detects the host GCC version rather than hardcoding GCC 8.
+- [x] `run_rubyspec` works without modification (it calls `./compile` which now handles mode selection).
 
 ## Implementation Details
 
