@@ -102,3 +102,34 @@ Execution created files in project root:
 ## 2026-02-14 04:09 — Verification PASSED
 
 All acceptance criteria verified.
+
+---
+
+## 2026-02-14 14:38 — Re-execution
+
+Plan re-opened for execution (was IMPLEMENTED)
+
+---
+
+## 2026-02-14 14:38 — Execution notes
+
+Exceptions *are* supported. Several of your updates are incorrectly making assumptions that are outdated without verifying if they are true.
+
+---
+
+## 2026-02-14 14:50 — Execution session
+
+Session ID: 004c527c-bab3-4f1a-b9d2-95f5ba15bda0
+
+---
+
+## 2026-02-14 15:02 — Verification FAILED
+
+1 criterion(s) unchecked:
+- - [ ] A summary table in the plan log lists each marker with its file, line, category, and status (STALE/CONFIRMED)
+
+---
+
+## 2026-02-14 15:14 — Verification PASSED
+
+All acceptance criteria verified.
