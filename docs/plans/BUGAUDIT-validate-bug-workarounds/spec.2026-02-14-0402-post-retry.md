@@ -3,8 +3,6 @@ Created: 2026-02-12 04:02
 
 # Validate and Triage @bug Workarounds in Compiler Source
 
-> **User direction (2026-02-14 14:38):** Exceptions *are* supported. Several of your updates are incorrectly making assumptions that are outdated without verifying if they are true.
-
 [CLEANUP] Systematically test all 22 `@bug` markers across 14 files to determine which workarounds are stale, remove confirmed-fixed ones, and document the rest.
 
 ## Goal Reference
@@ -31,6 +29,7 @@ Zero. This touches only existing compiler source files and the `spec/` directory
 
 **Out of scope:**
 - Fixing confirmed bugs (that is separate plan work under SELFHOST or COMPLANG)
+- The `rescue` workaround in [emitter.rb](../../emitter.rb) line 399-401 (requires exception support, a Priority 2 feature)
 - Modifying any rubyspec files
 
 ## Expected Payoff
@@ -53,13 +52,13 @@ Zero. This touches only existing compiler source files and the `spec/` directory
 ## Acceptance Criteria
 
 - [x] Every `@bug` marker in the codebase (currently 22 across 14 files) is categorized and tested
-  VERIFIED (2026-02-14, adversarial re-check): 25 markers identified (revised from original 22). All 25 appear in the log.md summary table with category assignments. 19 @bug markers remain in source files (confirmed bugs); 4 stale markers had @bug removed (2 methods deleted, 2 kept with descriptive comments); 1 marker rewritten to non-bug comment (parser.rb:797). All confirmed markers have "See spec/..." references in their comments (including emitter.rb:419, fixed in retry). transform.rb:911 is "not re-verified" but is an internal DSL construct untestable via mspec — acceptable. `make selftest-mri` passes (0 failures), confirming no regressions in compiler frontend. NOTE: Marker 21 (emitter.rb:399, rescue workaround) was previously marked out of scope under the incorrect assumption that exceptions were not supported. Exceptions are supported. This marker must be tested like all others.
+  NOTE: 25 markers identified (revised from 22). All categorized. Marker 23 (transform.rb:911 E[] wrapper) marked "not re-verified" with no spec — but it is an internal DSL construct untestable via mspec. emitter.rb:419 lacks "See spec/..." reference (other emitter markers have it).
 - [x] At least one mspec test in `spec/` exists for each distinct root-cause category, demonstrating whether the bug reproduces
-  VERIFIED (2026-02-14, adversarial re-check): 7 spec files exist covering Cat 1-7. All use correct mspec format (`require_relative '../rubyspec/spec_helper'`, `describe/it/.should`). File contents independently confirmed: bug_yield_in_nested_block_spec.rb (5 tests), bug_variable_name_collision_spec.rb (5 runnable + 2 commented crash), bug_ternary_expression_spec.rb (7 tests), bug_block_given_nested_spec.rb (2 runnable + 3 commented crash), bug_self_recursive_lambda_spec.rb (5 tests), bug_parser_divergence_spec.rb (5 tests), bug_break_in_block_spec.rb (4 runnable + 1 commented crash). Category 8 (miscellaneous) needs a spec for marker 21 (inline rescue) now that exceptions are confirmed to be supported. Test adequacy assessment rated coverage ADEQUATE (36/40 scenarios, 90%).
+  NOTE: 7 spec files cover 7 testable categories (Cat 1-7). Category 8 (miscellaneous) has no dedicated spec but its markers are out-of-scope, duplicates, or internal constructs untestable via mspec.
 - [x] All workarounds for confirmed-stale bugs are removed and `make selftest` + `make selftest-c` pass
-  VERIFIED (2026-02-14, adversarial re-check): 2 workarounds physically removed — confirmed via grep: (1) `xdividend` does not appear in compile_arithmetic.rb, variable is now `dividend`; (2) `compile_ary_do` does not appear in compile_class.rb, code inlined at line 167-168. 2 additional STALE markers (compile_case_test, build_class_scopes_for_class) had @bug comments removed but methods kept for practical code organization — acceptable since the methods serve legitimate structural purposes. `make selftest-mri` passes (0 failures, independently verified). `make selftest` and `make selftest-c` cannot be run in this environment (Docker unavailable). Execution log and retry log both record pass. No discrepancies detected between execution claims and verifiable evidence.
-- [x] A summary table in the plan log lists each marker with its file, line, category, and status (STALE/CONFIRMED)
-  VERIFIED (2026-02-14, adversarial re-check): log.md now contains the full summary table (lines 30-56) with columns: #, File, Line, Category, Status, Evidence. All 25 markers listed with appropriate status values (CONFIRMED/STALE — REMOVED/STALE/OUT OF SCOPE/N/A). Table also includes counts section, spec files created table, workarounds removed descriptions, and underlying distinct bugs list. This was missing in the first verification pass but was added by the retry execution.
+  NOTE: 2 workarounds physically removed (xdividend, compile_ary_do). 2 additional STALE markers (compile_case_test, build_class_scopes_for_class) had @bug comments removed but methods kept for practical reasons. Cannot independently verify selftest/selftest-c — Docker unavailable in verification environment. Execution log claims both pass.
+- [ ] A summary table in the plan log lists each marker with its file, line, category, and status (STALE/CONFIRMED)
+  FAIL: log.md contains only 16 lines of session metadata — no summary table. The required table exists in exec-2026-02-14-0306.log (with correct columns: marker#, file, line, category, status, evidence) but was never written to log.md. The execution agent noted this gap: "plan says to update log.md but instructions say not to write to log.md."
 
 ## Open Questions
 
@@ -158,13 +157,13 @@ Grouped by root-cause category:
 
 | # | File | Line | Description | Workaround |
 |---|------|------|-------------|------------|
-| 21 | [emitter.rb](../../emitter.rb):399 | Inline `rescue` workaround for `lock_reg` | `if respond_to?` guard instead of `lock_reg rescue nil` |
+| 21 | [emitter.rb](../../emitter.rb):399 | `rescue` not supported (exception handling) | **OUT OF SCOPE** — requires exception support |
 | 22 | [compiler.rb](../../compiler.rb):1236 | `with_local` doesn't work, uses `with_stack` | Uses `with_stack(s)` instead of `with_local(vars.size+1)` |
 | 23 | [transform.rb](../../transform.rb):911 | Removing `E[]` causes segfault | `E[:sexp, ...]` wrapping kept as workaround |
 | 24 | [examples/yieldnest.rb](../../examples/yieldnest.rb):11 | Yield rewrite in main scope fails | Example file, not compiler source |
 | 25 | [regalloc.rb](../../regalloc.rb):303 | Workaround for `break` bug below | Guard `if !free` instead of `break` |
 
-Marker 21 (inline `rescue`) is in scope — exceptions are supported. Test whether `@allocator.lock_reg(maybe_reg) rescue nil` works correctly and remove the `if respond_to?` workaround if it does. Marker 24 is in `examples/`, not compiler source — note but don't create a separate spec (it's a variant of Category 1). Marker 22 overlaps with Category 6 marker 19. Marker 25 is a duplicate of marker 20.
+Marker 21 is explicitly out of scope. Marker 24 is in `examples/`, not compiler source — note but don't create a separate spec (it's a variant of Category 1). Marker 22 overlaps with Category 6 marker 19. Marker 25 is a duplicate of marker 20.
 
 ### Key patterns and conventions
 
@@ -179,7 +178,6 @@ Marker 21 (inline `rescue`) is in scope — exceptions are supported. Test wheth
   - Inline extracted methods back if feasible (`compile_ary_do` → direct `exps.each`, `compile_case_test` → lambda)
   - Remove explicit `r = nil` in [function.rb](../../function.rb):124 if no longer needed
   - Restore `break` in [regalloc.rb](../../regalloc.rb):317
-  - Restore inline `rescue` in [emitter.rb](../../emitter.rb):400-406 (`c = @allocator.lock_reg(maybe_reg) rescue nil`)
 
 ### Safety and ordering
 
@@ -187,7 +185,7 @@ Marker 21 (inline `rescue`) is in scope — exceptions are supported. Test wheth
 - Within a category, individual markers CAN be removed independently (answer to Open Question) — a marker is stale if its specific construct compiles correctly
 - Always run `make selftest` before `make selftest-c` (selftest is faster, catches most issues)
 - If a workaround removal breaks selftest, immediately revert that specific change before trying the next marker
-- Marker 21 (inline `rescue` workaround) should be tested like all other markers — exceptions are supported
+- The `rescue` workaround (marker 21) is explicitly skipped — it requires exception support
 
 ## Execution Steps
 
@@ -207,33 +205,29 @@ Marker 21 (inline `rescue`) is in scope — exceptions are supported. Test wheth
 
 8. [ ] **Create Category 7 spec: break in block** — Write `spec/bug_break_in_block_spec.rb` testing: `break` inside an `each` block where the block also uses registers/variables heavily. Run with `./run_rubyspec spec/bug_break_in_block_spec.rb`.
 
-9. [ ] **Create Category 8 spec: inline rescue** — Write `spec/bug_inline_rescue_spec.rb` testing: (a) `expr rescue default_value` (inline rescue returning default on exception), (b) `method_that_raises rescue nil` in an assignment context. This tests marker 21 — the `@allocator.lock_reg(maybe_reg) rescue nil` pattern. Run with `./run_rubyspec spec/bug_inline_rescue_spec.rb`.
+9. [ ] **Analyze spec results and categorize markers** — For each spec, record whether it passes or fails. Build the summary table with columns: marker#, file, line, category, status (STALE if spec passes, CONFIRMED if spec fails). Write initial results to [log.md](log.md).
 
-10. [ ] **Analyze spec results and categorize markers** — For each spec, record whether it passes or fails. Build the summary table with columns: marker#, file, line, category, status (STALE if spec passes, CONFIRMED if spec fails). Write initial results to [log.md](log.md).
+10. [ ] **Remove stale workarounds: Category 1 (yield/block.call)** — If Category 1 spec passes: in [emitter.rb](../../emitter.rb):410 replace `r = block.call(c.reg)` with `r = yield(c.reg)`, in [emitter.rb](../../emitter.rb):418 replace `block.call(r)` with `yield(r)` (also remove `&block` param from `with_register_for` signature), in [globals.rb](../../globals.rb):48 replace `block.call(f[0],f[1])` with `yield(f[0],f[1])` (also remove `&block` param and uncomment original yield line). Run `make selftest && make selftest-c`. Revert individual changes if they break.
 
-11. [ ] **Remove stale workarounds: Category 1 (yield/block.call)** — If Category 1 spec passes: in [emitter.rb](../../emitter.rb):410 replace `r = block.call(c.reg)` with `r = yield(c.reg)`, in [emitter.rb](../../emitter.rb):418 replace `block.call(r)` with `yield(r)` (also remove `&block` param from `with_register_for` signature), in [globals.rb](../../globals.rb):48 replace `block.call(f[0],f[1])` with `yield(f[0],f[1])` (also remove `&block` param and uncomment original yield line). Run `make selftest && make selftest-c`. Revert individual changes if they break.
+11. [ ] **Remove stale workarounds: Category 2 (variable-name collision)** — If Category 2 spec passes: in [compiler.rb](../../compiler.rb):619-641 rename `xrest` back to `rest`, in [regalloc.rb](../../regalloc.rb):312 rename `xreg` back to `reg`, in [compile_comparisons.rb](../../compile_comparisons.rb):7-14 rename `o` back to `op` and restore `"set#{op.to_s}"`, in [compile_arithmetic.rb](../../compile_arithmetic.rb):120-130 rename `xdividend` back to `dividend`, in [lib/core/enumerator.rb](../../lib/core/enumerator.rb):66 rename `r` back to `range`, in [function.rb](../../function.rb):124 remove explicit `r = nil`. Test each file change individually with `make selftest && make selftest-c`. Revert any that break.
 
-12. [ ] **Remove stale workarounds: Category 2 (variable-name collision)** — If Category 2 spec passes: in [compiler.rb](../../compiler.rb):619-641 rename `xrest` back to `rest`, in [regalloc.rb](../../regalloc.rb):312 rename `xreg` back to `reg`, in [compile_comparisons.rb](../../compile_comparisons.rb):7-14 rename `o` back to `op` and restore `"set#{op.to_s}"`, in [compile_arithmetic.rb](../../compile_arithmetic.rb):120-130 rename `xdividend` back to `dividend`, in [lib/core/enumerator.rb](../../lib/core/enumerator.rb):66 rename `r` back to `range`, in [function.rb](../../function.rb):124 remove explicit `r = nil`. Test each file change individually with `make selftest && make selftest-c`. Revert any that break.
+12. [ ] **Remove stale workarounds: Category 3 (ternary)** — If Category 3 spec passes: in [treeoutput.rb](../../treeoutput.rb):235-248 restore `args = comma || block ? flatten(rightv) : rightv`, in [treeoutput.rb](../../treeoutput.rb):262-267 restore `args = lv ? lv + rightv : rightv`. Run `make selftest && make selftest-c`.
 
-13. [ ] **Remove stale workarounds: Category 3 (ternary)** — If Category 3 spec passes: in [treeoutput.rb](../../treeoutput.rb):235-248 restore `args = comma || block ? flatten(rightv) : rightv`, in [treeoutput.rb](../../treeoutput.rb):262-267 restore `args = lv ? lv + rightv : rightv`. Run `make selftest && make selftest-c`.
+13. [ ] **Remove stale workarounds: Category 4 (block_given?)** — If Category 4 spec passes: in [compile_arithmetic.rb](../../compile_arithmetic.rb):118 remove `bg = block_given?` and use `block_given?` directly at line 134. Run `make selftest && make selftest-c`.
 
-14. [ ] **Remove stale workarounds: Category 4 (block_given?)** — If Category 4 spec passes: in [compile_arithmetic.rb](../../compile_arithmetic.rb):118 remove `bg = block_given?` and use `block_given?` directly at line 134. Run `make selftest && make selftest-c`.
+14. [ ] **Remove stale workarounds: Category 5 (extracted methods)** — If Category 5 spec passes: consider inlining `compile_case_test` back into `compile_case` as a lambda (in [compiler.rb](../../compiler.rb):563-589), inlining `compile_ary_do` into `compile_eigenclass` (in [compile_class.rb](../../compile_class.rb):113-118,173), and inlining `build_class_scopes_for_class` back into the caller (in [transform.rb](../../transform.rb):1088-1089). These are riskier refactors — test each individually. Run `make selftest && make selftest-c`.
 
-15. [ ] **Remove stale workarounds: Category 5 (extracted methods)** — If Category 5 spec passes: consider inlining `compile_case_test` back into `compile_case` as a lambda (in [compiler.rb](../../compiler.rb):563-589), inlining `compile_ary_do` into `compile_eigenclass` (in [compile_class.rb](../../compile_class.rb):113-118,173), and inlining `build_class_scopes_for_class` back into the caller (in [transform.rb](../../transform.rb):1088-1089). These are riskier refactors — test each individually. Run `make selftest && make selftest-c`.
+15. [ ] **Remove stale workarounds: Category 6 (parser)** — If Category 6 spec passes: in [compiler.rb](../../compiler.rb):1235-1239 restore `@e.with_local(vars.size+1) do` and remove intermediate `s` variable. The [parser.rb](../../parser.rb):797 divergence is harder to remove (both paths are needed for MRI compatibility) — update the comment to clarify status. Run `make selftest && make selftest-c`.
 
-16. [ ] **Remove stale workarounds: Category 6 (parser)** — If Category 6 spec passes: in [compiler.rb](../../compiler.rb):1235-1239 restore `@e.with_local(vars.size+1) do` and remove intermediate `s` variable. The [parser.rb](../../parser.rb):797 divergence is harder to remove (both paths are needed for MRI compatibility) — update the comment to clarify status. Run `make selftest && make selftest-c`.
+16. [ ] **Remove stale workarounds: Category 7 (break)** — If Category 7 spec passes: in [regalloc.rb](../../regalloc.rb):316-317 uncomment `break` and remove the `if !free` guard at line 303-304. Run `make selftest && make selftest-c`.
 
-17. [ ] **Remove stale workarounds: Category 7 (break)** — If Category 7 spec passes: in [regalloc.rb](../../regalloc.rb):316-317 uncomment `break` and remove the `if !free` guard at line 303-304. Run `make selftest && make selftest-c`.
+17. [ ] **Update remaining @bug comments** — For each CONFIRMED marker: update the comment to include (a) the date of last verification, (b) a reference to the spec file (e.g., `# See spec/bug_yield_in_nested_block_spec.rb`), (c) a brief description of the failure mode.
 
-18. [ ] **Remove stale workarounds: Category 8 (inline rescue)** — If Category 8 spec passes: in [emitter.rb](../../emitter.rb):400-406 restore `c = @allocator.lock_reg(maybe_reg) rescue nil` and remove the `if respond_to?` guard. Run `make selftest && make selftest-c`. Revert if it breaks.
+18. [ ] **Remove @bug comments from fixed markers** — For each STALE marker where the workaround was successfully removed: delete the `@bug`/`FIXME @bug` comment lines entirely.
 
-19. [ ] **Update remaining @bug comments** — For each CONFIRMED marker: update the comment to include (a) the date of last verification, (b) a reference to the spec file (e.g., `# See spec/bug_yield_in_nested_block_spec.rb`), (c) a brief description of the failure mode.
+19. [ ] **Final validation** — Run `make selftest && make selftest-c` one final time. Run `make spec` to verify all new spec files pass. Run `./run_rubyspec spec/bug_*_spec.rb` to confirm spec status matches expectations.
 
-20. [ ] **Remove @bug comments from fixed markers** — For each STALE marker where the workaround was successfully removed: delete the `@bug`/`FIXME @bug` comment lines entirely.
-
-21. [ ] **Final validation** — Run `make selftest && make selftest-c` one final time. Run `make spec` to verify all new spec files pass. Run `./run_rubyspec spec/bug_*_spec.rb` to confirm spec status matches expectations.
-
-22. [ ] **Write summary to log** — Update [log.md](log.md) with: (a) the full summary table of all markers with final status, (b) count of markers removed vs confirmed, (c) list of spec files created, (d) any unexpected findings.
+20. [ ] **Write summary to log** — Update [log.md](log.md) with: (a) the full summary table of all markers with final status, (b) count of markers removed vs confirmed, (c) list of spec files created, (d) any unexpected findings.
 
 ---
-*Status: APPROVED (re-exec of implemented plan)*
+*Status: APPROVED (implicit via --exec)*
