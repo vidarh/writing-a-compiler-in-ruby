@@ -61,8 +61,9 @@ end
 # it's an easy way of getting basic Enumerator support
 # without
 class RangeEnumerator < Enumerator
-  # FIXME: @bug if I use "range" as a argument name
-  # it triggers the range constructor rewrite
+  # @bug: Argument named "range" triggers the range constructor rewrite,
+  # causing compilation failure (confirmed 2026-02-14).
+  # See spec/bug_variable_name_collision_spec.rb
   def initialize(r)
     @min = r.first
     @max = r.last
