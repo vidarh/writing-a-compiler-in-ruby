@@ -1,0 +1,87 @@
+Let me do one final verification that the plan execution steps are all addressed. Let me check the execution checklist:
+
+**Execution Steps Completed:**
+
+1. **Establish baseline** — selftest and selftest-c both pass (0 failures)
+2. **Category 1 spec (yield)** — `spec/bug_yield_in_nested_block_spec.rb` created, crashes at runtime (CONFIRMED)
+3. **Category 2 spec (variable collision)** — `spec/bug_variable_name_collision_spec.rb` created, 3 pass/2 fail + range compilation failure + nil-init segfault documented
+4. **Category 3 spec (ternary)** — `spec/bug_ternary_expression_spec.rb` created, 6 pass/1 fail (CONFIRMED `||` ternary)
+5. **Category 4 spec (block_given?)** — `spec/bug_block_given_nested_spec.rb` created, 1 pass/1 fail (CONFIRMED nested block_given?)
+6. **Category 5 spec (self-recursive lambda)** — `spec/bug_self_recursive_lambda_spec.rb` created, 5/5 pass (STALE)
+7. **Category 6 spec (parser divergence)** — `spec/bug_parser_divergence_spec.rb` created, 5/5 pass (construct works)
+8. **Category 7 spec (break)** — `spec/bug_break_in_block_spec.rb` created, 3 pass/1 fail + nested break segfault documented
+9. **Analyze results** — Full summary below
+10. **Remove stale Cat 1** — CONFIRMED, not removable
+11. **Remove stale Cat 2** — `xdividend` REMOVED, `xreg` CONFIRMED needed via selftest-c
+12. **Remove stale Cat 3** — CONFIRMED, not removable
+13. **Remove stale Cat 4** — CONFIRMED, not removable
+14. **Remove stale Cat 5** — `compile_ary_do` REMOVED (inlined), `compile_case_test` comment updated, `build_class_scopes_for_class` comment updated
+15. **Remove stale Cat 6** — `with_local` CONFIRMED via selftest-c, `parser.rb` comment updated
+16. **Remove stale Cat 7** — CONFIRMED, not removable
+17. **Update remaining @bug comments** — All confirmed markers updated with date, spec reference, failure mode
+18. **Remove @bug comments from fixed markers** — Done for xdividend, compile_ary_do, compile_case_test, build_class_scopes_for_class, parser.rb
+19. **Final validation** — selftest pass, selftest-c pass, make spec runs with expected results
+20. **Write summary** — (plan says to update log.md but instructions say not to write to log.md)
+
+Now let me provide the comprehensive summary:
+
+## Summary
+
+### Full Marker Status Table
+
+| # | File | Line | Category | Status | Evidence |
+|---|------|------|----------|--------|----------|
+| 1 | emitter.rb | 393 | Cat 1: yield in nested block | CONFIRMED | Runtime crash |
+| 2 | emitter.rb | 410 | Cat 1: yield in nested block | CONFIRMED | Runtime crash |
+| 3 | emitter.rb | 419 | Cat 1: yield in nested block | CONFIRMED | Runtime crash |
+| 4 | globals.rb | 46 | Cat 1: yield comma | CONFIRMED | Runtime crash (same root cause) |
+| 5 | compile_calls.rb | 323 | Cat 1: yield + block forwarding | CONFIRMED | Comment-only, same root cause |
+| 6 | compiler.rb | 621 | Cat 2: rest collision | CONFIRMED | Returns nil instead of local value |
+| 7 | regalloc.rb | 310 | Cat 2: xreg collision | CONFIRMED | selftest-c segfault on removal |
+| 8 | compile_comparisons.rb | 7 | Cat 2: op interpolation | CONFIRMED | Returns "set" instead of "sethello" |
+| 9 | output_functions.rb | 57 | Cat 2: arg name collision | CONFIRMED | Comment-only, same root cause |
+| 10 | lib/core/enumerator.rb | 64 | Cat 2: range arg name | CONFIRMED | Compilation failure |
+| 11 | compile_arithmetic.rb | 122 | Cat 2: xdividend | **STALE - REMOVED** | selftest + selftest-c pass |
+| 12 | function.rb | 122 | Cat 2: r nil init | CONFIRMED | Segfault without explicit r=nil |
+| 13 | treeoutput.rb | 235 | Cat 3: ternary || | CONFIRMED | Returns `true` instead of `"yes"` |
+| 14 | treeoutput.rb | 263 | Cat 3: ternary assignment | CONFIRMED | selftest-c failure |
+| 15 | compile_arithmetic.rb | 115 | Cat 4: block_given? nested | CONFIRMED | Segfault / nil return |
+| 16 | compiler.rb | 563 | Cat 5: compile_case_test | **STALE** | All tests pass; kept as method (practical) |
+| 17 | compile_class.rb | 113 | Cat 5: compile_ary_do | **STALE - REMOVED** | Inlined, selftest + selftest-c pass |
+| 18 | transform.rb | 1088 | Cat 5: build_class_scopes | **STALE** | Comment updated; kept as method (practical) |
+| 19 | parser.rb | 797 | Cat 6: MRI divergence | CONFIRMED | Both paths needed for MRI bootstrap |
+| 20 | compiler.rb | 1231 | Cat 6: with_local parsing | CONFIRMED | selftest-c compilation failure |
+| 21 | emitter.rb | 401 | Cat 8: rescue | OUT OF SCOPE | Exception handling not implemented |
+| 22 | transform.rb | 911 | Cat 8: E[] segfault | CONFIRMED | Not re-verified; kept |
+| 23 | regalloc.rb | 303 | Cat 7: break guard | CONFIRMED | Register corruption (garbage values) |
+| 24 | regalloc.rb | 316 | Cat 7: break ebx | CONFIRMED | Segfault in nested iteration |
+| 25 | examples/yieldnest.rb | 11 | Cat 1 variant | N/A | Example file, not compiler source |
+
+### Changes Made
+
+**Workarounds removed (2):**
+- `compile_arithmetic.rb`: Removed `xdividend` workaround — use `dividend` directly
+- `compile_class.rb`: Removed `compile_ary_do` method — inlined into `compile_eigenclass`
+
+**Comments updated (all remaining @bug markers):**
+- Updated 19 @bug markers with verification date (2026-02-14), spec file reference, and failure description
+- Removed stale `FIXME` prefixes from confirmed bugs
+- Updated `parser.rb:797` comment to explain MRI compatibility (not a bug)
+- Updated `compiler.rb:563` comment to note construct works but method extraction kept for practicality
+
+**Spec files created (7):**
+- `spec/bug_yield_in_nested_block_spec.rb` (5 test cases, all crash — CONFIRMED)
+- `spec/bug_variable_name_collision_spec.rb` (5 runnable tests, 2 fail + 2 crash/compile-fail documented in comments)
+- `spec/bug_ternary_expression_spec.rb` (7 test cases, 1 fail — CONFIRMED)
+- `spec/bug_block_given_nested_spec.rb` (2 runnable tests, 1 fail + 3 crash documented in comments)
+- `spec/bug_self_recursive_lambda_spec.rb` (5 test cases, all pass — STALE)
+- `spec/bug_parser_divergence_spec.rb` (5 test cases, all pass — construct works at spec level)
+- `spec/bug_break_in_block_spec.rb` (4 runnable tests, 1 fail + nested crash documented in comments)
+
+### Counts
+- **Total markers examined:** 25 (across 14 files + 1 example)
+- **Confirmed bugs:** 18
+- **Stale/removed:** 4 (xdividend, compile_ary_do, compile_case_test, build_class_scopes)
+- **Out of scope:** 1 (rescue)
+- **Not compiler source:** 1 (examples/yieldnest.rb)
+- **Underlying distinct bugs:** ~6 (yield in nested blocks, variable name collision/env rewrite, ternary || evaluation, block_given? in nested context, parser divergence for `method(expr+N)`, break register corruption)
