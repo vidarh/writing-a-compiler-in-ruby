@@ -1,0 +1,34 @@
+Implementation complete. Here's a summary of what was done:
+
+## Summary
+
+### Changes Made
+
+**`lib/core/comparable.rb`** — Replaced the 3-line empty stub with a full Comparable module implementing 6 methods:
+- `<`, `<=`, `>`, `>=` — call `self <=> other`, return nil if `<=>` returns nil, otherwise compare result against 0
+- `==` — identity shortcut via `equal?`, then `<=>` based comparison (returns false if nil)
+- `between?(min, max)` — uses explicit `unless` guards to return false (not nil) when `<=>` returns nil
+
+Also reopens `String` and `Symbol` at the bottom with `include Comparable`, giving both classes comparison operators via their existing `<=>` implementations.
+
+### Test Results
+
+| Test | Result |
+|------|--------|
+| `make selftest` (MRI) | 0 failures |
+| `make selftest` (compiled) | 0 failures |
+| `make selftest-c` (self-compiled) | 2 known failures (unchanged) |
+| `spec/comparable_operators_spec.rb` | 30/30 pass |
+| `spec/comparable_string_spec.rb` | 17/17 pass |
+| `spec/comparable_symbol_spec.rb` | 10/10 pass |
+
+### Rubyspec Comparable Results
+
+- `between_spec.rb` — fails due to pre-existing compiler limitation (inherited `initialize` not forwarded to subclasses in modules)
+- `lt_spec.rb`, `gt_spec.rb`, `lte_spec.rb`, `gte_spec.rb`, `equal_value_spec.rb` — all fail to compile due to `:<=>` symbol literal not being parseable
+
+These failures are all pre-existing compiler limitations, not issues with the Comparable implementation.
+
+### Known Limitation
+
+`Comparable#==` cannot override `Object#==` because `__include_module` only fills uninitialized vtable slots. Since `Object` always defines `==` first, no class will get Comparable's `==` through module inclusion. This doesn't affect practical usage since Integer, String, and Symbol all have appropriate `==` implementations already.

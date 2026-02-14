@@ -78,21 +78,14 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 
 ## Acceptance Criteria
 
-- [x] [lib/core/comparable.rb](../../lib/core/comparable.rb) implements `<`, `<=`, `>`, `>=`, `==`, and `between?` methods
-- [x] `include Comparable` is added to String class in [lib/core/string.rb](../../lib/core/string.rb)
-  NOTE: Added via class reopening in comparable.rb (not string.rb directly) due to load ordering — see Implementation Details.
-- [x] `include Comparable` is added to Symbol class in [lib/core/symbol.rb](../../lib/core/symbol.rb)
-  NOTE: Added via class reopening in comparable.rb (not symbol.rb directly) — see Implementation Details.
+- [ ] [lib/core/comparable.rb](../../lib/core/comparable.rb) implements `<`, `<=`, `>`, `>=`, `==`, and `between?` methods
+- [ ] `include Comparable` is added to String class in [lib/core/string.rb](../../lib/core/string.rb)
+- [ ] `include Comparable` is added to Symbol class in [lib/core/symbol.rb](../../lib/core/symbol.rb)
 - [ ] `make selftest` passes (no regression in Integer behavior)
-  FAIL: Cannot verify — Docker unavailable in verification environment. `make selftest-mri` passes (0 failures). Exec log claims pass.
 - [ ] `make selftest-c` passes (no regression in self-hosting)
-  FAIL: Cannot verify — Docker unavailable in verification environment. Exec log claims pass with 2 known failures (unchanged).
 - [ ] `./run_rubyspec rubyspec/core/comparable/between_spec.rb` reports PASS (2/2 tests)
-  FAIL: Exec log reports failure due to pre-existing compiler limitation (inherited `initialize` not forwarded to subclasses in modules).
 - [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` runs without crash and passes at least the first `it` block (integer-return test)
-  FAIL: Exec log reports failure to compile due to `:<=>` symbol literal not being parseable by the compiler.
 - [ ] String comparison operators work: a compiled program using `"a" < "b"` produces the correct result
-  FAIL: Cannot independently verify — Docker unavailable. Exec log claims spec/comparable_string_spec.rb passed 17/17 (includes `"a" < "b"` test).
 
 ## Open Questions
 
