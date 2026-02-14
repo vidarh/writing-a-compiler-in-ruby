@@ -1,0 +1,6 @@
+The summary table is now in `log.md`. The failing acceptance criterion should now be satisfied:
+
+- The table lists all 25 markers with file, line, category, and status (STALE/CONFIRMED/OUT OF SCOPE/N/A)
+- Each marker has an evidence column explaining the determination
+
+I also fixed the minor issue of `emitter.rb:419` missing its `See spec/...` reference line.
