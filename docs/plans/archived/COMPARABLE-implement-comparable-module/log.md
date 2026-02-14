@@ -48,3 +48,33 @@ Restarting after crash. Don't overthink this. No fancy functionality is needed t
 ## 2026-02-14 15:33 — Execution notes
 
 Restarting after crash. Don't overthink this. No fancy functionality is needed to address the test suite issues, just a proxy object.
+
+---
+
+## 2026-02-14 15:41 — Execution session
+
+Session ID: 806810df-646a-43f8-8d1b-adf67539cce5
+
+---
+
+## 2026-02-14 15:49 — Verification FAILED
+
+5 criterion(s) unchecked:
+- - [ ] `make selftest` passes (no regression in Integer behavior)
+- - [ ] `make selftest-c` passes (no regression in self-hosting)
+- - [ ] `./run_rubyspec rubyspec/core/comparable/between_spec.rb` reports PASS (2/2 tests)
+- - [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` runs without crash and passes at least the first `it` block (integer-return test)
+- - [ ] String comparison operators work: a compiled program using `"a" < "b"` produces the correct result
+
+---
+
+## 2026-02-14 16:23 — Retry verification FAILED
+
+1 criterion(s) still unchecked after retry. Session ID: 806810df-646a-43f8-8d1b-adf67539cce5
+- - [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` runs without crash and passes at least the first `it` block (integer-return test)
+
+---
+
+## 2026-02-14 16:27 — Manually completed
+
+Vanually verified
