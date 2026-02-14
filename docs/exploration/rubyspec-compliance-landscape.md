@@ -1,7 +1,7 @@
 # RubySpec Compliance Landscape
 Path: /home/vidarh/Desktop/Projects/Compiler
 Explored: 2026-02-10
-Last reviewed: 2026-02-10
+Last reviewed: 2026-02-14
 Related goals: [COMPLANG](../goals/COMPLANG-compiler-advancement.md)
 
 ## What This Is
@@ -20,7 +20,7 @@ Three rubyspec suites are currently tracked via Makefile targets:
 
 | Suite | Files | Pass (file) | Individual pass rate | Results file |
 |-------|-------|-------------|---------------------|--------------|
-| language/ | 78 | 3 (4%) | 272/994 (27%) | [rubyspec_language.txt](../rubyspec_language.txt) |
+| language/ | 80 | 4 (5%) | 269/982 (27%) | [rubyspec_language.txt](../rubyspec_language.txt) |
 | core/regexp/ | 24 | 2 (8%) | 66/154 (42%) | [rubyspec_regexp.txt](../rubyspec_regexp.txt) |
 | core/integer/ | 67 | >=5 (truncated) | unknown (results truncated) | [rubyspec_integer.txt](../rubyspec_integer.txt) |
 
@@ -29,8 +29,8 @@ Three rubyspec suites are currently tracked via Makefile targets:
 
 ### The Full Rubyspec Universe
 
-The rubyspec git submodule contains **3,781 spec files** across:
-- `language/` — 78 files (currently tracked)
+The rubyspec git submodule contains **3,773 spec files** across:
+- `language/` — 66 raw files / 80 as counted by runner (currently tracked)
 - `core/` — 2,079 files (only integer/ and regexp/ tracked)
 - `library/` — large (not tracked)
 - `command_line/`, `security/`, `optional/` — not tracked
@@ -38,7 +38,7 @@ The rubyspec git submodule contains **3,781 spec files** across:
 ### Correcting the "47 of 78 Crash" Framing
 
 The existing documentation (TODO.md, KNOWN_ISSUES.md, COMPLANG goal)
-prominently features "47 of 78 spec files crash (60%)." This number is
+prominently features "47 of 78 spec files crash (60%)" (now 48 of 80). This number is
 misleading in several ways:
 
 1. **"CRASH" doesn't mean segfault.** In [run_rubyspec](../../run_rubyspec)
@@ -47,28 +47,29 @@ misleading in several ways:
    loops, mid-test fatal errors from missing methods, and control flow bugs
    that abort the test binary before the summary line is printed.
 
-2. **24 of 47 "crash" files actually ran tests successfully.** They produced
-   partial results: 95 tests passed and 175 failed across these 24 files
-   before the test binary exited without printing the summary line. Examples:
+2. **Many of 48 "crash" files actually ran tests successfully.** They produced
+   partial results before the test binary exited without printing the summary
+   line. Examples from recent runs:
    - `until_spec.rb`: 23 passed, 5 failed, then crashed
    - `array_spec.rb`: 13 passed, 9 failed, then crashed
    - `case_spec.rb`: 10 passed, 1 failed, then crashed
    - `string_spec.rb`: 13 passed, 14 failed, then crashed
 
-3. **Only 23 files truly produced zero test output** (P:0 F:0 S:0 T:0).
+3. **A subset truly produced zero test output** (P:0 F:0 S:0 T:0).
    These are the genuinely opaque failures.
 
-4. **The 47/78 metric focuses on the wrong denominator.** The rubyspec has
-   3,781 files. Tracking 78 (language/) captures only 2% of the suite. The
+4. **The 48/80 metric focuses on the wrong denominator.** The rubyspec has
+   3,773 files. Tracking 78 (language/) captures only 2% of the suite. The
    more relevant questions are:
    - Of all rubyspec files, how many can the runner+compiler even attempt?
    - Of those attempted, what's the individual test pass rate?
 
 5. **A second results file exists with different numbers.**
    [rubyspec_language_new.txt](../rubyspec_language_new.txt) shows results
-   without the sed workarounds: 12 COMPILE FAILs, 39 crashes, 25 fails,
-   3 pass. The sed transformations convert 12 compile failures into runtime
-   crashes or failures, improving the individual pass rate from 15% to 27%.
+   from an earlier run without the sed workarounds: 12 COMPILE FAILs, 39
+   crashes, 25 fails, 3 pass (79 files, 158/993 = 15%). With workarounds
+   the current run shows 269/982 = 27%, confirming workarounds provide
+   significant value.
 
 ### The Custom Runner Architecture
 
@@ -142,14 +143,14 @@ approach for the foreseeable future.
   rate, which is likely one of the highest since integer.rb is one of the
   most complete implementations.
 
-- **Reclassify "CRASH" files with partial output**: The 24 files that run
-  partial tests before crashing are nearly as actionable as the 28 FAIL files.
+- **Reclassify "CRASH" files with partial output**: The files that run
+  partial tests before crashing are nearly as actionable as the 27 FAIL files.
   The runner could report a 4th category: "PARTIAL" (ran some tests but
   didn't print summary). This would make the metrics more honest and direct
   attention to the actually-opaque 23 zero-output failures.
 
-- **Identify the last test before crash for partial-crash files**: For the
-  24 files that produce partial output, the last `[P:X F:Y S:Z]` line
+- **Identify the last test before crash for partial-crash files**: For
+  files that produce partial output, the last `[P:X F:Y S:Z]` line
   before the crash identifies exactly which test causes the crash. This
   gives immediate debugging targets without needing any crash triage — the
   data is already in the output.
@@ -169,8 +170,8 @@ approach for the foreseeable future.
   - core/kernel/: 131 specs, critical but many missing methods
 
 - **Correct documentation metrics**: TODO.md, KNOWN_ISSUES.md, and the
-  COMPLANG goal all say "47 crashing" without noting that 24 of these
-  produce useful partial output. The "3/78 passing (4%)" metric undersells
+  COMPLANG goal may still say "47 crashing" without noting that many
+  produce useful partial output. The "4/80 passing (5%)" metric undersells
   progress — the individual test pass rate (27%) and the partial-crash
   data tell a much richer story.
 
@@ -187,17 +188,17 @@ approach for the foreseeable future.
   high pass rates — they would demonstrate that the compiler handles
   more of rubyspec than the language/ suite alone suggests.
 
-- **Partial-crash-to-fail conversion**: For the 24 files that crash
+- **Partial-crash-to-fail conversion**: For the files that crash
   mid-test, wrapping the `run_specs` call in a more robust error handler
   in rubyspec_helper.rb could catch some failures and print the summary
   line, converting CRASH to FAIL. This doesn't fix the underlying bugs
   but makes the results more informative.
 
 - **Sed workaround impact analysis**: Compare rubyspec_language.txt
-  (with workarounds, 272/994 pass = 27%) against rubyspec_language_new.txt
-  (without workarounds, 158/993 pass = 15%). The delta (114 more tests
-  passing) quantifies the value of the sed transformations and identifies
-  which compiler bugs, if fixed, would make the workarounds unnecessary.
+  (with workarounds, 269/982 pass = 27%) against rubyspec_language_new.txt
+  (without workarounds). The delta quantifies the value of the sed
+  transformations and identifies which compiler bugs, if fixed, would
+  make the workarounds unnecessary.
 
 - **Near-passing file identification**: From the results, files that are
   one failure away from full-pass (e.g., case_spec: 10 pass, 1 fail but
