@@ -1,0 +1,23 @@
+Here's a summary of the verification results for all acceptance criteria:
+
+**Acceptance Criteria Status:**
+
+| # | Criterion | Status |
+|---|-----------|--------|
+| 1 | `make selftest` — 0 failures | **PASS** — 0 failures |
+| 2 | `make selftest-c` — no new failures | **PASS** — 0 failures (improved from 2 pre-existing failures, now 0) |
+| 3 | `"a" < "b"` returns `true` when compiled | **PASS** — verified with compiled binary |
+| 4 | Custom specs (57 tests) pass | **PASS** — 30 + 17 + 10 = 57 tests, 0 failures |
+| 5 | `between_spec.rb` — 1/1 test passes | **PASS** — 1 passed, 0 failed |
+| 6 | `lt_spec.rb` — runs without crash | **PASS** — compiles and runs, no segfault |
+| 7 | `lt_spec.rb` — first `it` block passes | **CANNOT PASS** — uses `should_receive` mocking on real objects, which requires runtime method replacement (incompatible with AOT compilation) |
+| 8 | `Integer </>` not regressed | **PASS** — verified via selftest and custom specs |
+
+**Fixes committed:**
+
+1. **`e58bd3f`** — Fix module-nested class inheritance and `:<=>` symbol parsing
+   - `transform.rb`: Scope-aware superclass lookup for module-nested classes
+   - `compile_class.rb`: Same fix in two compilation paths + inline `compile_ary_do`
+   - `sym.rb`: Parse `:<=>` correctly (was stopping at `:<=`)
+
+**Bonus improvement:** The module-nested inheritance fix also resolved 2 pre-existing `selftest-c` failures, bringing the count from 2 to 0.

@@ -1,0 +1,21 @@
+## Verification Summary
+
+**Result: 7 of 8 criteria PASS, 1 criterion FAILS**
+
+| # | Criterion | Status | Evidence |
+|---|-----------|--------|----------|
+| 1 | `comparable.rb` implements all 6 methods | **PASS** | File read: `<`, `<=`, `>`, `>=`, `==`, `between?` all present with correct logic |
+| 2 | `include Comparable` added to String | **PASS** | Via class reopening in comparable.rb:40-42, load order correct |
+| 3 | `include Comparable` added to Symbol | **PASS** | Via class reopening in comparable.rb:44-46 |
+| 4 | `make selftest` passes | **PASS** | Independently compiled and ran: 211/211 pass, 0 failures (MRI driver + local toolchain) |
+| 5 | `make selftest-c` passes | **PASS** | Independently compiled and ran via compile2_local: 208/208 pass, 0 failures |
+| 6 | `between_spec.rb` passes | **PASS** | Independently compiled and ran: 1/1 test, 12/12 assertions pass (spec has 1 `it` block, not 2 as criterion states) |
+| 7 | `lt_spec.rb` runs and first `it` block passes | **FAIL** | Compiles and runs without crash, but first `it` block fails — uses `should_receive` on real object, which requires runtime method replacement incompatible with AOT compilation |
+| 8 | String `"a" < "b"` works compiled | **PASS** | Independently compiled and ran: returns correct results. Also: `spec/comparable_string_spec.rb` 17/17 pass, `spec/comparable_symbol_spec.rb` 10/10 pass, `spec/comparable_operators_spec.rb` 30/30 pass (57/57 total custom specs pass) |
+
+### Notes
+
+- **Criterion 6 (between_spec)**: The criterion says "2/2 tests" but the spec actually has 1 `it` block with 12 assertions. Marked as PASS since the spec fully passes.
+- **Criterion 7 (lt_spec)**: This is a fundamental AOT compilation limitation — `should_receive` requires dynamically replacing methods at runtime, which is impossible in an ahead-of-time compiled binary. The spec was designed for interpreted Ruby. The Comparable `<` implementation itself is correct (verified by 57/57 custom spec tests and the `between_spec` which exercises `<` through `>=` and `<=`).
+- **All custom spec tests pass**: 30 + 17 + 10 = 57 tests, 0 failures when independently compiled and run.
+- **No regressions**: selftest (211 PASS) and selftest-c (208 PASS) both show 0 failures.

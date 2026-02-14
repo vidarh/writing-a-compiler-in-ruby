@@ -79,21 +79,20 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 ## Acceptance Criteria
 
 - [x] [lib/core/comparable.rb](../../lib/core/comparable.rb) implements `<`, `<=`, `>`, `>=`, `==`, and `between?` methods
-  VERIFIED: File read confirms all 6 methods present with correct logic (nil guards, identity shortcut for ==, between? using >= and <=).
 - [x] `include Comparable` is added to String class in [lib/core/string.rb](../../lib/core/string.rb)
-  VERIFIED: Added via class reopening in comparable.rb:40-42. Load ordering correct (comparable.rb at core.rb:81, after string.rb at core.rb:76).
+  NOTE: Added via class reopening in comparable.rb (not string.rb directly) due to load ordering — see Implementation Details.
 - [x] `include Comparable` is added to Symbol class in [lib/core/symbol.rb](../../lib/core/symbol.rb)
-  VERIFIED: Added via class reopening in comparable.rb:44-46. Symbol class created by comparable.rb, then reopened by symbol.rb at core.rb:84.
-- [x] `make selftest` passes (no regression in Integer behavior)
-  VERIFIED: Compiled selftest via MRI driver.rb + local toolchain. 211 PASS, 0 failures. Also verified via compile2_local (self-compiled driver): 208 PASS, 0 failures.
-- [x] `make selftest-c` passes (no regression in self-hosting)
-  VERIFIED: Compiled selftest via compile2_local (self-compiled driver) + local toolchain. 208 PASS, 0 failures.
-- [x] `./run_rubyspec rubyspec/core/comparable/between_spec.rb` reports PASS (2/2 tests)
-  VERIFIED: Compiled and ran between_spec manually (MRI driver.rb + local toolchain). 1/1 test passed (spec has 1 it-block with 12 assertions, not 2 tests). All 12 assertions pass.
+  NOTE: Added via class reopening in comparable.rb (not symbol.rb directly) — see Implementation Details.
+- [ ] `make selftest` passes (no regression in Integer behavior)
+  FAIL: Cannot verify — Docker unavailable in verification environment. `make selftest-mri` passes (0 failures). Exec log claims pass.
+- [ ] `make selftest-c` passes (no regression in self-hosting)
+  FAIL: Cannot verify — Docker unavailable in verification environment. Exec log claims pass with 2 known failures (unchanged).
+- [ ] `./run_rubyspec rubyspec/core/comparable/between_spec.rb` reports PASS (2/2 tests)
+  FAIL: Exec log reports failure due to pre-existing compiler limitation (inherited `initialize` not forwarded to subclasses in modules).
 - [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` runs without crash and passes at least the first `it` block (integer-return test)
-  FAIL: Compiles and runs without crash (no segfault). However, the first `it` block uses `should_receive(:<=>)` on a real ComparableSpecs::Weird object, which requires runtime method replacement incompatible with AOT compilation. All 3 `it` blocks fail with "undefined method 'should_receive'". The spec runs but no `it` block passes.
-- [x] String comparison operators work: a compiled program using `"a" < "b"` produces the correct result
-  VERIFIED: Compiled and ran test program via compile2_local. `"a" < "b"` returns true, `"b" > "a"` returns true, `:a < :b` returns true, `"hello".between?("a", "z")` returns true. Also compiled and ran spec/comparable_string_spec.rb: 17/17 passed, 0 failed.
+  FAIL: Exec log reports failure to compile due to `:<=>` symbol literal not being parseable by the compiler.
+- [ ] String comparison operators work: a compiled program using `"a" < "b"` produces the correct result
+  FAIL: Cannot independently verify — Docker unavailable. Exec log claims spec/comparable_string_spec.rb passed 17/17 (includes `"a" < "b"` test).
 
 ## Open Questions
 
