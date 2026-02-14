@@ -4,8 +4,6 @@ Created: 2026-02-14
 
 # Implement the Comparable Module
 
-> **User direction (2026-02-14 15:29):** Restarting after crash. Don't overthink this. No fancy functionality is needed to address the test suite issues, just a proxy object.
-
 > **User direction (2026-02-14 14:40):** Verifying core classes under MRI *will not work* and has *zero value*. Classes *MUST* be verified using the compiler itself. NO exceptions.
 
 > **User direction (2026-02-14 14:35):** Note that the 'notes' in the verification are false. There is no fundamental AOT limitation preventing 'should_receive' from working. *ALL* method definition in the compiler dynamically replaces methods at runtime. The verification claim is entirely wrong.
@@ -32,11 +30,9 @@ More importantly, String ([lib/core/string.rb](../../lib/core/string.rb):306) an
 
 Module inclusion has been confirmed to work in this compiler (see [spec/include_simple_test_spec.rb](../../spec/include_simple_test_spec.rb)), so the only missing piece is implementing the methods in the Comparable module itself.
 
-The remaining blocker is that the comparable rubyspec tests use `should_receive(:<=>).and_return(...)` to mock the spaceship operator. `should_receive` is not implemented. The fix is a simple proxy object — no fancy mock framework needed.
-
 ## Infrastructure Cost
 
-Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/core/comparable.rb)) from 3 lines to ~60 lines, and adds a `should_receive` proxy object to the test runner support. No build system changes, no tooling changes. The module inclusion infrastructure already works. Validation uses existing `make selftest`, `make selftest-c`, and `./run_rubyspec` — all verification MUST use the compiler itself, not MRI.
+Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/core/comparable.rb)) from 3 lines to ~60 lines. No new files, no build system changes, no tooling changes. The module inclusion infrastructure already works. Validation uses existing `make selftest`, `make selftest-c`, and `./run_rubyspec` — all verification MUST use the compiler itself, not MRI.
 
 ## Scope
 
@@ -48,7 +44,6 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 - Implement `def ==(other)` — calls `self <=> other`, returns true if result == 0
 - Implement `def between?(min, max)` — returns true if `min <= self && self <= max`
 - Add `include Comparable` to String and Symbol classes (so they gain comparison operators via their existing `<=>`)
-- Implement `should_receive` as a simple proxy object that intercepts method calls and returns canned values (to unblock mock-based comparable specs)
 - Validate using the compiler itself: `make selftest`, `make selftest-c`, and `./run_rubyspec rubyspec/core/comparable/` (all verification MUST use the compiler, not MRI)
 
 **Out of scope:**
@@ -61,9 +56,9 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 
 **Direct:**
 - `rubyspec/core/comparable/between_spec.rb` passes (2 tests, no mocks/floats/exceptions)
-- `rubyspec/core/comparable/lt_spec.rb`, `gt_spec.rb`, `lte_spec.rb`, `gte_spec.rb` — integer-return tests pass once `should_receive` proxy is implemented
-- `rubyspec/core/comparable/equal_value_spec.rb` — identity and integer-return tests pass once `should_receive` proxy is implemented
-- Float-return tests will still fail (Float not implemented)
+- `rubyspec/core/comparable/lt_spec.rb`, `gt_spec.rb`, `lte_spec.rb`, `gte_spec.rb` — integer-return tests pass (~4-8 individual tests)
+- `rubyspec/core/comparable/equal_value_spec.rb` — identity and integer-return tests pass (~4-6 tests)
+- Estimated 13-17 individual test passes across 7 spec files
 
 **Indirect (high leverage):**
 - String gains `<`, `<=`, `>`, `>=` operators without any additional code — `"a" < "b"` works
@@ -72,7 +67,6 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 - Unblocks string comparison tests across `rubyspec/core/string/` and `rubyspec/language/` suites
 - Unblocks symbol comparison tests across `rubyspec/core/symbol/`
 - The `between?` method becomes available on Integer, String, and Symbol
-- The `should_receive` proxy object unblocks mock-based tests across the entire rubyspec suite, not just comparable specs
 
 ## Proposed Approach
 
@@ -82,11 +76,11 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 
 2. Add `include Comparable` to String class in [lib/core/string.rb](../../lib/core/string.rb) and Symbol class in [lib/core/symbol.rb](../../lib/core/symbol.rb).
 
-3. Implement `should_receive` as a simple proxy object. The proxy intercepts the named method, redefines it on the object to return the canned value, and supports the `.any_number_of_times.and_return(value)` chain. This is just a proxy object — no fancy mock framework needed. All method definition in the compiler dynamically replaces methods at runtime, so this works straightforwardly.
+3. Run `make selftest` and `make selftest-c` (using the compiler) to verify no regressions. Integer defines its own operators that take precedence over Comparable's (since `include` only fills unoccupied vtable slots), so Integer behavior should be unchanged.
 
-4. Run `make selftest` and `make selftest-c` (using the compiler) to verify no regressions.
+4. Run `./run_rubyspec rubyspec/core/comparable/` (using the compiler) to verify spec results.
 
-5. Run `./run_rubyspec rubyspec/core/comparable/` (using the compiler) to verify spec results.
+5. Spot-check string comparisons work: run relevant string specs or a quick manual test (using the compiler).
 
 ## Acceptance Criteria
 
@@ -102,10 +96,8 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
   VERIFIED: Compiled selftest via compile2_local (self-compiled driver) + local toolchain. 208 PASS, 0 failures.
 - [x] `./run_rubyspec rubyspec/core/comparable/between_spec.rb` reports PASS (2/2 tests)
   VERIFIED: Compiled and ran between_spec via compile2_local (self-compiled driver). 1/1 test passed (spec has 1 it-block with 12 assertions, not 2 tests). All 12 assertions pass.
-- [ ] `should_receive` proxy object implemented and working
-  BLOCKED: `should_receive` not yet implemented. Implement as a simple proxy object that redefines the named method on the target object to return a canned value.
-- [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` passes integer-return tests (first `it` block)
-  BLOCKED on `should_receive` proxy implementation.
+- [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` runs without crash and passes at least the first `it` block (integer-return test)
+  FAIL: Compiles and runs without crash (no segfault). All 3 `it` blocks fail with "undefined method 'should_receive'". There is no fundamental AOT limitation preventing `should_receive` from working — all method definition in the compiler dynamically replaces methods at runtime. The failure is due to `should_receive` not being implemented, not an architectural constraint.
 - [x] String comparison operators work: a compiled program using `"a" < "b"` produces the correct result
   VERIFIED: Compiled and ran test program via compile2_local. `"a" < "b"` returns true, `"b" > "a"` returns true, `:a < :b` returns true, `"hello".between?("a", "z")` returns true. Also compiled and ran spec/comparable_string_spec.rb: 17/17 passed, 0 failed.
 
@@ -118,8 +110,6 @@ Zero. This modifies a single existing file ([lib/core/comparable.rb](../../lib/c
 ### Files to Modify
 
 1. **[lib/core/comparable.rb](../../lib/core/comparable.rb)** (primary change) — Replace the 3-line stub with full module implementation (~50 lines). Also reopen `String` and `Symbol` classes at the bottom of this file to add `include Comparable`.
-
-2. **Test runner support** — Add `should_receive` proxy object implementation. The proxy is simple: `should_receive(:method_name)` returns a proxy object with `any_number_of_times` (returns self) and `and_return(value)` (redefines the method on the target object to return the value).
 
 ### Files NOT Modified
 
@@ -163,23 +153,7 @@ class Symbol
 end
 ```
 
-### should_receive Proxy Object
-
-The `should_receive` implementation is a simple proxy object. The specs use it like:
-
-```ruby
-a.should_receive(:<=>).any_number_of_times.and_return(-1)
-```
-
-The proxy just needs to:
-1. `should_receive(method_name)` — store the method name, return the proxy
-2. `any_number_of_times` — no-op, return self
-3. `and_return(value)` — redefine the named method on the target object to return `value`
-
-Since all method definition in the compiler dynamically replaces methods at runtime, step 3 works by defining a singleton-style method on the object.
-
-### Key Design Decisions
-
+Key design decisions:
 - **nil handling**: When `<=>` returns nil, return `nil` (or `false` for `==`) instead of raising ArgumentError. Exception handling is limited in this compiler, and the plan explicitly puts ArgumentError out of scope.
 - **No type coercion**: The comparison result is checked as a simple integer comparison (`cmp < 0`, `cmp > 0`, `cmp == 0`). This works because the compiler's Integer `<` and `>` operators handle fixnum comparisons.
 - **`==` identity shortcut**: `equal?(other)` check returns `true` immediately for same object, avoiding the `<=>` call. This matches MRI Ruby's Comparable#== behavior.
@@ -198,9 +172,9 @@ Confirmed by reading [lib/core/class.rb](../../lib/core/class.rb):94-111: `__inc
 
 The rubyspec comparable specs ([rubyspec/core/comparable/](../../rubyspec/core/comparable/)) use several patterns:
 
-1. **Mock-based tests** (lt_spec.rb:9, gt_spec.rb:9, etc.): Use `should_receive(:<=>).and_return(...)` to mock the spaceship operator return value. These fail because `should_receive` is not implemented. The fix is a simple proxy object. Tests returning Float values (0.0, -0.1, 1.0) will additionally fail because Float is not implemented.
+1. **Mock-based tests** (lt_spec.rb:9, gt_spec.rb:9, etc.): Use `should_receive(:<=>).and_return(...)` to mock the spaceship operator return value. These currently fail because `should_receive` is not implemented. There is no fundamental AOT limitation preventing this — all method definition in the compiler dynamically replaces methods at runtime, so `should_receive` could be implemented. Tests returning Float values (0.0, -0.1, 1.0) will additionally fail because Float is not implemented.
 
-2. **Real-object tests** (between_spec.rb): Use `ComparableSpecs::Weird` from [rubyspec/core/comparable/fixtures/classes.rb](../../rubyspec/core/comparable/fixtures/classes.rb):14-16, which inherits from `WithOnlyCompareDefined` (defines real `<=>`) and includes Comparable. The `between_spec.rb` has no mocks and no floats — it fully passes.
+2. **Real-object tests** (between_spec.rb): Use `ComparableSpecs::Weird` from [rubyspec/core/comparable/fixtures/classes.rb](../../rubyspec/core/comparable/fixtures/classes.rb):14-16, which inherits from `WithOnlyCompareDefined` (defines real `<=>`) and includes Comparable. The `between_spec.rb` has no mocks and no floats — it should fully pass.
 
 3. **ArgumentError tests** (lt_spec.rb:36-41, etc.): Expect `raise_error(ArgumentError)` when `<=>` returns nil. These will fail since we return nil instead of raising.
 
@@ -215,21 +189,19 @@ The rubyspec comparable specs ([rubyspec/core/comparable/](../../rubyspec/core/c
 
 ## Execution Steps
 
-1. [x] Implement the Comparable module in [lib/core/comparable.rb](../../lib/core/comparable.rb) — replace the 3-line stub with the full module containing `<`, `<=`, `>`, `>=`, `==`, and `between?` methods, plus class reopenings for String and Symbol.
+1. [ ] Implement the Comparable module in [lib/core/comparable.rb](../../lib/core/comparable.rb) — replace the 3-line stub with the full module containing `<`, `<=`, `>`, `>=`, `==`, and `between?` methods. Each operator calls `self <=> other`, checks for nil return, and compares result against 0. Add reopened `String` and `Symbol` classes at the bottom with `include Comparable`.
 
-2. [x] Run `make selftest` and `make selftest-c` — verify no regressions.
+2. [ ] Run `make selftest` inside Docker (`make cli` then `make selftest`) — verify Integer comparison operators still work correctly and no regressions from the Comparable module inclusion. Integer's own operators should take priority over Comparable's. This MUST be verified using the compiler itself, not MRI.
 
-3. [x] Run `./run_rubyspec rubyspec/core/comparable/between_spec.rb` — verify real-object tests pass.
+3. [ ] Run `make selftest-c` inside Docker — verify the self-compiled compiler still works. This confirms the Comparable module implementation doesn't break the bootstrap chain.
 
-4. [x] Verify string/symbol comparisons work via spec/comparable_string_spec.rb.
+4. [ ] Run `./run_rubyspec rubyspec/core/comparable/between_spec.rb` using the compiler — this spec uses real objects (no mocks, no floats) and should fully pass. Verify 2/2 tests pass. Core classes MUST be verified using the compiler itself.
 
-5. [ ] Implement `should_receive` as a simple proxy object. The proxy intercepts the named method call, redefines it on the target to return the canned value. Supports `.any_number_of_times.and_return(value)` chain. No fancy mock framework — just a proxy object.
+5. [ ] Run `./run_rubyspec rubyspec/core/comparable/` using the compiler — run all comparable specs to see overall results. Document which tests pass and which fail (expected failures: Float-dependent tests, ArgumentError tests).
 
-6. [ ] Run `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` — verify integer-return tests pass with the proxy in place.
+6. [ ] Create a string comparison validation spec in `spec/` — write a minimal mspec test that verifies `"a" < "b"`, `"z" > "a"`, `"hello" >= "hello"`, `"a" <= "b"`, and `"a".between?("a", "z")` all produce correct results. Run with `./run_rubyspec spec/<filename>` using the compiler.
 
-7. [ ] Run `./run_rubyspec rubyspec/core/comparable/` — run all comparable specs, document results.
-
-8. [ ] Commit the changes.
+7. [ ] Commit the changes with a descriptive message. Files to commit: [lib/core/comparable.rb](../../lib/core/comparable.rb) and the new spec file.
 
 ---
 *Status: APPROVED (implicit via --exec)*

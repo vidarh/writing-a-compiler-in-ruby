@@ -36,3 +36,9 @@ Note that the 'notes' in the verification are false. There is no fundamental AOT
 ## 2026-02-14 14:40 — Execution notes
 
 Verifying core classes under MRI *will not work* and has *zero value*. Classes *MUST* be verified using the compiler itself. NO exceptions.
+
+---
+
+## 2026-02-14 15:29 — Execution notes
+
+Restarting after crash. Don't overthink this. No fancy functionality is needed to address the test suite issues, just a proxy object.
