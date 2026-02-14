@@ -92,5 +92,102 @@ The current `compile_local` hardcodes GCC 8 paths (`gcc/x86_64-linux-gnu/8/32`).
 8. The unified `compile` script auto-detects the host GCC version rather than hardcoding GCC 8.
 9. `run_rubyspec` works without modification (it calls `./compile` which now handles mode selection).
 
+## Implementation Details
+
+### Files to read/modify
+
+- [compile](../../compile) (33 lines) — Currently a pure-Docker script. The `dr()` helper on line 11-13 wraps every command in `docker run`. Three `dr()` calls: line 17 (ruby driver.rb), line 18 (gcc -c tgc.c), line 24 (gcc link). Must be restructured to conditionally use local toolchain or Docker.
+- [compile2](../../compile2) (33 lines) — Near-identical to `compile` but invokes `out/driver` (the compiled compiler) instead of `ruby driver.rb` on line 17 and appends `2` to output names (lines 16, 17, 24). Same restructuring needed.
+- [compile_local](../../compile_local) (72 lines) — Contains the local toolchain logic to merge into `compile`. Key elements:
+  - GCC version path resolution: line 15 (`gcc32` variable) — currently hardcoded to GCC 8
+  - Toolchain root detection: line 11 (`GLIBC32_ROOT` env var with fallback)
+  - Required file validation: line 23 (checks for `libc.so.6` and `crt1.o`)
+  - Link flags construction: lines 45-66 (nostdlib, explicit CRT objects, library paths)
+  - tgc.o caching: lines 37-43 (only recompiles if missing)
+- [compile2_local](../../compile2_local) (72 lines) — Identical to `compile_local` except: line 33 uses `out/driver` instead of `ruby driver.rb`, and output names have `2` suffix. Will be deleted after merge.
+- [Makefile](../../Makefile) (105 lines) — Targets to modify:
+  - `fetch-glibc32` (lines 74-82): Keep as-is, add `setup-toolchain` and `local-check` targets
+  - `selftest-c2` (line 60-63) and `hello` (line 25-27): These use `${DR}` (Docker) directly — consider leaving as-is (these are minor/legacy targets)
+- [.gitignore](../../.gitignore) — line 4 has `bin/*` which would ignore `bin/setup-i386-toolchain`. Need to add an exception: `!bin/setup-i386-toolchain`.
+- [run_rubyspec](../../run_rubyspec) — line 134 calls `./compile` — no changes needed (will automatically benefit from the unified script).
+
+### Key variables and paths in compile_local to preserve
+
+The local toolchain logic uses these directory layout assumptions (matching the Docker image's Debian Buster layout):
+
+| Variable       | Path under `toolchain/32root/`                    | Contains                        |
+|----------------|---------------------------------------------------|---------------------------------|
+| `lib32`        | `lib/i386-linux-gnu/`                             | `libc.so.6`, `ld-linux.so.2`, `libgcc_s.so.1` |
+| `usr32`        | `usr/lib32/`                                      | `crt1.o`, `crti.o`, `crtn.o`, `libc_nonshared.a` |
+| `usr_i386`     | `usr/lib/i386-linux-gnu/`                         | Additional i386 libs            |
+| `gcc32`        | `usr/lib/gcc/x86_64-linux-gnu/<VER>/32/`          | `crtbegin.o`, `crtend.o`       |
+| `dynamic_linker` | `lib/i386-linux-gnu/ld-linux.so.2`              | Dynamic linker                  |
+
+On host systems with `gcc-multilib` installed, the same files live under system paths:
+- `/usr/lib32/` or `/usr/lib/i386-linux-gnu/` — CRT objects
+- `/lib/i386-linux-gnu/` or `/lib32/` — shared libs
+- `/usr/lib/gcc/x86_64-linux-gnu/<VER>/32/` — GCC CRT objects
+
+The `bin/setup-i386-toolchain` script must map from system paths to the `toolchain/32root/` layout that `compile_local` expects.
+
+### Design for the unified compile script
+
+The unified `compile` script should:
+
+1. Keep the existing `dr()` function for Docker mode.
+2. Add a new function (e.g., `local_toolchain_available?`) that checks:
+   - `toolchain/32root/lib/i386-linux-gnu/libc.so.6` exists
+   - `toolchain/32root/usr/lib32/crt1.o` exists
+   - A `crtbegin.o` exists somewhere under `toolchain/32root/usr/lib/gcc/`
+3. Add a `find_gcc_version()` function that globs for `toolchain/32root/usr/lib/gcc/x86_64-linux-gnu/*/32/crtbegin.o` and returns the first match's version directory.
+4. Support `COMPILE_MODE=docker` or `COMPILE_MODE=local` env var to force a specific mode.
+5. Merge the local toolchain linking logic from `compile_local` (lines 45-72) into `compile` inside a conditional branch.
+
+The key difference between `compile` and `compile2` is only the compilation step (line 17): `ruby driver.rb` vs `out/driver`. The linking step is identical. Both should share the same local-toolchain linking logic.
+
+### Design for bin/setup-i386-toolchain
+
+The script should be a bash script that:
+
+1. Checks if `toolchain/32root/` is already populated and valid → skip if so.
+2. Detects the distro (check `/etc/os-release` for `ID=debian`, `ID=ubuntu`, etc.).
+3. **Method 1 (apt, needs root)**: Check if `libc6-dev-i386` and `gcc-multilib` packages are installed. If not, offer to install them. Then symlink/copy from system paths into `toolchain/32root/`.
+4. **Method 2 (deb extraction, no root)**: Download `.deb` packages from the Ubuntu/Debian archive and extract with `dpkg-deb -x`.
+5. Detect the system GCC version by inspecting `/usr/lib/gcc/x86_64-linux-gnu/*/` or `gcc -dumpversion`.
+6. Validate the result by checking all required files exist.
+
+### Edge cases
+
+- **tgc.o caching**: `compile_local` only recompiles `tgc.c` if `out/tgc.o` doesn't exist (line 37). The Docker-based `compile` recompiles it every time (line 18). The unified script should follow the local behavior (cache `tgc.o`), since recompiling a C file unnecessarily wastes time.
+- **`/tmp` volume mount**: The Docker `dr()` in `compile` (line 13) mounts `-v /tmp:/tmp` but `compile2` (line 13) does not. The unified script should not need `/tmp` mounts in local mode, but Docker fallback should preserve existing behavior.
+- **`2>&1` redirect**: `compile2` line 17 redirects stderr to stdout (`2>&1 >out/...`). `compile` line 17 does not. The unified script must preserve this difference.
+- **`.gitignore` has `bin/*`**: This will ignore the new `bin/setup-i386-toolchain` script. Must add `!bin/setup-i386-toolchain` exception.
+
+## Execution Steps
+
+1. [ ] Create `bin/setup-i386-toolchain` bash script — Create the directory `bin/` and the script. Implement: (a) detect distro via `/etc/os-release`, (b) check if `gcc-multilib` and `libc6-dev-i386` are installed via `dpkg -s`, (c) detect GCC version by globbing `/usr/lib/gcc/x86_64-linux-gnu/*/`, (d) populate `toolchain/32root/` by symlinking from system paths, (e) validate required files (`crt1.o`, `crti.o`, `crtn.o`, `crtbegin.o`, `crtend.o`, `libc.so.6`, `ld-linux.so.2`, `libgcc_s.so.1`, `libc_nonshared.a`), (f) print validation summary. Make it executable (`chmod +x`).
+
+2. [ ] Unify `compile` with `compile_local` — Rewrite [compile](../../compile) to: (a) keep the existing `dr()` Docker helper, (b) add a `local_toolchain_available?` check function, (c) add a `find_gcc32_dir()` function that globs `toolchain/32root/usr/lib/gcc/x86_64-linux-gnu/*/32/crtbegin.o`, (d) add a `run_local()` path that uses the linking logic from [compile_local](../../compile_local) lines 11-72, (e) support `COMPILE_MODE` env var override, (f) print mode selection ("Using local toolchain" vs "Using Docker"). Preserve the existing Docker path as fallback.
+
+3. [ ] Unify `compile2` with `compile2_local` — Apply the same pattern to [compile2](../../compile2): same structure as step 2 but with the `out/driver` invocation (instead of `ruby driver.rb`) and `2` output suffix. The differences from `compile` are: line 17 uses `#{dir}/out/driver` and line 13 omits the `-v /tmp:/tmp` Docker mount. Preserve these differences.
+
+4. [ ] Delete `compile_local` and `compile2_local` — Remove [compile_local](../../compile_local) and [compile2_local](../../compile2_local) since their logic is now merged into `compile` and `compile2`.
+
+5. [ ] Update `.gitignore` — Add `!bin/setup-i386-toolchain` exception after the `bin/*` line in [.gitignore](../../.gitignore):4 so the new script is tracked by git.
+
+6. [ ] Add Makefile targets — Add to [Makefile](../../Makefile): (a) `setup-toolchain` phony target that runs `bin/setup-i386-toolchain`, (b) `local-check` phony target that checks for required files in `toolchain/32root/` and prints status. Add both to `.PHONY` declarations.
+
+7. [ ] Test: Run `bin/setup-i386-toolchain` — Execute the setup script and verify it populates `toolchain/32root/` correctly. Check that all required CRT objects and libraries are present.
+
+8. [ ] Test: `./compile driver.rb -I . -g` with local toolchain — Verify the unified `compile` selects local mode and produces a working `out/driver`. Check it prints "Using local toolchain" or similar.
+
+9. [ ] Test: `make selftest` — Run `make selftest` to verify end-to-end compilation and execution works with the unified `compile`.
+
+10. [ ] Test: `make selftest-c` — Run `make selftest-c` to verify `compile2` also works correctly via the unified script.
+
+11. [ ] Test: Docker fallback — Temporarily rename `toolchain/32root/` and verify `./compile` falls back to Docker mode (or prints a clear error if Docker is unavailable). Restore `toolchain/32root/` afterward.
+
+12. [ ] Test: `run_rubyspec` — Run `./run_rubyspec spec/` (a quick subset) to verify the rubyspec runner works without modification through the unified `compile`.
+
 ---
 *Status: APPROVED*
