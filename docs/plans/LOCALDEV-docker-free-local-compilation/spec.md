@@ -93,4 +93,4 @@ The current `compile_local` hardcodes GCC 8 paths (`gcc/x86_64-linux-gnu/8/32`).
 9. `run_rubyspec` works without modification (it calls `./compile` which now handles mode selection).
 
 ---
-*Status: PROPOSED*
+*Status: APPROVED*
