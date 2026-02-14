@@ -24,3 +24,9 @@ Session ID: 9e6a22e3-16be-4ed3-8e94-60e677947ee4
 
 1 criterion(s) still unchecked after retry. Session ID: 9e6a22e3-16be-4ed3-8e94-60e677947ee4
 - - [ ] `./run_rubyspec rubyspec/core/comparable/lt_spec.rb` runs without crash and passes at least the first `it` block (integer-return test)
+
+---
+
+## 2026-02-14 14:35 — Execution notes
+
+Note that the 'notes' in the verification are false. There is no fundamental AOT limitation preventing 'should_receive' from working. *ALL* method definition in the compiler dynamically replaces methods at runtime. The verification claim is entirely wrong.
