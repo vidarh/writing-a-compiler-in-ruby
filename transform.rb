@@ -1125,6 +1125,10 @@ class Compiler
     # so we fall back to Object as the known superclass
     if superclass.is_a?(Symbol)
       superc = @classes[superclass]
+      # If not found and we're inside a module/class scope, try qualified name
+      if !superc && scope.respond_to?(:name) && !scope.name.empty?
+        superc = @classes["#{scope.name}__#{superclass}".to_sym]
+      end
     elsif superclass.is_a?(Array) && superclass[0] == :deref
       # Handle namespaced superclass like Foo::Bar
       # For now just use Object as fallback

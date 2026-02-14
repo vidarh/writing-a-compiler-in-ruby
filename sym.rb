@@ -89,6 +89,10 @@ module Tokens
           return :":<<"
         elsif s.peek == ?=
           s.get
+          if s.peek == ?>
+            s.get
+            return ":<=>".to_sym
+          end
           return :":<="
         end
         return :":<"

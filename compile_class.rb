@@ -110,12 +110,6 @@ class Compiler
     [:index,ob,0]
   end
 
-  # FIXME: compiler @bug workaround. See #compile_eigenclass
-  def compile_ary_do(lscope, exps)
-    exps.each do |e|
-      compile_do(lscope, e)
-    end
-  end
 
   # Find the nearest ClassScope by traversing the scope chain
   # Returns Object's ClassScope if no ClassScope found in chain
@@ -170,7 +164,9 @@ class Compiler
         # Compile eigenclass body with LocalVarScope
         # When compile_defm is called, it will find escope via lscope.class_scope
         # Methods will register in escope's vtable, :self resolves from lscope
-        compile_ary_do(escope, exps)
+        exps.each do |e|
+          compile_do(escope, e)
+        end
 
         # Return the eigenclass
         compile_eval_arg(lscope, :self)
@@ -187,6 +183,10 @@ class Compiler
   # that belong to the class.
   def compile_class(scope, name,superclass, *exps)
     superc = name == :Class ? nil : @classes[superclass]
+    # If not found, try qualified name within current scope
+    if !superc && name != :Class && superclass.is_a?(Symbol) && scope.respond_to?(:name) && !scope.name.empty?
+      superc = @classes["#{scope.name}__#{superclass}".to_sym]
+    end
 
     # Check if this is an eigenclass definition: class << obj
     if name.is_a?(Array) && name[0] == :eigen
@@ -372,6 +372,10 @@ class Compiler
     #does not try to deref a null pointer
     #
     sscope = (fq_name == superclass or fq_name == :Class or fq_name == :Kernel) ? nil : @classes[superclass]
+    # If not found, try qualified name within current scope
+    if !sscope && superclass.is_a?(Symbol) && scope.respond_to?(:name) && !scope.name.empty?
+      sscope = @classes["#{scope.name}__#{superclass}".to_sym]
+    end
 
     ssize = sscope ? sscope.klass_size : nil
     ssize = 0 if ssize.nil?
