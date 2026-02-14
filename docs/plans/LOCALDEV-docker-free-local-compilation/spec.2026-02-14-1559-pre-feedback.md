@@ -3,29 +3,23 @@ Created: 2026-02-14 14:54
 
 # Docker-Free Local Compilation Pipeline
 
-> **User direction (2026-02-14 15:59):** Failed. make selftest etc. still uses Docker.
-
 > **User direction (2026-02-14 15:27):** Restarting after crash. Focus should be on the *simplest possible approach
 
 **Goal references:** [PURERB](../../goals/PURERB-pure-ruby-runtime.md), [SELFHOST](../../goals/SELFHOST-clean-bootstrap.md)
 
 ## Problem Statement
 
-The compilation scripts ([compile](../../compile) and [compile2](../../compile2)) use Docker for every step. A local compilation script ([compile_local](../../compile_local)) exists and works but is disconnected from the build system — the Makefile, `run_rubyspec`, and all `make` targets still use the Docker-based `./compile` and `./compile2`.
-
-A previous execution attempt failed. `make selftest` and other targets still use Docker. The `compile` and `compile2` scripts are unchanged — still pure Docker. The local toolchain logic was never merged in.
+The main compilation scripts ([compile](../../compile) and [compile2](../../compile2)) use Docker for every step. Local compilation scripts ([compile_local](../../compile_local) and [compile2_local](../../compile2_local)) already exist and work but are disconnected from the build system — the Makefile, `run_rubyspec`, and all `make` targets still use the Docker-based `./compile` and `./compile2`.
 
 ## Approach
 
-The simplest possible approach: merge the existing `compile_local` logic into `compile` (and equivalent logic into `compile2`). If `toolchain/32root/` exists, use local toolchain. Otherwise fall back to Docker. Fix the hardcoded GCC 8 path to auto-detect. That's it.
-
-Additionally, the Makefile has targets that directly use `${DR}` (Docker) — `selftest-c2`, `hello`, `valgrind`, `fetch-glibc32`. These also need attention to ensure `make selftest` and `make selftest-c` work without Docker.
+The simplest possible approach: merge the existing `compile_local` logic into `compile` (and `compile2_local` into `compile2`). If `toolchain/32root/` exists, use local toolchain. Otherwise fall back to Docker. Fix the hardcoded GCC 8 path to auto-detect. That's it.
 
 No new setup scripts. No distro detection. No deb extraction. The existing `make fetch-glibc32` or manual package installation (`apt install gcc-multilib libc6-dev-i386`) + existing `fetch-glibc32` already populate the toolchain directory. This plan only unifies the compile scripts.
 
 ## Infrastructure Cost
 
-Low. Modify 2 existing files, delete 1 file, minor Makefile touch-ups.
+Low. Modify 2 existing files, delete 2 files, minor Makefile/gitignore touch-ups.
 
 ## Scope and Deliverables
 
@@ -37,26 +31,25 @@ Modify [compile](../../compile) to:
 - If no: fall back to Docker (current behavior).
 - Auto-detect the host GCC version by globbing for `crtbegin.o` instead of hardcoding GCC 8.
 
-Apply the same to [compile2](../../compile2) (there is no `compile2_local` — port the logic from `compile_local` with the appropriate `out/driver` invocation).
+Apply the same to [compile2](../../compile2) / [compile2_local](../../compile2_local).
 
-After unification, delete `compile_local`.
+After unification, delete `compile_local` and `compile2_local`.
 
-### 2. Makefile cleanup
+### 2. Makefile integration
 
-- Ensure `make selftest` and `make selftest-c` work without Docker when the local toolchain is present (they call `./compile` and `./compile2`, so unifying the compile scripts should be sufficient).
-- Review other Makefile targets that use `${DR}` directly (`selftest-c2`, `hello`, `valgrind`) and ensure they don't break the local compilation path.
+- Ensure all existing targets continue to work unchanged — they already call `./compile`.
 - Add a `setup-toolchain` target that runs `apt install gcc-multilib libc6-dev-i386` then `make fetch-glibc32` (or equivalent), as a convenience.
 
 ## Acceptance Criteria
 
 1. `./compile driver.rb -I . -g` succeeds with the local toolchain (no Docker running) and produces a working `out/driver`.
 2. `./compile2 driver.rb -I . -g` succeeds with the local toolchain and produces a working `out/driver2`.
-3. `make selftest` passes using the unified `./compile` with local toolchain — no Docker involved.
-4. `make selftest-c` passes using the unified `./compile` and `./compile2` with local toolchain — no Docker involved.
+3. `make selftest` passes using the unified `./compile` with local toolchain.
+4. `make selftest-c` passes using the unified `./compile` and `./compile2` with local toolchain.
 5. `./compile` falls back to Docker gracefully when `toolchain/32root/` is missing and Docker is available.
-6. `compile_local` is deleted.
+6. `compile_local` and `compile2_local` are deleted.
 7. The unified `compile` script auto-detects the host GCC version rather than hardcoding GCC 8.
-8. `run_rubyspec` works without modification (it calls `./compile` which will now use local toolchain).
+8. `run_rubyspec` works without modification.
 
 ## Implementation Details
 
@@ -64,10 +57,9 @@ After unification, delete `compile_local`.
 
 - [compile](../../compile) (33 lines) — Currently a pure-Docker script. Must be restructured to conditionally use local toolchain or Docker.
 - [compile2](../../compile2) (33 lines) — Same restructuring.
-- [compile_local](../../compile_local) (72 lines) — Contains the local toolchain logic to merge into `compile`. Key elements: GCC version path (line 15, hardcoded to GCC 8), toolchain root detection (line 11), required file validation (line 23), link flags (lines 45-66), tgc.o caching (lines 37-43). Will be deleted after merge.
-- [Makefile](../../Makefile) — Add `setup-toolchain` convenience target. Review `${DR}` usage in other targets.
-
-Note: `compile2_local` does not exist. The `compile2` unification must port logic from `compile_local` directly.
+- [compile_local](../../compile_local) (72 lines) — Contains the local toolchain logic to merge into `compile`. Key elements: GCC version path (line 15, hardcoded to GCC 8), toolchain root detection (line 11), required file validation (line 23), link flags (lines 45-66), tgc.o caching (lines 37-43).
+- [compile2_local](../../compile2_local) (72 lines) — Same as `compile_local` but uses `out/driver` instead of `ruby driver.rb`. Will be deleted after merge.
+- [Makefile](../../Makefile) — Add `setup-toolchain` convenience target.
 
 ### Design for the unified compile script
 
@@ -91,17 +83,17 @@ The key difference between `compile` and `compile2` is the compilation step: `ru
 
 1. [ ] Unify `compile` with `compile_local` — Merge the local toolchain logic from [compile_local](../../compile_local) into [compile](../../compile). Add local toolchain detection, GCC version auto-detection via glob, and Docker fallback. Keep the script simple.
 
-2. [ ] Unify `compile2` — Port the local toolchain logic into [compile2](../../compile2) with `out/driver` invocation and `2` output suffix.
+2. [ ] Unify `compile2` with `compile2_local` — Same pattern as step 1, but with `out/driver` invocation and `2` output suffix.
 
-3. [ ] Delete `compile_local`.
+3. [ ] Delete `compile_local` and `compile2_local`.
 
 4. [ ] Add `setup-toolchain` Makefile target — A convenience target that documents/runs the package install + `fetch-glibc32` steps.
 
-5. [ ] Test: `make selftest` — Verify end-to-end compilation works with the unified `compile`, no Docker involved.
+5. [ ] Test: `make selftest` — Verify end-to-end compilation works with the unified `compile`.
 
-6. [ ] Test: `make selftest-c` — Verify `compile2` works correctly, no Docker involved.
+6. [ ] Test: `make selftest-c` — Verify `compile2` works correctly.
 
 7. [ ] Test: Docker fallback — Temporarily rename `toolchain/32root/` and verify `./compile` falls back to Docker mode. Restore afterward.
 
 ---
-*Status: APPROVED — previous execution failed, needs re-execution*
+*Status: APPROVED*
