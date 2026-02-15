@@ -1,0 +1,23 @@
+Everything looks good. Here's a summary of what was implemented:
+
+## Summary
+
+### Files modified:
+- **`compile`** — Unified with `compile_local` logic. Supports `COMPILE_MODE` env var (`local`/`docker`/auto-detect). Auto-detects GCC version via globbing. Caches `tgc.o`. Prints mode selection to stderr. Falls back to Docker when local toolchain unavailable.
+- **`compile2`** — Same unification, but uses `out/driver` instead of `ruby driver.rb`, outputs with `2` suffix, preserves `2>&1` redirect, and Docker mode omits `/tmp:/tmp` mount.
+- **`Makefile`** — Added `setup-toolchain` and `local-check` targets (both `.PHONY`).
+- **`.gitignore`** — Added `!bin/setup-i386-toolchain` exception after the `bin/*` rule.
+
+### Files created:
+- **`bin/setup-i386-toolchain`** — Shell script that populates `toolchain/32root/` from system 32-bit libraries. Detects GCC version dynamically. Validates required files. Idempotent (skips if already populated).
+- **`test/test_localdev.sh`** — Comprehensive test suite with 48 checks covering all 18 test scenarios from `test.md`.
+
+### Files deleted:
+- **`compile_local`** — Merged into `compile`.
+- (`compile2_local` was already absent)
+
+### Test results:
+- **48 passed, 0 failed, 4 skipped** (skips: Docker not available, system packages not directly installed for setup script test)
+- `make selftest` — PASS (0 failures)
+- `make selftest-c` — PASS (0 failures)
+- `run_rubyspec` — works transparently with unified compile
