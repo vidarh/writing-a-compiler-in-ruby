@@ -2,6 +2,7 @@
 *.o
 *.s
 bin/*
+!bin/setup-i386-toolchain
 asm/*
 doc/*
 examples/*
@@ -13,6 +14,7 @@ toolchain/
 features/inputs/*
 out/*
 test_*
+!test/test_localdev.sh
 debug_*
 rubyspec_temp*
 rubyspec/*

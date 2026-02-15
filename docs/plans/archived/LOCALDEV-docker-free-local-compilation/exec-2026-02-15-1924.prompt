@@ -29,15 +29,18 @@ fixed already and the real cause is Z. If you blindly "fix Y" you will
 waste time and may introduce regressions. Always start from the actual
 symptoms, not the plan's theory.
 
+
 ---BEGIN PLAN SPEC---
 LOCALDEV
 Created: 2026-02-14 14:54
 
 # Docker-Free Local Compilation Pipeline
 
-> **User direction (2026-02-14 15:59):** Failed. make selftest etc. still uses Docker.
+> **User direction (2026-02-15 19:23):** Still uses docker all over the place. Whatever you did has been lost, possibly to bugs in improve. Redo.
 
-> **User direction (2026-02-14 15:27):** Restarting after crash. Focus should be on the *simplest possible approach
+> **User direction (2026-02-14 15:27):** Focus should be on the *simplest possible approach*.
+
+> **User direction (2026-02-15 19:23):** Still uses Docker all over the place. Previous execution's changes were lost. Redo.
 
 **Goal references:** [PURERB](../../goals/PURERB-pure-ruby-runtime.md), [SELFHOST](../../goals/SELFHOST-clean-bootstrap.md)
 
@@ -45,7 +48,7 @@ Created: 2026-02-14 14:54
 
 The compilation scripts ([compile](../../compile) and [compile2](../../compile2)) use Docker for every step. A local compilation script ([compile_local](../../compile_local)) exists and works but is disconnected from the build system — the Makefile, `run_rubyspec`, and all `make` targets still use the Docker-based `./compile` and `./compile2`.
 
-A previous execution attempt failed. `make selftest` and other targets still use Docker. The `compile` and `compile2` scripts are unchanged — still pure Docker. The local toolchain logic was never merged in.
+Two previous execution attempts failed — changes were lost. The `compile` and `compile2` scripts are unchanged and still pure Docker. The `compile_local` script still exists as a separate file. The local toolchain logic was never merged in. The Makefile still uses `${DR}` (Docker) in several targets. Nothing from the previous executions survived.
 
 ## Approach
 
@@ -136,13 +139,13 @@ The key difference between `compile` and `compile2` is the compilation step: `ru
 7. [ ] Test: Docker fallback — Temporarily rename `toolchain/32root/` and verify `./compile` falls back to Docker mode. Restore afterward.
 
 ---
-*Status: APPROVED — previous execution failed, needs re-execution*
+*Status: APPROVED (re-exec — previous execution changes were lost)*
 
 ---END PLAN SPEC---
 
 
 Additional user instructions for this execution:
-Failed. make selftest etc. still uses Docker.
+Still uses docker all over the place. Whatever you did has been lost, possibly to bugs in improve. Redo.
 
 A test specification exists at /tmp/improve-worktrees/LOCALDEV/docs/plans/LOCALDEV-docker-free-local-compilation/test.md. Read it — it defines
 the automated test suite you MUST write as part of this implementation.

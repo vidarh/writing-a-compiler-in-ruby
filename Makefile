@@ -87,6 +87,18 @@ cli:
 bundle:
 	${DR} bundle install
 
+.PHONY: setup-toolchain
+setup-toolchain:
+	bin/setup-i386-toolchain
+
+.PHONY: local-check
+local-check:
+	@echo "Checking local toolchain..."
+	@test -d toolchain/32root/lib/i386-linux-gnu || { echo "FAIL: toolchain/32root not found. Run: make setup-toolchain"; exit 1; }
+	@test -f toolchain/32root/lib/i386-linux-gnu/libc.so.6 || { echo "FAIL: libc.so.6 missing"; exit 1; }
+	@test -f toolchain/32root/usr/lib32/crt1.o || { echo "FAIL: crt1.o missing"; exit 1; }
+	@echo "OK: Local toolchain available"
+
 .PHONY: rubyspec-integer
 rubyspec-integer:
 	./run_rubyspec rubyspec/core/integer/ 2>&1 | tee docs/rubyspec_integer.txt
