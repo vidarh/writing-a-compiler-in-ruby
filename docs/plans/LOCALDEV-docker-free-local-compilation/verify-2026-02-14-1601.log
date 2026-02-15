@@ -1,0 +1,17 @@
+## Verification Summary
+
+All 9 acceptance criteria **PASS** independent verification:
+
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| 1 | `bin/setup-i386-toolchain` populates `toolchain/32root/` | **PASS** | Script exists, executable, all 9 required files present (libc.so.6, ld-linux.so.2, libgcc_s.so.1, crt1.o, crti.o, crtn.o, libc_nonshared.a, crtbegin.o, crtend.o). Idempotent re-run exits 0. |
+| 2 | `./compile driver.rb -I . -g` with local toolchain | **PASS** | Produces `out/driver` (ELF 32-bit i386 binary, 2.4MB). Binary runs and compiles Ruby source to assembly. |
+| 3 | `./compile2 driver.rb -I . -g` with local toolchain | **PASS** | Produces `out/driver2` (ELF 32-bit i386 binary, 2.6MB). Uses `out/driver` as the compiler. |
+| 4 | `make selftest` passes | **PASS** | All tests pass, "Fails: 0". Uses local toolchain (confirmed by "Using local toolchain" in output). |
+| 5 | `make selftest-c` passes | **PASS** | All tests pass, "Fails: 0". Uses local toolchain. |
+| 6 | Docker fallback when toolchain missing | **PASS** | Renaming `toolchain/32root/` causes auto-detect mode to print "Using Docker" and attempt Docker invocation. `COMPILE_MODE=local` correctly fails with clear error message. |
+| 7 | `compile_local` and `compile2_local` deleted | **PASS** | Neither file exists. Logic merged into `compile` and `compile2`. |
+| 8 | GCC version auto-detection | **PASS** | No hardcoded GCC 8 in any script. `compile` uses `Dir.glob` with wildcard `*` via `detect_gcc_version()`. `bin/setup-i386-toolchain` uses `gcc -dumpversion`. System correctly detects GCC 11. |
+| 9 | `run_rubyspec` works without modification | **PASS** | `./run_rubyspec spec/array_max_integer_size_spec.rb` compiles and runs successfully (3 passed, 0 failed). |
+
+**Test suite:** 55 passed, 0 failed, 3 skipped (Docker tests + git tracking check — expected in sandbox environment).
