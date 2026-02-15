@@ -8,26 +8,114 @@ bname = File.basename(fname).split(".")[0..-2].join(".")
 # and you will be able to debug at the assembler level.
 asmdebug = ARGV.include?("-g") ? "-g" : ""
 
+def fail!(msg)
+  STDERR.puts msg
+  exit(1)
+end
+
 def dr(cmd)
   puts cmd
   system("docker run -v #{Dir.pwd}:/app -v /tmp:/tmp -i ruby-compiler-buildenv bash -c '#{cmd}'")
 end
 
-puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
-if dr("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} >out/#{bname}.s")
-  if dr("gcc -Wall #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
-    puts "+++ \e[32mCompiled tgc\e[37m"
-  else
-    STDERR.puts "*** \e[31mCompiling tgc failed.\e[37m"
-    exit(1)
+# Determine compilation mode: local, docker, or auto-detect
+mode = ENV["COMPILE_MODE"]
+glibc_root = ENV["GLIBC32_ROOT"] || File.join(dir, "toolchain", "32root")
+lib32 = File.join(glibc_root, "lib", "i386-linux-gnu")
+usr32 = File.join(glibc_root, "usr", "lib32")
+
+local_available = File.exist?(File.join(lib32, "libc.so.6")) && File.exist?(File.join(usr32, "crt1.o"))
+
+if mode == "local"
+  fail!("Local toolchain not found in #{glibc_root}. Run bin/setup-i386-toolchain first.") unless local_available
+  use_local = true
+elsif mode == "docker"
+  use_local = false
+elsif local_available
+  use_local = true
+else
+  use_local = false
+end
+
+if use_local
+  puts "*** Using local toolchain from #{glibc_root}"
+
+  # Auto-detect GCC version by globbing for crtbegin.o
+  crtbegin_glob = Dir.glob(File.join(glibc_root, "usr", "lib", "gcc", "x86_64-linux-gnu", "*", "32", "crtbegin.o"))
+  if crtbegin_glob.empty?
+    fail!("Cannot find crtbegin.o in #{glibc_root}. Toolchain may be incomplete.")
   end
-  if dr("gcc #{asmdebug} -m32 -o out/#{bname} out/#{bname}.s out/tgc.o")
-    puts "+++ \e[32mCompiled to out/#{bname}\e[37m"
+  gcc32 = File.dirname(crtbegin_glob.first)
+
+  usr_i386 = File.join(glibc_root, "usr", "lib", "i386-linux-gnu")
+  dynamic_linker = File.join(lib32, "ld-linux.so.2")
+
+  crt1 = File.join(usr32, "crt1.o")
+  crti = File.join(usr32, "crti.o")
+  crtn = File.join(usr32, "crtn.o")
+  crtbegin = File.join(gcc32, "crtbegin.o")
+  crtend = File.join(gcc32, "crtend.o")
+
+  puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
+  unless system("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} >out/#{bname}.s")
+    fail!("*** Compilation failed.")
+  end
+
+  # Include path for 32-bit headers (from libc6-dev:i386 in toolchain)
+  i386_inc = File.join(glibc_root, "usr", "include", "i386-linux-gnu")
+  tgc_cflags = File.directory?(i386_inc) ? "-isystem #{i386_inc}" : ""
+
+  unless File.exist?("out/tgc.o")
+    if system("gcc -Wall #{tgc_cflags} #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
+      puts "+++ Compiled tgc"
+    else
+      fail!("*** Compiling tgc failed.")
+    end
+  end
+
+  link_flags = [
+    "-m32",
+    "-nostdlib",
+    "-Wl,--dynamic-linker=#{dynamic_linker}",
+    "-Wl,-rpath,#{lib32}",
+    "-L#{usr32}",
+    "-L#{lib32}",
+    "-L#{usr_i386}",
+    "-L#{gcc32}"
+  ].join(" ")
+
+  link_cmd = [
+    "gcc", asmdebug,
+    link_flags,
+    "-o", "out/#{bname}",
+    crt1, crti, crtbegin,
+    "out/#{bname}.s", "out/tgc.o",
+    File.join(lib32, "libc.so.6"),
+    File.join(usr32, "libc_nonshared.a"),
+    File.join(lib32, "libgcc_s.so.1"),
+    crtend, crtn
+  ].reject(&:empty?).join(" ")
+
+  if system(link_cmd)
+    puts "+++ Compiled to out/#{bname} (local toolchain)"
   else
-    STDERR.puts "*** \e[31mAssembly failed.\e[37m"
-    exit(1)
+    fail!("*** Assembly failed.")
   end
 else
-  STDERR.puts "*** \e[31mCompilation failed.\e[37m"
-  exit(1)
+  puts "*** Using Docker for compilation"
+  puts "*** Compiling with arguments: '#{ARGV.join(" ")}' into out/#{bname}"
+  if dr("ruby -I. #{dir}/driver.rb #{ARGV.join(" ")} >out/#{bname}.s")
+    if dr("gcc -Wall #{asmdebug} -c -m32 -o out/tgc.o tgc.c")
+      puts "+++ \e[32mCompiled tgc\e[37m"
+    else
+      fail!("*** \e[31mCompiling tgc failed.\e[37m")
+    end
+    if dr("gcc #{asmdebug} -m32 -o out/#{bname} out/#{bname}.s out/tgc.o")
+      puts "+++ \e[32mCompiled to out/#{bname}\e[37m"
+    else
+      fail!("*** \e[31mAssembly failed.\e[37m")
+    end
+  else
+    fail!("*** \e[31mCompilation failed.\e[37m")
+  end
 end

@@ -1,0 +1,19 @@
+## Verification Results
+
+All 9 acceptance criteria **PASS** independent adversarial verification:
+
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| 1 | `bin/setup-i386-toolchain` populates `toolchain/32root/` without Docker | **PASS** | Ran from scratch: downloads 5 `.deb` packages via `apt-get download`, extracts with `dpkg-deb`, all 9 required files present (libc.so.6, ld-linux.so.2, libgcc_s.so.1, crt1.o, crti.o, crtn.o, libc_nonshared.a, crtbegin.o, crtend.o). Idempotent (second run exits 0 with "already set up"). |
+| 2 | `./compile driver.rb -I . -g` with local toolchain | **PASS** | Produces `out/driver` (ELF 32-bit i386 binary). Prints "Using local toolchain". Binary runs and generates assembly output. |
+| 3 | `./compile2 driver.rb -I . -g` with local toolchain | **PASS** | Produces `out/driver2` (ELF 32-bit i386 binary). Uses `out/driver` as compiler. Preserves `2>&1` redirect. |
+| 4 | `make selftest` passes | **PASS** | All tests pass, "Fails: 0". |
+| 5 | `make selftest-c` passes | **PASS** | All tests pass, "Fails: 0". |
+| 6 | Docker fallback when toolchain missing | **PASS** | Renaming `toolchain/32root/` causes auto-detect mode to print "Using Docker for compilation" and attempt Docker invocation. `COMPILE_MODE=local` correctly fails with "Run bin/setup-i386-toolchain first." Docker itself is unavailable in this sandbox so end-to-end Docker compilation cannot be tested, but the fallback logic is correct. |
+| 7 | `compile_local` and `compile2_local` deleted | **PASS** | `compile_local` confirmed deleted via `git diff master`. `compile2_local` never existed on master. Logic merged into `compile`/`compile2`. |
+| 8 | GCC version auto-detection | **PASS** | Both scripts use `Dir.glob("*/32/crtbegin.o")` with wildcard `*`. No hardcoded GCC 8. Correctly detected GCC 11 on this system. |
+| 9 | `run_rubyspec` works without modification | **PASS** | `run_rubyspec` has zero diff from master. `./run_rubyspec spec/array_max_integer_size_spec.rb` compiles and runs successfully (3 passed, 0 failed). |
+
+**Test suite:** 52 passed, 0 failed, 2 skipped (Docker tests — expected in sandbox).
+
+**No discrepancies** found between execution logs and independent verification. The spec.md checkboxes are already correctly marked `[x]` for all 9 criteria.

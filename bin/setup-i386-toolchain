@@ -1,0 +1,242 @@
+#!/bin/bash
+#
+# Populate toolchain/32root/ with 32-bit glibc and GCC support files
+# needed for local (non-Docker) compilation.
+#
+# This script downloads and extracts the required Debian packages into
+# toolchain/32root/ using apt-get download + dpkg-deb. It does NOT
+# require root or sudo.
+#
+# Prerequisites: apt-get, dpkg-deb, gcc (for version detection)
+#
+# If gcc-multilib and libc6-dev-i386 are installed system-wide, you can
+# also run: make fetch-glibc32 (Docker-based) to populate the same dir.
+#
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+TOOLCHAIN_ROOT="$SCRIPT_DIR/toolchain/32root"
+
+# Detect host GCC version
+if ! command -v gcc >/dev/null 2>&1; then
+    echo "ERROR: gcc not found. Install gcc first." >&2
+    exit 1
+fi
+
+GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
+echo "Detected GCC version: $GCC_VERSION"
+
+# Validate toolchain contents and print summary
+validate_toolchain() {
+    local pass=0
+    local fail=0
+
+    check_file() {
+        if [ -e "$1" ]; then
+            echo "  FOUND: $1"
+            pass=$((pass + 1))
+        else
+            echo "  MISSING: $1"
+            fail=$((fail + 1))
+        fi
+    }
+
+    check_file "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/libc.so.6"
+    check_file "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/ld-linux.so.2"
+    check_file "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/libgcc_s.so.1"
+    check_file "$TOOLCHAIN_ROOT/usr/lib32/crt1.o"
+    check_file "$TOOLCHAIN_ROOT/usr/lib32/crti.o"
+    check_file "$TOOLCHAIN_ROOT/usr/lib32/crtn.o"
+    check_file "$TOOLCHAIN_ROOT/usr/lib32/libc_nonshared.a"
+
+    # Check for crtbegin.o/crtend.o under detected GCC version
+    local crtbegin
+    crtbegin=$(find "$TOOLCHAIN_ROOT/usr/lib/gcc/x86_64-linux-gnu" -name crtbegin.o -path '*/32/*' 2>/dev/null | head -1)
+    if [ -n "$crtbegin" ]; then
+        echo "  FOUND: $crtbegin"
+        pass=$((pass + 1))
+        local crtdir
+        crtdir=$(dirname "$crtbegin")
+        local crtend="$crtdir/crtend.o"
+        if [ -f "$crtend" ]; then
+            echo "  FOUND: $crtend"
+            pass=$((pass + 1))
+        else
+            echo "  MISSING: $crtend"
+            fail=$((fail + 1))
+        fi
+    else
+        echo "  MISSING: crtbegin.o (under usr/lib/gcc/x86_64-linux-gnu/*/32/)"
+        fail=$((fail + 1))
+    fi
+
+    echo ""
+    echo "$pass found, $fail missing"
+
+    if [ "$fail" -gt 0 ]; then
+        return 1
+    fi
+    return 0
+}
+
+# Quick check if toolchain is already populated
+check_toolchain() {
+    local ok=true
+    for f in \
+        "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/libc.so.6" \
+        "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/ld-linux.so.2" \
+        "$TOOLCHAIN_ROOT/usr/lib32/crt1.o" \
+        "$TOOLCHAIN_ROOT/usr/lib32/crti.o" \
+        "$TOOLCHAIN_ROOT/usr/lib32/crtn.o" \
+    ; do
+        if [ ! -f "$f" ]; then
+            ok=false
+            break
+        fi
+    done
+
+    # Check for crtbegin.o under any GCC version
+    local crtbegin
+    crtbegin=$(find "$TOOLCHAIN_ROOT/usr/lib/gcc/x86_64-linux-gnu" -name crtbegin.o -path '*/32/*' 2>/dev/null | head -1)
+    if [ -z "$crtbegin" ]; then
+        ok=false
+    fi
+
+    if $ok; then
+        return 0
+    fi
+    return 1
+}
+
+if [ -d "$TOOLCHAIN_ROOT" ] && check_toolchain; then
+    echo "Toolchain already set up in $TOOLCHAIN_ROOT"
+    echo ""
+    echo "=== Validation Summary ==="
+    validate_toolchain
+    exit 0
+fi
+
+# Check for required tools
+if ! command -v dpkg-deb >/dev/null 2>&1; then
+    echo "ERROR: dpkg-deb not found. This script requires a Debian/Ubuntu system." >&2
+    exit 1
+fi
+
+if ! command -v apt-get >/dev/null 2>&1; then
+    echo "ERROR: apt-get not found. This script requires a Debian/Ubuntu system." >&2
+    exit 1
+fi
+
+# Create temp directory for downloads
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
+echo "Downloading 32-bit packages..."
+
+# Determine package names based on GCC version
+LIB32GCC_DEV_PKG="lib32gcc-${GCC_VERSION}-dev"
+
+cd "$TMPDIR"
+
+# Download required packages
+apt-get download \
+    libc6-i386 \
+    libc6-dev-i386 \
+    libc6-dev:i386 \
+    lib32gcc-s1 \
+    "$LIB32GCC_DEV_PKG" \
+    2>&1 || {
+    # Fallback: try without versioned package names
+    echo "Trying fallback package names..."
+    apt-get download \
+        libc6-i386 \
+        libc6-dev-i386 \
+        libc6-dev:i386 \
+        lib32gcc-s1 \
+        2>&1
+}
+
+echo "Extracting packages..."
+mkdir -p "$TOOLCHAIN_ROOT"
+
+for deb in *.deb; do
+    [ -f "$deb" ] || continue
+    echo "  Extracting $deb"
+    dpkg-deb --extract "$deb" "$TOOLCHAIN_ROOT"
+done
+
+cd "$SCRIPT_DIR"
+
+# Some packages put 32-bit files in different locations. Ensure the
+# expected directory structure exists.
+
+# libc6-i386 puts files in /lib32/ and /usr/lib32/. We need them
+# accessible via the paths compile expects.
+# lib/i386-linux-gnu/ should have libc.so.6, ld-linux.so.2, etc.
+
+# If lib/i386-linux-gnu doesn't exist but lib32 does, create symlinks
+if [ ! -d "$TOOLCHAIN_ROOT/lib/i386-linux-gnu" ] && [ -d "$TOOLCHAIN_ROOT/lib32" ]; then
+    mkdir -p "$TOOLCHAIN_ROOT/lib/i386-linux-gnu"
+    for f in "$TOOLCHAIN_ROOT/lib32/"*; do
+        [ -f "$f" ] || [ -L "$f" ] || continue
+        bn=$(basename "$f")
+        [ -e "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/$bn" ] || ln -sf "$f" "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/$bn"
+    done
+fi
+
+# Ensure ld-linux.so.2 is findable
+if [ ! -e "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/ld-linux.so.2" ]; then
+    for candidate in \
+        "$TOOLCHAIN_ROOT/lib32/ld-linux.so.2" \
+        /lib/i386-linux-gnu/ld-linux.so.2 \
+        /lib32/ld-linux.so.2; do
+        if [ -e "$candidate" ]; then
+            mkdir -p "$TOOLCHAIN_ROOT/lib/i386-linux-gnu"
+            ln -sf "$candidate" "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/ld-linux.so.2"
+            break
+        fi
+    done
+fi
+
+# Ensure libgcc_s.so.1 is in lib/i386-linux-gnu/
+if [ ! -e "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/libgcc_s.so.1" ]; then
+    for candidate in \
+        "$TOOLCHAIN_ROOT/lib32/libgcc_s.so.1" \
+        "$TOOLCHAIN_ROOT/usr/lib32/libgcc_s.so.1" \
+        /lib/i386-linux-gnu/libgcc_s.so.1 \
+        /lib32/libgcc_s.so.1; do
+        if [ -e "$candidate" ]; then
+            mkdir -p "$TOOLCHAIN_ROOT/lib/i386-linux-gnu"
+            ln -sf "$candidate" "$TOOLCHAIN_ROOT/lib/i386-linux-gnu/libgcc_s.so.1"
+            break
+        fi
+    done
+fi
+
+# Ensure libc_nonshared.a is in usr/lib32/
+if [ ! -e "$TOOLCHAIN_ROOT/usr/lib32/libc_nonshared.a" ]; then
+    for candidate in \
+        "$TOOLCHAIN_ROOT/usr/lib/i386-linux-gnu/libc_nonshared.a" \
+        /usr/lib32/libc_nonshared.a \
+        /usr/lib/i386-linux-gnu/libc_nonshared.a; do
+        if [ -e "$candidate" ]; then
+            mkdir -p "$TOOLCHAIN_ROOT/usr/lib32"
+            cp "$candidate" "$TOOLCHAIN_ROOT/usr/lib32/libc_nonshared.a"
+            break
+        fi
+    done
+fi
+
+echo ""
+echo "=== Validation Summary ==="
+if validate_toolchain; then
+    echo ""
+    echo "Toolchain setup complete in $TOOLCHAIN_ROOT"
+else
+    echo ""
+    echo "WARNING: Some files are missing. Compilation may fail." >&2
+    echo "Try: sudo apt-get install gcc-multilib libc6-dev-i386" >&2
+    echo "Then re-run this script." >&2
+    exit 1
+fi
