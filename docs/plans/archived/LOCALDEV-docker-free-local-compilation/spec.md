@@ -190,4 +190,4 @@ The script should be a bash script that:
 12. [ ] Test: `run_rubyspec` — Run `./run_rubyspec spec/` (a quick subset) to verify the rubyspec runner works without modification through the unified `compile`.
 
 ---
-*Status: APPROVED*
+*Status: IMPLEMENTED*
