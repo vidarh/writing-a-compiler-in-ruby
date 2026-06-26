@@ -317,8 +317,19 @@ class Hash
   # As a compromise solution, at least update insertion
   # operations to insert into Deleted slots.
   def delete key
-    slot  = _find_slot(key)
-    return nil if !@data[slot]
+    # A nil key collides representationally with the empty-slot marker (both nil), so it
+    # must be handled explicitly via member?/_find_nil_slot, exactly as #[] and #member? do.
+    # Otherwise delete(nil) for an ABSENT nil key falls through _find_nil_slot to an
+    # arbitrary slot (nil.hash % capacity) that may hold another key, and deletes IT --
+    # nondeterministically, since nil.hash varies with memory layout. (This was the
+    # intermittent selftest failure: delete(nil) wrongly removing key :a.)
+    if key.nil?
+      return nil unless member?(nil)
+      slot = _find_nil_slot
+    else
+      slot = _find_slot(key)
+      return nil if !@data[slot]
+    end
     value = @data[slot+1]
     @data[slot]   = DELETED
     @data[slot+1] = nil
