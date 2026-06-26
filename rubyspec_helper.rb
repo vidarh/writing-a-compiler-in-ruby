@@ -787,6 +787,11 @@ def it_behaves_like(name, *args)
   end
 end
 
+# Deprecated mspec alias for it_behaves_like.
+def it_should_behave_like(name, *args)
+  it_behaves_like(name, *args)
+end
+
 # Hooks
 def before(type = :each, &block)
   if type == :each
