@@ -19,8 +19,8 @@ large missing feature/subsystem, not a small bug. To make further progress here,
 
 | spec | F | verdict | root cause |
 |---|---|---|---|
-| core/integer/gcd | 2 | DEEP | Euclidean algo correct; `(9999**99) % 99` ≠ 0 → **bignum** modulo/pow bug. |
-| core/integer/lcm | 2 | DEEP | uses gcd → same bignum bug. |
+| core/integer/gcd | 2 | DEEP | Euclidean algo correct; bug is **bignum multiplication** (`9999**25 * 9999**25 ≠ 9999**50`). `Integer#__multiply_heap_by_heap` (integer.rb:893) carries incompletely: when a partial product's carry exceeds one limb it adds to `result_limbs[i+j+1]` unnormalized (lines ~962-970), corrupting the slot read next iteration. Root constraint: limb_base 2^30 == fixnum range, no headroom for column sums → needs smaller limb base or raw-64-bit accumulation. Substantial. |
+| core/integer/lcm | 2 | DEEP | uses gcd → same bignum-multiply bug. |
 | core/integer/lt | 1 | FEATURE | "CoerceError expected, none raised" → **coerce protocol** missing in comparisons. |
 | core/integer/lte | 2 | FEATURE | coerce protocol + comparison-with-Float. |
 | core/integer/case_compare | 2 | BLOCKED | `9 === 9.0` (**Float**) + bignum equality. |
