@@ -221,11 +221,14 @@ module Tokens
           s.unget(".")
           # Not a float, fall through to check for large integer
         else
-          # It's a float - parse fractional part and return Float
-          # Fractional part is never negative
-          f = Int.expect(s, false)
-          # Convert to string and let MRI parse as float
-          # This works for any size number since MRI handles it
+          # It's a float - parse fractional part and return Float.
+          # Read the fractional digits as a raw decimal string: integer-literal parsing
+          # (Int.expect) would treat a leading zero as octal, but fractional digits are
+          # plain decimal (e.g. .090 is ninety-thousandths, and 9 is not a valid octal digit).
+          f = ""
+          while (?0..?9).member?(s.peek)
+            f << s.get
+          end
           num = "#{i}.#{f}"
 
           # Check for scientific notation exponent: e+19, e-10, E5, etc.

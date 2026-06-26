@@ -48,3 +48,9 @@ large missing feature/subsystem, not a small bug. To make further progress here,
   so `Klass === obj` was always false and every `case/when ClassName` mis-dispatched. Added
   `Class#===` = `other.is_a?(self)` (lib/core/class_ext.rb). Correctness win beyond the one
   green flip: `case/when` with class patterns now works.
+- **core/array crash cluster (~39 specs)** → fixed. The shared array fixture
+  (`fixtures/classes.rb`) crashed at load on `CHI_SQUARED_CRITICAL_VALUES`, a Float array
+  containing `20.090` etc. Root cause: the float tokenizer parsed the fractional part with
+  Int.expect, applying leading-zero=octal rules, so `.090` tried to parse `090` as octal (9
+  invalid) → bad data → segfault. Fixed by reading fractional digits as a raw decimal
+  string (tokens.rb). Broad set: CRASH 204→165, tests 879→942.
