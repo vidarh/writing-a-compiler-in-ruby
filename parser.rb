@@ -1123,9 +1123,8 @@ class Parser < ParserBase
   end
 
   # undef ::= "undef" ws* name ("," ws* name)*
-  # `undef` is recognised as a keyword (mirroring `alias`) so it is no longer parsed as a
-  # call to a method named `undef` (which segfaults). The names are parsed via parse_subexp
-  # (handles `:sym` and bare names) but compiled as a no-op stub for now — see compile_undef.
+  # Names are parsed via parse_subexp (which handles both `:sym` and bare-name forms).
+  # The result is compiled as a no-op stub for now — see compile_undef.
   def parse_undef
     pos = position
     keyword(:undef) or return

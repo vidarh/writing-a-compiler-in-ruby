@@ -55,11 +55,9 @@ class Compiler
   end
 
   # Compiles method aliasing: alias new_name old_name
-  # `undef name, ...` removes method definitions. STUB: recognised as a keyword (so it no
-  # longer compiles to a crashing call to a method named 'undef'), but does not yet actually
-  # remove the methods. Proper impl would point each name's vtable slot at the method_missing
-  # thunk (cf. __alias_method_runtime in lib/core/class.rb). Compiles to nothing for now,
-  # converting a load-time segfault into, at worst, a few failing `undef`-dependent tests.
+  # `undef name, ...` removes method definitions. STUB: compiles to nothing -- it does not
+  # yet actually remove the methods. A proper implementation would point each name's vtable
+  # slot at the method_missing thunk (cf. __alias_method_runtime in lib/core/class.rb).
   def compile_undef(scope, *names)
     return Value.new([:subexpr])
   end
