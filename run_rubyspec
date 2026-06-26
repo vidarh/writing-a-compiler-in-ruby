@@ -306,8 +306,12 @@ if [ -d "$TARGET" ]; then
 elif [ -f "$TARGET" ]; then
     # Single file mode - show full output
     SPEC_FILE="$TARGET"
-    SPEC_NAME=$(basename "$SPEC_FILE" .rb)
-    TEMP_SPEC="rubyspec_temp_${SPEC_NAME}.rb"
+    # Path-based name (not just basename) so concurrent runs of same-named specs across
+    # different dirs (e.g. core/integer/abs_spec vs core/complex/abs_spec) don't clobber
+    # each other's temp/binary. Temp lives in tmp/ (gitignored) to keep the repo root clean.
+    SPEC_NAME=$(echo "$SPEC_FILE" | sed 's/\.rb$//; s#[/.]#_#g')
+    mkdir -p tmp
+    TEMP_SPEC="tmp/rubyspec_temp_${SPEC_NAME}.rb"
 
     # Replace the spec_helper require with our own
     echo "require 'rubyspec_helper'" > "$TEMP_SPEC"

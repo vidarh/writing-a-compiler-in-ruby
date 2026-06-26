@@ -66,7 +66,7 @@ def timed
   [(Time.now - t).round(3), v]
 end
 
-def strip_ansi(s); s.gsub(/\e\[[0-9;]*[A-Za-z]/, ""); end
+def strip_ansi(s); s.scrub("").gsub(/\e\[[0-9;]*[A-Za-z]/, ""); end
 
 results = []
 SPEC_SET.each do |spec|

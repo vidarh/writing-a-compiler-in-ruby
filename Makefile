@@ -99,21 +99,10 @@ local-check:
 	@test -f toolchain/32root/usr/lib32/crt1.o || { echo "FAIL: crt1.o missing"; exit 1; }
 	@echo "OK: Local toolchain available"
 
-.PHONY: rubyspec-integer
-rubyspec-integer:
-	./run_rubyspec rubyspec/core/integer/ 2>&1 | tee docs/rubyspec_integer.txt
-
-.PHONY: rubyspec-regexp
-rubyspec-regexp:
-	./run_rubyspec rubyspec/core/regexp/ 2>&1 | tee docs/rubyspec_regexp.txt
-
-.PHONY: rubyspec-language
-rubyspec-language:
-	./run_rubyspec rubyspec/language/ 2>&1 | tee docs/rubyspec_language.txt
-
+# Custom reduced-test suite in spec/ (not rubyspec). Output not committed.
 .PHONY: spec
 spec:
-	./run_rubyspec ./spec 2>&1 | tee docs/spec.txt
+	./run_rubyspec ./spec 2>&1 | tee out/spec.txt
 
 # Compiler-pipeline microbenchmark: per-stage timing on PROXY inputs (tiny/selftest/driver).
 # Measures the compiler, NOT specs. Writes docs/specbench.{jsonl,_baseline.txt}.
@@ -128,8 +117,11 @@ specbench:
 specbench-rubyspec:
 	ruby -I. tools/specbench_rubyspec.rb
 
-# Parallel rubyspec runner (prefer on ax52). DIR defaults to language, J to nproc.
-#   make specs-parallel DIR=rubyspec/language J=16
+# Parallel rubyspec runner -> ONE diffable status summary: docs/spec_status.{jsonl,md}.
+# Runs the tracked categories by default; override with SPECS="dir1 dir2 ...". Prefer ax52.
+#   make specs-parallel                 (tracked set)
+#   make specs-parallel SPECS=rubyspec/core/array J=16
+TRACKED_SPECS = rubyspec/language rubyspec/core/integer rubyspec/core/string rubyspec/core/regexp
 .PHONY: specs-parallel
 specs-parallel:
-	ruby -I. tools/run_specs_parallel.rb $(or $(DIR),rubyspec/language) -j $(or $(J),$(shell nproc))
+	ruby -I. tools/run_specs_parallel.rb $(or $(SPECS),$(TRACKED_SPECS)) -j $(or $(J),$(shell nproc))

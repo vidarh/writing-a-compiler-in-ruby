@@ -1,8 +1,0 @@
-DEBUG: Starting run_rubyspec for ./spec
-Running all specs in ./spec...
-================================
-
-[32m[PASS] ./spec/all_control_flow_end_should_spec.rb (P:4 F:0 S:0 T:4)
-[32m[PASS] ./spec/anonymous_splat_assignment_spec.rb (P:1 F:0 S:0 T:1)
-[32m[PASS] ./spec/anonymous_splat_parens_spec.rb (P:0 F:0 S:1 T:1)
-[32m[PASS] ./spec/anonymous_splat_spec.rb (P:1 F:0 S:0 T:1)

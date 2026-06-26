@@ -220,11 +220,10 @@ This is a Ruby compiler written in Ruby that targets x86 assembly. The compiler 
 - `make selftest` - Compile and run the self-test suite
 - `make selftest-mri` - Run self-test under MRI Ruby (for validation)
 - `make selftest-c` - Self-host test (compile with compiled compiler)
-- `make rubyspec-integer` - Run integer specs (rubyspec/core/integer/)
-- `make rubyspec-language` - Run language specs (rubyspec/language/)
+- `make specs-parallel` - Run the tracked rubyspec categories in parallel (prefer on ax52); writes the single status summary
 - `make spec` - Run custom test cases (spec/ directory)
 
-**Slow targets:** The `make rubyspec-*` targets above are slow (many minutes each — they compile and run dozens of specs sequentially). They automatically write results to `docs/rubyspec_*.txt` via `tee`. **Read those files** for current spec status; only re-run the targets to validate actual code changes.
+**Spec status:** `make specs-parallel` runs the tracked categories (language + core/integer + core/string + core/regexp; override with `SPECS="..."`) in parallel and writes **one diffable summary**: `docs/spec_status.md` (human-readable, per-category + per-spec) and `docs/spec_status.jsonl` (machine-readable). **Read `docs/spec_status.md`** for current spec status; commit it to track burndown progress. Prefer running on ax52 (uncontended; see docs/COMPILER_WORKFLOW.md). `tools/classify_failures.rb` turns the JSONL into ranked failure signatures (`docs/failure_signatures.txt`).
 
 **Test Hierarchy:**
 1. **selftest** - Self-hosting validation (MUST PASS before committing)
@@ -364,5 +363,5 @@ The goal is a three-stage bootstrap:
 
 ### Docker Environment
 Development requires i386 toolchain and specific dependencies managed via Docker. The `ruby-compiler-buildenv` image provides the complete build environment including GCC multilib, Valgrind, and Ruby 2.5.
-- Rubyspecs are run with ./run_rubyspec [path to the spec directory or file].
-- Keep docs/rubyspec_language.txt up to date by running make rubyspec-language. Commit the result with your changes.
+- Rubyspecs are run with ./run_rubyspec [path to the spec directory or file] for a single spec/dir, or `make specs-parallel` (parallel, prefer on ax52) for the tracked set.
+- Keep `docs/spec_status.md` (+ `.jsonl`) up to date by running `make specs-parallel`. Commit the result with your changes to track progress. (The old per-category `docs/rubyspec_*.txt` files are retired in favour of this single diffable summary.)

@@ -19,16 +19,18 @@ require 'json'
 DIR = File.expand_path("..", __dir__)
 Dir.chdir(DIR)
 
-infile = ARGV[0] || "docs/spec_parallel_results.jsonl"
+infile = ARGV[0] || "docs/spec_status.jsonl"
 RUN_TIMEOUT = 10
 
-def strip_ansi(s); s.gsub(/\e\[[0-9;]*[A-Za-z]/, ""); end
+def strip_ansi(s); s.scrub("").gsub(/\e\[[0-9;]*[A-Za-z]/, ""); end
 
-def signature(name, outcome)
+def signature(spec, outcome)
   return "compile-fail" if outcome == "COMPILE_FAIL"
-  bin = "out/rubyspec_temp_#{name}"
+  # binary name mirrors run_rubyspec's path-based SPEC_NAME (collision-safe)
+  binname = spec.sub(/\.rb$/, "").gsub(%r{[/.]}, "_")
+  bin = "out/rubyspec_temp_#{binname}"
   return "no-binary (#{outcome})" unless File.executable?(bin)
-  tmp = "/tmp/cf_#{name}_#{Process.pid}"
+  tmp = "/tmp/cf_#{binname}_#{Process.pid}"
   system("timeout #{RUN_TIMEOUT} script -q -c './#{bin}' #{tmp} </dev/null >/dev/null 2>&1")
   raw = File.exist?(tmp) ? File.read(tmp) : ""
   File.delete(tmp) rescue nil
@@ -60,7 +62,7 @@ groups = Hash.new { |h, k| h[k] = [] }
 failing.each do |r|
   name = File.basename(r["spec"], ".rb")
   STDERR.puts "classify #{name} (#{r["outcome"]})"
-  sig = signature(name, r["outcome"])
+  sig = signature(r["spec"], r["outcome"])
   groups[sig] << name
 end
 

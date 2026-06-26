@@ -1,9 +1,0 @@
-DEBUG: Starting run_rubyspec for rubyspec/core/integer/
-Running all specs in rubyspec/core/integer/...
-================================
-
-[32m[PASS] rubyspec/core/integer/abs_spec.rb (P:2 F:0 S:0 T:2)
-[32m[PASS] rubyspec/core/integer/allbits_spec.rb (P:4 F:0 S:0 T:4)
-[32m[PASS] rubyspec/core/integer/anybits_spec.rb (P:4 F:0 S:0 T:4)
-[32m[PASS] rubyspec/core/integer/bit_and_spec.rb (P:13 F:0 S:0 T:13)
-[32m[PASS] rubyspec/core/integer/bit_length_spec.rb (P:4 F:0 S:0 T:4)
