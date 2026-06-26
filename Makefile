@@ -114,3 +114,9 @@ rubyspec-language:
 .PHONY: spec
 spec:
 	./run_rubyspec ./spec 2>&1 | tee docs/spec.txt
+
+# Spec-compile benchmark harness: per-stage pipeline timing over a fixed set.
+# Writes docs/specbench.jsonl + docs/specbench_baseline.txt. See tools/specbench.rb.
+.PHONY: specbench
+specbench:
+	ruby -I. tools/specbench.rb
