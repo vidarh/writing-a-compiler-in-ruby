@@ -1,0 +1,5 @@
+{"spec":"rubyspec/language/and_spec.rb","outcome":"PASS","passed":10,"failed":0,"skipped":0,"preprocess":0.19,"parse":0.8374,"transform":0.3189,"codegen":0.7041,"compile":1.93,"link":0.085,"run":0.003,"total":2.208}
+{"spec":"rubyspec/language/if_spec.rb","outcome":"FAIL","passed":36,"failed":19,"skipped":1,"preprocess":0.98,"parse":0.8748,"transform":0.3405,"codegen":0.7432,"compile":2.049,"link":0.075,"run":0.004,"total":3.108}
+{"spec":"rubyspec/language/ensure_spec.rb","outcome":"FAIL","passed":12,"failed":27,"skipped":0,"preprocess":0.811,"parse":0.8727,"transform":0.3317,"codegen":0.7188,"compile":1.978,"link":0.074,"run":0.004,"total":2.867}
+{"spec":"rubyspec/language/array_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null,"preprocess":0.379,"parse":0.8663,"transform":0.3433,"codegen":0.7201,"compile":2.01,"link":0.075,"run":1.065,"total":3.529}
+{"spec":"rubyspec/language/module_spec.rb","outcome":"COMPILE_FAIL","passed":null,"failed":null,"skipped":null,"preprocess":0.236,"parse":null,"transform":null,"codegen":null,"compile":1.895,"link":null,"run":null,"total":2.131}

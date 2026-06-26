@@ -414,6 +414,14 @@ elif [ -f "$TARGET" ]; then
     echo "run_specs" >> "$TEMP_SPEC"
     echo "print_spec_results" >> "$TEMP_SPEC"
 
+    # Opt-in seam for the benchmark harness (tools/specbench_rubyspec.rb): emit the
+    # preprocessed temp spec and stop, so preprocess can be timed as a distinct phase.
+    # Default behaviour (unset) is unchanged.
+    if [ -n "$SPEC_PREPROCESS_ONLY" ]; then
+        echo "PREPROCESSED $TEMP_SPEC"
+        exit 0
+    fi
+
     echo "Compiling $SPEC_FILE..."
     COMPILE_OUTPUT=$(./compile "$TEMP_SPEC" -I. -I lib/core 2>&1)
 

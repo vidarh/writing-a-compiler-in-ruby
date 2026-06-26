@@ -115,8 +115,15 @@ rubyspec-language:
 spec:
 	./run_rubyspec ./spec 2>&1 | tee docs/spec.txt
 
-# Spec-compile benchmark harness: per-stage pipeline timing over a fixed set.
-# Writes docs/specbench.jsonl + docs/specbench_baseline.txt. See tools/specbench.rb.
+# Compiler-pipeline microbenchmark: per-stage timing on PROXY inputs (tiny/selftest/driver).
+# Measures the compiler, NOT specs. Writes docs/specbench.{jsonl,_baseline.txt}.
 .PHONY: specbench
 specbench:
 	ruby -I. tools/specbench.rb
+
+# REAL rubyspec benchmark: actual rubyspec/language/* files end-to-end via run_rubyspec,
+# recording outcome + compile-vs-run split. Writes docs/specbench_rubyspec.{jsonl,_baseline.txt}.
+# Prefer running on ax52 (uncontended). See tools/specbench_rubyspec.rb.
+.PHONY: specbench-rubyspec
+specbench-rubyspec:
+	ruby -I. tools/specbench_rubyspec.rb

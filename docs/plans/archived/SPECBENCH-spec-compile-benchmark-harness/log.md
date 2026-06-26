@@ -38,10 +38,48 @@ Built the benchmark harness and captured the initial baseline.
 - `tools/bench_compile.rb` output verified byte-identical to `driver.rb`.
 - No compiler-source (`*.rb`) files changed (only `tools/`, `Makefile` target, `docs/`),
   confirmed via `git diff --stat master`. So compile behavior is unchanged by definition.
-- `make selftest` shows `Fails: 3` — **pre-existing on the current tree, not introduced
-  here** (proven by the zero compiler-source-change diff). Flagged separately; it
-  contradicts the earlier audit's "selftest all passing" note and is worth its own look,
-  but is out of scope for SPECBENCH. `selftest-c` not re-run: with no compiler-source
-  changes it cannot be affected.
+- Gate: `make selftest` → `Fails: 0` (verified across 3 consecutive runs) and
+  `make selftest-c` → `Fails: 0` (exit 0). Both green.
+  - One earlier `make selftest` invocation reported `Fails: 3`; it could not be
+    reproduced and I have **no verified explanation** for it. (An earlier version of this
+    log speculated it was "pre-existing under load" — that was unfounded and has been
+    removed. Do not invent causes for gate failures.)
 
-*Status: IMPLEMENTED*
+## 2026-06-26 — Correction: this measures proxies, NOT real specs
+
+This first cut benchmarks `tiny.rb` / `selftest.rb` / `driver.rb` — the **compiler
+pipeline on proxy inputs**. It does **not** run any rubyspec, so it omits what actually
+dominates the real spec loop: the `run_rubyspec` preprocessing, the `rubyspec_helper` mock
+framework, the spec body, and above all the **run stage** with real pass/fail/**crash/
+timeout** outcomes (30 s timeouts are where the real suite burns wall-clock). The
+`lib/core` floor number is real and useful, but it is a proxy, and this harness was
+mislabeled as a "spec" benchmark.
+
+**Superseded by a real-spec, PHASE-BY-PHASE benchmark — now delivered:**
+`tools/specbench_rubyspec.rb` (`make specbench-rubyspec`) benchmarks a fixed set of actual
+`rubyspec/language/*` files and measures **every phase directly** —
+preprocess → parse → transform → codegen → link → run — plus the outcome
+(PASS/FAIL/CRASH/COMPILE_FAIL/TIMEOUT). It uses an opt-in `SPEC_PREPROCESS_ONLY` seam added
+to `run_rubyspec` (default behaviour unchanged; verified). `specbench`/`bench_compile` are
+retained as the compiler-pipeline microbenchmark (floor + self-host timing).
+
+First phase-by-phase baseline (ax52, uncontended; outcomes match `docs/rubyspec_language.txt`):
+
+    spec        outcome    prepro parse transf codegen link  run  total
+    and_spec    PASS         0.19  0.84  0.32   0.70   0.08 0.00  2.21
+    if_spec     FAIL         0.98  0.87  0.34   0.74   0.08 0.00  3.11
+    ensure_spec FAIL         0.81  0.87  0.33   0.72   0.07 0.00  2.87
+    array_spec  CRASH        0.38  0.87  0.34   0.72   0.08 1.06  3.53
+    module_spec COMPILE_FAIL 0.24   -     -      -      -    -    2.13
+
+Findings:
+- **compile (parse+transform+codegen) ≈ 1.85 s, constant across specs** — the lib/core
+  floor, ~60–85% of total. Confirms the lib/core precompile (COREMARSHAL) as the top lead.
+- **preprocess is a real, size-dependent phase (0.2–1.0 s)** — the sed-based rewriting in
+  `run_rubyspec` is surprisingly costly for large specs (`if_spec`: 0.98 s ≈ 1/3 of total).
+  A *second* speedup lead that also serves divergence reduction (fewer rewrites = faster).
+- **link is negligible (0.08 s); run ≈ 0** for pass/fail; the crasher costs ~1 s.
+- Gap: this set has no *hanging* spec, so the 30 s-timeout cost is not yet represented — add one.
+
+*Status: IMPLEMENTED — compiler-pipeline microbenchmark and the real phase-by-phase
+benchmark both delivered.*
