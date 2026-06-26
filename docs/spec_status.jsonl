@@ -77,7 +77,7 @@
 {"spec":"rubyspec/core/regexp/initialize_spec.rb","outcome":"FAIL","passed":0,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/regexp/inspect_spec.rb","outcome":"PASS","passed":8,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/regexp/last_match_spec.rb","outcome":"FAIL","passed":1,"failed":8,"skipped":0}
-{"spec":"rubyspec/core/regexp/linear_time_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/regexp/linear_time_spec.rb","outcome":"FAIL","passed":0,"failed":10,"skipped":0}
 {"spec":"rubyspec/core/regexp/match_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/regexp/named_captures_spec.rb","outcome":"FAIL","passed":2,"failed":3,"skipped":1}
 {"spec":"rubyspec/core/regexp/names_spec.rb","outcome":"FAIL","passed":2,"failed":3,"skipped":1}
@@ -85,7 +85,7 @@
 {"spec":"rubyspec/core/regexp/options_spec.rb","outcome":"FAIL","passed":8,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/regexp/quote_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/regexp/source_spec.rb","outcome":"FAIL","passed":6,"failed":2,"skipped":0}
-{"spec":"rubyspec/core/regexp/timeout_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/regexp/timeout_spec.rb","outcome":"FAIL","passed":0,"failed":6,"skipped":0}
 {"spec":"rubyspec/core/regexp/to_s_spec.rb","outcome":"FAIL","passed":7,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/regexp/try_convert_spec.rb","outcome":"FAIL","passed":3,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/regexp/union_spec.rb","outcome":"FAIL","passed":2,"failed":41,"skipped":0}
@@ -95,7 +95,7 @@
 {"spec":"rubyspec/core/string/ascii_only_spec.rb","outcome":"FAIL","passed":0,"failed":26,"skipped":0}
 {"spec":"rubyspec/core/string/b_spec.rb","outcome":"FAIL","passed":0,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/string/byteindex_spec.rb","outcome":"FAIL","passed":0,"failed":54,"skipped":1}
-{"spec":"rubyspec/core/string/byterindex_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/string/byterindex_spec.rb","outcome":"FAIL","passed":0,"failed":46,"skipped":1}
 {"spec":"rubyspec/core/string/bytes_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/string/bytesize_spec.rb","outcome":"FAIL","passed":0,"failed":12,"skipped":0}
 {"spec":"rubyspec/core/string/byteslice_spec.rb","outcome":"COMPILE_FAIL","passed":null,"failed":null,"skipped":null}
@@ -112,7 +112,7 @@
 {"spec":"rubyspec/core/string/clear_spec.rb","outcome":"FAIL","passed":0,"failed":9,"skipped":0}
 {"spec":"rubyspec/core/string/clone_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/string/codepoints_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/string/comparison_spec.rb","outcome":"CRASH","passed":13,"failed":7,"skipped":0}
+{"spec":"rubyspec/core/string/comparison_spec.rb","outcome":"FAIL","passed":13,"failed":9,"skipped":0}
 {"spec":"rubyspec/core/string/concat_spec.rb","outcome":"FAIL","passed":5,"failed":37,"skipped":0}
 {"spec":"rubyspec/core/string/count_spec.rb","outcome":"FAIL","passed":1,"failed":8,"skipped":0}
 {"spec":"rubyspec/core/string/crypt_spec.rb","outcome":"FAIL","passed":0,"failed":9,"skipped":0}
@@ -146,7 +146,7 @@
 {"spec":"rubyspec/core/string/include_spec.rb","outcome":"FAIL","passed":2,"failed":7,"skipped":0}
 {"spec":"rubyspec/core/string/index_spec.rb","outcome":"FAIL","passed":5,"failed":36,"skipped":0}
 {"spec":"rubyspec/core/string/initialize_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/string/insert_spec.rb","outcome":"CRASH","passed":0,"failed":20,"skipped":0}
+{"spec":"rubyspec/core/string/insert_spec.rb","outcome":"FAIL","passed":0,"failed":22,"skipped":0}
 {"spec":"rubyspec/core/string/inspect_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/string/intern_spec.rb","outcome":"FAIL","passed":0,"failed":20,"skipped":0}
 {"spec":"rubyspec/core/string/length_spec.rb","outcome":"FAIL","passed":0,"failed":9,"skipped":0}
@@ -165,7 +165,7 @@
 {"spec":"rubyspec/core/string/prepend_spec.rb","outcome":"FAIL","passed":0,"failed":14,"skipped":0}
 {"spec":"rubyspec/core/string/replace_spec.rb","outcome":"FAIL","passed":0,"failed":13,"skipped":0}
 {"spec":"rubyspec/core/string/reverse_spec.rb","outcome":"FAIL","passed":3,"failed":10,"skipped":0}
-{"spec":"rubyspec/core/string/rindex_spec.rb","outcome":"CRASH","passed":0,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/string/rindex_spec.rb","outcome":"FAIL","passed":2,"failed":48,"skipped":0}
 {"spec":"rubyspec/core/string/rjust_spec.rb","outcome":"FAIL","passed":0,"failed":21,"skipped":0}
 {"spec":"rubyspec/core/string/rpartition_spec.rb","outcome":"FAIL","passed":0,"failed":27,"skipped":0}
 {"spec":"rubyspec/core/string/rstrip_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -192,7 +192,7 @@
 {"spec":"rubyspec/core/string/to_sym_spec.rb","outcome":"FAIL","passed":3,"failed":14,"skipped":0}
 {"spec":"rubyspec/core/string/tr_s_spec.rb","outcome":"FAIL","passed":0,"failed":29,"skipped":0}
 {"spec":"rubyspec/core/string/tr_spec.rb","outcome":"FAIL","passed":0,"failed":29,"skipped":0}
-{"spec":"rubyspec/core/string/try_convert_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/string/try_convert_spec.rb","outcome":"FAIL","passed":1,"failed":13,"skipped":0}
 {"spec":"rubyspec/core/string/uminus_spec.rb","outcome":"FAIL","passed":1,"failed":6,"skipped":0}
 {"spec":"rubyspec/core/string/undump_spec.rb","outcome":"FAIL","passed":7,"failed":33,"skipped":0}
 {"spec":"rubyspec/core/string/unicode_normalize_spec.rb","outcome":"FAIL","passed":0,"failed":24,"skipped":0}
@@ -225,7 +225,7 @@
 {"spec":"rubyspec/core/string/unpack_spec.rb","outcome":"FAIL","passed":0,"failed":10,"skipped":0}
 {"spec":"rubyspec/core/string/upcase_spec.rb","outcome":"FAIL","passed":6,"failed":46,"skipped":0}
 {"spec":"rubyspec/core/string/uplus_spec.rb","outcome":"FAIL","passed":2,"failed":2,"skipped":0}
-{"spec":"rubyspec/core/string/upto_spec.rb","outcome":"CRASH","passed":0,"failed":14,"skipped":0}
+{"spec":"rubyspec/core/string/upto_spec.rb","outcome":"FAIL","passed":0,"failed":31,"skipped":0}
 {"spec":"rubyspec/core/string/valid_encoding/utf_8_spec.rb","outcome":"FAIL","passed":0,"failed":56,"skipped":0}
 {"spec":"rubyspec/core/string/valid_encoding_spec.rb","outcome":"FAIL","passed":0,"failed":16,"skipped":0}
 {"spec":"rubyspec/language/BEGIN_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":0}
@@ -238,7 +238,7 @@
 {"spec":"rubyspec/language/break_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/case_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/class_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/language/class_variable_spec.rb","outcome":"CRASH","passed":2,"failed":0,"skipped":0}
+{"spec":"rubyspec/language/class_variable_spec.rb","outcome":"FAIL","passed":3,"failed":21,"skipped":0}
 {"spec":"rubyspec/language/comment_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/language/constants_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/def_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -253,7 +253,7 @@
 {"spec":"rubyspec/language/heredoc_spec.rb","outcome":"FAIL","passed":14,"failed":2,"skipped":0}
 {"spec":"rubyspec/language/if_spec.rb","outcome":"FAIL","passed":36,"failed":19,"skipped":1}
 {"spec":"rubyspec/language/keyword_arguments_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/language/lambda_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/language/lambda_spec.rb","outcome":"CRASH","passed":2,"failed":6,"skipped":0}
 {"spec":"rubyspec/language/line_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/loop_spec.rb","outcome":"FAIL","passed":4,"failed":5,"skipped":0}
 {"spec":"rubyspec/language/magic_comment_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -263,17 +263,17 @@
 {"spec":"rubyspec/language/module_spec.rb","outcome":"COMPILE_FAIL","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/next_spec.rb","outcome":"FAIL","passed":7,"failed":34,"skipped":0}
 {"spec":"rubyspec/language/not_spec.rb","outcome":"PASS","passed":10,"failed":0,"skipped":0}
-{"spec":"rubyspec/language/numbered_parameters_spec.rb","outcome":"CRASH","passed":0,"failed":19,"skipped":0}
+{"spec":"rubyspec/language/numbered_parameters_spec.rb","outcome":"FAIL","passed":0,"failed":21,"skipped":0}
 {"spec":"rubyspec/language/numbers_spec.rb","outcome":"FAIL","passed":5,"failed":17,"skipped":0}
 {"spec":"rubyspec/language/optional_assignments_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/or_spec.rb","outcome":"FAIL","passed":10,"failed":4,"skipped":1}
 {"spec":"rubyspec/language/order_spec.rb","outcome":"FAIL","passed":0,"failed":10,"skipped":0}
 {"spec":"rubyspec/language/pattern_matching_spec.rb","outcome":"CRASH","passed":2,"failed":28,"skipped":0}
-{"spec":"rubyspec/language/precedence_spec.rb","outcome":"CRASH","passed":6,"failed":4,"skipped":0}
+{"spec":"rubyspec/language/precedence_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/predefined/data_spec.rb","outcome":"FAIL","passed":0,"failed":16,"skipped":1}
 {"spec":"rubyspec/language/predefined/toplevel_binding_spec.rb","outcome":"FAIL","passed":0,"failed":10,"skipped":0}
 {"spec":"rubyspec/language/predefined_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/language/private_spec.rb","outcome":"CRASH","passed":1,"failed":6,"skipped":0}
+{"spec":"rubyspec/language/private_spec.rb","outcome":"FAIL","passed":1,"failed":10,"skipped":0}
 {"spec":"rubyspec/language/proc_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/range_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/redo_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -284,8 +284,8 @@
 {"spec":"rubyspec/language/regexp/encoding_spec.rb","outcome":"FAIL","passed":2,"failed":29,"skipped":1}
 {"spec":"rubyspec/language/regexp/escapes_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/regexp/grouping_spec.rb","outcome":"FAIL","passed":3,"failed":5,"skipped":0}
-{"spec":"rubyspec/language/regexp/interpolation_spec.rb","outcome":"CRASH","passed":2,"failed":0,"skipped":0}
-{"spec":"rubyspec/language/regexp/modifiers_spec.rb","outcome":"CRASH","passed":1,"failed":3,"skipped":0}
+{"spec":"rubyspec/language/regexp/interpolation_spec.rb","outcome":"FAIL","passed":4,"failed":7,"skipped":0}
+{"spec":"rubyspec/language/regexp/modifiers_spec.rb","outcome":"FAIL","passed":2,"failed":12,"skipped":0}
 {"spec":"rubyspec/language/regexp/repetition_spec.rb","outcome":"FAIL","passed":8,"failed":6,"skipped":2}
 {"spec":"rubyspec/language/regexp/subexpression_call_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":0}
 {"spec":"rubyspec/language/regexp_spec.rb","outcome":"FAIL","passed":4,"failed":19,"skipped":2}

@@ -100,12 +100,10 @@
     (assign i 6)  # Skip the initial instance vars (slots 0-5)
     (while (lt i __vtable_size)
        (do
-          # Only copy if class slot is still uninitialized
+          # Only copy if the class slot is still uninitialized. __set_vtable (rather than a
+          # plain assign) propagates the included method to already-created subclasses, the
+          # same way a normal `def` does.
           (if (eq (index klass i) (index __base_vtable i))
-             # Use __set_vtable (not a plain assign) so included methods PROPAGATE to
-             # subclasses, exactly as a normal `def` does. Without this, e.g. Object's
-             # `include Kernel` put puts/raise/loop/... on Object but not on Class, so any
-             # Kernel method invoked with self being a class hit method_missing and crashed.
              (__set_vtable klass i (index mod i))
           )
           (assign i (add i 1))
