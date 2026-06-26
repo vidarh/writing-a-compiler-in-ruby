@@ -879,8 +879,14 @@ class Array
   # Append.
   # Pushes the given object(s) on to the end of this array.
   # This expression returns the array itself, so several appends may be chained together.
-  def push(objects) # FIXME: * objects
-    self << objects
+  def push(*objects)
+    i = 0
+    n = objects.length
+    while i < n
+      self << objects[i]
+      i = i + 1
+    end
+    self
   end
 
 
