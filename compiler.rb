@@ -46,7 +46,7 @@ class Compiler
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
                    :preturn, :stackframe, :caller_stackframe, :stackpointer, :deref, :include, :addr,
-                   :protected, :array, :splat, :mod, :or_assign, :and_assign, :break, :next, :alias,
+                   :protected, :array, :splat, :mod, :or_assign, :and_assign, :break, :next, :alias, :undef,
                    :mul_assign, :div_assign, :mod_assign, :pow_assign,
                    :and_bitwise_assign, :or_bitwise_assign, :xor_assign,
                    :lshift_assign, :rshift_assign,

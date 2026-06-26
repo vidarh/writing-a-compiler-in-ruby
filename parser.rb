@@ -790,7 +790,7 @@ class Parser < ParserBase
     ws
     # Consume leading semicolons (empty statements)
     while literal(";"); ws; end
-    ret = parse_def || parse_alias || parse_sexp ||
+    ret = parse_def || parse_alias || parse_undef || parse_sexp ||
           parse_subexp || parse_case || parse_require_relative || parse_require
     if ret.respond_to?(:position)
       ret.position = pos
@@ -1122,6 +1122,26 @@ class Parser < ParserBase
     return E[pos, :alias, new_name, old_name]
   end
 
+  # undef ::= "undef" ws* name ("," ws* name)*
+  # `undef` is recognised as a keyword (mirroring `alias`) so it is no longer parsed as a
+  # call to a method named `undef` (which segfaults). The names are parsed via parse_subexp
+  # (handles `:sym` and bare names) but compiled as a no-op stub for now — see compile_undef.
+  def parse_undef
+    pos = position
+    keyword(:undef) or return
+    ws
+    name = parse_subexp or expected("method name after undef")
+    names = [name]
+    ws
+    while literal(",")
+      ws
+      nextname = parse_subexp or expected("method name after undef ,")
+      names << nextname
+      ws
+    end
+    return E[pos, :undef, *names]
+  end
+
   # Returns the include paths relative to a given filename.
   def rel_include_paths(filename)
     if filename[0].chr == "/"
@@ -1242,7 +1262,7 @@ class Parser < ParserBase
   def parse_exp
     ws
     pos = position
-    ret = parse_def || parse_alias || parse_defexp || literal("protected")
+    ret = parse_def || parse_alias || parse_undef || parse_defexp || literal("protected")
     if ret.is_a?(Array)
       ret = E[pos].concat(ret)
     elsif ret.respond_to?(:position) && !ret.position
