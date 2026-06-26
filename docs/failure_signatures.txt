@@ -1,0 +1,121 @@
+Failure signatures — ranked by spec count (burndown targets)
+From docs/spec_parallel_results.jsonl. One fix per signature ideally clears all its specs.
+
+  6  segfault @ <no output>
+     defined_spec, for_spec, rescue_spec, return_spec, super_spec, yield_spec
+  5  exception: wrong number of arguments (given 2, expected 1)
+     BEGIN_spec, data_spec, source_encoding_spec, symbol_spec, toplevel_binding_spec
+  3  exception: redo not supported in current compiler
+     loop_spec, redo_spec, until_spec
+  2  warn-method: a
+     constants_spec, optional_assignments_spec
+  2  segfault @ 2 passed, 29 failed, 1 skipped (32 total)
+     encoding_spec, encoding_spec
+  2  exception: undefined method 'callm' for <Object>
+     execution_spec, if_spec
+  2  exception: undefined method 'match' for nil
+     escapes_spec, repetition_spec
+  2  exception: undefined method '[]' for nil
+     grouping_spec, subexpression_call_spec
+  2  warn-method: o
+     interpolation_spec, modifiers_spec
+  1  exception: undefined method 'lines' for ""
+     END_spec
+  1  segfault @ The alias keyword
+     alias_spec
+  1  exception: undefined method 'split' for <Object>
+     array_spec
+  1  warn-method: object
+     assignments_spec
+  1  segfault @ Array
+     block_spec
+  1  segfault @ The break statement in a block
+     break_spec
+  1  segfault after: FAILED: Expected "foo" but got nil
+     case_spec
+  1  exception: undefined method 'eax' for <Eigenclass_1846>
+     class_spec
+  1  warn-method: cvar_m
+     class_variable_spec
+  1  segfault @ 0 passed, 1 failed, 0 skipped (1 total)
+     comment_spec
+  1  warn-method: puts
+     def_spec
+  1  exception: wrong number of arguments (given 1, expected 0)
+     delegation_spec
+  1  exception: undefined method 'v' for <Object>
+     ensure_spec
+  1  segfault @ The __FILE__ pseudo-variable with require
+     file_spec
+  1  exception: undefined method 'keys' for nil
+     hash_spec
+  1  segfault @ 14 passed, 2 failed, 0 skipped (16 total)
+     heredoc_spec
+  1  segfault @ FAILED: Expected [[], {}] but got [[], []]
+     keyword_arguments_spec
+  1  warn-method: create_lambda
+     lambda_spec
+  1  segfault @ The __LINE__ pseudo-variable
+     line_spec
+  1  segfault @ in stdin
+     magic_comment_spec
+  1  exception: undefined method 'local_variables' for <Object>
+     match_spec
+  1  segfault after: FAILED: Expected NilClass but got Eigenclass_15212
+     metaclass_spec
+  1  exception: undefined method 'evaluate' for <Object>
+     method_spec
+  1  compile-fail
+     module_spec
+  1  warn-method: loop
+     next_spec
+  1  exception: undefined method '_1' for <Object>
+     numbered_parameters_spec
+  1  segfault @ 5 passed, 17 failed, 0 skipped (22 total)
+     numbers_spec
+  1  segfault @ 10 passed, 4 failed, 1 skipped (15 total)
+     or_spec
+  1  exception: undefined method '__env__' for <Eigenclass_14823>
+     order_spec
+  1  exception: undefined method 'pair' for <Object>
+     pattern_matching_spec
+  1  exception: Integer can't be coerced
+     precedence_spec
+  1  segfault @ Predefined global $~
+     predefined_spec
+  1  exception: undefined method 'methods' for <Private__A>
+     private_spec
+  1  segfault after: FAILED: Expected ArgumentError to be raised but nothing was 
+     proc_spec
+  1  segfault @ ArgumentError: In __method_Range_initialize - expected a min
+     range_spec
+  1  segfault @ FAILED: Expected 3 but got 4
+     anchors_spec
+  1  segfault @ Regexps with back-references
+     back-references_spec
+  1  exception: undefined method 'match' for "x00"
+     character_classes_spec
+  1  segfault @ 0 passed, 4 failed, 0 skipped (4 total)
+     empty_checks_spec
+  1  segfault @ 4 passed, 19 failed, 2 skipped (25 total)
+     regexp_spec
+  1  exception: undefined method 'retry' for <Object>
+     retry_spec
+  1  exception: undefined method 'unknown' for <Object>
+     safe_navigator_spec
+  1  exception: wrong number of arguments (given 0, expected 1)
+     safe_spec
+  1  warn-method: fooM0
+     send_spec
+  1  exception: undefined method 'be_ancestor_of' for <Eigenclass_1845>
+     singleton_class_spec
+  1  exception: undefined method 'be_computed_by' for <Object>
+     string_spec
+  1  segfault @ The throw keyword
+     throw_spec
+  1  warn-method: meth
+     undef_spec
+  1  exception: undefined method 'instance_eval' for <VariablesSpecs__EvalOrder>
+     variables_spec
+  1  exception: undefined method 'and_return' for nil
+     while_spec
