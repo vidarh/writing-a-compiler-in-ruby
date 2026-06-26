@@ -750,6 +750,53 @@ class String
     pattern =~ self
   end
 
+  # Minimal String#unpack: supports the 8-bit directives C (unsigned) and c (signed), each
+  # with an optional count or '*'. Multi-byte/endian directives and inputs containing NUL
+  # bytes are not handled yet (the latter needs a binary-safe String).
+  def unpack(format)
+    result = []
+    pos = 0
+    blen = length
+    fi = 0
+    flen = format.length
+    while fi < flen
+      d = format[fi].ord
+      fi = fi + 1
+      count = 1
+      star = false
+      if fi < flen
+        nc = format[fi].ord
+        if nc == 42        # '*'
+          star = true
+          fi = fi + 1
+        elsif nc >= 48 && nc <= 57   # digit: a count modifier
+          count = 0
+          while fi < flen && format[fi].ord >= 48 && format[fi].ord <= 57
+            count = count * 10 + (format[fi].ord - 48)
+            fi = fi + 1
+          end
+        end
+      end
+      if d == 67 || d == 99   # 'C' / 'c'
+        n = count
+        n = blen - pos if star
+        i = 0
+        while i < n
+          if pos < blen
+            b = self[pos].ord
+            b = b - 256 if d == 99 && b > 127   # 'c' is signed
+            result << b
+          else
+            result << nil
+          end
+          pos = pos + 1
+          i = i + 1
+        end
+      end
+    end
+    result
+  end
+
   # Return a new string with characters in reverse order
   def reverse
     result = String.new

@@ -1,0 +1,42 @@
+Crash clusters by crashing instruction (gdb, ranked by spec count)
+
+ 43  crash @ movl (%esi), %eax
+     END_spec, anchors_spec, any_spec, append_spec, back-references_spec, break_spec, case_spec, comparison_spec, constructor_spec, cycle_spec, difference_spec, each_byte_spec, each_spec, fetch_spec, file_spec, hash_spec, initialize_spec, last_spec, line_spec, magic_comment_spec ...
+ 41  no-segfault-under-gdb (flaky/exit-code)
+     bsearch_index_spec, chilled_string_spec, chomp_spec, class_spec, compact_spec, compare_by_identity_spec, constants_spec, d_spec, d_spec, element_set_spec, f_spec, f_spec, gsub_spec, i_spec, i_spec, insert_spec, inspect_spec, invert_spec, j_spec, j_spec ...
+ 15  crash @ indirect-call (computed)
+     alias_spec, assignments_spec, block_spec, bytes_spec, casecmp_spec, clone_spec, codepoints_spec, dup_spec, encoding_spec, fdiv_spec, inspect_spec, predefined_spec, safe_navigator_spec, send_spec, variables_spec
+ 13  crash @ call calloc
+     eql_spec, eql_spec, equal_value_spec, filter_spec, flatten_spec, intersection_spec, push_spec, reject_spec, rindex_spec, sort_spec, to_ary_spec, uniq_spec, zip_spec
+ 12  crash @ pushl %ebx
+     array_spec, bsearch_spec, delete_if_spec, delete_if_spec, each_index_spec, each_key_spec, each_pair_spec, each_spec, each_value_spec, escapes_spec, keep_if_spec, sort_by_spec
+  9  crash @ idivl %edi
+     capitalize_spec, compile_spec, escape_spec, lstrip_spec, new_spec, quote_spec, range_spec, rstrip_spec, split_spec
+  6  crash @ vtable-call slot +12
+     defined_spec, for_spec, rescue_spec, return_spec, super_spec, yield_spec
+  4  crash @ call snprintf
+     inspect_spec, inspect_spec, to_s_spec, to_s_spec
+  3  crash @ call *__voff__object_id(%eax)
+     allocate_spec, new_spec, to_a_spec
+  2  crash @ call *__voff__should(%eax)
+     def_spec, initialize_spec
+  2  crash @ movl %eax, (%edx)
+     keyword_arguments_spec, precedence_spec
+  1  crash @ movl %esi, (%esp)
+     equal_value_spec
+  1  crash @ call *__voff__freeze(%eax)
+     rehash_spec
+  1  crash @ movb %al, (%edx)
+     element_set_spec
+  1  crash @ movl %eax, (%esp)
+     match_spec
+  1  crash @ call *__voff__is_a__Q(%eax)
+     modulo_spec
+  1  crash @ call *__voff____copy_raw(%eax)
+     element_reference_spec
+  1  crash @ movl (%edi), %eax
+     metaclass_spec
+  1  crash @ call *__voff____X__3d(%eax)
+     proc_spec
+  1  crash @ call *__voff__str_concat(%eax)
+     string_spec
