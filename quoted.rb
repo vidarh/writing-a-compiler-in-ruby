@@ -67,30 +67,6 @@ module Tokens
             # Control: mask to lower 5 bits
             return (ch.ord & 0x1f).chr
           end
-        when 'x'
-          # \xNN hex escape (1-2 hex digits). \x00 still can't survive a C-string-backed
-          # String (see String#length FIXME), but \x01..\xFF now produce the right byte.
-          hex = ""
-          while hex.length < 2 && s.peek &&
-                ((?0..?9).member?(s.peek) || (?a..?f).member?(s.peek) || (?A..?F).member?(s.peek))
-            hex << s.get
-          end
-          return 'x' if hex.empty?
-          val = 0
-          i = 0
-          while i < hex.length
-            d = hex[i].ord
-            if d >= 97
-              d = d - 87
-            elsif d >= 65
-              d = d - 55
-            else
-              d = d - 48
-            end
-            val = val * 16 + d
-            i += 1
-          end
-          return val.chr
         when '#'
           # Escaped # - return special marker to prevent interpolation
           return :escaped_hash
