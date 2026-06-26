@@ -52,7 +52,7 @@
 {"spec":"rubyspec/core/integer/right_shift_spec.rb","outcome":"FAIL","passed":28,"failed":12,"skipped":0}
 {"spec":"rubyspec/core/integer/round_spec.rb","outcome":"FAIL","passed":5,"failed":12,"skipped":1}
 {"spec":"rubyspec/core/integer/size_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/integer/sqrt_spec.rb","outcome":"CRASH","passed":1,"failed":0,"skipped":0}
+{"spec":"rubyspec/core/integer/sqrt_spec.rb","outcome":"FAIL","passed":4,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/integer/succ_spec.rb","outcome":"PASS","passed":6,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/times_spec.rb","outcome":"PASS","passed":9,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/to_f_spec.rb","outcome":"FAIL","passed":0,"failed":3,"skipped":0}
@@ -74,7 +74,7 @@
 {"spec":"rubyspec/core/regexp/escape_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/regexp/fixed_encoding_spec.rb","outcome":"FAIL","passed":6,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/regexp/hash_spec.rb","outcome":"FAIL","passed":1,"failed":2,"skipped":0}
-{"spec":"rubyspec/core/regexp/initialize_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/regexp/initialize_spec.rb","outcome":"FAIL","passed":0,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/regexp/inspect_spec.rb","outcome":"PASS","passed":8,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/regexp/last_match_spec.rb","outcome":"FAIL","passed":1,"failed":8,"skipped":0}
 {"spec":"rubyspec/core/regexp/linear_time_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -241,7 +241,7 @@
 {"spec":"rubyspec/language/class_variable_spec.rb","outcome":"CRASH","passed":2,"failed":0,"skipped":0}
 {"spec":"rubyspec/language/comment_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/language/constants_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/language/def_spec.rb","outcome":"CRASH","passed":1,"failed":0,"skipped":0}
+{"spec":"rubyspec/language/def_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/defined_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/delegation_spec.rb","outcome":"FAIL","passed":0,"failed":23,"skipped":0}
 {"spec":"rubyspec/language/encoding_spec.rb","outcome":"FAIL","passed":2,"failed":4,"skipped":0}
@@ -261,7 +261,7 @@
 {"spec":"rubyspec/language/metaclass_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/method_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/module_spec.rb","outcome":"COMPILE_FAIL","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/language/next_spec.rb","outcome":"CRASH","passed":7,"failed":16,"skipped":0}
+{"spec":"rubyspec/language/next_spec.rb","outcome":"FAIL","passed":7,"failed":34,"skipped":0}
 {"spec":"rubyspec/language/not_spec.rb","outcome":"PASS","passed":10,"failed":0,"skipped":0}
 {"spec":"rubyspec/language/numbered_parameters_spec.rb","outcome":"CRASH","passed":0,"failed":19,"skipped":0}
 {"spec":"rubyspec/language/numbers_spec.rb","outcome":"FAIL","passed":5,"failed":17,"skipped":0}

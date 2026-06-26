@@ -1,7 +1,33 @@
 
 class Kernel
-  def puts s
-    %s(puts (index s 1))
+  def puts *str
+    na = str.length
+    if na == 0
+      %s(puts "")
+      return
+    end
+
+    i = 0
+    while i < na
+      raw = str[i]
+      if raw
+        raw = raw.to_s
+        last = raw[-1]
+        raw = raw.__get_raw
+        %s(if (ne raw 0) (printf "%s" raw))
+        if last
+          if last.ord != 10
+            %s(puts "")
+          end
+        else
+          %s(puts "")
+        end
+      else
+        %s(puts "")
+      end
+      i = i + 1
+    end
+    nil
   end
 
   # Raise an exception
@@ -78,10 +104,10 @@ class Kernel
     raise "NameError: uninitialized constant #{const_name}"
   end
 
-  # Runtime constant lookup in global scope - stub implementation
+  # Runtime constant lookup in global scope.
+  # FIXME: Should look up dynamic constants from a runtime hash / call const_missing.
   def __const_get_global(const_name)
-    STDERR.puts "Runtime constant lookup not implemented: #{const_name}"
-    raise "NameError: uninitialized constant #{const_name}"
+    raise NameError.new("uninitialized constant #{const_name}")
   end
 
   # Runtime constant assignment in global scope - stub implementation

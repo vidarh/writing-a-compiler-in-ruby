@@ -120,18 +120,7 @@ class Object
     self.class.__send_for_obj__(self,sym,*args)
   end
 
-  # Runtime constant lookup for undefined constants
-  # This is called when accessing a constant that wasn't defined at compile time
-  # FIXME: Should call const_missing hook if available
-  # FIXME: Should actually look up dynamic constants from a runtime hash
-  def __const_get_global(const_name)
-    # For now, just raise NameError
-    # Future: look up in dynamic constants hash, call const_missing
-    raise NameError.new("uninitialized constant #{const_name}")
-  end
-
-  # FIXME: Belongs in Kernel
-# FIXME: Add splat support for s-expressions / call so that
+  # FIXME: Add splat support for s-expressions / call so that
 # the below works
 #  def printf format, *args
 #    %s(printf format (rest args))
@@ -140,37 +129,6 @@ class Object
   def p ob
     puts ob.inspect
     ob
-  end
-
-  # FIXME: Belongs in Kernel
-  def puts *str
-    na = str.length
-    if na == 0
-      %s(puts "")
-      return
-    end
-
-    i = 0
-    while i < na
-      raw = str[i]
-      if raw
-        raw = raw.to_s
-        last = raw[-1]
-        raw = raw.__get_raw
-        %s(if (ne raw 0) (printf "%s" raw))
-        if last
-          if last.ord != 10
-            %s(puts "")
-          end
-        else
-          %s(puts "")
-        end
-      else
-        %s(puts "")
-      end
-      i = i + 1
-    end
-    nil
   end
 
   def print *str
