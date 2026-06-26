@@ -1,30 +1,44 @@
-# Next Steps — Spec-Run Speed (top priority), Burndown, Cleanup
+# Next Steps — Completing the Compiler
 
 *Created: 2026-06-26. A cross-cutting roadmap proposal. Each numbered item below is
 intended to be promoted into a focused `docs/plans/<CODE>` plan via the improvement
 planner; this document is the strategy that prioritizes them (an iterative loop, not a
 fixed order — see Operating method).*
 
-> **The standing operating procedure lives in [`docs/SPEC_SPEEDUP_WORKFLOW.md`](SPEC_SPEEDUP_WORKFLOW.md)** —
+> **The standing operating procedure lives in [`docs/COMPILER_WORKFLOW.md`](COMPILER_WORKFLOW.md)** —
 > read that first on a restart, then this file for the candidate backlog and detail.
+
+## The gate — non-negotiable
+
+**Every change is gated by BOTH `make selftest` AND `make selftest-c` passing with ZERO
+failures.** `selftest-c` is the survival gate: if it fails the compiler can no longer
+compile itself correctly — it is **broken** and all other progress is blocked until it is
+fixed. Never commit on a red gate; never explain a failure away. See
+[`docs/COMPILER_WORKFLOW.md`](COMPILER_WORKFLOW.md).
 
 ## Priorities (from the user)
 
-0. **TOP PRIORITY: anything that speeds up spec runs**, even if it is significant work.
-   Spec-run speed is the goal, not merely an enabler — a fast loop is what makes every
-   other workstream affordable.
-1. **Benchmarks come first.** There are currently **no benchmarks**, so every speedup
-   claim in this document (including "the compiler dominates the loop") is *speculative*
-   until measured. Build the measurement harness before optimizing anything.
-2. **Spike-driven.** Before committing to expensive work, run a quick **spike to verify
+0. **THE GOAL is to complete the compiler** — a correct, self-hosting, pure-Ruby compiler
+   that passes (ideally unmodified upstream) rubyspec. Everything below is a facet of that.
+1. **Spec-run speed is the current top priority *because it is the binding constraint*** on
+   the correctness burndown that completes the compiler — not because speed is the goal. A
+   fast, measurable loop makes every later correctness fix affordable. As the loop gets
+   fast, weight shifts back to direct correctness/feature/GC/codegen work.
+2. **Measure first.** Benchmarks and structured spec results come before optimizing — an
+   unmeasured speedup claim (e.g. "the compiler dominates the loop") is speculative until
+   measured. **And the benchmark must measure what matters: real rubyspec runs end-to-end
+   (preprocess → compile → link → run, with real pass/fail/crash/timeout outcomes), not
+   proxy inputs.**
+3. **Spike-driven.** Before committing to expensive work, run a quick **spike to verify
    the complexity/payoff**. Apply the cheapest effective win first; shelve a candidate
    the moment a faster-to-apply alternative exists.
-3. **Pure Ruby only**, using the `%s(...)` s-expression extension. The C GC (`tgc.c`)
+4. **Pure Ruby only**, using the `%s(...)` s-expression extension. The C GC (`tgc.c`)
    is a tolerated *exception* we aim to delete. No new C.
-4. **Token-efficient**: push as much as possible into deterministic scripts/reusable
+5. **Token-efficient**: push as much as possible into deterministic scripts/reusable
    tools so Claude spends tokens fixing, not rediscovering.
-5. There is an **idle machine** available for parallel test builds.
-6. **Minimise rubyspec divergence.** The goal is to track upstream `ruby/spec` and
+6. There is an **idle machine** available for parallel test builds, reachable via
+   `ssh compiler@ax52`.
+7. **Minimise rubyspec divergence.** The goal is to track upstream `ruby/spec` and
    eventually run it **unchanged** under real mspec. Today's divergence is bad: the
    `run_rubyspec` runner *actively rewrites spec files* (sed-injecting parens into
    `describe`, rewriting `@ivars` to `$globals`, stripping `platform_is`/`ruby_bug`

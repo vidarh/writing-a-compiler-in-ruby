@@ -1,7 +1,7 @@
 # tools/bench_compile.rb
 #
 # Instrumented mirror of driver.rb used by the spec-speedup benchmark harness
-# (see docs/SPEC_SPEEDUP_WORKFLOW.md / docs/plans/SPECBENCH-*).
+# (see docs/COMPILER_WORKFLOW.md / docs/plans/SPECBENCH-*).
 #
 # It compiles a file exactly like driver.rb but times the three in-process stages
 # and emits a one-line JSON timing record to STDERR:

@@ -9,8 +9,9 @@ later speedup is ranked on real numbers instead of speculation.
 
 ## Goal Reference
 
-[COMPLANG](../../goals/COMPLANG-compiler-advancement.md): spec-run speed is the top
-priority (see [`docs/SPEC_SPEEDUP_WORKFLOW.md`](../../SPEC_SPEEDUP_WORKFLOW.md) and
+[COMPLANG](../../goals/COMPLANG-compiler-advancement.md): spec-run speed is the current
+top-priority lever on completing the compiler (see
+[`docs/COMPILER_WORKFLOW.md`](../../COMPILER_WORKFLOW.md) and
 [`docs/NEXT_STEPS.md`](../../NEXT_STEPS.md) Workstream 0). The workflow's loop *starts* with
 "benchmark", and there is currently **no benchmark** — so this is the gating first step.
 
