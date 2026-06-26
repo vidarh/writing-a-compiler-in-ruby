@@ -42,3 +42,9 @@ large missing feature/subsystem, not a small bug. To make further progress here,
 - **Float** support → case_compare, equal_value, lte, ceildiv, … (large).
 - **encoding** (`force_encoding`, transcoding, Encoding objects) → many string/regexp specs.
 - **eval / ruby_exe** → blocks specs needing runtime eval or subprocess; out of scope.
+
+## Fixed
+- **core/symbol/case_compare** → GREEN. `Class#===` was missing (fell back to Object#=== = `==`),
+  so `Klass === obj` was always false and every `case/when ClassName` mis-dispatched. Added
+  `Class#===` = `other.is_a?(self)` (lib/core/class_ext.rb). Correctness win beyond the one
+  green flip: `case/when` with class patterns now works.

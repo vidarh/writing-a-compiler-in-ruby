@@ -16,6 +16,12 @@ class Class
     @method_to_voff
   end
 
+  # Case-equality for classes: `Klass === obj` iff obj.is_a?(Klass). Needed because the
+  # generic Object#=== is `==`, which is never true for a class vs an instance.
+  def ===(other)
+    other.is_a?(self)
+  end
+
   # This is called by __send__
   def __send_for_obj__ obj,sym,*args
     sym  = sym.to_sym

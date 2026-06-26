@@ -121,7 +121,8 @@ specbench-rubyspec:
 # Runs the tracked categories by default; override with SPECS="dir1 dir2 ...". Prefer ax52.
 #   make specs-parallel                 (tracked set)
 #   make specs-parallel SPECS=rubyspec/core/array J=16
-TRACKED_SPECS = rubyspec/language rubyspec/core/integer rubyspec/core/string rubyspec/core/regexp
+TRACKED_SPECS = rubyspec/language rubyspec/core/integer rubyspec/core/string rubyspec/core/regexp \
+                rubyspec/core/array rubyspec/core/hash rubyspec/core/symbol
 .PHONY: specs-parallel
 specs-parallel:
 	ruby -I. tools/run_specs_parallel.rb $(or $(SPECS),$(TRACKED_SPECS)) -j $(or $(J),$(shell nproc))
