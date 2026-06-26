@@ -127,3 +127,9 @@ specbench:
 .PHONY: specbench-rubyspec
 specbench-rubyspec:
 	ruby -I. tools/specbench_rubyspec.rb
+
+# Parallel rubyspec runner (prefer on ax52). DIR defaults to language, J to nproc.
+#   make specs-parallel DIR=rubyspec/language J=16
+.PHONY: specs-parallel
+specs-parallel:
+	ruby -I. tools/run_specs_parallel.rb $(or $(DIR),rubyspec/language) -j $(or $(J),$(shell nproc))
