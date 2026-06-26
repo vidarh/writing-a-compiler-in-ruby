@@ -102,7 +102,11 @@
        (do
           # Only copy if class slot is still uninitialized
           (if (eq (index klass i) (index __base_vtable i))
-             (assign (index klass i) (index mod i))
+             # Use __set_vtable (not a plain assign) so included methods PROPAGATE to
+             # subclasses, exactly as a normal `def` does. Without this, e.g. Object's
+             # `include Kernel` put puts/raise/loop/... on Object but not on Class, so any
+             # Kernel method invoked with self being a class hit method_missing and crashed.
+             (__set_vtable klass i (index mod i))
           )
           (assign i (add i 1))
        )
