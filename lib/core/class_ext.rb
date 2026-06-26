@@ -16,6 +16,12 @@ class Class
     @method_to_voff
   end
 
+  # FIXME: This warns and exit(1)s rather than raising a catchable NoMethodError like
+  # Object#method_missing does. It can't simply `raise` yet: `raise` (and even `puts`)
+  # from a context where self is a Class crashes, because Class objects do NOT have access
+  # to Kernel/Object instance methods (e.g. `puts`) -- only the methods explicitly defined
+  # on Class/Module (name/inspect/to_s/...). Fixing this properly requires Class instances
+  # to inherit Object/Kernel instance methods; until then method_missing here cannot raise.
   def method_missing sym, *args
       %s(if sym (printf "WARNING:    Method: '%s'\n" (callm (callm sym to_s) __get_raw)))
       %s(printf "WARNING:    symbol address = %p\n" sym)
