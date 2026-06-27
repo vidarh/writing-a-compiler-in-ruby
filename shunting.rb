@@ -95,11 +95,12 @@ module OpPrec
       #STDERR.puts "oper: #{token.inspect} / ostack=#{ostack.inspect} / opstate=#{opstate.inspect} / op=#{op.inspect}" if ENV['DEBUG_PARSER']
       #STDERR.puts "   vstack=#{@out.vstack.inspect}" if ENV['DEBUG_PARSER']
 
-      # Handle argument forwarding: ... when used standalone in function calls
-      # If we see ... with only opening paren on ostack inside foo(...), it's argument forwarding, not endless range
-      # Check: @is_call_context means we're inside foo()
-      #        ostack.size == 1 && ostack.first.type == :lp && ostack.first.sym == nil means we're inside (...), not [...]
-      if op && op.sym == :exclusive_range &&
+      # Handle argument forwarding: ... when used standalone in function calls.
+      # Only when ... is in prefix position (opstate == :prefix, i.e. no left operand): that
+      # distinguishes the standalone foo(...) from an exclusive range foo(a...b), where `a` is
+      # already on the value stack and ... is an infix operator.
+      # Also requires being inside (...) (ostack is a single nil-sym :lp) and in call context.
+      if op && op.sym == :exclusive_range && opstate == :prefix &&
          ostack.size == 1 && ostack.first && ostack.first.type == :lp && ostack.first.sym == nil &&
          @is_call_context
         # This is argument forwarding in a method call: foo(...)
