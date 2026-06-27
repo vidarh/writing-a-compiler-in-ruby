@@ -13,10 +13,11 @@ module Tokens
         tmp << s.get if c == ?@ && s.peek == ?@
       end
 
-      if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c))
+      # c.ord >= 128 accepts UTF-8 multibyte bytes/chars in identifiers (e.g. Multibyteぁあ).
+      if (c = s.peek) && (c == ?_ || (?a .. ?z).member?(c) || (?A .. ?Z).member?(c) || c.ord >= 128)
         tmp << s.get
 
-        while (c = s.peek) && (ALNUM.member?(c) || ?_ == c)
+        while (c = s.peek) && (ALNUM.member?(c) || ?_ == c || c.ord >= 128)
           tmp << s.get
         end
       elsif tmp == "$"
