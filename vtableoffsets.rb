@@ -32,7 +32,9 @@ class VTableOffsets
   # If the name is an array, return the converted first element
   # of the array as the name.
   def clean_name(name)
-    name = name[1] if name.is_a?(Array) # Handle cases like self.foo => look up the offset for "foo"
+    # Unwrap to the name symbol. Nested for computed-receiver singletons, e.g.
+    # def (expr).m => [:eigen, [:assign, ...]] needs more than one level.
+    name = name[1] while name.is_a?(Array)
     name = name.to_sym
   end
 
