@@ -3528,8 +3528,13 @@ class Integer < Numeric
     # Integer can be compared with Integer and numeric types (Float, Rational)
     # But not with non-numeric types (String, Array, etc.)
     if !other.is_a?(Integer) && !other.is_a?(Float)
-      # For truly incomparable types, raise ArgumentError
-      raise ArgumentError.new("comparison of Integer with #{other.class} failed")
+      # coerce protocol: a non-numeric that defines #coerce gets it called (any exception it
+      # raises must propagate, not be rescued); otherwise the comparison is invalid.
+      if other.respond_to?(:coerce)
+        other.coerce(self)
+      else
+        raise ArgumentError.new("comparison of Integer with #{other.class} failed")
+      end
     end
   end
 

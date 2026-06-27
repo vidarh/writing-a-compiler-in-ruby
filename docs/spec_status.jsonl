@@ -101,7 +101,7 @@
 {"spec":"rubyspec/core/array/repeated_permutation_spec.rb","outcome":"FAIL","passed":0,"failed":22,"skipped":0}
 {"spec":"rubyspec/core/array/replace_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/reverse_each_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/array/reverse_spec.rb","outcome":"TIMEOUT","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/array/reverse_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/rindex_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/rotate_spec.rb","outcome":"FAIL","passed":0,"failed":24,"skipped":0}
 {"spec":"rubyspec/core/array/sample_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -115,7 +115,7 @@
 {"spec":"rubyspec/core/array/sum_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/take_spec.rb","outcome":"FAIL","passed":0,"failed":13,"skipped":0}
 {"spec":"rubyspec/core/array/take_while_spec.rb","outcome":"FAIL","passed":0,"failed":10,"skipped":0}
-{"spec":"rubyspec/core/array/to_a_spec.rb","outcome":"TIMEOUT","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/array/to_a_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/to_ary_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/to_h_spec.rb","outcome":"COMPILE_FAIL","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/to_s_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -207,7 +207,7 @@
 {"spec":"rubyspec/core/integer/ceildiv_spec.rb","outcome":"FAIL","passed":0,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/integer/chr_spec.rb","outcome":"FAIL","passed":13,"failed":13,"skipped":0}
 {"spec":"rubyspec/core/integer/coerce_spec.rb","outcome":"FAIL","passed":3,"failed":9,"skipped":0}
-{"spec":"rubyspec/core/integer/comparison_spec.rb","outcome":"FAIL","passed":11,"failed":28,"skipped":0}
+{"spec":"rubyspec/core/integer/comparison_spec.rb","outcome":"FAIL","passed":12,"failed":22,"skipped":1}
 {"spec":"rubyspec/core/integer/complement_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/constants_spec.rb","outcome":"PASS","passed":0,"failed":0,"skipped":2}
 {"spec":"rubyspec/core/integer/denominator_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
@@ -225,13 +225,13 @@
 {"spec":"rubyspec/core/integer/floor_spec.rb","outcome":"PASS","passed":8,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/gcd_spec.rb","outcome":"FAIL","passed":10,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/integer/gcdlcm_spec.rb","outcome":"PASS","passed":10,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/integer/gt_spec.rb","outcome":"FAIL","passed":2,"failed":3,"skipped":0}
-{"spec":"rubyspec/core/integer/gte_spec.rb","outcome":"FAIL","passed":2,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/integer/gt_spec.rb","outcome":"FAIL","passed":3,"failed":2,"skipped":0}
+{"spec":"rubyspec/core/integer/gte_spec.rb","outcome":"FAIL","passed":3,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/integer/integer_spec.rb","outcome":"PASS","passed":3,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/lcm_spec.rb","outcome":"FAIL","passed":9,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/integer/left_shift_spec.rb","outcome":"FAIL","passed":30,"failed":8,"skipped":0}
-{"spec":"rubyspec/core/integer/lt_spec.rb","outcome":"FAIL","passed":4,"failed":1,"skipped":0}
-{"spec":"rubyspec/core/integer/lte_spec.rb","outcome":"FAIL","passed":5,"failed":2,"skipped":0}
+{"spec":"rubyspec/core/integer/lt_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
+{"spec":"rubyspec/core/integer/lte_spec.rb","outcome":"FAIL","passed":6,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/integer/magnitude_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/minus_spec.rb","outcome":"FAIL","passed":4,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/integer/modulo_spec.rb","outcome":"FAIL","passed":8,"failed":8,"skipped":0}
@@ -467,7 +467,7 @@
 {"spec":"rubyspec/language/class_variable_spec.rb","outcome":"FAIL","passed":3,"failed":21,"skipped":0}
 {"spec":"rubyspec/language/comment_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/language/constants_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/language/def_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/language/def_spec.rb","outcome":"CRASH","passed":5,"failed":28,"skipped":0}
 {"spec":"rubyspec/language/defined_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/delegation_spec.rb","outcome":"FAIL","passed":0,"failed":23,"skipped":0}
 {"spec":"rubyspec/language/encoding_spec.rb","outcome":"FAIL","passed":2,"failed":4,"skipped":0}
