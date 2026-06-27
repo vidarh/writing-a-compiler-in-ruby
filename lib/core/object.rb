@@ -1,4 +1,19 @@
 class Object
+  # OBJECT INSTANCE LAYOUT (applies to every heap object, since Object is the root):
+  #   slot 0: @__class__  -- the class pointer (word 0)
+  #   then each class's ivars, allocated in order of first mention, lowest class first.
+  #
+  # Adding an ivar to Object is a whole-bootstrap change, not a local edit. Ivars are allocated
+  # in mention order, and Object's land in the lowest slots of EVERY object -- including Class
+  # objects, whose metadata sits at fixed slots that low-level code reads by hardcoded index
+  # (see lib/core/class.rb). A new Object ivar shifts all of those. To add one:
+  #   1. Mention it here before any other Object ivar, so it takes slot 1 (after @__class__).
+  #   2. Bump ClassScope::CLASS_IVAR_NUM by one and shift EVERY hardcoded class-metadata index
+  #      up by one (instance_size/name/superclass/subclasses/next_sibling in class.rb, and the
+  #      `(index self N)` fixup below).
+  #   3. Override its accessors on the type-tagged immediates (Integer/Symbol/nil/true/false),
+  #      which have no storage at all and cannot hold or read the slot.
+  #
   # At this point we have a "fixup to make as part of bootstrapping:
   #
   #  Class was created *before* Object existed, which means it is not linked into the

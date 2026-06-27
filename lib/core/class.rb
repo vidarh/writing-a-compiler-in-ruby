@@ -1,3 +1,13 @@
+# CLASS OBJECT METADATA SLOTS (fixed offsets, read below by hardcoded index). These must stay
+# in sync with ClassScope::CLASS_IVAR_NUM (currently 6) and with Object's ivar count, because a
+# Class object's metadata is laid out right after Object's ivars:
+#   slot 0: @__class__ / vtable ptr   slot 1: @instance_size   slot 2: @name
+#   slot 3: superclass                slot 4: subclasses        slot 5: next_sibling
+# To add an ivar to Object (see lib/core/object.rb), every one of these shifts up by one. The
+# hardcoded uses are scattered as BOTH `(index <ob> N)` AND bare CLASS_IVAR_NUM literals (e.g.
+# `(assign i 6)` below skips the metadata slots) -- all must be found and bumped together, or
+# the bootstrap silently corrupts. Immediates (Integer etc.) are type-tagged with no slots.
+#
 # size <= ssize *always* or something is severely wrong.
 %s(defun __new_class_object (size superclass ssize classob)
   (let (ob i)
