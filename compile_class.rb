@@ -42,6 +42,16 @@ class Compiler
     compile_class(scope,name, *exps)
   end
 
+  # True if `target` is reachable from `start` by following the namespace (next) chain.
+  def scope_in_chain?(start, target)
+    cur = start
+    while cur
+      return true if cur == target
+      cur = cur.respond_to?(:next) ? cur.next : nil
+    end
+    false
+  end
+
   # Helper method to search for a method in the class vtable chain (including superclasses)
   def find_method_in_vtable_chain(class_scope, method_name)
     current = class_scope
@@ -338,7 +348,10 @@ class Compiler
       # Class is being reopened - update local_scope for this invocation
       # This allows accessing local variables from the enclosing scope
       local_scope = (scope != parent_scope) ? scope : nil
-      cscope.local_scope = local_scope if local_scope
+      # ...but not when the enclosing scope is itself inside cscope (e.g. reopening via
+      # module ::M from within M): that would make cscope.local_scope chain back to cscope
+      # and send get_arg into infinite recursion.
+      cscope.local_scope = local_scope if local_scope && !scope_in_chain?(local_scope, cscope)
     end
 
     # For nested class/module Foo::Bar, register Bar in Foo's namespace
