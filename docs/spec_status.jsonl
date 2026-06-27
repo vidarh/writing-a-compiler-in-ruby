@@ -156,7 +156,7 @@
 {"spec":"rubyspec/core/hash/flatten_spec.rb","outcome":"FAIL","passed":0,"failed":17,"skipped":0}
 {"spec":"rubyspec/core/hash/gt_spec.rb","outcome":"FAIL","passed":0,"failed":19,"skipped":0}
 {"spec":"rubyspec/core/hash/gte_spec.rb","outcome":"FAIL","passed":0,"failed":19,"skipped":0}
-{"spec":"rubyspec/core/hash/has_key_spec.rb","outcome":"FAIL","passed":4,"failed":1,"skipped":0}
+{"spec":"rubyspec/core/hash/has_key_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/has_value_spec.rb","outcome":"FAIL","passed":1,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/hash/hash_spec.rb","outcome":"FAIL","passed":4,"failed":5,"skipped":0}
 {"spec":"rubyspec/core/hash/include_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
@@ -164,7 +164,7 @@
 {"spec":"rubyspec/core/hash/inspect_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/hash/invert_spec.rb","outcome":"CRASH","passed":0,"failed":6,"skipped":0}
 {"spec":"rubyspec/core/hash/keep_if_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/hash/key_spec.rb","outcome":"FAIL","passed":4,"failed":9,"skipped":0}
+{"spec":"rubyspec/core/hash/key_spec.rb","outcome":"FAIL","passed":5,"failed":8,"skipped":0}
 {"spec":"rubyspec/core/hash/keys_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/length_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/lt_spec.rb","outcome":"FAIL","passed":0,"failed":19,"skipped":0}
