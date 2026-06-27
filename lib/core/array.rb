@@ -355,8 +355,13 @@ class Array
   # Returns nil if the index is out of range. See also Array#[].
   # (Array#at is slightly faster than Array#[], as it does not accept ranges and so on.)
   def at(idx)
-    # faster implementation here? or simply:
-    return self[idx]
+    if !idx.is_a?(Integer)
+      if !idx.respond_to?(:to_int)
+        raise TypeError.new("no implicit conversion of #{idx.class} into Integer")
+      end
+      idx = idx.to_int
+    end
+    self[idx]
   end
 
 
