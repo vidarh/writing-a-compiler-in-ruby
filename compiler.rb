@@ -946,7 +946,7 @@ class Compiler
   # Parser returns: [:block, args, exps, rescue_clause, ensure_body]
   # For begin blocks: args=[], exps=body, rescue_clause=[:rescue, ...] or nil, ensure_body=... or nil
   # rescue_clause can also be [:rescues, r1, r2, r3...] for multiple rescue clauses
-  def compile_block(scope, args, exps, rescue_clause = nil, ensure_body = nil)
+  def compile_block(scope, args = [], exps = [], rescue_clause = nil, ensure_body = nil)
     # Handle multiple rescue clauses with dedicated method
     if rescue_clause && rescue_clause[0] == :rescues
       return compile_begin_rescues(scope, exps, rescue_clause[1..-1], ensure_body)
