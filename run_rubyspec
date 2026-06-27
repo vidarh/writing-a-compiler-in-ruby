@@ -88,8 +88,8 @@ run_single_spec() {
                     sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
                     sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
                     sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
-                    sed 's/platform_is[^d]*do/platform_is do/g' | \
-                    sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
+                    sed 's/platform_is[ (].* do$/platform_is do/g' | \
+                    sed 's/platform_is_not[ (].* do$/platform_is_not do/g' \
                     >> "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
@@ -115,8 +115,8 @@ run_single_spec() {
         sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
         sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
         sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
-        sed 's/platform_is[^d]*do/platform_is do/g' | \
-        sed 's/platform_is_not[^d]*do/platform_is_not do/g' | \
+        sed 's/platform_is[ (].* do$/platform_is do/g' | \
+        sed 's/platform_is_not[ (].* do$/platform_is_not do/g' | \
         sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
         sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
         sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
@@ -379,8 +379,8 @@ elif [ -f "$TARGET" ]; then
                     sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
                     sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
                     sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
-                    sed 's/platform_is[^d]*do/platform_is do/g' | \
-                    sed 's/platform_is_not[^d]*do/platform_is_not do/g' \
+                    sed 's/platform_is[ (].* do$/platform_is do/g' | \
+                    sed 's/platform_is_not[ (].* do$/platform_is_not do/g' \
                     >> "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
@@ -406,8 +406,8 @@ elif [ -f "$TARGET" ]; then
         sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
         sed 's/platform_is *c_long_size: *64 *do/if false  # SKIPPED: 64-bit test on 32-bit platform/g' | \
         sed 's/platform_is_not *c_long_size: *32 *do/if false  # SKIPPED: not-32-bit test on 32-bit platform/g' | \
-        sed 's/platform_is[^d]*do/platform_is do/g' | \
-        sed 's/platform_is_not[^d]*do/platform_is_not do/g' | \
+        sed 's/platform_is[ (].* do$/platform_is do/g' | \
+        sed 's/platform_is_not[ (].* do$/platform_is_not do/g' | \
         sed 's/ruby_bug[^d]*do/ruby_bug do/g' | \
         sed 's/ruby_version_is[^d]*do/ruby_version_is do/g' | \
         sed 's/not_supported_on[^d]*do/not_supported_on do/g' | \
