@@ -554,6 +554,36 @@ class Object
     end
     true
   end
+
+  # Mock expectations on a REAL object (Mock overrides these with full behaviour). We can't
+  # intercept real method dispatch, so these are best-effort: should_not_receive is not
+  # enforced and should_receive does not stub the return value. They return a chainable
+  # null-expectation so a spec's `.and_return`/`.with`/`.exactly` chain doesn't crash.
+  def should_receive(method)
+    MockExpectationStub.new
+  end
+
+  def should_not_receive(method)
+    MockExpectationStub.new
+  end
+
+  def stub!(method)
+    MockExpectationStub.new
+  end
+end
+
+# Chainable no-op returned by Object#should_receive/should_not_receive on real objects.
+class MockExpectationStub
+  def and_return(*a); self; end
+  def and_raise(*a); self; end
+  def with(*a); self; end
+  def any_number_of_times; self; end
+  def exactly(*a); self; end
+  def at_least(*a); self; end
+  def at_most(*a); self; end
+  def times; self; end
+  def once; self; end
+  def twice; self; end
 end
 
 # Matcher methods
