@@ -389,9 +389,13 @@ module Tokens
         # Don't check symbols (whose to_s starts with :) against operators
         # This prevents empty symbol :"" (which has to_s ":") from matching ternary operator
         s = buf.to_s
-        return [buf, Operators[s]] if s[0] != ?: && Operators.member?(s)
-        if @keywords.member?(buf)
-          return [buf,nil, :keyword]
+        # A keyword/operator name immediately followed by ':' is a label (e.g. in:, if:, class:),
+        # not the keyword/operator -- fall through to a plain name so the parser builds a pair.
+        unless @s.peek == ?:
+          return [buf, Operators[s]] if s[0] != ?: && Operators.member?(s)
+          if @keywords.member?(buf)
+            return [buf,nil, :keyword]
+          end
         end
         return [buf, nil]
       when ?%
