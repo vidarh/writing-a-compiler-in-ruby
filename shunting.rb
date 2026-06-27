@@ -147,6 +147,13 @@ module OpPrec
         return :infix_or_postfix  # Allow postfix while/until after begin...end
       end
 
+      # Beginless range: .. / ... in prefix position has no left operand. Supply nil as the left
+      # value (mirroring the endless-range nil right value) so it reduces to [:range, nil, end].
+      if opstate == :prefix && (op.sym == :range || op.sym == :exclusive_range)
+        @out.value(nil)
+        opstate = :infix_or_postfix
+      end
+
       # When if/unless/while/until/rescue appear in prefix position, parse as statement UNLESS
       # they're appearing after a prefix operator (which would make them modifiers)
       if opstate == :prefix && (ostack.empty? || ostack.last.type != :prefix)
