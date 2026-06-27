@@ -80,6 +80,15 @@ class Object
     false
   end
 
+  # FIXME: per-class hack. The proper fix is a frozen bit in the slot-1 flags word so freeze
+  # works uniformly for every object -- see the "Adding an ivar to Object" documentation at the
+  # top of this file (that change is implemented but stashed, pending a parser regression).
+  # Until then Object#freeze is a no-op and classes needing real frozen state (e.g. Array) use
+  # a local @frozen ivar.
+  def freeze
+    self
+  end
+
   def frozen?
     false
   end

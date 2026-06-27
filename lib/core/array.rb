@@ -367,6 +367,7 @@ class Array
 
   # Removes all elements from self.
   def clear
+    raise FrozenError.new("can't modify frozen Array: #{inspect}") if frozen?
     # FIXME: consider whether to actually shrink
     %s(assign @len 0)
     self
@@ -686,9 +687,15 @@ class Array
   end
 
 
-  # Return true if this array is frozen (or temporarily frozen while being sorted).
+  # FIXME: local @frozen ivar is a per-class workaround; the proper mechanism is the slot-1
+  # flags word so freeze works uniformly -- see the object layout docs in lib/core/object.rb.
+  def freeze
+    @frozen = true
+    self
+  end
+
   def frozen?
-    %s(puts "Array#frozen? not implemented")
+    @frozen ? true : false
   end
 
 
