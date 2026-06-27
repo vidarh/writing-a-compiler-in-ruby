@@ -4,6 +4,27 @@
 # Suppress bash job control messages
 set +m 2>/dev/null
 
+# Inline a fixture into the temp spec. A fixture may itself require_relative sibling files
+# (e.g. marshal_data -> marshal_multibyte_data, file_types -> ../../library/socket/fixtures);
+# those resolve relative to the fixture's own directory, not the temp dir, so inline them first
+# and strip the require_relative lines from the emitted content.
+inline_fixture() {
+    local fpath="$1" out="$2"
+    [ -f "$fpath" ] || return
+    local fdir; fdir=$(dirname "$fpath")
+    grep -E "^[[:space:]]*require_relative" "$fpath" 2>/dev/null | while IFS= read -r nested; do
+        local nf np
+        nf=$(echo "$nested" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1/")
+        np="$fdir/$nf"; [ -f "$np" ] || np="$fdir/$nf.rb"
+        if [ -f "$np" ]; then
+            grep -v "require_relative" "$np" >> "$out"
+            echo "" >> "$out"
+        fi
+    done
+    grep -v "require_relative" "$fpath" >> "$out"
+    echo "" >> "$out"
+}
+
 if [ $# -eq 0 ]; then
     echo "Usage: ./run_rubyspec <spec_file_or_directory>"
     echo "Example: ./run_rubyspec rubyspec/core/integer/even_spec.rb"
@@ -37,7 +58,7 @@ run_single_spec() {
             FIXTURE_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
             FIXTURE_PATH="$SPEC_DIR/$FIXTURE_FILE"
             if [ -f "$FIXTURE_PATH" ]; then
-                cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                inline_fixture "$FIXTURE_PATH" "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
         fi
@@ -53,7 +74,7 @@ run_single_spec() {
                         SHARED_DIR=$(dirname "$SHARED_PATH")
                         FIXTURE_PATH="$SHARED_DIR/$FIXTURE_FILE"
                         if [ -f "$FIXTURE_PATH" ]; then
-                            cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                            inline_fixture "$FIXTURE_PATH" "$TEMP_SPEC"
                             echo "" >> "$TEMP_SPEC"
                         fi
                     fi
@@ -328,7 +349,7 @@ elif [ -f "$TARGET" ]; then
             FIXTURE_FILE=$(echo "$line" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1.rb/")
             FIXTURE_PATH="$SPEC_DIR/$FIXTURE_FILE"
             if [ -f "$FIXTURE_PATH" ]; then
-                cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                inline_fixture "$FIXTURE_PATH" "$TEMP_SPEC"
                 echo "" >> "$TEMP_SPEC"
             fi
         fi
@@ -344,7 +365,7 @@ elif [ -f "$TARGET" ]; then
                         SHARED_DIR=$(dirname "$SHARED_PATH")
                         FIXTURE_PATH="$SHARED_DIR/$FIXTURE_FILE"
                         if [ -f "$FIXTURE_PATH" ]; then
-                            cat "$FIXTURE_PATH" >> "$TEMP_SPEC"
+                            inline_fixture "$FIXTURE_PATH" "$TEMP_SPEC"
                             echo "" >> "$TEMP_SPEC"
                         fi
                     fi
