@@ -1180,7 +1180,13 @@ class Parser < ParserBase
       fname = path
       f = File.exist?(path) ? File.open(path) : nil
     end
-    error("Unable to open '#{q}'")  if !f
+    if !f
+      # The required file does not exist. Whether that is a build error (a top-level static require)
+      # or a runtime LoadError (a require inside a method/block) depends on context that only the
+      # scope knows at compile time -- so defer the decision to compile_required via a marker rather
+      # than failing or raising here.
+      return E[position, :required, E[position, :require_missing, q]]
+    end
 
     # STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
 

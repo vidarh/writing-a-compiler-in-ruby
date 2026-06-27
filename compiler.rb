@@ -1267,6 +1267,18 @@ class Compiler
   # Put at the start of a required file, to allow any special processing
   # before/after
   def compile_required(scope,exp)
+    # A require whose target file does not exist reaches here as a :require_missing marker. The
+    # scope tells us the context: scope.method walks the scope chain and is non-nil only when an
+    # enclosing method/block/lambda exists. Inside such a runtime context an unresolved require is a
+    # runtime LoadError (compile it so the program raises when that path executes); at the top level
+    # (or a class/module body), where there is no enclosing method, it is a real build error.
+    if exp.is_a?(Array) && exp[0] == :require_missing
+      q = exp[1]
+      if scope.method
+        return compile_exp(scope, [:call, :raise, [:LoadError, "cannot load such file -- #{q}"]])
+      end
+      error("Unable to open '#{q}'")
+    end
     @e.include(exp.position.filename) do
       v = scope.get_arg(:__FILE__)
       if v[0] == :global
