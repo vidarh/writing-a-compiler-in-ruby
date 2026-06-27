@@ -70,7 +70,6 @@ require 'core/nil'         # Before this, all variables must be explicitly defin
 
 require 'core/class_ivarinit'
 
-#require 'core/enumerable'
 require 'core/range'
 require 'core/array'
 require 'core/string'
@@ -79,6 +78,7 @@ require 'core/io'
 require 'core/file'
 require 'core/dir'
 require 'core/comparable'  # Must be before Integer so Integer can include it
+require 'core/enumerable'  # After Array/comparable: its methods reference both
 require 'core/integer'     # Full Integer with bignum support (after Array is available)
 require 'core/fixnum'
 require 'core/symbol'
