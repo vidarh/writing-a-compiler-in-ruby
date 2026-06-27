@@ -301,7 +301,7 @@ class Compiler
     # Handle malformed :deref node (no children)
     # This can occur when transform.rb incorrectly adds [:deref] to a :let variables list
     if left.nil?
-      error("Malformed :deref node with no children - likely a transform bug", scope)
+      error("Malformed :deref node with no children - likely a transform bug: right=#{right.inspect}", scope)
     end
 
     # Prefix form: ::Constant (global scope lookup)
@@ -533,7 +533,7 @@ class Compiler
         pairs << elem[1]
         pairs << elem[2]
       else
-        error("Literal Hash must contain key value pairs or hash splat only",scope,args)
+        error("Literal Hash must contain key value pairs or hash splat only: elem=#{elem.inspect}",scope,args)
       end
     end
 
