@@ -65,6 +65,13 @@ class Object
     false
   end
 
+  # No-op: a real frozen flag needs an ivar, but adding an ivar to Object shifts every
+  # subclass's ivar offsets (see ClassScope). Classes needing real frozen state define their
+  # own freeze/frozen? with a local ivar (e.g. Array).
+  def freeze
+    self
+  end
+
   def frozen?
     false
   end

@@ -367,6 +367,7 @@ class Array
 
   # Removes all elements from self.
   def clear
+    raise FrozenError.new("can't modify frozen Array: #{inspect}") if frozen?
     # FIXME: consider whether to actually shrink
     %s(assign @len 0)
     self
@@ -686,9 +687,15 @@ class Array
   end
 
 
-  # Return true if this array is frozen (or temporarily frozen while being sorted).
+  # @frozen is a local Array ivar (safe: it doesn't reopen a superclass). Object#freeze is a
+  # no-op, so Array overrides it to record real frozen state here.
+  def freeze
+    @frozen = true
+    self
+  end
+
   def frozen?
-    %s(puts "Array#frozen? not implemented")
+    @frozen ? true : false
   end
 
 
