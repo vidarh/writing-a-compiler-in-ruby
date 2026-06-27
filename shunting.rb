@@ -195,12 +195,13 @@ module OpPrec
             # Build lambda node: [:lambda, args, body, rescue, ensure]
             result = Parser::E[@parser.position, :lambda, *block[1..-1]]
             @out.value(result)
-            return :prefix
+            return :infix_or_postfix  # lambda { } is a value; allow chaining like .arity / .call
           else
-            # No block found - treat 'lambda' as a method name/call
-            # Push :lambda as a value and mark as possible function
+            # No block found (e.g. lambda(&blk) / lambda(args)) - treat 'lambda' as a method name.
+            # possible_func is a local in shunt(), so signal it via an ivar the main loop honours,
+            # otherwise the following ( is taken as grouping rather than a call.
             @out.value(:lambda)
-            possible_func = true
+            @lambda_func = true
             return :infix_or_postfix
           end
         elsif op.sym == :class_stmt
@@ -503,7 +504,12 @@ module OpPrec
           opstate = :infix_or_postfix # After a non-operator value, any single arity operator would be either postfix,
                                       # so when seeing the next operator we will assume it is either infix or postfix.
         end
-        possible_func = op ? op.type == :lp :  (!token.is_a?(Numeric) || !token.is_a?(Array))
+        if @lambda_func
+          possible_func = true
+          @lambda_func = false
+        else
+          possible_func = op ? op.type == :lp :  (!token.is_a?(Numeric) || !token.is_a?(Array))
+        end
         lastlp = false
         if lp_on_entry
           src.ws
