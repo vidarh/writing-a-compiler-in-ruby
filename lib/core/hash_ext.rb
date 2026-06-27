@@ -67,8 +67,9 @@ class Hash
   end
 
   def has_key?(key)
-    pos = _find_slot(key)
-    @data[pos] ? true : false
+    # Delegate to member?, which handles a nil key (whose slot stores nil and so can't be
+    # distinguished from an empty slot by a truthiness check).
+    member?(key)
   end
 
   alias key? has_key?
