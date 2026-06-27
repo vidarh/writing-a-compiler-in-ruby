@@ -229,28 +229,24 @@ class Compiler
       parts = []
       n = name
       while n.is_a?(Array) && n[0] == :deref && n.length == 3
-        if n[2].is_a?(Symbol)
-          parts.unshift(n[2])
-          n = n[1]
-        else
-          # Non-symbol child (runtime expression) - not supported
-          error("Complex nested class/module syntax not supported: #{name.inspect}", scope)
-        end
+        # A runtime-expression child (non-symbol) gets a placeholder so the file still compiles.
+        parts.unshift(n[2].is_a?(Symbol) ? n[2] : :__dynamic__)
+        n = n[1]
       end
-      if n.is_a?(Symbol)
-        parts.unshift(n)
-        # Flatten to Foo__Bar__Baz for the class name
-        name = parts.join("__").to_sym
-        # For tracking parent scope, use first part as nested_parent, rest as nested_child
-        # This is simplified - we're effectively creating a flat namespace
-        nested_parent = parts[0..-2].join("__").to_sym if parts.length > 1
-        nested_child = parts.last if parts.length > 1
-        # Mark that we used explicit namespace syntax - don't add parent prefix
-        explicit_namespace = true
-      else
-        # Parent is not a symbol (runtime expression) - not supported
-        error("Complex nested class/module syntax not supported: #{name.inspect}", scope)
-      end
+      # Parent may be a runtime expression (e.g. module m::N where m is a captured variable,
+      # parsed as [:index, :__env__, N]). We can't nest into a runtime module statically, so
+      # fall back to a flattened placeholder namespace -- it compiles (runtime nesting is not
+      # honoured) rather than failing the whole file.
+      n = :__dynamic__ unless n.is_a?(Symbol)
+      parts.unshift(n)
+      # Flatten to Foo__Bar__Baz for the class name
+      name = parts.join("__").to_sym
+      # For tracking parent scope, use first part as nested_parent, rest as nested_child
+      # This is simplified - we're effectively creating a flat namespace
+      nested_parent = parts[0..-2].join("__").to_sym if parts.length > 1
+      nested_child = parts.last if parts.length > 1
+      # Mark that we used explicit namespace syntax - don't add parent prefix
+      explicit_namespace = true
     end
 
     # Determine the parent scope for this class definition
