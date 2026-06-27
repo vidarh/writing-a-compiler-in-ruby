@@ -572,9 +572,10 @@ class Compiler
     # like "eq" from being recognized. The proper fix to this is to type
     # the AST properly, but for now this seems to be an improvement
     #Compiler::Keywords.member?(v) ||
+      c = v.to_s[0]   # nil for an empty name (e.g. the empty symbol)
       v == :nil || v == :self ||
-      v.to_s[0] == ?@ ||
-      v == :true || v == :false  || v.to_s[0] < ?a
+      c == ?@ ||
+      v == :true || v == :false  || (c && c < ?a)
   end
 
   def push_var(scopes, env, v)
