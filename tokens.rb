@@ -1041,6 +1041,9 @@ module Tokens
 
       if @last.is_a?(Array) && @last[1].is_a?(Oper) && @last[1].sym == :callm
         @lastop = false
+        # A "." may be followed by whitespace (including a newline) before the method name -- the
+        # trailing-dot continuation "expr.\n  method". Skip it so the method name is found.
+        @s.ws
         @lastpos = @s.position
         res = Methodname.expect(@s)
         # Support .() syntax for lambda/proc calls - insert :call as method name
