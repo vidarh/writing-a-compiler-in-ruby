@@ -139,7 +139,7 @@
 {"spec":"rubyspec/core/array/rindex_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/rotate_spec.rb","outcome":"FAIL","passed":0,"failed":24,"skipped":0}
 {"spec":"rubyspec/core/array/sample_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/array/select_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/array/select_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":4}
 {"spec":"rubyspec/core/array/shift_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/shuffle_spec.rb","outcome":"FAIL","passed":0,"failed":25,"skipped":0}
 {"spec":"rubyspec/core/array/size_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
@@ -425,7 +425,7 @@
 {"spec":"rubyspec/core/enumerator/generator/each_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/enumerator/generator/initialize_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/enumerator/initialize_spec.rb","outcome":"FAIL","passed":0,"failed":14,"skipped":0}
-{"spec":"rubyspec/core/enumerator/inspect_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/enumerator/inspect_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":0}
 {"spec":"rubyspec/core/enumerator/lazy/chunk_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/enumerator/lazy/chunk_while_spec.rb","outcome":"FAIL","passed":0,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/enumerator/lazy/collect_concat_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
@@ -837,7 +837,7 @@
 {"spec":"rubyspec/core/hash/replace_spec.rb","outcome":"CRASH","passed":0,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/ruby2_keywords_hash_spec.rb","outcome":"FAIL","passed":0,"failed":20,"skipped":0}
 {"spec":"rubyspec/core/hash/select_spec.rb","outcome":"FAIL","passed":0,"failed":18,"skipped":4}
-{"spec":"rubyspec/core/hash/shift_spec.rb","outcome":"FAIL","passed":3,"failed":8,"skipped":0}
+{"spec":"rubyspec/core/hash/shift_spec.rb","outcome":"FAIL","passed":3,"failed":7,"skipped":0}
 {"spec":"rubyspec/core/hash/size_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/slice_spec.rb","outcome":"FAIL","passed":0,"failed":12,"skipped":0}
 {"spec":"rubyspec/core/hash/sort_spec.rb","outcome":"FAIL","passed":0,"failed":6,"skipped":0}
