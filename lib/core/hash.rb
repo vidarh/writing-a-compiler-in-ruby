@@ -365,6 +365,9 @@ class Hash
   end
 
   def ==(other)
+    # Identity short-circuit: prevents infinite recursion (segfault) on self-referential hashes
+    # (h[:k]=h; h==h), and is correct since a hash always equals itself.
+    return true if self.equal?(other)
     return false if !other.is_a?(Hash)
     return false if size != other.size
     each do |k, v|

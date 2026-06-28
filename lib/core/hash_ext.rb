@@ -33,6 +33,12 @@ class Hash
     to_a.collect
   end
   def inspect
+    # Cycle guard: a self-referential hash (h[:k]=h) would recurse forever through v.inspect ->
+    # segfault. MRI prints "{...}" for a hash already being inspected. Track with a per-hash flag.
+    if @__inspecting
+      return "{...}"
+    end
+    @__inspecting = true
     str = "{"
     first = true
     each do |k,v|
@@ -46,6 +52,7 @@ class Hash
       str += v.inspect
     end
     str += "}"
+    @__inspecting = false
     str
   end
 

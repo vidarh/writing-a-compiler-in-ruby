@@ -820,7 +820,7 @@
 {"spec":"rubyspec/core/hash/hash_spec.rb","outcome":"FAIL","passed":5,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/hash/include_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/initialize_spec.rb","outcome":"FAIL","passed":0,"failed":11,"skipped":0}
-{"spec":"rubyspec/core/hash/inspect_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/hash/inspect_spec.rb","outcome":"FAIL","passed":4,"failed":8,"skipped":0}
 {"spec":"rubyspec/core/hash/invert_spec.rb","outcome":"CRASH","passed":0,"failed":6,"skipped":0}
 {"spec":"rubyspec/core/hash/keep_if_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/hash/key_spec.rb","outcome":"FAIL","passed":5,"failed":8,"skipped":0}
@@ -846,7 +846,7 @@
 {"spec":"rubyspec/core/hash/to_h_spec.rb","outcome":"FAIL","passed":0,"failed":17,"skipped":0}
 {"spec":"rubyspec/core/hash/to_hash_spec.rb","outcome":"FAIL","passed":0,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/to_proc_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/hash/to_s_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/hash/to_s_spec.rb","outcome":"FAIL","passed":4,"failed":8,"skipped":0}
 {"spec":"rubyspec/core/hash/transform_keys_spec.rb","outcome":"FAIL","passed":0,"failed":37,"skipped":0}
 {"spec":"rubyspec/core/hash/transform_values_spec.rb","outcome":"FAIL","passed":0,"failed":22,"skipped":0}
 {"spec":"rubyspec/core/hash/try_convert_spec.rb","outcome":"FAIL","passed":1,"failed":13,"skipped":0}
