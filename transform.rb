@@ -981,10 +981,19 @@ class Compiler
         e[3] << E[:assign, blockname, block_nilable]
       end
 
-      # FIXME: When body is a single expression node (like :block from ensure),
-      # concat would flatten its contents incorrectly. Detect this case and wrap it.
-      # A single expression node has a keyword symbol as its first element.
-      if body.is_a?(Array) && body[0].is_a?(Symbol) && Compiler::Keywords.include?(body[0])
+      # When body is a single expression node (like :block from ensure), concat would flatten its
+      # contents incorrectly. Detect this case and wrap it. A single expression node has a keyword
+      # symbol as its first element.
+      #
+      # BUT several keyword TAGS (:block, :index, :array, :hash, :include ...) are also legal local
+      # variable names, so a method whose body is just that bare variable parses to a length-1 body
+      # like [:block] -- indistinguishable from an empty :block node. A genuine expression node from
+      # ensure/rescue carries its statements (length > 1); a bare standalone control keyword
+      # (:return/:break/:next/:redo/:retry) is the only length-1 node that must still be wrapped.
+      # Everything else of length 1 is a variable reference and must be concatenated.
+      single_node = body.is_a?(Array) && body[0].is_a?(Symbol) && Compiler::Keywords.include?(body[0]) &&
+        (body.length > 1 || [:return, :break, :next, :redo, :retry].include?(body[0]))
+      if single_node
         e[3] << body
       else
         e[3].concat(body)
