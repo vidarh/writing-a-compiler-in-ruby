@@ -197,6 +197,12 @@ class Array
   # element is equal to (according to Object.==) the corresponding element in the
   # other array.
   def ==(other)
+    # Identity short-circuit: an array is always == to itself. Besides being a fast path, this is
+    # what prevents infinite recursion (-> stack overflow / segfault) on self-referential arrays:
+    # rubyspec compares the SAME recursive array on both sides (e.g. empty.uniq == [empty]), so the
+    # recursive element hits this identity check instead of descending forever.
+    return true if self.equal?(other)
+
     if !other.is_a?(Array)
       return false
     end
@@ -786,6 +792,13 @@ class Array
 
   # Create a printable version of array.
   def inspect
+    # Cycle guard: a self-referential array (a = []; a << a) would otherwise recurse forever through
+    # a.inspect -> stack overflow / segfault. MRI prints "[...]" for an array already being inspected.
+    # Track that with a per-array flag set for the duration of this call.
+    if @__inspecting
+      return "[...]"
+    end
+    @__inspecting = true
     str = "["
     first = true
     each do |a|
@@ -797,6 +810,7 @@ class Array
       str << a.inspect
     end
     str << "]"
+    @__inspecting = false
     str
   end
 
