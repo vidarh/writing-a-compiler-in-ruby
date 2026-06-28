@@ -200,7 +200,10 @@ class Compiler
     # But we need to handle them here because method calls in class bodies
     # don't work correctly (self/%esi not set up properly)
     # module_function makes methods both module methods and private instance methods
-    if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor, :module_function].include?(func)
+    # undef_method is a no-op here, matching the `undef` keyword (compile_undef). Without it, class
+    # bodies that call undef_method (common in rubyspec fixtures) crash with "undefined method
+    # 'undef_method'" while the fixture loads, taking out every spec that requires that fixture.
+    if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor, :module_function, :undef_method].include?(func)
       if scope.is_a?(ModuleScope)
         # In class/module body - just return nil
         @e.movl("nil", :eax)

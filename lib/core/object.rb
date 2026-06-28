@@ -135,6 +135,31 @@ class Object
     is_a?(c)
   end
 
+  # instance_of? is an EXACT class match (unlike is_a?, which walks the ancestry).
+  def instance_of?(c)
+    self.class == c
+  end
+
+  def itself
+    self
+  end
+
+  # Kernel#tap: yield self to the block, then return self (for method chaining).
+  def tap
+    yield self
+    self
+  end
+
+  # NOTE: Kernel#yield_self / #then intentionally omitted -- they must return an Enumerator when
+  # called with no block, and the no-block path currently raises LocalJumpError which segfaults
+  # (unhandled-raise limitation), regressing yield_self_spec from FAIL to CRASH. Re-add once the
+  # Enumerator-without-block path works. See [[no-block-null-deref-crashes]].
+
+  def display
+    print self
+    nil
+  end
+
   # FIXME: Private
   def send sym, *args
     __send__(sym, *args)
