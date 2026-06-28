@@ -145,6 +145,15 @@ module OpPrec
         @out.value(:_)
       end
 
+      # Endless range followed by a comma: [1.., x] -- the .. / ... operator has no right operand
+      # because the next token is the comma separating array elements. Supply nil as the missing
+      # right-hand value so the range reduces to [:range, 1, nil] before the comma is processed.
+      if op && op.sym == :comma &&
+         src.lasttoken && (src.lasttoken[0] == ".." || src.lasttoken[0] == "...") &&
+         !ostack.empty? && ostack.last && (ostack.last.sym == :range || ostack.last.sym == :exclusive_range)
+        @out.value(nil)
+      end
+
       # begin is always a complete expression that produces a value
       # It should be parsed regardless of whether a prefix operator is waiting
       if opstate == :prefix && op.sym == :begin_stmt
@@ -272,9 +281,10 @@ module OpPrec
            src.lasttoken && src.lasttoken[0] == ";"
           @out.value(nil)
         end
-        # Handle endless ranges: if the last token was .. or ... (range operator) followed immediately by ),
-        # push nil as the missing right-hand value
-        if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
+        # Handle endless ranges: if the last token was .. or ... (range operator) followed immediately
+        # by a closing ) or ], push nil as the missing right-hand value. ostack.first.sym is nil for
+        # (...) (call/index/grouping) and :array for [...] (array literal).
+        if !ostack.empty? && ostack.first && (ostack.first.sym == nil || ostack.first.sym == :array) &&
            src.lasttoken && (src.lasttoken[0] == ".." || src.lasttoken[0] == "...") &&
            (ostack.last.sym == :range || ostack.last.sym == :exclusive_range)
           @out.value(nil)
