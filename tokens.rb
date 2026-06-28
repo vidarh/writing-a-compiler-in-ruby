@@ -370,6 +370,14 @@ module Tokens
       # is fixed.
       first = nil
 
+      # A leading UTF-8 multibyte byte (>= 128) starts an identifier (e.g. a variable named "ë").
+      # The case below dispatches identifiers via ALPHA/_/@/$, none of which match a multibyte byte,
+      # so handle it here as a plain name (Atom.expect already accepts >= 128 in identifiers).
+      if (mb = @s.peek) && mb.ord >= 128
+        buf = @s.expect(Atom)
+        return [buf, nil] if buf
+      end
+
       case @s.peek
       when ?`,?",?'
         return [get_quoted_exp, nil]
