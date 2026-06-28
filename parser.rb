@@ -852,7 +852,18 @@ class Parser < ParserBase
 
 
   def parse_defname
-    name = expect(Methodname) || @shunting.parse or expected("function name")
+    # A singleton def with an expression receiver -- def (expr).name -- is parsed by consuming the
+    # parenthesised receiver explicitly, so the ".name" below is not swallowed as a method call on
+    # it (which would consume the body and leave the def open).
+    if @scanner.peek == "("
+      literal("(")
+      ws
+      name = @shunting.parse([")"]) or expected("receiver expression")
+      ws
+      literal(")") or expected("')' after def receiver")
+    else
+      name = expect(Methodname) || @shunting.parse or expected("function name")
+    end
     if (expect("."))
       name = [name]
       ret = expect(Methodname) or expected("name following '#{name}.'")
