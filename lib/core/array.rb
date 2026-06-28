@@ -95,6 +95,17 @@ class Array
 
   alias map collect
 
+  # Array#sum is defined directly here (Array cannot `include Enumerable` -- those methods segfault on
+  # call; see the array-include-enumerable-broken note). NOTE: only non-yielding helpers are safe to add
+  # this way -- a method that does `yield` inside an `each {}` block (min_by/group_by/each_with_object/
+  # flat_map) currently segfaults on an Array (captured-yield-through-Array#each bug), though the same
+  # code works on Set. So those are intentionally NOT added here yet.
+  def sum init = 0
+    acc = init
+    each {|x| acc = acc + x }
+    acc
+  end
+
 
   # FIXME: Cut and paste from Enumerable
   def detect(ifnone = nil)
