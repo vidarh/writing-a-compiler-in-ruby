@@ -248,4 +248,76 @@ module Enumerable
     end
     result
   end
+
+  def sum init = 0
+    acc = init
+    each {|x| acc = acc + x }
+    acc
+  end
+
+  def min_by
+    result = nil
+    best = nil
+    seen = false
+    each do |x|
+      k = yield(x)
+      if !seen
+        best = k
+        result = x
+        seen = true
+      elsif (k <=> best) < 0
+        best = k
+        result = x
+      end
+    end
+    result
+  end
+
+  def max_by
+    result = nil
+    best = nil
+    seen = false
+    each do |x|
+      k = yield(x)
+      if !seen
+        best = k
+        result = x
+        seen = true
+      elsif (k <=> best) > 0
+        best = k
+        result = x
+      end
+    end
+    result
+  end
+
+  def group_by
+    h = Hash.new
+    each do |x|
+      k = yield(x)
+      if !h.has_key?(k)
+        h[k] = Array.new
+      end
+      h[k] << x
+    end
+    h
+  end
+
+  def each_with_object obj
+    each {|x| yield(x, obj) }
+    obj
+  end
+
+  def flat_map
+    result = Array.new
+    each do |x|
+      v = yield(x)
+      if v.is_a?(Array)
+        v.each {|e| result << e }
+      else
+        result << v
+      end
+    end
+    result
+  end
 end
