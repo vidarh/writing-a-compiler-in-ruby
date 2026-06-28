@@ -51,6 +51,11 @@ class Set
   end
 
   def inspect
+    # Cycle guard: a self-referential set (s << s) would recurse forever through k.inspect -> segfault.
+    if @__inspecting
+      return "#<Set: {...}>"
+    end
+    @__inspecting = true
     out = "#<Set: {"
     first = true
     @set.each do |k,_|
@@ -62,8 +67,11 @@ class Set
       out << k.inspect
     end
     out << "}>"
+    @__inspecting = false
     out
   end
+
+  alias to_s inspect
 
   def member?(m)
     @set[m] == 1

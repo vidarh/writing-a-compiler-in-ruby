@@ -91,6 +91,7 @@ require 'core/pp'
 require 'core/regexp'
 require 'core/matchdata'
 require 'core/enumerator'
+require 'set'              # Set is a core autoloaded class in modern Ruby; load it after Array/Hash/Enumerable
 require 'core/complex'
 require 'core/env'
 require 'core/method'
