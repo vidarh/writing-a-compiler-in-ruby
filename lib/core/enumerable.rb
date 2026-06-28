@@ -175,6 +175,16 @@ module Enumerable
 
 
   def partition
+    yes = Array.new
+    no  = Array.new
+    each do |x|
+      if yield(x)
+        yes << x
+      else
+        no << x
+      end
+    end
+    [yes, no]
   end
 
 
@@ -207,18 +217,35 @@ module Enumerable
   end
 
 
-  def sort_by
+  def sort_by &block
+    pairs = Array.new
+    each {|x| pairs << [block.call(x), x] }
+    sorted = pairs.sort {|a, b| a[0] <=> b[0] }
+    sorted.map {|p| p[1] }
   end
 
 
   def to_a
+    a = Array.new
+    each {|x| a << x }
+    a
   end
 
 
   def to_set
+    Set.new(self)
   end
 
 
-  def zip
+  def zip *others
+    result = Array.new
+    i = 0
+    each do |x|
+      row = [x]
+      others.each {|o| row << o[i] }
+      result << row
+      i = i + 1
+    end
+    result
   end
 end
