@@ -96,6 +96,52 @@ class Set
   end
   alias intersection &
 
+  def subset? other
+    return false if size > other.size
+    r = true
+    each {|e| r = false if !other.include?(e) }
+    r
+  end
+  alias <= subset?
+
+  def superset? other
+    other.subset?(self)
+  end
+  alias >= superset?
+
+  def proper_subset? other
+    size < other.size && subset?(other)
+  end
+  alias < proper_subset?
+
+  def proper_superset? other
+    size > other.size && superset?(other)
+  end
+  alias > proper_superset?
+
+  def intersect? other
+    r = false
+    each {|e| r = true if other.include?(e) }
+    r
+  end
+
+  def disjoint? other
+    !intersect?(other)
+  end
+
+  def replace other
+    @set = Hash.new
+    other.each {|e| @set[e] = 1 }
+    self
+  end
+
+  # Delete o if present, returning self; nil if it was not a member.
+  def delete? o
+    return nil if @set[o] != 1
+    @set.delete(o)
+    self
+  end
+
   def to_a
     @set.keys
   end
