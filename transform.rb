@@ -904,6 +904,17 @@ class Compiler
       prologue = nil
       vars -= args.to_a
       seen = false
+
+      # A &block parameter must read as nil when no block was passed (MRI semantics). It otherwise
+      # resolves to the raw __closure__ slot, which is 0/null when absent, so merely touching the
+      # parameter (block.arity, !block, block.call) dereferenced null and segfaulted. Bind it to a
+      # nilable view of the closure slot: block_given? ? __closure__ : nil. Two cases:
+      #  - captured (used inside a nested closure -> lives in __env__): make its env-copy nilable below;
+      #  - plain local: inject an assignment after the prologue (see further down).
+      blockparam = e[2].find { |a| a.is_a?(Array) && a[1] == :block }
+      blockname  = blockparam ? blockparam[0] : nil
+      block_nilable = E[:if, :"block_given?", :__closure__, :nil]
+
       if env.size > 0
         seen = rewrite_env_vars(body, aenv)
 
@@ -914,7 +925,8 @@ class Compiler
         extra_assigns = (env - notargs).to_a.collect do |a|
           ai = aenv.index(a)
           # FIXME: "ex" instead of "e" due to compiler bug.
-          E[ex.position, :assign, E[ex.position,:index, :__env__, ai], a]
+          rhs = (blockname && a == blockname) ? block_nilable : a
+          E[ex.position, :assign, E[ex.position,:index, :__env__, ai], rhs]
         end
         prologue = [E[:sexp, E[:assign, :__env__, E[:call, :__alloc_env,  aenv.size]]]]
         if !extra_assigns.empty?
@@ -959,6 +971,13 @@ class Compiler
 
       if seen && prologue # seen && prologue
         e[3].concat(prologue)
+      end
+
+      # Plain-local &block case (not captured into __env__): bind a real local to the nilable closure.
+      # Declared in `vars`, the LocalVarScope resolves it before function.rb's __closure__ alias.
+      if blockname && !env.include?(blockname)
+        vars << blockname if !vars.include?(blockname)
+        e[3] << E[:assign, blockname, block_nilable]
       end
 
       # FIXME: When body is a single expression node (like :block from ensure),
