@@ -1049,6 +1049,12 @@ module Tokens
         # Support .() syntax for lambda/proc calls - insert :call as method name
         if !res && @s.peek == ?(
           res = :call
+        elsif !res && @s.peek && @s.peek.ord == 96
+          # A backtick (`) is a valid method name immediately after '.': obj.`(args). Elsewhere the
+          # tokenizer treats ` as a command-string start, but in method-name position it is the name.
+          # (96 == ?` -- written numerically to avoid a stray backtick in the source.)
+          @s.get
+          res = 96.chr.to_sym
         end
         res = [res,nil] if res
       else
