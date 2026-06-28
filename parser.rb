@@ -1133,6 +1133,13 @@ class Parser < ParserBase
     new_name = expect(Methodname) or expected("new method name")
     ws
     old_name = expect(Methodname) or expected("old method name")
+    # `alias :new :old` (symbol form): Methodname captures the leading colon into the name (:":new"),
+    # so strip it to recover the bare method name, matching `alias new old`. Otherwise the alias is
+    # registered under ":new" and calling `new` finds nothing.
+    ns = new_name.to_s
+    os = old_name.to_s
+    new_name = ns[1..-1].to_sym if ns[0] == ?:
+    old_name = os[1..-1].to_sym if os[0] == ?:
     return E[pos, :alias, new_name, old_name]
   end
 
