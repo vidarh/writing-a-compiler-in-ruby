@@ -73,7 +73,7 @@
 {"spec":"rubyspec/core/array/filter_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":4}
 {"spec":"rubyspec/core/array/find_index_spec.rb","outcome":"FAIL","passed":0,"failed":14,"skipped":1}
 {"spec":"rubyspec/core/array/first_spec.rb","outcome":"FAIL","passed":7,"failed":12,"skipped":0}
-{"spec":"rubyspec/core/array/flatten_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/array/flatten_spec.rb","outcome":"FAIL","passed":8,"failed":33,"skipped":1}
 {"spec":"rubyspec/core/array/frozen_spec.rb","outcome":"PASS","passed":0,"failed":0,"skipped":2}
 {"spec":"rubyspec/core/array/hash_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/array/include_spec.rb","outcome":"FAIL","passed":2,"failed":2,"skipped":0}
@@ -832,7 +832,7 @@
 {"spec":"rubyspec/core/hash/merge_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/hash/new_spec.rb","outcome":"FAIL","passed":4,"failed":9,"skipped":0}
 {"spec":"rubyspec/core/hash/rassoc_spec.rb","outcome":"FAIL","passed":0,"failed":16,"skipped":0}
-{"spec":"rubyspec/core/hash/rehash_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/hash/rehash_spec.rb","outcome":"FAIL","passed":0,"failed":11,"skipped":0}
 {"spec":"rubyspec/core/hash/reject_spec.rb","outcome":"CRASH","passed":0,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/replace_spec.rb","outcome":"CRASH","passed":0,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/ruby2_keywords_hash_spec.rb","outcome":"FAIL","passed":0,"failed":20,"skipped":0}
@@ -1736,7 +1736,7 @@
 {"spec":"rubyspec/core/string/downcase_spec.rb","outcome":"FAIL","passed":5,"failed":48,"skipped":0}
 {"spec":"rubyspec/core/string/dump_spec.rb","outcome":"FAIL","passed":0,"failed":34,"skipped":0}
 {"spec":"rubyspec/core/string/dup_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/string/each_byte_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/string/each_byte_spec.rb","outcome":"FAIL","passed":1,"failed":7,"skipped":0}
 {"spec":"rubyspec/core/string/each_char_spec.rb","outcome":"FAIL","passed":0,"failed":20,"skipped":0}
 {"spec":"rubyspec/core/string/each_codepoint_spec.rb","outcome":"FAIL","passed":0,"failed":28,"skipped":0}
 {"spec":"rubyspec/core/string/each_grapheme_cluster_spec.rb","outcome":"FAIL","passed":0,"failed":26,"skipped":0}

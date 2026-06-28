@@ -669,6 +669,13 @@ class Array
   # That is, for every element that is an array, extract its elements into the new array.
   def flatten level=nil
     #STDERR.puts "FLATTEN: #{self.inspect}"
+    # Cycle guard: a self-referential array would recurse forever through e.flatten -> segfault.
+    # MRI raises ArgumentError "tried to flatten recursive array". Track the in-progress flatten with
+    # a per-array flag; re-entering flatten on the same array raises.
+    if @__flattening
+      raise ArgumentError, "tried to flatten recursive array"
+    end
+    @__flattening = true
     n = []
     l = level
     each do |e|
@@ -686,6 +693,7 @@ class Array
         n << e
       end
     end
+    @__flattening = false
     n
   end
 
