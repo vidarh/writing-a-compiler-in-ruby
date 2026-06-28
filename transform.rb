@@ -1183,6 +1183,19 @@ class Compiler
       name = clean_method_name(name.to_s)
     end
 
+    # A nested-constant name (Foo::Bar) may still be an unflattened [:deref, ...] node here for
+    # some forms; flatten it to Foo__Bar so it can be used as a class-table key and symbol.
+    if name.is_a?(Array) && name[0] == :deref
+      parts = []
+      n = name
+      while n.is_a?(Array) && n[0] == :deref
+        parts.unshift(n[2])
+        n = n[1]
+      end
+      parts.unshift(n) if n.is_a?(Symbol)
+      name = parts.join("__").to_sym
+    end
+
     cscope = @classes[name.to_sym]
     cscope = ClassScope.new(scope, name, @vtableoffsets, superc) if !cscope
     @classes[cscope.name.to_sym] =  cscope
