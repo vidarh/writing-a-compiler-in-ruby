@@ -44,7 +44,57 @@ class Set
 
   def << k
     @set[k]=1
+    self
   end
+  alias add <<
+
+  # Add k unless already present; return self if added, nil if it was already there.
+  def add? k
+    return nil if @set[k] == 1
+    @set[k] = 1
+    self
+  end
+
+  def empty?
+    @set.size == 0
+  end
+
+  def length
+    @set.size
+  end
+
+  def clear
+    @set = Hash.new
+    self
+  end
+
+  # Add every element of other to self (mutating); returns self.
+  def merge other
+    other.each {|e| @set[e] = 1 }
+    self
+  end
+
+  def ==(other)
+    return true if equal?(other)
+    return false if !other.is_a?(Set)
+    return false if size != other.size
+    @set.each {|k,_| return false if !other.include?(k) }
+    true
+  end
+
+  def | other
+    s = dup
+    other.each {|e| s << e }
+    s
+  end
+  alias union |
+
+  def & other
+    s = Set.new
+    each {|e| s << e if other.include?(e) }
+    s
+  end
+  alias intersection &
 
   def to_a
     @set.keys
