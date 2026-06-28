@@ -790,10 +790,11 @@ class Compiler
       if e.is_a?(Array) && e[0] == :call && e[1] == :yield
         seen = true
         args = e[2] || []
-        e[0] = :callm
-        e[1] = :__closure__
-        e[2] = :call
-        e[3] = args.is_a?(Array) ? args : [args]
+        args = args.is_a?(Array) ? args : [args]
+        e[0] = :if
+        e[1] = E[:ne, :__closure__, 0]
+        e[2] = E[:callm, :__closure__, :call, args]
+        e[3] = E[:call, :raise, [:LocalJumpError, "no block given (yield)"]]
       end
 
       e.each_with_index do |ex, i|
