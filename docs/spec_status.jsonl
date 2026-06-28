@@ -1014,7 +1014,7 @@
 {"spec":"rubyspec/core/kernel/abort_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/kernel/at_exit_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/kernel/autoload_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
-{"spec":"rubyspec/core/kernel/backtick_spec.rb","outcome":"COMPILE_FAIL","passed":null,"failed":null,"skipped":null}
+{"spec":"rubyspec/core/kernel/backtick_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/kernel/binding_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/kernel/block_given_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/core/kernel/caller_locations_spec.rb","outcome":"CRASH","passed":0,"failed":23,"skipped":0}
@@ -2095,7 +2095,7 @@
 {"spec":"rubyspec/language/delegation_spec.rb","outcome":"FAIL","passed":0,"failed":23,"skipped":0}
 {"spec":"rubyspec/language/encoding_spec.rb","outcome":"FAIL","passed":2,"failed":4,"skipped":0}
 {"spec":"rubyspec/language/ensure_spec.rb","outcome":"FAIL","passed":12,"failed":27,"skipped":0}
-{"spec":"rubyspec/language/execution_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":0}
+{"spec":"rubyspec/language/execution_spec.rb","outcome":"FAIL","passed":0,"failed":12,"skipped":0}
 {"spec":"rubyspec/language/file_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/for_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/hash_spec.rb","outcome":"FAIL","passed":16,"failed":22,"skipped":6}
