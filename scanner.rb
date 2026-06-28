@@ -182,6 +182,20 @@ class Scanner
       get
       had_any = true
     end
+    # Backslash line continuation: a "\" immediately followed by a newline joins the next line, so it
+    # must be consumed here too (ws consumes it, but after a value the tokenizer uses nolfws). This is
+    # lexical, not grammar -- the backslash+newline is simply not a token.
+    if peek == "\\"
+      bs = get
+      if peek == LF
+        get  # consume the newline
+        had_any = true
+        nolfws  # continue scanning whitespace on the joined line
+        @had_ws_before_token = had_any
+        return
+      end
+      unget(bs)  # not a continuation -- put the backslash back
+    end
     # Check if we stopped at a newline that's followed by . (method chaining)
     # If so, skip the newline and continue as if it were whitespace
     if peek == LF && peek_past_newline_is_dot?
