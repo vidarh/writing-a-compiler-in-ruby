@@ -53,6 +53,10 @@ module Tokens
   # Match a (optionally specific) keyword
   class Keyword
     def self.expect(s,match)
+      # A keyword is a bare word, never a symbol. Don't let Atom.expect consume a ":"-symbol here:
+      # for e.g. :'' it returns :":" whose to_s is just ":", so the unget below would lose the quoted
+      # part and corrupt the stream (leaving a bare ":" operator). Bail out before consuming.
+      return nil if s.peek == ?:
       a = Atom.expect(s)
       return a if (a == match)
       s.unget(a.to_s) if a
