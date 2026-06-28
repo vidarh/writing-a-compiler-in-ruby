@@ -267,7 +267,11 @@ module OpPrec
             @out.value(nil)   # Empty [] and {} and foo() get placeholder nil
           end
         end
-        @out.value(nil) if src.lasttoken and src.lasttoken[1] == COMMA
+        # A trailing-comma nil only applies when the container had content. An empty container
+        # (lastlp) cannot have a trailing comma, so a COMMA lasttoken here is stale -- e.g. left
+        # over from a re-entrant parse such as a lambda default value (->(a, d=1, b){}) -- and must
+        # not inject a spurious nil.
+        @out.value(nil) if !lastlp && src.lasttoken and src.lasttoken[1] == COMMA
         # Before closing paren, check if there's a prefix operator with minarity=0 that needs a nil value
         # Only for parentheses (), not for blocks {} or arrays []
         if !ostack.empty? && ostack.first && ostack.first.sym == nil &&
