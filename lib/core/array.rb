@@ -396,7 +396,11 @@ class Array
 
   # Removes nil elements from array. Returns nil if no changes were made.
   def compact!
-    %s(puts "Array#compact! not implemented")
+    n = self.size
+    kept = self.select {|x| x != nil }
+    return nil if kept.size == n
+    replace(kept)
+    self
   end
 
   # Appends the elements in other_array to self.
@@ -464,7 +468,10 @@ class Array
 
   # Deletes every element of self for which block evaluates to true.
   def delete_if
-    %s(puts "Array#delete_if not implemented")
+    kept = []
+    each {|x| kept << x if !yield(x) }
+    replace(kept)
+    self
   end
 
   # FIXME: Highly inefficient...
@@ -873,7 +880,13 @@ class Array
   # Creates a new array containing the values returned by the block.
   # See also Enumerable#collect.
   def collect!
-    %s(puts "Array#collect! not implemented")
+    i = 0
+    n = self.size
+    while i < n
+      self[i] = yield(self[i])
+      i += 1
+    end
+    self
   end
 
 
@@ -881,7 +894,13 @@ class Array
   # Creates a new array containing the values returned by the block.
   # See also Enumerable#collect.
   def map!
-    %s(puts "Array#map! not implemented")
+    i = 0
+    n = self.size
+    while i < n
+      self[i] = yield(self[i])
+      i += 1
+    end
+    self
   end
 
 
@@ -953,7 +972,12 @@ class Array
   # block evaluates to true, but returns nil if no changes were made.
   # Also see Enumerable#reject.
   def reject!
-    %s(puts "Array#reject! not implemented")
+    n = self.size
+    kept = []
+    each {|x| kept << x if !yield(x) }
+    return nil if kept.size == n
+    replace(kept)
+    self
   end
 
 
@@ -1137,8 +1161,10 @@ class Array
 
 
   # Prepends objects to the front of array. other elements up one.
+  # Prepend the given objects to the front of self, returning self.
   def unshift(*objects)
-    %s(puts "Array#unshift not implemented")
+    replace(objects + self)
+    self
   end
 
 
