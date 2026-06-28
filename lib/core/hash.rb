@@ -176,7 +176,9 @@ class Hash
       end
       return false
     end
-    @data[pos] ? true : false
+    # An occupied slot holds the key; an empty slot holds nil. Test for nil, NOT truthiness, otherwise
+    # a stored `false` key (a falsy value sitting in @data[pos]) reads as an empty slot.
+    !@data[pos].nil?
   end
 
   def include? key
@@ -197,7 +199,8 @@ class Hash
       return member?(nil) ? @data[_find_slot(nil) + 1] : @defval
     end
     pos = _find_slot(key)
-    @data[pos] ? @data[pos + 1] : @defval
+    # Test the slot for nil (empty), NOT truthiness -- a stored `false` key is falsy but present.
+    @data[pos].nil? ? @defval : @data[pos + 1]
   end
 
   def capacity_too_low
