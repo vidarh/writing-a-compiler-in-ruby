@@ -1626,6 +1626,9 @@ class Compiler
     alloc_vtable_offsets(exp)
     scan_and_register_constants(exp)  # Pre-scan to register all constants
 
+    # Rewrite "expr rescue fallback" modifiers into begin/rescue blocks before compilation.
+    rewrite_rescue_mod(exp)
+
     # Transform pattern matching to when clauses
     # NOTE: This runs AFTER preprocess(), so pattern-bound variables won't be captured
     # in __env__ for nested closures. See docs/KNOWN_ISSUES.md and transform.rb:rewrite_pattern_matching

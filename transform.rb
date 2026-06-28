@@ -226,6 +226,24 @@ class Compiler
     exp
   end
 
+  # The "expr rescue fallback" modifier parses as [:rescue_mod, expr, fallback]. It has no direct
+  # code generation, so rewrite it into the equivalent begin/rescue block: run expr, and on any
+  # exception evaluate fallback. The catch-all rescue clause has no class and no exception variable.
+  def rewrite_rescue_mod(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      # The "expr rescue fallback" modifier reduces to [:rescue, fallback, expr] (size 3), distinct
+      # from a begin/def rescue *clause* [:rescue, class, var, body] (size 4+). Rewrite the modifier
+      # into a begin/rescue block: run expr, and on any exception evaluate fallback.
+      if e[0] == :rescue && e.size == 3
+        fallback = e[1]
+        body = e[2]
+        e.replace([:block, [], [body], [:rescue, nil, nil, [fallback]], nil])
+      end
+    end
+    exp
+  end
+
   # This replaces the old lambda handling with a rewrite.
   # The advantage of handling it as a rewrite phase is that it's
   # much easier to debug - it can be turned on and off to 

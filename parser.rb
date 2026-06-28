@@ -712,7 +712,10 @@ class Parser < ParserBase
     # Inside parentheses, ; and newline will still work as :do operator (see shunting.rb)
     # Also inhibit case statement keywords (when, in, else, end) to prevent them from
     # being consumed as operators when they should start new branches
-    ret = @shunting.parse([";", "\n", :when, :in, :else, :end, :elsif, :ensure, :rescue])
+    # Note: :rescue is NOT inhibited here so the "expr rescue fallback" modifier parses as the
+    # rescue_mod infix operator. A rescue that starts a begin/def rescue *clause* is in prefix
+    # position (no left operand) and the shunting yard stops on it as a keyword anyway.
+    ret = @shunting.parse([";", "\n", :when, :in, :else, :end, :elsif, :ensure])
     if ret.is_a?(Array)
       ret = E[pos] + ret
     end
