@@ -87,7 +87,9 @@ Operators = {
 
   "rescue"    => Oper.new(2, :rescue_mod, :infix, 2, 2, :right, 1),
   "begin"     => Oper.new(2, :begin_stmt, :prefix, 0, 0),
-  "lambda"    => Oper.new(2, :lambda_stmt, :prefix, 0, 0),
+  # 'lambda' is NOT an operator/keyword -- it is Kernel#lambda (like proc). Treating it as a prefix
+  # operator prevented it being used as a value (lambda = x) or taking parenthesised args
+  # (lambda(&blk)). lambda { } is handled as a method-call-with-block in treeoutput.
   "class"     => Oper.new(2, :class_stmt, :prefix, 0, 0),
   "module"    => Oper.new(2, :module_stmt, :prefix, 0, 0),
 #    :infix_or_postfix => 
