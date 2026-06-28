@@ -620,7 +620,15 @@ class Compiler
     e.each do |n|
       if n.is_a?(Array)
         if n[0] == :assign
-          vars1, env1 = find_vars(n[1],     scopes + [Set.new],env, freq, in_lambda, true, current_params)
+          target = n[1]
+          if target.is_a?(Array) && target[0] == :deref
+            # Constant assignment Foo::Bar = v / m::N = v: only the parent (target[1]) can be a local
+            # variable. Iterating the [:deref, parent, const] node as a list would wrongly collect the
+            # :deref tag and the constant name as variables. Process just the parent.
+            vars1, env1 = find_vars([target[1]], scopes + [Set.new],env, freq, in_lambda, true, current_params)
+          else
+            vars1, env1 = find_vars(target, scopes + [Set.new],env, freq, in_lambda, true, current_params)
+          end
           vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, freq, in_lambda, false, current_params)
           env = env1 + env2
           vars = vars1+vars2
