@@ -473,6 +473,10 @@ class Array
   # Calls block once for each element in self,
   # passing that element as a parameter.
   def each &block
+    # Without a block, #each returns an Enumerator (Ruby semantics). Previously `block.arity` below
+    # was called with no block and segfaulted -- the root of a large cluster of array/enumerable spec
+    # crashes. Use block_given? (touching the &block var itself when none was passed also segfaults).
+    return ArrayEnumerator.new(self) if !block_given?
     i = 0
     a = block.arity
     s = self.size
