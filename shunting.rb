@@ -66,7 +66,13 @@ module OpPrec
              ((op && op.type == :rp) || ostack.last.type != :lp) &&
              # Don't reduce prefix operators when an equal-or-higher-precedence prefix operator follows
              # This allows "not not false" to parse as "not (not false)" instead of "(not) not false"
-             !(ostack.last.type == :prefix && op && op.type == :prefix && pri <= ostack.last.pri)
+             !(ostack.last.type == :prefix && op && op.type == :prefix && pri <= ostack.last.pri) &&
+             # An incoming *unary* prefix operator (arity <= 1: defined?, not, !, ...) binds to the
+             # operand that follows it, so a pending infix must NOT reduce yet -- it still needs that
+             # operand as its right side. Without this a low-pri prefix like defined? (pri 6) wrongly
+             # reduces e.g. << (pri 8). The call operator (sym :call, arity 2) is excluded -- it must
+             # still reduce to bind paren-less call arguments.
+             !(ostack.last.type == :infix && op && op.type == :prefix && (op.arity.nil? || op.arity <= 1))
         o = ostack.pop
         @out.oper(o) if o.sym
       end
