@@ -61,6 +61,12 @@ module Tokens
       elsif s.peek == ?%
         s.get
         return :":%"
+      elsif s.peek && s.peek.ord == 96
+        # Backtick `: the symbol for the backtick (command-exec) method, e.g. :` . Without this it
+        # falls through to Quoted.expect, which treats ` as a string delimiter -> "Unterminated
+        # string". (96 == ?` -- numeric to avoid a stray backtick in the source.)
+        s.get
+        return (":" + 96.chr).to_sym
       elsif s.peek == ?*
         s.get
         if s.peek == ?*
