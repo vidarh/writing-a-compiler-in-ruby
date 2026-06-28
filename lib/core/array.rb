@@ -1085,17 +1085,22 @@ class Array
   # an optional code block. The block implements a comparison between a and b,
   # returning -1, 0, or +1.
   # See also Enumerable#sort_by.
-  def sort
+  def sort &block
     return self if length <= 1
 
     pivot = self[0]
 
+    # Use the comparator block when given (it returns -1/0/1), otherwise <=>.
     part  = self[1..-1].partition do |e|
-      (e <=> pivot)  <= 0
+      if block
+        block.call(e, pivot) <= 0
+      else
+        (e <=> pivot) <= 0
+      end
     end
 
-    left  = part[0].sort
-    right = part[1].sort
+    left  = part[0].sort(&block)
+    right = part[1].sort(&block)
 
     left + [pivot] + right
   end
