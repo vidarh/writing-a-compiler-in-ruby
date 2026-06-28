@@ -14,6 +14,11 @@ end
 # to get some of the basics in place
 #
 class Set
+  # Set is Enumerable: this provides map/select/reject/inject/min/max/sort/count/include?/... for free
+  # via #each, instead of stubbing each one. (Set defines its own #each, #select, #include? where it
+  # needs set-specific behaviour; those override the Enumerable versions.)
+  include Enumerable
+
   def initialize(enum = nil)
     @set = Hash.new # Told you it was dirty
     if enum

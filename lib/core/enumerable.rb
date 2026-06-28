@@ -135,6 +135,17 @@ module Enumerable
 
 
   def max
+    result = nil
+    seen = false
+    each do |x|
+      if !seen
+        result = x
+        seen = true
+      elsif (x <=> result) > 0
+        result = x
+      end
+    end
+    result
   end
 
 
@@ -142,6 +153,24 @@ module Enumerable
 
 
   def min
+    result = nil
+    seen = false
+    each do |x|
+      if !seen
+        result = x
+        seen = true
+      elsif (x <=> result) < 0
+        result = x
+      end
+    end
+    result
+  end
+
+
+  def count
+    n = 0
+    each {|x| n = n + 1 }
+    n
   end
 
 
@@ -152,9 +181,9 @@ module Enumerable
   def reject
     items = Array.new
     self.each do |item|
-#      unless yield(item)
-#        items << item
-#      end
+      if !yield(item)
+        items << item
+      end
     end
     return items
   end
@@ -172,6 +201,9 @@ module Enumerable
 
 
   def sort
+    a = Array.new
+    each {|x| a << x }
+    a.sort
   end
 
 
