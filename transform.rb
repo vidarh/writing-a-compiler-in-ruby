@@ -252,7 +252,11 @@ class Compiler
     seen = false
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
-      if e[0] == :lambda || e[0] == :proc
+      # A real lambda/proc node's args (e[1]) is always nil, :block, or an array. A :let variables
+      # list whose first variable happens to be named `proc` or `lambda` -- e.g. [:proc, :lambda] for
+      # locals `proc` and `lambda` -- is structurally identical at e[0] but has a bare Symbol at e[1];
+      # don't mistake it for a proc node (that fed :lambda in as args and crashed).
+      if (e[0] == :lambda || e[0] == :proc) && (e[1].nil? || e[1] == :block || e[1].is_a?(Array))
         seen = true
         # args can be an array, :block symbol, or nil
         args = e[1]
