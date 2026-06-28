@@ -929,8 +929,12 @@ module Tokens
               @s.get
             end
 
-            # Check if next character starts an identifier or quoted heredoc marker
-            if @s.peek && (ALPHA.member?(@s.peek) || @s.peek == ?_ || @s.peek == ?' || @s.peek == ?")
+            # Check if next character starts an identifier or quoted heredoc marker.
+            # A plain "<<IDENT" is only a heredoc in operand position (start of expression or after
+            # an operator); after a value it is the shift/append operator (e.g. "r<<i"). "<<~"/"<<-"
+            # are unambiguously heredocs, so they are not gated on operand position.
+            if @s.peek && (ALPHA.member?(@s.peek) || @s.peek == ?_ || @s.peek == ?' || @s.peek == ?") &&
+               (dash || squiggly || @first || prev_lastop)
               # This is a heredoc!
               # Read the heredoc marker
               marker = ""
