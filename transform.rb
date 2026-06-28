@@ -792,6 +792,9 @@ class Compiler
         next if i == 0 && (ex == :index || ex == :deref)
         # Also skip :callm at position 0
         next if i == 0 && ex == :callm
+        # Skip hash-pair / hash-splat node tags at position 0 so a local variable named e.g. `pair`
+        # does not cause the [:pair, k, v] tag itself to be rewritten into a closure reference.
+        next if i == 0 && (ex == :pair || ex == :hash_splat)
         # Skip constant names in :deref nodes - they're constant/module names, not variables
         # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
         # The parent might be a variable like: a = Object; a::CONST
