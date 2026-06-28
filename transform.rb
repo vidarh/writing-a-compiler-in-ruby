@@ -1128,8 +1128,10 @@ class Compiler
             module_name = module_name[1]
             parent_scope = @global_scope
           elsif module_name.is_a?(Array) && module_name[0] == :deref
-            # Flatten Foo::Bar to Foo__Bar
-            module_name = "#{module_name[1]}__#{module_name[2]}".to_sym
+            # Flatten Foo::Bar -- and deeper, Foo::Bar::Baz -- to Foo__Bar__Baz. The previous
+            # one-level "#{module_name[1]}__#{module_name[2]}" produced a malformed name for 3+
+            # levels because module_name[1] was itself a [:deref, ...] node.
+            module_name = flatten_deref(module_name)
           end
 
           cscope   = @classes[module_name.to_sym]
