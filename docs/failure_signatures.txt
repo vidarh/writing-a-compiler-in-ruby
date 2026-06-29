@@ -1,21 +1,18 @@
-tools/classify_failures.rb
 Failure signatures — ranked by spec count (burndown targets)
 From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
 
-128  segfault @ <no output>
-     Array_spec, Float_spec, Hash_spec, Integer_spec, String_spec, abort_spec, arity_spec, at_exit_spec, autoload_spec, backtick_spec, binding_spec, birthtime_spec, block_given_spec, call_spec, case_compare_spec, case_compare_spec, catch_spec, chomp_spec, chop_spec, class_spec, clone_spec, clone_spec, compose_spec, curry_spec, define_singleton_method_spec, defined_spec, display_spec, dup_spec, dup_spec, element_reference_spec, eql_spec, equal_value_spec, equal_value_spec, eval_spec, eval_spec, exec_spec, exit_spec, extend_spec, fail_spec, for_spec, fork_spec, format_spec, freeze_spec, frozen_spec, gets_spec, global_variables_spec, gsub_spec, hash_spec, import_methods_spec, inspect_spec, inspect_spec, instance_of_spec, instance_variable_defined_spec, instance_variable_get_spec, instance_variable_set_spec, instance_variables_spec, is_a_spec, itself_spec, kind_of_spec, lambda_spec, local_variable_get_spec, local_variable_set_spec, local_variables_spec, loop_spec, method_spec, methods_spec, name_spec, nil_spec, not_match_spec, open_spec, original_name_spec, owner_spec, p_spec, parameters_spec, print_spec, printf_spec, private_methods_spec, private_spec, proc_spec, protected_methods_spec, protected_spec, public_method_spec, public_methods_spec, public_send_spec, public_spec, putc_spec, puts_spec, raise_spec, rand_spec, readline_spec, readlines_spec, receiver_spec, receiver_spec, remove_instance_variable_spec, rescue_spec, respond_to_missing_spec, respond_to_spec, return_spec, select_spec, send_spec, set_trace_func_spec, singleton_methods_spec, source_location_spec, spawn_spec, sprintf_spec, srand_spec, sub_spec, super_method_spec, super_spec, syscall_spec, system_spec, taint_spec, tainted_spec, tap_spec, test_spec, throw_spec, to_proc_spec, to_s_spec, to_s_spec, trace_var_spec, trust_spec, unbind_spec, untaint_spec, untrace_var_spec, untrust_spec, untrusted_spec, warn_spec, yield_spec
-104  exception: undefined method 'tmp' for <Object>
-     atime_spec, atime_spec, binmode_spec, binread_spec, binwrite_spec, blksize_spec, blockdev_spec, blockdev_spec, blocks_spec, chardev_spec, chardev_spec, chmod_spec, close_spec, comparison_spec, ctime_spec, delete_spec, dev_major_spec, dev_minor_spec, dev_spec, directory_spec, directory_spec, dup_spec, empty_spec, empty_spec, eof_spec, executable_real_spec, executable_real_spec, executable_spec, executable_spec, external_encoding_spec, file_spec, file_spec, flock_spec, for_fd_spec, fsync_spec, gets_spec, gid_spec, grpowned_spec, grpowned_spec, identical_spec, initialize_spec, ino_spec, inspect_spec, inspect_spec, internal_encoding_spec, lstat_spec, mode_spec, mtime_spec, mtime_spec, new_spec, new_spec, new_spec, open_spec, open_spec, path_spec, pos_spec, print_spec, printf_spec, putc_spec, puts_spec, rdev_major_spec, rdev_minor_spec, rdev_spec, read_spec, readable_real_spec, readable_real_spec, readable_spec, readable_spec, realdirpath_spec, realpath_spec, rename_spec, reopen_spec, reopen_spec, seek_spec, set_encoding_by_bom_spec, set_encoding_spec, setgid_spec, setuid_spec, size_spec, size_spec, stat_spec, sticky_spec, sticky_spec, sysread_spec, sysseek_spec, syswrite_spec, tell_spec, to_path_spec, truncate_spec, try_convert_spec, uid_spec, ungetbyte_spec, unlink_spec, world_readable_spec, world_readable_spec, world_writable_spec, world_writable_spec, writable_real_spec, writable_real_spec, writable_spec, writable_spec, write_spec, zero_spec, zero_spec
- 72  exception: undefined method 'call' for nil
-     _dump_spec, _load_spec, add_trace_func_spec, byteslice_spec, change_privilege_spec, change_privilege_spec, clear_spec, coredump_spec, count_objects_spec, eid_spec, eid_spec, entries_spec, enum_for_spec, eql_spec, exit_spec, fdatasync_spec, fdiv_spec, find_spec, getegid_spec, geteuid_spec, getgid_spec, getpgrp_spec, getuid_spec, grant_privilege_spec, grant_privilege_spec, hash_spec, insert_output_spec, inspect_spec, issetugid_spec, owned_spec, owned_spec, parameters_spec, pipe_spec, pipe_spec, re_exchange_spec, re_exchange_spec, re_exchangeable_spec, re_exchangeable_spec, remainder_spec, report_spec, rid_spec, rid_spec, set_trace_func_spec, setegid_spec, seteuid_spec, setgid_spec, setregid_spec, setresgid_spec, setresuid_spec, setreuid_spec, setrgid_spec, setruid_spec, setuid_spec, sid_available_spec, sid_available_spec, socket_spec, socket_spec, sort_by_spec, stopped_spec, stopsig_spec, switch_spec, switch_spec, to_a_spec, to_enum_spec, to_int_spec, to_r_spec, to_s_spec, tv_nsec_spec, tv_usec_spec, waitpid2_spec, world_readable_spec, world_writable_spec
- 66  exception: wrong number of arguments (given 2, expected 1)
-     BEGIN_spec, advise_spec, argv_spec, autoclose_spec, basicobject_spec, binmode_spec, close_spec, closed_spec, closed_spec, copy_stream_spec, data_spec, dirname_spec, each_byte_spec, each_byte_spec, each_char_spec, each_char_spec, each_codepoint_spec, each_codepoint_spec, each_line_spec, each_line_spec, each_spec, each_spec, element_reference_spec, element_reference_spec, element_reference_spec, eof_spec, file_spec, filename_spec, fileno_spec, foreach_spec, getbyte_spec, getc_spec, getc_spec, gets_spec, lineno_spec, lineno_spec, merge_spec, path_spec, pid_spec, pos_spec, read_spec, readchar_spec, readchar_spec, readline_spec, readline_spec, readlines_spec, readlines_spec, readpartial_spec, rewind_spec, rewind_spec, seek_spec, set_encoding_spec, skip_spec, source_encoding_spec, symbol_spec, sync_spec, tell_spec, to_a_spec, to_i_spec, to_io_spec, to_io_spec, to_s_spec, toplevel_binding_spec, ungetc_spec, unpack_spec, uplus_spec
- 64  exception: undefined method 'private_constant' for ModuleSpecs__PrivConstModule
-     alias_method_spec, ancestors_spec, append_features_spec, attr_accessor_spec, attr_reader_spec, attr_spec, attr_writer_spec, autoload_spec, case_compare_spec, class_eval_spec, class_exec_spec, class_variable_defined_spec, class_variable_get_spec, class_variable_set_spec, class_variables_spec, comparison_spec, const_added_spec, define_method_spec, eql_spec, equal_spec, equal_value_spec, extend_object_spec, extended_spec, freeze_spec, gt_spec, gte_spec, include_spec, included_modules_spec, included_spec, initialize_spec, instance_method_spec, instance_methods_spec, lt_spec, lte_spec, method_added_spec, method_defined_spec, method_removed_spec, method_undefined_spec, module_eval_spec, module_exec_spec, module_function_spec, nesting_spec, new_spec, prepend_features_spec, prepend_spec, private_class_method_spec, private_instance_methods_spec, private_method_defined_spec, private_spec, protected_instance_methods_spec, protected_method_defined_spec, protected_spec, public_class_method_spec, public_instance_method_spec, public_instance_methods_spec, public_method_defined_spec, public_spec, remove_class_variable_spec, remove_method_spec, ruby2_keywords_spec, subclasses_spec, to_s_spec, undef_method_spec, undefined_instance_methods_spec
+110  exception: undefined method 'tmp' for <Object>
+     atime_spec, atime_spec, binmode_spec, binread_spec, binwrite_spec, blksize_spec, blockdev_spec, blockdev_spec, blocks_spec, chardev_spec, chardev_spec, chmod_spec, close_spec, comparison_spec, copy_stream_spec, ctime_spec, data_spec, delete_spec, dev_major_spec, dev_minor_spec, dev_spec, directory_spec, directory_spec, dup_spec, empty_spec, empty_spec, eof_spec, executable_real_spec, executable_real_spec, executable_spec, executable_spec, external_encoding_spec, file_spec, file_spec, flock_spec, for_fd_spec, fsync_spec, gets_spec, gid_spec, grpowned_spec, grpowned_spec, identical_spec, initialize_spec, ino_spec, inspect_spec, inspect_spec, internal_encoding_spec, lstat_spec, mode_spec, mtime_spec, mtime_spec, new_spec, new_spec, new_spec, open_spec, open_spec, open_spec, path_spec, pos_spec, print_spec, printf_spec, printf_spec, putc_spec, putc_spec, puts_spec, puts_spec, rdev_major_spec, rdev_minor_spec, rdev_spec, read_spec, readable_real_spec, readable_real_spec, readable_spec, readable_spec, realdirpath_spec, realpath_spec, rename_spec, reopen_spec, reopen_spec, seek_spec, set_encoding_by_bom_spec, set_encoding_spec, setgid_spec, setuid_spec, size_spec, size_spec, stat_spec, sticky_spec, sticky_spec, sysread_spec, sysseek_spec, syswrite_spec, tell_spec, to_path_spec, truncate_spec, try_convert_spec, uid_spec, ungetbyte_spec, unlink_spec, world_readable_spec, world_readable_spec, world_writable_spec, world_writable_spec, writable_real_spec, writable_real_spec, writable_spec, writable_spec, write_spec, zero_spec, zero_spec
+ 79  exception: undefined method 'call' for nil
+     _dump_spec, _load_spec, add_trace_func_spec, byteslice_spec, change_privilege_spec, change_privilege_spec, clear_spec, coredump_spec, count_objects_spec, display_spec, eid_spec, eid_spec, entries_spec, enum_for_spec, eql_spec, exit_spec, fdatasync_spec, fdiv_spec, find_spec, getegid_spec, geteuid_spec, getgid_spec, getpgrp_spec, getuid_spec, grant_privilege_spec, grant_privilege_spec, hash_spec, insert_output_spec, inspect_spec, issetugid_spec, owned_spec, owned_spec, parameters_spec, pipe_spec, pipe_spec, re_exchange_spec, re_exchange_spec, re_exchangeable_spec, re_exchangeable_spec, readline_spec, readlines_spec, remainder_spec, report_spec, rid_spec, rid_spec, set_trace_func_spec, set_trace_func_spec, setegid_spec, seteuid_spec, setgid_spec, setregid_spec, setresgid_spec, setresuid_spec, setreuid_spec, setrgid_spec, setruid_spec, setuid_spec, sid_available_spec, sid_available_spec, socket_spec, socket_spec, sort_by_spec, stopped_spec, stopsig_spec, sub_spec, switch_spec, switch_spec, syscall_spec, to_a_spec, to_enum_spec, to_int_spec, to_r_spec, to_s_spec, tv_nsec_spec, tv_usec_spec, untrace_var_spec, waitpid2_spec, world_readable_spec, world_writable_spec
+ 61  exception: undefined method 'm' for ModuleSpecs
+     alias_method_spec, ancestors_spec, append_features_spec, attr_spec, autoload_spec, case_compare_spec, class_eval_spec, class_exec_spec, class_variable_defined_spec, class_variable_get_spec, class_variable_set_spec, class_variables_spec, comparison_spec, const_added_spec, define_method_spec, eql_spec, equal_spec, equal_value_spec, extend_object_spec, extended_spec, freeze_spec, gt_spec, gte_spec, include_spec, included_modules_spec, included_spec, initialize_spec, instance_method_spec, instance_methods_spec, lt_spec, lte_spec, method_added_spec, method_defined_spec, method_removed_spec, method_undefined_spec, module_eval_spec, module_exec_spec, module_function_spec, nesting_spec, new_spec, prepend_features_spec, prepend_spec, private_class_method_spec, private_instance_methods_spec, private_method_defined_spec, private_spec, protected_instance_methods_spec, protected_method_defined_spec, protected_spec, public_class_method_spec, public_instance_method_spec, public_instance_methods_spec, public_method_defined_spec, public_spec, remove_class_variable_spec, remove_method_spec, ruby2_keywords_spec, subclasses_spec, to_s_spec, undef_method_spec, undefined_instance_methods_spec
  45  exception: uninitialized constant Time
      _dump_spec, _load_spec, asctime_spec, at_spec, ceil_spec, comparison_spec, ctime_spec, deconstruct_keys_spec, dump_spec, dup_spec, eql_spec, floor_spec, friday_spec, getlocal_spec, gm_spec, gmt_spec, hash_spec, iso8601_spec, load_spec, minus_spec, monday_spec, new_spec, now_spec, nsec_spec, plus_spec, restore_spec, round_spec, saturday_spec, sec_spec, strftime_spec, subsec_spec, sunday_spec, thursday_spec, time_spec, to_f_spec, to_i_spec, to_r_spec, tuesday_spec, tv_sec_spec, usec_spec, utc_spec, utime_spec, wednesday_spec, xmlschema_spec, zone_spec
- 41  exception: undefined method 'instance_variable_get' for <Object>
-     a_spec, a_spec, at_spec, at_spec, b_spec, b_spec, c_spec, c_spec, d_spec, e_spec, e_spec, f_spec, g_spec, g_spec, h_spec, h_spec, i_spec, i_spec, j_spec, l_spec, l_spec, m_spec, m_spec, n_spec, n_spec, p_spec, p_spec, q_spec, q_spec, s_spec, s_spec, u_spec, u_spec, v_spec, v_spec, w_spec, w_spec, x_spec, x_spec, z_spec, z_spec
+ 44  exception: undefined method 'instance_variable_get' for <Object>
+     a_spec, a_spec, at_spec, at_spec, b_spec, b_spec, c_spec, c_spec, d_spec, d_spec, e_spec, e_spec, f_spec, f_spec, g_spec, g_spec, h_spec, h_spec, i_spec, i_spec, j_spec, j_spec, l_spec, l_spec, m_spec, m_spec, n_spec, n_spec, p_spec, p_spec, q_spec, q_spec, s_spec, s_spec, u_spec, u_spec, v_spec, v_spec, w_spec, w_spec, x_spec, x_spec, z_spec, z_spec
+ 37  segfault @ <no output>
+     arity_spec, birthtime_spec, call_spec, case_compare_spec, clone_spec, compose_spec, curry_spec, dup_spec, element_reference_spec, eql_spec, equal_value_spec, eval_spec, for_spec, hash_spec, import_methods_spec, inspect_spec, local_variable_get_spec, local_variable_set_spec, name_spec, original_name_spec, owner_spec, owner_spec, parameters_spec, private_spec, protected_spec, public_spec, receiver_spec, receiver_spec, rescue_spec, return_spec, source_location_spec, super_method_spec, super_method_spec, to_proc_spec, to_s_spec, unbind_spec, yield_spec
  25  exception: uninitialized constant Converter
      asciicompat_encoding_spec, constants_spec, convert_spec, convpath_spec, destination_encoding_name_spec, destination_encoding_name_spec, destination_encoding_spec, destination_encoding_spec, destination_encoding_spec, error_bytes_spec, error_char_spec, finish_spec, last_error_spec, new_spec, primitive_convert_spec, primitive_errinfo_spec, putback_spec, readagain_bytes_spec, replacement_spec, search_convpath_spec, source_encoding_name_spec, source_encoding_name_spec, source_encoding_spec, source_encoding_spec, source_encoding_spec
  25  exception: undefined method 'new' for <Struct>
@@ -26,6 +23,1881 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      day_spec, dst_spec, getgm_spec, getutc_spec, gmt_offset_spec, gmtime_spec, gmtoff_spec, hour_spec, inspect_spec, isdst_spec, local_spec, localtime_spec, mday_spec, min_spec, mktime_spec, mon_spec, month_spec, to_s_spec, utc_offset_spec, wday_spec, yday_spec, year_spec
  21  exception: uninitialized constant FileTest
      blockdev_spec, chardev_spec, directory_spec, executable_real_spec, executable_spec, exist_spec, grpowned_spec, identical_spec, owned_spec, pipe_spec, readable_real_spec, readable_spec, setgid_spec, setuid_spec, size_spec, socket_spec, sticky_spec, symlink_spec, writable_real_spec, writable_spec, zero_spec
+ 19  exception: undefined method 'new_io' for IOSpecs
+     advise_spec, autoclose_spec, closed_spec, each_byte_spec, each_char_spec, each_codepoint_spec, each_line_spec, each_spec, getbyte_spec, getc_spec, lineno_spec, pid_spec, readchar_spec, readline_spec, readlines_spec, rewind_spec, sync_spec, to_io_spec, ungetc_spec
  18  exception: wrong number of arguments (given 1, expected 2)
      Complex_spec, coerce_spec, comparison_spec, denominator_spec, eql_spec, equal_value_spec, fdiv_spec, hash_spec, insert_spec, inspect_spec, integer_spec, negative_spec, numerator_spec, numerator_spec, positive_spec, rect_spec, rectangular_spec, to_c_spec
  17  exception: undefined method 'to_enum' for <EnumeratorLazySpecs__YieldsMixed>
+     chunk_spec, collect_concat_spec, collect_spec, drop_spec, drop_while_spec, filter_spec, find_all_spec, flat_map_spec, force_spec, grep_spec, grep_v_spec, map_spec, reject_spec, select_spec, take_spec, take_while_spec, zip_spec
+ 17  exception: uninitialized constant Process
+     _fork_spec, abort_spec, argv0_spec, clock_getres_spec, clock_gettime_spec, constants_spec, egid_spec, euid_spec, exit_spec, fork_spec, getrlimit_spec, last_status_spec, pid_spec, set_proctitle_spec, setrlimit_spec, times_spec, warmup_spec
+ 16  exception: NameError: uninitialized constant ObjectSpace::WeakMap
+     delete_spec, each_key_spec, each_pair_spec, each_spec, each_value_spec, element_reference_spec, element_set_spec, include_spec, inspect_spec, key_spec, keys_spec, length_spec, member_spec, size_spec, values_spec, weakmap_spec
+ 16  exception: wrong number of arguments (given 1, expected 2+)
+     begin_spec, case_compare_spec, end_spec, eql_spec, equal_value_spec, exclude_end_spec, first_spec, frozen_spec, hash_spec, include_spec, inspect_spec, last_spec, member_spec, minmax_spec, range_spec, to_s_spec
+ 15  exception: undefined method 'argf' for <Object>
+     binmode_spec, close_spec, closed_spec, eof_spec, file_spec, filename_spec, fileno_spec, lineno_spec, path_spec, pos_spec, set_encoding_spec, tell_spec, to_i_spec, to_io_spec, to_s_spec
+ 15  segfault @ 0 passed, 1 failed, 0 skipped (1 total)
+     allocate_spec, allocate_spec, allocate_spec, comment_spec, dup_spec, dup_spec, fcntl_spec, hash_spec, imag_spec, numerator_spec, percent_spec, sortedset_spec, to_f_spec, to_s_spec, trap_spec
+ 14  segfault @ 0 passed, 2 failed, 0 skipped (2 total)
+     exponent_spec, falseclass_spec, hash_spec, isatty_spec, minus_spec, new_spec, nilclass_spec, plus_spec, prepended_spec, to_f_spec, to_i_spec, to_int_spec, trueclass_spec, tty_spec
+ 13  segfault @ 1 passed, 1 failed, 0 skipped (2 total)
+     block_pass_spec, eql_spec, has_value_spec, hash_spec, initialize_spec, minus_spec, not_spec, plus_spec, rational_spec, to_i_spec, to_i_spec, to_s_spec, value_spec
+ 13  exception: undefined method 'obj' for Object
+     byterindex_spec, case_compare_spec, case_equality_spec, fail_spec, include_spec, member_spec, modulo_spec, printf_spec, result_spec, rindex_spec, singleton_method_added_spec, singleton_method_spec, sprintf_spec
+ 13  exception: undefined method 'do' for <Object>
+     Rational_spec, chilled_string_spec, close_on_exec_spec, exponent_spec, flush_spec, inspect_spec, integer_spec, ioctl_spec, performance_warning_spec, pread_spec, pwrite_spec, to_s_spec, to_s_spec
+ 13  exception: uninitialized constant Data
+     constants_spec, deconstruct_keys_spec, deconstruct_spec, define_spec, eql_spec, equal_value_spec, hash_spec, initialize_spec, inspect_spec, members_spec, to_h_spec, to_s_spec, with_spec
+ 10  exception: wrong number of arguments (given 1, expected 0)
+     comment_spec, comparison_spec, count_spec, default_spec, delegation_spec, each_slice_spec, empty_spec, new_spec, size_spec, to_i_spec
+ 10  exception: undefined method 'mock_numeric' for <Object>
+     ceil_spec, denominator_spec, fdiv_spec, finite_spec, infinite_spec, modulo_spec, to_f_spec, to_i_spec, to_r_spec, uminus_spec
+ 10  exception: undefined method 'step' for 1
+     begin_spec, each_spec, end_spec, eq_spec, exclude_end_spec, first_spec, hash_spec, inspect_spec, last_spec, size_spec
+ 10  exception: uninitialized constant Random
+     bytes_spec, default_spec, equal_value_spec, new_seed_spec, new_spec, rand_spec, random_number_spec, seed_spec, srand_spec, urandom_spec
+  9  segfault @ Failed to open '/home/vidarh/Desktop/Projects/Compiler/fixtu
+     each_line_spec, each_spec, gets_spec, readline_spec, readlines_spec, rewind_spec, seek_spec, skip_spec, to_a_spec
+  9  exception: uninitialized constant Mutex
+     broadcast_spec, lock_spec, locked_spec, owned_spec, signal_spec, sleep_spec, synchronize_spec, try_lock_spec, unlock_spec
+  9  exception: uninitialized constant GC
+     count_spec, disable_spec, enable_spec, garbage_collect_spec, measure_total_time_spec, start_spec, stat_spec, stress_spec, total_time_spec
+  9  exception: undefined method 'pair' for <Object>
+     clone_spec, deconstruct_keys_spec, element_set_spec, encode_spec, merge_spec, pattern_matching_spec, store_spec, to_proc_spec, update_spec
+  9  exception: undefined method 'a' for ConstantSpecs
+     const_defined_spec, const_get_spec, const_missing_spec, const_set_spec, const_source_location_spec, constants_spec, constants_spec, optional_assignments_spec, remove_const_spec
+  8  exception: wrong number of arguments (given 0, expected 2)
+     collect_spec, compact_spec, constructor_spec, dup_spec, dup_spec, flatten_spec, join_spec, map_spec
+  8  exception: wrong number of arguments (given 2, expected 1)
+     basename_spec, dirname_spec, element_reference_spec, element_reference_spec, merge_spec, respond_to_missing_spec, respond_to_spec, unpack_spec
+  7  exception: undefined method 'read' for File
+     each_byte_spec, each_char_spec, each_codepoint_spec, getc_spec, read_spec, readchar_spec, readpartial_spec
+  7  segfault @ 1 passed, 2 failed, 0 skipped (3 total)
+     allocate_spec, float_spec, gt_spec, gte_spec, hash_spec, lte_spec, symbol_spec
+  7  exception: undefined method 'lazy' for 0..268435456
+     chunk_while_spec, enum_for_spec, slice_after_spec, slice_before_spec, slice_when_spec, to_enum_spec, with_index_spec
+  7  exception: undefined method 'clear' for ENV
+     clear_spec, each_key_spec, each_pair_spec, each_spec, each_value_spec, length_spec, size_spec
+  7  exception: wrong number of arguments (given 0, expected 1)
+     case_compare_spec, equal_value_spec, new_spec, path_spec, safe_spec, singleton_class_spec, system_call_error_spec
+  7  segfault @ 3 passed, 2 failed, 0 skipped (5 total)
+     case_compare_spec, eql_spec, equal_value_spec, equal_value_spec, gt_spec, gte_spec, rationalize_spec
+  7  exception: undefined method 'pipe' for IO
+     inspect_spec, pipe_spec, read_nonblock_spec, readpartial_spec, select_spec, select_spec, write_nonblock_spec
+  7  exception: NameError: uninitialized constant ObjectSpace::WeakKeyMap
+     clear_spec, delete_spec, element_reference_spec, element_set_spec, getkey_spec, inspect_spec, key_spec
+  7  exception: undefined method 'caller_locations' for ThreadBacktraceLocationSpecs
+     absolute_path_spec, base_label_spec, inspect_spec, label_spec, lineno_spec, path_spec, to_s_spec
+  7  exception: undefined method 'join' for <Thread>
+     element_reference_spec, element_set_spec, fetch_spec, join_spec, key_spec, keys_spec, main_spec
+  6  exception: uninitialized constant PI
+     angle_spec, arg_spec, constants_spec, cos_spec, phase_spec, sin_spec
+  6  exception: uninitialized constant NotImplementedError
+     auto_compact_spec, birthtime_spec, daemon_spec, fchdir_spec, fileno_spec, waitall_spec
+  6  exception: uninitialized constant Product
+     each_spec, initialize_copy_spec, initialize_spec, inspect_spec, rewind_spec, size_spec
+  6  exception: uninitialized constant SystemExit
+     exit_spec, initialize_spec, status_spec, success_spec, success_spec, system_exit_spec
+  6  exception: undefined method 'callm' for <Object>
+     backtick_spec, constants_spec, execution_spec, if_spec, index_spec, inspect_spec
+  6  exception: undefined method 'public' for <Object>
+     define_method_spec, include_spec, private_spec, public_spec, ruby2_keywords_spec, using_spec
+  6  exception: undefined method 'unbind' for <Method>
+     bind_call_spec, bind_spec, private_spec, protected_spec, public_spec, source_location_spec
+  5  exception: undefined method 'x' for Object
+     case_compare_spec, delete_spec, equal_value_spec, find_index_spec, index_spec
+  5  exception: undefined method 'o' for Object
+     include_spec, interpolation_spec, modifiers_spec, next_values_spec, peek_values_spec
+  5  exception: uninitialized constant Chain
+     each_spec, initialize_spec, inspect_spec, rewind_spec, size_spec
+  5  exception: undefined method 'delete' for ENV
+     delete_spec, fetch_spec, include_spec, inspect_spec, replace_spec
+  5  exception: NameError: uninitialized constant GC::Profiler
+     disable_spec, enable_spec, enabled_spec, result_spec, total_time_spec
+  5  exception: undefined method 'false' for ProcessSpecs
+     kill_spec, popen_spec, spawn_spec, wait_spec, wait_spec
+  5  exception: wrong number of arguments (given 0, expected 1+)
+     chomp_spec, chop_spec, compile_spec, element_reference_spec, new_spec
+  5  exception: undefined method 'false' for <Object>
+     defined_spec, flatten_spec, freeze_spec, proper_subset_spec, subset_spec
+  4  exception: undefined method '+' for :c
+     all_spec, drop_while_spec, none_spec, one_spec
+  4  exception: undefined method '<=>' for nil
+     max_spec, max_spec, min_spec, min_spec
+  4  exception: Integer can't be coerced
+     exponent_spec, multiply_spec, pow_spec, precedence_spec
+  4  exception: undefined method 'arity' for <Method>
+     __send___spec, extend_spec, send_spec, warn_spec
+  4  exception: undefined method 'list' for Encoding
+     inspect_spec, list_spec, name_spec, to_s_spec
+  4  exception: uninitialized constant Yielder
+     append_spec, initialize_spec, to_proc_spec, yield_spec
+  4  segfault @ 0 passed, 3 failed, 0 skipped (3 total)
+     clone_spec, initialize_spec, multiply_spec, to_f_spec
+  4  exception: undefined method 'resume' for <Fiber>
+     blocking_spec, new_spec, resume_spec, yield_spec
+  4  exception: undefined method 'value' for <Thread>
+     alive_spec, inspect_spec, status_spec, value_spec
+  4  exception: undefined method '[]' for nil
+     element_reference_spec, grouping_spec, subexpression_call_spec, to_a_spec
+  4  exception: undefined method 'match' for "haystack"
+     eql_spec, equal_value_spec, names_spec, regexp_spec
+  4  exception: uninitialized constant ObjectSpace
+     _id2ref_spec, define_finalizer_spec, each_object_spec, garbage_collect_spec
+  4  exception: NameError: uninitialized constant Process::Tms
+     cstime_spec, cutime_spec, stime_spec, utime_spec
+  4  exception: uninitialized constant Queue
+     enclose_spec, initialize_spec, list_spec, new_spec
+  4  exception: undefined method 'ord' for nil
+     empty_spec, length_spec, size_spec, symbol_spec
+  3  exception: uninitialized constant ARGF
+     argf_spec, argv_spec, gets_spec
+  3  segfault @ 2 passed, 4 failed, 0 skipped (6 total)
+     delete_at_spec, encoding_spec, name_spec
+  3  segfault @ 8 passed, 1 failed, 0 skipped (9 total)
+     eql_spec, equal_value_spec, options_spec
+  3  exception: uninitialized constant ASCII
+     default_external_spec, default_internal_spec, replicate_spec
+  3  exception: undefined method '__dir__' for <Object>
+     __dir___spec, equal_value_spec, test_spec
+  3  exception: uninitialized constant SignalException
+     signal_exception_spec, signm_spec, signo_spec
+  3  segfault @ 2 passed, 1 failed, 0 skipped (3 total)
+     eql_spec, replace_spec, standard_error_spec
+  3  exception: undefined method 'lines' for ""
+     END_spec, at_exit_spec, top_level_spec
+  3  segfault @ 1 passed, 1 failed, 1 skipped (3 total)
+     to_s_spec, to_s_spec, to_s_spec
+  3  exception: Unsupported
+     element_reference_spec, left_shift_spec, right_shift_spec
+  3  segfault @ 4 passed, 3 failed, 0 skipped (7 total)
+     minus_spec, to_s_spec, try_convert_spec
+  3  exception: undefined method 'popen' for IO
+     close_read_spec, close_write_spec, stat_spec
+  3  exception: undefined method 'output_to_fd' for <Object>
+     output_spec, spawn_spec, system_spec
+  3  exception: undefined method 'lambda?' for <Proc>
+     lambda_spec, lambda_spec, proc_spec
+  3  exception: undefined method 'match' for nil
+     escapes_spec, match_spec, repetition_spec
+  3  exception: undefined method '[]=' for Object
+     attr_accessor_spec, attr_reader_spec, attr_writer_spec
+  3  exception: nil can't be coerced into Integer
+     imag_spec, imaginary_spec, real_spec
+  3  exception: undefined method 'evaluate' for <Object>
+     arity_spec, arity_spec, method_spec
+  3  segfault @ for a child that exited normally
+     exited_spec, success_spec, termsig_spec
+  3  exception: uninitialized constant Refinement
+     append_features_spec, extend_object_spec, prepend_features_spec
+  3  segfault @ 7 passed, 3 failed, 0 skipped (10 total)
+     case_compare_spec, equal_value_spec, to_s_spec
+  3  exception: undefined method 'encode' for " hello "
+     lstrip_spec, rstrip_spec, strip_spec
+  3  exception: undefined method '__env__' for <Object>
+     def_spec, next_spec, utf_8_spec
+  3  exception: undefined method 'thread_variable_set' for <Thread>
+     thread_variable_set_spec, thread_variable_spec, thread_variables_spec
+  3  exception: undefined method 'instance_method' for UnboundMethodSpecs__Methods
+     hash_spec, inspect_spec, to_s_spec
+  3  exception: redo not supported in current compiler
+     loop_spec, redo_spec, until_spec
+  2  segfault @ 3 passed, 1 failed, 0 skipped (4 total)
+     assoc_spec, try_convert_spec
+  2  exception: undefined method 'encode' for "utf8"
+     inspect_spec, to_s_spec
+  2  exception: wrong number of arguments (given 3, expected 1)
+     catch_spec, sample_spec
+  2  exception: uninitialized constant CVar
+     instance_eval_spec, instance_exec_spec
+  2  exception: undefined method 'klass' for Object
+     singleton_method_removed_spec, singleton_method_undefined_spec
+  2  exception: undefined method 'binding' for <Object>
+     local_variable_defined_spec, local_variables_spec
+  2  segfault @ 1 passed, 3 failed, 0 skipped (4 total)
+     assoc_spec, lt_spec
+  2  exception: undefined method 'i' for <Object>
+     finite_spec, infinite_spec
+  2  exception: uninitialized constant ConditionVariable
+     marshal_dump_spec, wait_spec
+  2  exception: undefined method 'aliases' for Encoding
+     aliases_spec, find_spec
+  2  exception: undefined method 'name_list' for Encoding
+     name_list_spec, names_spec
+  2  exception: undefined method 'any?' for {}
+     any_spec, any_spec
+  2  exception: comparison of Integer with Mock failed
+     comparison_spec, each_cons_spec
+  2  exception: undefined method 'to_set' for [1, 2, 3]
+     to_set_spec, to_set_spec
+  2  exception: undefined method 'to_enum' for [1, 2, 3, 4]
+     each_with_index_spec, with_index_spec
+  2  exception: undefined method 'to_enum' for [:a, :b]
+     each_with_object_spec, with_object_spec
+  2  exception: undefined method 'method_defined?' for Kernel
+     enum_for_spec, to_enum_spec
+  2  exception: uninitialized constant Generator
+     each_spec, initialize_spec
+  2  exception: undefined method 'size' for nil
+     initialize_spec, size_spec
+  2  exception: undefined method 'next' for <Enumerator>
+     next_spec, rewind_spec
+  2  exception: undefined method 'keys' for ENV
+     empty_spec, keys_spec
+  2  exception: undefined method 'backtrace' for <RuntimeError>
+     backtrace_spec, set_backtrace_spec
+  2  exception: NameError: uninitialized constant Errno::EINVAL
+     case_compare_spec, errno_spec
+  2  segfault @ 0 passed, 5 failed, 0 skipped (5 total)
+     comment_spec, inspect_spec
+  2  exception: uninitialized constant KeyError
+     fetch_spec, key_error_spec
+  2  exception: undefined method 'alive?' for <Fiber>
+     alive_spec, kill_spec
+  2  exception: undefined method 'as_superuser' for <Object>
+     chown_spec, lchown_spec
+  2  exception: uninitialized constant Constants
+     file_spec, io_spec
+  2  exception: NameError: uninitialized constant Errno::ENOENT
+     exec_spec, ftype_spec
+  2  exception: undefined method 'Float' for <Object>
+     ceil_spec, floor_spec
+  2  exception: undefined method '>' for nil
+     gt_spec, include_spec
+  2  exception: undefined method 'to_f' for "0.21611564636388508"
+     inspect_spec, to_s_spec
+  2  exception: undefined method 'negative?' for 0.0
+     negative_spec, negative_spec
+  2  exception: undefined method 'positive?' for 0.0
+     positive_spec, positive_spec
+  2  exception: undefined method '-@' for 0.0
+     uminus_spec, uminus_spec
+  2  exception: undefined method 'default_proc' for {}
+     default_proc_spec, new_spec
+  2  exception: undefined method 'mock_hash' for Object
+     eql_spec, equal_value_spec
+  2  exception: uninitialized constant UTF_16BE
+     inspect_spec, to_s_spec
+  2  exception: divided by 0
+     ceildiv_spec, div_spec
+  2  segfault @ 4 passed, 5 failed, 0 skipped (9 total)
+     downto_spec, upto_spec
+  2  segfault @ 6 passed, 1 failed, 0 skipped (7 total)
+     instance_of_spec, lte_spec
+  2  segfault @ 0 passed, 1 failed, 2 skipped (3 total)
+     exec_spec, undefine_finalizer_spec
+  2  exception: undefined method 'local_variables' for <Object>
+     local_variables_spec, match_spec
+  2  exception: undefined method 'name' for <RuntimeError>
+     raise_spec, raise_spec
+  2  exception: undefined method 'erf' for Math
+     erf_spec, erfc_spec
+  2  exception: undefined method 'eax' for <Object>
+     deprecate_constant_spec, list_spec
+  2  exception: undefined method 'name' for <Module>
+     name_spec, set_temporary_name_spec
+  2  exception: undefined method 'const_set' for Class
+     private_constant_spec, public_constant_spec
+  2  segfault after: FAILED: Expected ArgumentError to be raised but nothing was 
+     proc_spec, step_spec
+  2  segfault @ 8 passed, 2 failed, 0 skipped (10 total)
+     eql_spec, equal_value_spec
+  2  exception: undefined method 'each_char' for "/home/vidarh/Desktop/Projects/Compiler/rubyspec_helper.rb"
+     inspect_spec, to_s_spec
+  2  segfault @ 0 passed, 4 failed, 0 skipped (4 total)
+     empty_checks_spec, equal_value_spec
+  2  segfault @ 4 passed, 2 failed, 0 skipped (6 total)
+     case_compare_spec, inspect_spec
+  2  exception: undefined method 'each_char' for "\\*?{}.+^$[]()- "
+     escape_spec, quote_spec
+  2  segfault @ 6 passed, 2 failed, 0 skipped (8 total)
+     fixed_encoding_spec, source_spec
+  2  exception: uninitialized constant IndexError
+     bytesplice_spec, last_match_spec
+  2  exception: undefined method 'to_sym' for nil
+     match_spec, match_spec
+  2  segfault @ 2 passed, 3 failed, 1 skipped (6 total)
+     named_captures_spec, names_spec
+  2  segfault @ 2 passed, 2 failed, 0 skipped (4 total)
+     intersection_spec, union_spec
+  2  exception: undefined method 'call' for :inspect
+     proper_superset_spec, superset_spec
+  2  exception: undefined method 'encode!' for "!"
+     append_spec, concat_spec
+  2  exception: undefined method 'encode' for "hello"
+     ascii_only_spec, upcase_spec
+  2  exception: wrong number of arguments (given 4, expected 1)
+     end_with_spec, start_with_spec
+  2  exception: undefined method 'be_computed_by' for <Object>
+     inspect_spec, string_spec
+  2  exception: uninitialized constant UTF_32BE
+     length_spec, size_spec
+  2  exception: undefined method 'encode' for "ruby"
+     id2name_spec, to_s_spec
+  2  exception: undefined method 'status' for <Thread>
+     backtrace_spec, stop_spec
+  2  exception: undefined method 'pending_interrupt?' for Thread
+     handle_interrupt_spec, pending_interrupt_spec
+  2  exception: undefined method 'new' for Thread
+     inspect_spec, to_s_spec
+  2  exception: undefined method '__true?' for true
+     and_spec, xor_spec
+  2  exception: undefined method 'instance_method' for Class
+     clone_spec, dup_spec
+  2  exception: undefined method 'instance_method' for String
+     name_spec, original_name_spec
+  2  exception: uninitialized constant Warning
+     element_set_spec, warn_spec
+  1  segfault @ FAILED: Expected 0 but got -407381760
+     allocate_spec
+  1  segfault @ with no block given (a default block of { |x| x } is implici
+     any_spec
+  1  exception: Integer can't be coerced into Integer
+     append_spec
+  1  exception: undefined method 'bsearch_index' for [1, 2, 42, 100, 666]
+     bsearch_index_spec
+  1  exception: undefined method 'bsearch' for [1]
+     bsearch_spec
+  1  exception: undefined method 'clone' for []
+     clone_spec
+  1  exception: undefined method 'combination' for [1, 2, 3, 4]
+     combination_spec
+  1  exception: undefined method 'each' for "foobar"
+     comparison_spec
+  1  exception: undefined method 'each' for true
+     concat_spec
+  1  exception: undefined method 'count' for :c
+     count_spec
+  1  exception: undefined method 'cycle' for []
+     cycle_spec
+  1  exception: undefined method 'deconstruct' for 1
+     deconstruct_spec
+  1  exception: undefined method 'delete_if' for "c"
+     delete_if_spec
+  1  segfault @ Array#difference
+     difference_spec
+  1  exception: undefined method 'dig' for ["a"]
+     dig_spec
+  1  exception: undefined method 'drop' for [1, 2, 3, 4, 5]
+     drop_spec
+  1  exception: undefined method 'each_index' for "d"
+     each_index_spec
+  1  exception: undefined method 'each' for 3
+     each_spec
+  1  exception: wrong number of arguments (given 3, expected 2)
+     element_set_spec
+  1  segfault after: Array#eql?
+     eql_spec
+  1  segfault after: Array#==
+     equal_value_spec
+  1  segfault @ Array#fetch not implemented
+     fetch_spec
+  1  exception: undefined method 'fetch_values' for [:a, :b, :c]
+     fetch_values_spec
+  1  exception: undefined method 'fill' for 3
+     fill_spec
+  1  exception: undefined method 'filter' for 9
+     filter_spec
+  1  exception: undefined method '__get_raw' for [1, 2, 3, 4, 5, 9]
+     first_spec
+  1  segfault @ Array#hash
+     hash_spec
+  1  segfault after: FAILED: Expected [:size_or_array, :obj] but got [true]
+     initialize_spec
+  1  exception: undefined method 'intersect?' for [1, 2]
+     intersect_spec
+  1  exception: undefined method '&' for []
+     intersection_spec
+  1  exception: undefined method 'keep_if' for 3
+     keep_if_spec
+  1  exception: undefined method 'last' for 2
+     last_spec
+  1  segfault @ Array#minmax
+     minmax_spec
+  1  segfault @ Array#-
+     minus_spec
+  1  segfault after: Array.new
+     new_spec
+  1  exception: wrong number of arguments (given 2, expected 0)
+     buffer_spec
+  1  segfault @ Array#partition
+     partition_spec
+  1  exception: undefined method 'permutation' for [1, 2, 3]
+     permutation_spec
+  1  segfault @ FAILED: Expected 5 but got 8
+     plus_spec
+  1  exception: undefined method 'pop' for true
+     pop_spec
+  1  exception: undefined method 'prepend' for 3
+     prepend_spec
+  1  exception: undefined method 'product' for [1]
+     product_spec
+  1  exception: undefined method 'push' for "c"
+     push_spec
+  1  exception: undefined method 'rassoc' for "d"
+     rassoc_spec
+  1  exception: undefined method 'reject' for 5
+     reject_spec
+  1  exception: undefined method 'repeated_combination' for [10, 11, 12]
+     repeated_combination_spec
+  1  exception: undefined method 'repeated_permutation' for [10, 11, 12]
+     repeated_permutation_spec
+  1  exception: undefined method 'replace' for 5
+     replace_spec
+  1  exception: undefined method 'reverse_each' for 6
+     reverse_each_spec
+  1  segfault @ Array#reverse
+     reverse_spec
+  1  exception: undefined method 'rindex' for 5
+     rindex_spec
+  1  exception: undefined method 'rotate' for [1, 2, 3, 4, 5]
+     rotate_spec
+  1  exception: undefined method 'select' for 9
+     select_spec
+  1  exception: undefined method 'shift' for 4
+     shift_spec
+  1  exception: undefined method 'shuffle' for [1, 2, 3, 4]
+     shuffle_spec
+  1  exception: undefined method 'slice!' for 4
+     slice_spec
+  1  exception: undefined method 'sort_by!' for 30000
+     sort_by_spec
+  1  exception: undefined method 'sort' for 0
+     sort_spec
+  1  exception: undefined method 'sum' for 3
+     sum_spec
+  1  exception: undefined method 'take' for [1, 2, 3]
+     take_spec
+  1  exception: undefined method 'take_while' for 3
+     take_while_spec
+  1  exception: undefined method 'to_a' for 3
+     to_a_spec
+  1  exception: undefined method 'to_ary' for 3
+     to_ary_spec
+  1  segfault @ Array#to_h
+     to_h_spec
+  1  segfault @ Array#transpose not implemented
+     transpose_spec
+  1  exception: undefined method 'try_convert' for Array
+     try_convert_spec
+  1  segfault @ Array#|
+     union_spec
+  1  exception: undefined method 'uniq' for 1
+     uniq_spec
+  1  exception: undefined method 'unshift' for 3
+     unshift_spec
+  1  exception: undefined method 'values_at' for 5
+     values_at_spec
+  1  exception: undefined method 'to_enum' for ["a", "b", "c", "d", "e"]
+     zip_spec
+  1  segfault @ BasicObject#__id__
+     __id__spec
+  1  exception: undefined method 'false' for BasicObjectSpecs__BOSubclass
+     basicobject_spec
+  1  exception: undefined method 'o1' for Object
+     equal_spec
+  1  segfault @ for a Class
+     method_missing_spec
+  1  segfault @ 7 passed, 1 failed, 0 skipped (8 total)
+     not_equal_spec
+  1  exception: undefined method 'binding' for BindingSpecs__LocationMethod
+     source_location_spec
+  1  exception: undefined method 'constants' for `b
+     allocate_spec
+  1  exception: undefined method 'attached_object' for Eigenclass_1099
+     attached_object_spec
+  1  segfault @ Class#dup
+     dup_spec
+  1  segfault @ Class.inherited
+     inherited_spec
+  1  exception: undefined method 'have_private_method' for <Object>
+     initialize_spec
+  1  exception: undefined method 'message' for Class
+     new_spec
+  1  exception: undefined method 'superclass' for {:new=>6, :__send__=>7, :__get_symbol=>8, :__initialize=>9, :allocate=>10, :__new=>11, :name=>12, :!==>13, :superclass=>14, :define_method=>15, :attr_accessor=>16, :attr_reader=>17, :attr_writer=>18, :attr=>19, :prepend=>20, :class_eval=>21, :module_function=>22, :extend=>23, :include?=>24, :include=>25, :private=>26, :protected=>27, :public=>28, :puts=>29, :raise=>30, :fail=>31, :loop=>32, :exit=>33, :system=>34, :Array=>35, :__const_get=>36, :__const_get_on=>37, :__const_get_global=>38, :__const_set_global=>39, :require=>40, :require_relative=>41, :catch=>42, :throw=>43, :redo=>44, :fixture=>45, :proc=>46, :lambda=>47, :initialize=>48, :class=>49, :object_id=>50, :hash=>51, :eql?=>52, :====>53, :equal?=>54, :inspect=>55, :to_s=>56, :===>57, :!=>58, :nil?=>59, :freeze=>60, :frozen?=>61, :method_missing=>62, :respond_to?=>63, :is_a?=>64, :kind_of?=>65, :instance_of?=>66, :itself=>67, :tap=>68, :display=>69, :send=>70, :p=>71, :print=>72, :dup=>73, :const_defined?=>74, :eval=>75, :index=>76, :singleton_class=>77, :__set_raw=>78, :arity=>79, :to_proc=>80, :call=>81, :[]=>82, :i=>83, :numerator=>84, :denominator=>85, :to_i=>86, :to_f=>87, :%=>88, :__get_raw=>89, :zero?=>90, :>=>91, :>==>92, :<=>93, :<==>94, :__len=>95, :__ptr=>96, :__grow=>97, :__set=>98, :to_a=>99, :"&"=>100, :"|"=>101, :"^"=>102, :<<=>103, :>>=>104, :__true?=>105, :to_h=>106, :rationalize=>107, :-=>108, :exclude_end?=>109, :first=>110, :last=>111, :member?=>112, :each=>113, :to_enum=>114, :__copy_init=>115, :capacity=>116, :__get=>117, :find=>118, :reject=>119, :select=>120, :collect=>121, :sum=>122, :detect=>123, :each_with_index=>124, :+=>125, :__offset_to_pos=>126, :__range_get=>127, :[]==>128, :abbrev=>129, :slice=>130, :assoc=>131, :at=>132, :clear=>133, :collect!=>134, :compact=>135, :compact!=>136, :concat=>137, :dclone=>138, :delete=>139, :delete_at=>140, :delete_if=>141, :each_index=>142, :empty?=>143, :fetch=>144, :fill=>145, :max=>146, :min=>147, :any?=>148, :all?=>149, :none?=>150, :flatten=>151, :flatten!=>152, :replace=>153, :insert=>154, :join=>155, :length=>156, :map!=>157, :nitems=>158, :pack=>159, :pop=>160, :pretty_print=>161, :push=>162, :quote=>163, :rassoc=>164, :reject!=>165, :reverse=>166, :reverse!=>167, :reverse_each=>168, :rindex=>169, :shift=>170, :size=>171, :partition=>172, :sort_by=>173, :sort=>174, :sort!=>175, :to_ary=>176, :to_yaml=>177, :transpose=>178, :uniq=>179, :uniq!=>180, :unshift=>181, :values_at=>182, :yaml_initialize=>183, :zip=>184, :__copy_initialize=>185, :_hash=>186, :encoding=>187, :__copy_raw=>188, :chr=>189, :ord=>190, :each_byte=>191, :bytes=>192, :<=>=>193, :to_str=>194, :to_sym=>195, :slice!=>196, :upcase=>197, :downcase=>198, :start_with?=>199, :end_with?=>200, :count=>201, :+@=>202, :"-@"=>203, :*=>204, :gsub=>205, :split=>206, :__percent_I=>207, :lstrip=>208, :rstrip=>209, :strip=>210, :chomp=>211, :chomp!=>212, :force_encoding=>213, :"=~"=>214, :unpack=>215, :default=>216, :_data=>217, :_state=>218, :_alloc_data=>219, :not_deleted?=>220, :_bulkinsert=>221, :_grow=>222, :_find_slot=>223, :_find_nil_slot=>224, :_find_insertion_slot=>225, :capacity_too_low=>226, :keys=>227, :values=>228, :merge=>229, :pair=>230, :hash_splat=>231, :getc=>232, :file?=>233, :absolute_path?=>234, :path=>235, :open=>236, :exist?=>237, :readlines=>238, :basename=>239, :dirname=>240, :expand_path=>241, :pwd=>242, :between?=>243, :each_cons=>244, :each_slice=>245, :entries=>246, :find_all=>247, :inject=>248, :to_set=>249, :each_with_object=>250, :flat_map=>251, :__set_heap_data=>252, :__from_literal=>253, :__init_from_overflow_value=>254, :__is_nonzero_raw=>255, :__extract_limb=>256, :__heap_get_raw=>257, :__to_fixnum_if_possible=>258, :__subtract_fixnum_from_heap=>259, :__subtract_heap=>260, :__add_fixnum_to_heap=>261, :__add_heap=>262, :__add_heap_and_fixnum=>263, :__add_magnitudes_fixnum=>264, :__add_heap_and_heap=>265, :__add_magnitudes=>266, :__compare_magnitudes=>267, :__subtract_magnitudes=>268, :__subtract_with_borrow=>269, :__add_limbs_with_carry=>270, :__max_fixnum=>271, :__less_than=>272, :__ge_fixnum=>273, :__greater_than=>274, :__get_limb_or_zero=>275, :__normalize_limb=>276, :__limb_base_raw=>277, :__multiply_raw_full=>278, :__check_limb_overflow=>279, :__make_overflow_result=>280, :__multiply_limb_by_fixnum_with_carry=>281, :__multiply_heap_by_fixnum=>282, :__multiply_heap_by_heap=>283, :__check_limb_borrow=>284, :__multiply_heap_and_fixnum=>285, :__half_limb_base=>286, :__limb_base=>287, :__get_sign=>288, :__get_limbs=>289, :__cmp=>290, :__cmp_fixnum_fixnum=>291, :__cmp_fixnum_heap=>292, :__cmp_heap_fixnum=>293, :__cmp_heap_heap=>294, :__add_multi_limb=>295, :__divmod_limbs=>296, :__divmod_by_fixnum=>297, :__make_divmod_array=>298, :__divmod_heap_single_limb=>299, :__divmod_heap_multi_limb=>300, :__divmod_with_carry=>301, :__is_negative=>302, :__negate=>303, :__negate_heap=>304, :__to_s_multi=>305, :__modulo_via_division=>306, :modulo=>307, :remainder=>308, :__multiply_fixnum_overflow=>309, :__multiply_fixnum_by_heap=>310, :__multiply_heap=>311, :/=>312, :fdiv=>313, :__divide_fixnum_by_heap=>314, :__divide_heap=>315, :__divide_heap_by_fixnum=>316, :__divide_magnitude_by_fixnum=>317, :__divide_heap_by_heap=>318, :__divide_magnitudes=>319, :__shift_limbs_left_one_bit=>320, :__add_two_limbs_with_overflow=>321, :__shift_limb_with_carry=>322, :__subtract_magnitudes_raw=>323, :abs=>324, :__abs_heap=>325, :__check_bitwise_float=>326, :__bitand_fixnum_fixnum=>327, :__bitand_limbs=>328, :__bitand_fixnum_heap=>329, :__bitand_heap_fixnum=>330, :__magnitude_to_twos_complement=>331, :__invert_limb=>332, :__limb_max_value=>333, :__add_with_carry=>334, :__limb_base_minus_one=>335, :__subtract_one_magnitude=>336, :__add_one_magnitude=>337, :__make_heap_or_fixnum=>338, :__bitand_heap_heap=>339, :__min_fixnum=>340, :__extend_limbs_with_zeros=>341, :__trim_leading_zeros=>342, :__bitor_fixnum_fixnum=>343, :__bitor_limbs=>344, :__bitor_fixnum_heap=>345, :__bitor_heap_fixnum=>346, :__bitor_heap_heap=>347, :__bitxor_fixnum_fixnum=>348, :__bitxor_limbs=>349, :__bitxor_fixnum_heap=>350, :__bitxor_heap_fixnum=>351, :__bitxor_heap_heap=>352, :"~"=>353, :__left_shift_fixnum=>354, :__left_shift_heap=>355, :__shift_limb_with_carry_split=>356, :__right_shift_fixnum=>357, :__right_shift_heap=>358, :__shift_limb_right_with_borrow=>359, :infinite?=>360, :integer?=>361, :even?=>362, :odd?=>363, :positive?=>364, :negative?=>365, :succ=>366, :next=>367, :pred=>368, :__check_comparable=>369, :to_r=>370, :sqrt=>371, :try_convert=>372, :__is_heap_integer?=>373, :div=>374, :divmod=>375, :to_int=>376, :**=>377, :pow=>378, :allbits?=>379, :anybits?=>380, :nobits?=>381, :bit_length=>382, :__bit_length_fixnum=>383, :__bit_length_heap=>384, :ceil=>385, :floor=>386, :truncate=>387, :round=>388, :magnitude=>389, :gcd=>390, :lcm=>391, :gcdlcm=>392, :ceildiv=>393, :digits=>394, :mul=>395, :times=>396, :downto=>397, :upto=>398, :coerce=>399, :coerce_to_integer=>400, :intern=>401, :method_to_voff=>402, :__send_for_obj__=>403, :has_key?=>404, :has_value?=>405, :nan?=>406, :finite?=>407, :save_stack_state=>408, :saved_ebp=>409, :saved_esp=>410, :handler_addr=>411, :rescue_classes=>412, :rescue_classes==>413, :next==>414, :push_handler=>415, :pop_handler=>416, :current_handler=>417, :current_exception=>418, :message=>419, :source=>420, :parse_options=>421, :options=>422, :match=>423, :match?=>424, :match_internal=>425, :match_at=>426, :match_from=>427, :match_quantified=>428, :match_atom=>429, :char_digit?=>430, :char_word?=>431, :char_space?=>432, :__posix?=>433, :escape_forward_slashes=>434, :option_flags_string=>435, :negative_flags_string=>436, :casefold?=>437, :fixed_encoding?=>438, :names=>439, :named_captures=>440, :escape=>441, :compile=>442, :union=>443, :last_match=>444, :begin=>445, :end=>446, :captures=>447, :pre_match=>448, :post_match=>449, :string=>450, :regexp=>451, :rewind=>452, :add?=>453, :subset?=>454, :superset?=>455, :proper_subset?=>456, :proper_superset?=>457, :intersect?=>458, :disjoint?=>459, :delete?=>460, :imag=>461, :real=>462, :to_hash=>463, :rehash=>464, :owner=>465, :receiver=>466, :method=>467, :default_internal=>468, :default_internal==>469, :default_external=>470, :default_external==>471, :local_variables=>472, :nesting=>473, :record=>474, :recorded=>475, :desc==>476, :desc=>477, :should_receive=>478, :should_not_receive=>479, :any_number_of_times=>480, :exactly=>481, :at_least=>482, :at_most=>483, :and_return=>484, :and_raise=>485, :with=>486, :stub!=>487, :expected=>488, :failure_message=>489, :check_exception_type=>490, :should=>491, :should_not=>492, :once=>493, :twice=>494, :inherited=>495, :__assert_fixnum=>496, :Integer=>497, :Complex=>498, :Rational=>499, :__ENCODING__=>500, :describe=>501, :it=>502, :mock=>503, :equal=>504, :eql=>505, :be_true=>506, :be_false=>507, :be_nil=>508, :raise_error=>509, :be_an_instance_of=>510, :be_kind_of=>511, :be_close=>512, :complain=>513, :ruby_version_is=>514, :platform_is=>515, :platform_is_not=>516, :ruby_bug=>517, :conflicts_with=>518, :not_supported_on=>519, :skip=>520, :suppress_warning=>521, :context=>522, :let=>523, :clear_let_cache=>524, :it_behaves_like=>525, :it_should_behave_like=>526, :before=>527, :after=>528, :bignum_value=>529, :infinity_value=>530, :nan_value=>531, :fixnum_max=>532, :fixnum_min=>533, :c_long_size=>534, :min_long=>535, :max_long=>536, :mock_int=>537, :ruby_exe=>538, :have_private_instance_method=>539, :have_public_instance_method=>540, :print_spec_results=>541, :run_specs=>542, :map=>543, :key?=>544, :id2name=>545, :value?=>546, :add=>547, :intersection=>548}
+     superclass_spec
+  1  exception: undefined method 'clamp' for <ComparableSpecs__Weird>
+     clamp_spec
+  1  segfault @ 7 passed, 7 failed, 0 skipped (14 total)
+     equal_value_spec
+  1  exception: undefined method 'abs2' for <Complex>
+     abs2_spec
+  1  exception: undefined method 'abs' for <Complex>
+     abs_spec
+  1  exception: undefined method 'conj' for <Complex>
+     conj_spec
+  1  exception: undefined method 'conjugate' for <Complex>
+     conjugate_spec
+  1  exception: uninitialized constant I
+     constants_spec
+  1  exception: undefined method 'denominator' for <Complex>
+     denominator_spec
+  1  exception: undefined method '/' for <Complex>
+     divide_spec
+  1  exception: undefined method '**' for <Complex>
+     exponent_spec
+  1  exception: undefined method 'imaginary' for <Complex>
+     imaginary_spec
+  1  exception: undefined method 'magnitude' for <Complex>
+     magnitude_spec
+  1  exception: undefined method 'marshal_dump' for <Complex>
+     marshal_dump_spec
+  1  exception: undefined method '-' for <Complex>
+     minus_spec
+  1  exception: undefined method '*' for <Complex>
+     multiply_spec
+  1  exception: undefined method '+' for <Complex>
+     plus_spec
+  1  exception: undefined method 'polar' for Complex
+     polar_spec
+  1  exception: undefined method 'quo' for <Complex>
+     quo_spec
+  1  exception: undefined method 'rationalize' for <Complex>
+     rationalize_spec
+  1  exception: undefined method 'real?' for <Complex>
+     real_spec
+  1  exception: undefined method 'to_c' for <Complex>
+     to_c_spec
+  1  segfault @ Dir.chdir
+     chdir_spec
+  1  segfault @ Dir.children
+     children_spec
+  1  segfault @ Dir#close
+     close_spec
+  1  segfault @ Dir.delete
+     delete_spec
+  1  segfault @ Dir.each_child
+     each_child_spec
+  1  segfault @ Dir#each
+     each_spec
+  1  segfault @ Dir.[]
+     element_reference_spec
+  1  segfault @ Dir.entries
+     entries_spec
+  1  segfault @ Dir.exist?
+     exist_spec
+  1  segfault @ 0 passed, 0 failed, 1 skipped (1 total)
+     for_fd_spec
+  1  segfault @ Dir.foreach
+     foreach_spec
+  1  segfault @ Dir.getwd
+     getwd_spec
+  1  segfault @ Dir.glob
+     glob_spec
+  1  exception: undefined method 'home' for Dir
+     home_spec
+  1  segfault @ Dir#initialize
+     initialize_spec
+  1  exception: undefined method 'getwd' for Dir
+     inspect_spec
+  1  segfault @ Dir.mkdir
+     mkdir_spec
+  1  segfault @ Dir.open
+     open_spec
+  1  segfault @ Dir#path
+     path_spec
+  1  segfault @ Dir#pos
+     pos_spec
+  1  segfault @ Dir.pwd
+     pwd_spec
+  1  segfault @ Dir#read
+     read_spec
+  1  segfault @ Dir#rewind
+     rewind_spec
+  1  segfault @ Dir.rmdir
+     rmdir_spec
+  1  segfault @ Dir#seek
+     seek_spec
+  1  segfault @ Dir#tell
+     tell_spec
+  1  segfault @ Dir#to_path
+     to_path_spec
+  1  segfault @ Dir.unlink
+     unlink_spec
+  1  exception: undefined method 'ascii_compatible?' for <Encoding>
+     ascii_compatible_spec
+  1  exception: undefined method 'encode' for "def"
+     compatible_spec
+  1  exception: uninitialized constant UTF_16LE
+     inspect_spec
+  1  exception: undefined method 'dummy?' for <Encoding>
+     dummy_spec
+  1  exception: uninitialized constant InvalidByteSequenceError
+     incomplete_input_spec
+  1  exception: undefined method 'locale_charmap' for Encoding
+     locale_charmap_spec
+  1  exception: undefined method 'all?' for {}
+     all_spec
+  1  exception: undefined method 'chain' for <EnumerableSpecs__Numerous>
+     chain_spec
+  1  segfault @ Enumerable#chunk
+     chunk_spec
+  1  exception: undefined method 'chunk_while' for <EnumerableSpecs__Numerous>
+     chunk_while_spec
+  1  exception: undefined method 'collect_concat' for <EnumerableSpecs__Numerous>
+     collect_concat_spec
+  1  exception: 858753016
+     collect_spec
+  1  exception: undefined method 'compact' for <EnumerableSpecs__Numerous>
+     compact_spec
+  1  exception: undefined method 'splat' for <Object>
+     cycle_spec
+  1  segfault @ Enumerable#detect
+     detect_spec
+  1  exception: undefined method 'drop' for <EnumerableSpecs__Numerous>
+     drop_spec
+  1  exception: undefined method 'drop_while' for <EnumerableSpecs__Numerous>
+     drop_while_spec
+  1  exception: undefined method 'each_entry' for <EnumerableSpecs__YieldsMixed>
+     each_entry_spec
+  1  segfault after: FAILED: Expected #<EnumerableSpecs__Numerous:0x58159d90>, go
+     each_with_index_spec
+  1  segfault @ Enumerable#each_with_object
+     each_with_object_spec
+  1  exception: undefined method 'filter_map' for <EnumerableSpecs__Empty>
+     filter_map_spec
+  1  exception: undefined method 'filter' for <EnumerableSpecs__Numerous>
+     filter_spec
+  1  exception: 831321930
+     find_all_spec
+  1  exception: undefined method 'find_index' for <EnumerableSpecs__Numerous>
+     find_index_spec
+  1  exception: undefined method 'first' for <EnumerableSpecs__Numerous>
+     first_spec
+  1  exception: 832974772
+     flat_map_spec
+  1  exception: undefined method 'grep' for <EnumerableSpecs__Numerous>
+     grep_spec
+  1  exception: undefined method 'grep_v' for ["abc", "def"]
+     grep_v_spec
+  1  exception: undefined method 'group_by' for <EnumerableSpecs__Numerous>
+     group_by_spec
+  1  segfault after: Enumerable#include?
+     include_spec
+  1  segfault @ Enumerable#inject
+     inject_spec
+  1  exception: undefined method 'lazy' for <EnumerableSpecs__Numerous>
+     lazy_spec
+  1  exception: 741158900
+     map_spec
+  1  exception: undefined method 'max_by' for <EnumerableSpecs__Numerous>
+     max_by_spec
+  1  segfault after: Enumerable#member?
+     member_spec
+  1  exception: undefined method 'min_by' for <EnumerableSpecs__Numerous>
+     min_by_spec
+  1  exception: undefined method 'minmax_by' for <EnumerableSpecs__Numerous>
+     minmax_by_spec
+  1  segfault @ Enumerable#minmax
+     minmax_spec
+  1  exception: undefined method 'none?' for <EnumerableSpecs__Empty>
+     none_spec
+  1  exception: undefined method 'one?' for <EnumerableSpecs__Empty>
+     one_spec
+  1  exception: 828972944
+     partition_spec
+  1  exception: undefined method 'reduce' for <EnumerableSpecs__Numerous>
+     reduce_spec
+  1  exception: 740724595
+     reject_spec
+  1  exception: undefined method 'reverse_each' for <EnumerableSpecs__Numerous>
+     reverse_each_spec
+  1  exception: 758560584
+     select_spec
+  1  exception: undefined method 'slice_after' for <EnumerableSpecs__Numerous>
+     slice_after_spec
+  1  exception: undefined method 'slice_before' for <EnumerableSpecs__Numerous>
+     slice_before_spec
+  1  exception: undefined method 'slice_when' for <EnumerableSpecs__Numerous>
+     slice_when_spec
+  1  exception: undefined method 'length' for /[^aeiou]/
+     sort_spec
+  1  exception: undefined method 'to_enum' for <Object>
+     sum_spec
+  1  exception: undefined method 'take' for <EnumerableSpecs__Numerous>
+     take_spec
+  1  exception: undefined method 'take_while' for <EnumerableSpecs__Numerous>
+     take_while_spec
+  1  exception: undefined method 'tally' for <EnumerableSpecs__Numerous>
+     tally_spec
+  1  exception: undefined method 'to_h' for <EnumerableSpecs__EachDefiner>
+     to_h_spec
+  1  exception: undefined method 'to_enum' for [0, 1, 2, 3]
+     uniq_spec
+  1  exception: undefined method '[]' for <EnumerableSpecs__ArrayConvertible>
+     zip_spec
+  1  exception: undefined method 'step' for 1..10
+     step_spec
+  1  exception: undefined method 'object_each_with_arguments' for Object
+     each_spec
+  1  exception: undefined method 'to_enum' for <EnumeratorSpecs__Feed>
+     feed_spec
+  1  exception: undefined method 'first' for <Enumerator>
+     first_spec
+  1  exception: 772752747
+     inspect_spec
+  1  exception: undefined method 'to_enum' for [1, nil, 3, false, 5]
+     compact_spec
+  1  exception: undefined method 'lazy' for [1, 2, 3]
+     eager_spec
+  1  exception: undefined method 'lazy' for 1..268435456
+     filter_map_spec
+  1  exception: undefined method 'receiver' for Object
+     initialize_spec
+  1  exception: uninitialized constant Lazy
+     lazy_spec
+  1  exception: undefined method 'to_enum' for [0, 1, 0, 1]
+     uniq_spec
+  1  exception: undefined method 'take' for <Enumerator>
+     new_spec
+  1  exception: undefined method 'to_enum' for [1, 2, 3, 4, 5]
+     peek_spec
+  1  exception: undefined method '+' for <Enumerator>
+     plus_spec
+  1  exception: undefined method 'produce' for Enumerator
+     produce_spec
+  1  exception: undefined method 'product' for Enumerator
+     product_spec
+  1  exception: undefined method 'delete_if' for ENV
+     delete_if_spec
+  1  segfault @ ENV.[]
+     element_reference_spec
+  1  segfault @ ENV.[]=
+     element_set_spec
+  1  exception: undefined method 'except' for ENV
+     except_spec
+  1  exception: undefined method 'filter!' for ENV
+     filter_spec
+  1  exception: undefined method 'has_key?' for ENV
+     has_key_spec
+  1  exception: undefined method 'has_value?' for ENV
+     has_value_spec
+  1  exception: undefined method 'invert' for ENV
+     invert_spec
+  1  exception: undefined method 'keep_if' for ENV
+     keep_if_spec
+  1  exception: undefined method 'key?' for ENV
+     key_spec
+  1  exception: undefined method 'member?' for ENV
+     member_spec
+  1  exception: undefined method 'merge!' for ENV
+     merge_spec
+  1  exception: undefined method 'rassoc' for ENV
+     rassoc_spec
+  1  exception: undefined method 'reject!' for ENV
+     reject_spec
+  1  exception: undefined method 'select!' for ENV
+     select_spec
+  1  exception: undefined method 'replace' for ENV
+     shift_spec
+  1  exception: undefined method 'slice' for ENV
+     slice_spec
+  1  exception: undefined method 'store' for ENV
+     store_spec
+  1  exception: undefined method 'to_a' for ENV
+     to_a_spec
+  1  exception: undefined method 'to_h' for ENV
+     to_h_spec
+  1  exception: undefined method 'size' for ENV
+     to_hash_spec
+  1  exception: undefined method 'update' for ENV
+     update_spec
+  1  exception: undefined method 'value?' for ENV
+     value_spec
+  1  exception: undefined method 'values_at' for ENV
+     values_at_spec
+  1  exception: undefined method 'values' for ENV
+     values_spec
+  1  exception: undefined method 'backtrace_locations' for <RuntimeError>
+     backtrace_locations_spec
+  1  segfault @ Exception#cause
+     cause_spec
+  1  exception: undefined method 'detailed_message' for <RuntimeError>
+     detailed_message_spec
+  1  segfault @ Exception#dup
+     dup_spec
+  1  exception: undefined method 'exception' for Exception
+     exception_spec
+  1  segfault @ LocalJumpError#exit_value
+     exit_value_spec
+  1  exception: undefined method 'receiver' for <FrozenError>
+     frozen_error_spec
+  1  exception: undefined method 'set_backtrace' for <RuntimeError>
+     full_message_spec
+  1  exception: uninitialized constant NoMemoryError
+     hierarchy_spec
+  1  exception: uninitialized constant Interrupt
+     interrupt_spec
+  1  exception: uninitialized constant EAGAINWaitReadable
+     io_error_spec
+  1  exception: undefined method 'path' for <LoadError>
+     load_error_spec
+  1  exception: undefined method 'e' for Object
+     message_spec
+  1  exception: undefined method 'name' for <NameError>
+     name_error_spec
+  1  exception: undefined method 'be_ancestor_of' for <Object>
+     new_spec
+  1  exception: undefined method 'args' for <NoMethodError>
+     no_method_error_spec
+  1  segfault @ LocalJumpError#reason
+     reason_spec
+  1  segfault after: FAILED: Expected NameError to be raised but nothing was rais
+     receiver_spec
+  1  compile-fail
+     syntax_error_spec
+  1  segfault @ NameError#to_s
+     to_s_spec
+  1  segfault @ FalseClass#|
+     or_spec
+  1  exception: undefined method 'remove_method' for FalseClass
+     singleton_method_spec
+  1  segfault @ FalseClass#^
+     xor_spec
+  1  exception: undefined method 'current' for Fiber
+     current_spec
+  1  segfault @ Fiber#raise
+     raise_spec
+  1  exception: undefined method 'ternalt' for <Object>
+     storage_spec
+  1  exception: undefined method 'transfer' for <Fiber>
+     transfer_spec
+  1  exception: undefined method 'chdir' for Dir
+     absolute_path_spec
+  1  exception: uninitialized constant FNM_NOESCAPE
+     constants_spec
+  1  exception: undefined method 'ctime' for File
+     ctime_spec
+  1  segfault @ File.exist?
+     exist_spec
+  1  exception: system() not implemented - backtick/command execution not supported
+     expand_path_spec
+  1  exception: undefined method 'extname' for File
+     extname_spec
+  1  exception: undefined method 'fnmatch' for File
+     fnmatch_spec
+  1  exception: undefined method 'external_encoding' for <File>
+     initialize_spec
+  1  segfault @ ArgumentError: wrong number of arguments (given 0, expected 
+     join_spec
+  1  exception: uninitialized constant NULL
+     null_spec
+  1  exception: NameError: uninitialized constant Errno::EISDIR
+     read_spec
+  1  exception: undefined method 'split' for File
+     split_spec
+  1  exception: undefined method 'touch' for FileSpecs
+     ftype_spec
+  1  exception: undefined method 'umask' for File
+     umask_spec
+  1  exception: undefined method 'abs' for 0.0
+     abs_spec
+  1  exception: undefined method 'angle' for nil
+     angle_spec
+  1  exception: undefined method 'arg' for nil
+     arg_spec
+  1  exception: undefined method 'coerce' for 0.0
+     coerce_spec
+  1  exception: undefined method '<=>' for 0.0
+     comparison_spec
+  1  exception: uninitialized constant DIG
+     constants_spec
+  1  exception: undefined method 'denominator' for 0.0
+     denominator_spec
+  1  segfault @ FAILED: Expected 0.0 to be within 0.0 of 0.0
+     divide_spec
+  1  exception: undefined method 'divmod' for 0.0
+     divmod_spec
+  1  exception: undefined method 'fdiv' for 0.0
+     fdiv_spec
+  1  exception: undefined method 'finite?' for 268435456
+     finite_spec
+  1  exception: undefined method '>=' for nil
+     gte_spec
+  1  exception: undefined method 'infinite?' for nil
+     infinite_spec
+  1  exception: undefined method '<' for nil
+     lt_spec
+  1  exception: undefined method '<=' for nil
+     lte_spec
+  1  exception: undefined method 'magnitude' for 0.0
+     magnitude_spec
+  1  exception: undefined method '%' for 0.0
+     modulo_spec
+  1  exception: undefined method 'nan?' for nil
+     nan_spec
+  1  exception: undefined method 'next_float' for 0.0
+     next_float_spec
+  1  exception: undefined method 'numerator' for 0.0
+     numerator_spec
+  1  exception: undefined method 'phase' for nil
+     phase_spec
+  1  exception: undefined method 'prev_float' for 0.0
+     prev_float_spec
+  1  exception: undefined method 'quo' for 0.0
+     quo_spec
+  1  exception: undefined method 'rationalize' for 0.0
+     rationalize_spec
+  1  exception: undefined method 'round' for 0.0
+     round_spec
+  1  exception: undefined method 'truncate' for 0.0
+     truncate_spec
+  1  exception: undefined method '+@' for 0.0
+     uplus_spec
+  1  exception: undefined method 'zero?' for 0.0
+     zero_spec
+  1  exception: undefined method '/' for nil
+     allocate_spec
+  1  exception: undefined method 'assoc' for {:apple=>:green, :orange=>:orange, :grape=>:green, :banana=>:yellow}
+     assoc_spec
+  1  exception: undefined method 'clear' for {1=>2, 3=>4}
+     clear_spec
+  1  exception: undefined method 'compact' for {:truthy=>true, :false=>false, :nil=>nil, nil=>true}
+     compact_spec
+  1  exception: undefined method 'compare_by_identity' for {}
+     compare_by_identity_spec
+  1  segfault @ passed zero arguments
+     constructor_spec
+  1  exception: undefined method 'delete_if' for {1=>2, 3=>4}
+     delete_if_spec
+  1  exception: undefined method 'each_pair' for {:a=>1, :b=>2}
+     delete_spec
+  1  exception: undefined method 'dig' for {0=>false, :a=>1}
+     dig_spec
+  1  exception: undefined method 'each_key' for {1=>-1, 2=>-2, 3=>-3, 4=>-4}
+     each_key_spec
+  1  exception: undefined method 'each_pair' for {1=>2, 3=>4}
+     each_pair_spec
+  1  segfault @ Hash#each
+     each_spec
+  1  exception: undefined method 'each_value' for {:a=>-5, :b=>-3, :c=>-2, :d=>-1, :e=>-1}
+     each_value_spec
+  1  segfault @ 9 passed, 4 failed, 1 skipped (14 total)
+     element_reference_spec
+  1  exception: undefined method 'except' for {:a=>1, :b=>2, :c=>3}
+     except_spec
+  1  exception: undefined method 'fetch_values' for {:a=>1, :b=>2, :c=>3}
+     fetch_values_spec
+  1  exception: undefined method 'filter' for {1=>2, 3=>4}
+     filter_spec
+  1  exception: undefined method 'flatten' for {}
+     flatten_spec
+  1  exception: undefined method '>' for {:a=>1}
+     gt_spec
+  1  exception: undefined method '>=' for {:a=>1}
+     gte_spec
+  1  segfault @ 5 passed, 3 failed, 0 skipped (8 total)
+     hash_spec
+  1  exception: undefined method 'default_proc' for {"foo"=>1, "bar"=>2}
+     initialize_spec
+  1  exception: undefined method 'invert' for {1=>"a", 2=>"b", 3=>"c"}
+     invert_spec
+  1  exception: undefined method 'keep_if' for {1=>2, 3=>4}
+     keep_if_spec
+  1  exception: undefined method 'key' for {2=>"a", 1=>"b"}
+     key_spec
+  1  exception: undefined method '<' for {:a=>1}
+     lt_spec
+  1  exception: undefined method '<=' for {:a=>1}
+     lte_spec
+  1  exception: undefined method 'rassoc' for {:apple=>:green, :orange=>:orange, :grape=>:green, :banana=>:yellow}
+     rassoc_spec
+  1  exception: undefined method 'k1' for Object
+     rehash_spec
+  1  exception: undefined method 'reject' for {1=>false, 2=>true, 3=>false, 4=>true}
+     reject_spec
+  1  exception: undefined method 'replace' for {:a=>1, :b=>2}
+     replace_spec
+  1  exception: undefined method 'ruby2_keywords_hash?' for Hash
+     ruby2_keywords_hash_spec
+  1  exception: undefined method 'select' for {1=>2, 3=>4}
+     select_spec
+  1  exception: undefined method 'each_pair' for {:a=>1, :b=>2, :c=>3}
+     shift_spec
+  1  exception: undefined method 'slice' for {:a=>1, :b=>2, :c=>3}
+     slice_spec
+  1  exception: undefined method 'sort' for {"a"=>"b", "1"=>"2", "b"=>"a"}
+     sort_spec
+  1  exception: undefined method 'each_pair' for {:a=>1, 1=>:a, 3=>:b, :b=>5}
+     to_a_spec
+  1  exception: undefined method 'to_h' for {}
+     to_h_spec
+  1  exception: undefined method 'to_hash' for {}
+     to_hash_spec
+  1  exception: undefined method 'transform_keys' for {:a=>1, :b=>2, :c=>3}
+     transform_keys_spec
+  1  exception: undefined method 'transform_values' for {:a=>1, :b=>2, :c=>3}
+     transform_values_spec
+  1  exception: undefined method 'try_convert' for Hash
+     try_convert_spec
+  1  exception: undefined method 'values_at' for {:a=>9, :b=>"a", :c=>-10, :d=>nil}
+     values_at_spec
+  1  segfault @ 13 passed, 13 failed, 0 skipped (26 total)
+     chr_spec
+  1  segfault @ 3 passed, 9 failed, 0 skipped (12 total)
+     coerce_spec
+  1  segfault @ 10 passed, 8 failed, 0 skipped (18 total)
+     divide_spec
+  1  segfault @ 7 passed, 6 failed, 0 skipped (13 total)
+     divmod_spec
+  1  segfault @ FAILED: Expected 0.0 but got 0.0
+     fdiv_spec
+  1  segfault @ 10 passed, 2 failed, 0 skipped (12 total)
+     gcd_spec
+  1  segfault @ 9 passed, 2 failed, 0 skipped (11 total)
+     lcm_spec
+  1  segfault @ 8 passed, 8 failed, 0 skipped (16 total)
+     modulo_spec
+  1  segfault @ 1 passed, 4 failed, 0 skipped (5 total)
+     multiply_spec
+  1  segfault @ 4 passed, 3 failed, 1 skipped (8 total)
+     plus_spec
+  1  segfault @ 2 passed, 5 failed, 0 skipped (7 total)
+     remainder_spec
+  1  exception: undefined method '+@' for false
+     round_spec
+  1  exception: Integer.sqrt: number too large (heap integer with 45 limbs, max 15)
+     sqrt_spec
+  1  exception: undefined method 'fileno' for <IO>
+     fileno_spec
+  1  exception: undefined method 'foreach' for IO
+     foreach_spec
+  1  exception: undefined method 'readbyte' for <File>
+     readbyte_spec
+  1  segfault @ IO.sysopen
+     sysopen_spec
+  1  segfault @ Kernel.Array
+     Array_spec
+  1  segfault @ Kernel.Float
+     Float_spec
+  1  segfault @ Kernel.Hash
+     Hash_spec
+  1  segfault @ Kernel.Integer
+     Integer_spec
+  1  segfault @ Kernel.String
+     String_spec
+  1  exception: undefined method '__callee__' for KernelSpecs__CalleeTest
+     __callee___spec
+  1  exception: undefined method '__method__' for KernelSpecs__MethodTest
+     __method___spec
+  1  exception: uninitialized constant IOStub
+     abort_spec
+  1  exception: undefined method 'autoload' for <Object>
+     autoload_spec
+  1  exception: undefined method 'binding' for Kernel
+     binding_spec
+  1  segfault @ Kernel#block_given?
+     block_given_spec
+  1  exception: undefined method 'caller_locations' for KernelSpecs__CallerLocationsTest
+     caller_locations_spec
+  1  segfault after: FAILED: Expected Kernel to have private instance method call
+     caller_spec
+  1  segfault @ 9 passed, 1 failed, 0 skipped (10 total)
+     case_compare_spec
+  1  exception: undefined method 'a' for Object
+     class_spec
+  1  exception: undefined method 'clone' for <ObjectSpecDup>
+     clone_spec
+  1  exception: undefined method '<=>' for <Object>
+     comparison_spec
+  1  exception: undefined method 'define_singleton_method' for DefineSingletonMethodSpecClass
+     define_singleton_method_spec
+  1  segfault @ eval not supported in AOT compiler
+     eval_spec
+  1  segfault after: FAILED: Expected Kernel to have private instance method fork
+     fork_spec
+  1  exception: undefined method 'format' for Kernel
+     format_spec
+  1  segfault @ 6 passed, 5 failed, 0 skipped (11 total)
+     freeze_spec
+  1  segfault @ 5 passed, 3 failed, 1 skipped (9 total)
+     frozen_spec
+  1  exception: undefined method 'global_variables' for <Object>
+     global_variables_spec
+  1  exception: undefined method 'gsub' for <Object>
+     gsub_spec
+  1  exception: undefined method 'initialize_clone' for <Object>
+     initialize_clone_spec
+  1  exception: undefined method 'initialize_copy' for <Object>
+     initialize_copy_spec
+  1  exception: undefined method 'initialize_dup' for <Object>
+     initialize_dup_spec
+  1  exception: undefined method 'instance_eval' for <Object>
+     inspect_spec
+  1  exception: undefined method 'instance_variable_defined?' for <KernelSpecs__InstanceVariable>
+     instance_variable_defined_spec
+  1  exception: undefined method 'instance_variable_set' for <Object>
+     instance_variable_get_spec
+  1  exception: undefined method 'instance_variable_set' for Class
+     instance_variable_set_spec
+  1  exception: undefined method 'instance_variables' for 0
+     instance_variables_spec
+  1  exception: undefined method 'extend' for "0e"
+     is_a_spec
+  1  exception: undefined method 'extend' for "0N}a"
+     kind_of_spec
+  1  segfault @ Kernel#load
+     load_spec
+  1  segfault after: FAILED: Expected Kernel to have private instance method loop
+     loop_spec
+  1  exception: undefined method 'a' for Class
+     method_spec
+  1  exception: undefined method 'methods' for KernelSpecs__Methods
+     methods_spec
+  1  exception: undefined method '!~' for <Object>
+     not_match_spec
+  1  segfault @ Kernel#object_id
+     object_id_spec
+  1  exception: undefined method '$/' for <Object>
+     p_spec
+  1  exception: undefined method 'output' for <Object>
+     print_spec
+  1  exception: undefined method 'private_methods' for KernelSpecs__Methods
+     private_methods_spec
+  1  exception: undefined method 'protected_methods' for KernelSpecs__Methods
+     protected_methods_spec
+  1  exception: undefined method 'public_method' for <KernelSpecs__Foo>
+     public_method_spec
+  1  exception: undefined method 'public_methods' for KernelSpecs__Methods
+     public_methods_spec
+  1  exception: undefined method 'public_send' for <KernelSpecs__Foo>
+     public_send_spec
+  1  exception: undefined method 'rand' for <Object>
+     rand_spec
+  1  exception: undefined method 'to_sym' for true
+     remove_instance_variable_spec
+  1  segfault @ Kernel#require_relative with a relative path
+     require_relative_spec
+  1  segfault @ Kernel#require
+     require_spec
+  1  segfault @ when not passed an argument
+     singleton_methods_spec
+  1  exception: undefined method 'sleep' for <Object>
+     sleep_spec
+  1  exception: undefined method 'srand' for <Object>
+     srand_spec
+  1  exception: undefined method 'then' for <Object>
+     then_spec
+  1  exception: throw didn't transfer the control
+     throw_spec
+  1  exception: undefined method 'trace_var' for <Object>
+     trace_var_spec
+  1  exception: undefined method 'yield_self' for <Object>
+     yield_self_spec
+  1  exception: uninitialized constant Marshal
+     float_spec
+  1  exception: NameError: uninitialized constant Marshal::MAJOR_VERSION
+     major_version_spec
+  1  exception: NameError: uninitialized constant Marshal::MINOR_VERSION
+     minor_version_spec
+  1  exception: undefined method 'begin' for nil
+     begin_spec
+  1  exception: undefined method 'byteoffset' for nil
+     byteoffset_spec
+  1  exception: undefined method 'captures' for nil
+     captures_spec
+  1  exception: undefined method 'deconstruct_keys' for <MatchData>
+     deconstruct_keys_spec
+  1  exception: undefined method 'deconstruct' for nil
+     deconstruct_spec
+  1  exception: undefined method 'instance_variable_set' for <MatchData>
+     dup_spec
+  1  exception: undefined method 'end' for nil
+     end_spec
+  1  exception: undefined method 'match' for "abc def ghi"
+     inspect_spec
+  1  exception: undefined method 'length' for nil
+     length_spec
+  1  exception: undefined method 'match_length' for nil
+     match_length_spec
+  1  exception: undefined method 'named_captures' for nil
+     named_captures_spec
+  1  exception: undefined method 'offset' for nil
+     offset_spec
+  1  exception: undefined method 'post_match' for nil
+     post_match_spec
+  1  exception: undefined method 'pre_match' for nil
+     pre_match_spec
+  1  exception: undefined method 'string' for nil
+     string_spec
+  1  exception: undefined method 'values_at' for nil
+     values_at_spec
+  1  exception: undefined method 'acos' for Math
+     acos_spec
+  1  exception: undefined method 'acosh' for Math
+     acosh_spec
+  1  exception: undefined method 'asin' for Math
+     asin_spec
+  1  exception: undefined method 'asinh' for Math
+     asinh_spec
+  1  exception: undefined method 'atan2' for Math
+     atan2_spec
+  1  exception: undefined method 'atan' for Math
+     atan_spec
+  1  segfault @ Math.atanh
+     atanh_spec
+  1  exception: undefined method 'cbrt' for Math
+     cbrt_spec
+  1  exception: undefined method 'cosh' for Math
+     cosh_spec
+  1  exception: undefined method 'exp' for Math
+     exp_spec
+  1  exception: undefined method 'frexp' for Math
+     frexp_spec
+  1  exception: undefined method 'gamma' for Math
+     gamma_spec
+  1  exception: undefined method 'hypot' for Math
+     hypot_spec
+  1  exception: undefined method 'ldexp' for Math
+     ldexp_spec
+  1  exception: undefined method 'lgamma' for Math
+     lgamma_spec
+  1  exception: undefined method 'log10' for Math
+     log10_spec
+  1  exception: undefined method 'log2' for Math
+     log2_spec
+  1  exception: undefined method 'log' for Math
+     log_spec
+  1  exception: undefined method 'sinh' for Math
+     sinh_spec
+  1  exception: undefined method 'sqrt' for Math
+     sqrt_spec
+  1  exception: undefined method 'tan' for Math
+     tan_spec
+  1  exception: undefined method 'tanh' for Math
+     tanh_spec
+  1  segfault @ Method#clone
+     clone_spec
+  1  segfault @ Method#dup
+     dup_spec
+  1  exception: undefined method 'a' for <Module>
+     define_singleton_method_spec
+  1  exception: undefined method 'mod' for Object
+     initialize_copy_spec
+  1  exception: undefined method 'name' for nil
+     refine_spec
+  1  exception: undefined method 'refinements' for <Module>
+     refinements_spec
+  1  exception: undefined method 'singleton_class?' for Object
+     singleton_class_spec
+  1  exception: undefined method 'call' for :object_id
+     used_refinements_spec
+  1  exception: undefined method 'call_foo' for <Module>
+     using_spec
+  1  exception: undefined method '&' for nil
+     and_spec
+  1  exception: undefined method '=~' for nil
+     match_spec
+  1  exception: undefined method '|' for nil
+     or_spec
+  1  segfault after: FAILED: Expected #<Rational:0x5b00d230> but got nil
+     rationalize_spec
+  1  exception: undefined method 'remove_method' for NilClass
+     singleton_method_spec
+  1  exception: undefined method 'to_c' for nil
+     to_c_spec
+  1  exception: undefined method 'to_f' for nil
+     to_f_spec
+  1  exception: undefined method 'to_r' for nil
+     to_r_spec
+  1  exception: undefined method '^' for nil
+     xor_spec
+  1  exception: undefined method 'abs2' for 0
+     abs2_spec
+  1  exception: undefined method 'abs' for <NumericSpecs__Subclass>
+     abs_spec
+  1  exception: undefined method 'angle' for 20
+     angle_spec
+  1  exception: undefined method 'arg' for 20
+     arg_spec
+  1  exception: undefined method 'clone' for 1
+     clone_spec
+  1  exception: undefined method 'coerce' for <NumericSpecs__Subclass>
+     coerce_spec
+  1  exception: undefined method '<=>' for <NumericSpecs__Subclass>
+     comparison_spec
+  1  exception: undefined method 'conj' for 20
+     conj_spec
+  1  exception: undefined method 'conjugate' for 20
+     conjugate_spec
+  1  exception: undefined method 'div' for <NumericSpecs__Subclass>
+     div_spec
+  1  exception: undefined method 'divmod' for <NumericSpecs__Subclass>
+     divmod_spec
+  1  segfault @ Numeric#dup
+     dup_spec
+  1  exception: undefined method 'floor' for <NumericSpecs__Subclass>
+     floor_spec
+  1  exception: undefined method 'i' for 0.0
+     i_spec
+  1  exception: undefined method 'integer?' for <NumericSpecs__Subclass>
+     integer_spec
+  1  exception: undefined method 'magnitude' for <NumericSpecs__Subclass>
+     magnitude_spec
+  1  exception: undefined method 'nonzero?' for <NumericSpecs__Subclass>
+     nonzero_spec
+  1  exception: undefined method 'phase' for 20
+     phase_spec
+  1  exception: undefined method 'polar' for 1
+     polar_spec
+  1  exception: undefined method 'quo' for 5
+     quo_spec
+  1  exception: undefined method 'rect' for 20
+     rect_spec
+  1  exception: undefined method 'rectangular' for 20
+     rectangular_spec
+  1  exception: undefined method 'remainder' for <NumericSpecs__Subclass>
+     remainder_spec
+  1  exception: undefined method 'round' for <NumericSpecs__Subclass>
+     round_spec
+  1  exception: undefined method 'remove_method' for NumericSpecs__Subclass
+     singleton_method_added_spec
+  1  exception: undefined method 'to_int' for <NumericSpecs__Subclass>
+     to_int_spec
+  1  exception: undefined method 'truncate' for <NumericSpecs__Subclass>
+     truncate_spec
+  1  exception: undefined method '+@' for <NumericSpecs__Subclass>
+     uplus_spec
+  1  exception: undefined method 'zero?' for <NumericSpecs__Subclass>
+     zero_spec
+  1  exception: undefined method 'binding' for <Proc>
+     binding_spec
+  1  segfault @ Proc#call
+     call_spec
+  1  exception: undefined method 'clone' for <Proc>
+     clone_spec
+  1  exception: undefined method '<<' for <Proc>
+     compose_spec
+  1  exception: undefined method 'curry' for <Proc>
+     curry_spec
+  1  segfault @ Proc#dup
+     dup_spec
+  1  segfault @ Proc#[]
+     element_reference_spec
+  1  segfault @ Proc.new with an associated block
+     new_spec
+  1  exception: undefined method 'parameters' for <Proc>
+     parameters_spec
+  1  exception: undefined method 'ruby2_keywords' for <Proc>
+     ruby2_keywords_spec
+  1  exception: undefined method '__method__' for ProcSpecs__SourceLocation
+     source_location_spec
+  1  exception: undefined method 'yield' for <Proc>
+     yield_spec
+  1  exception: NameError: uninitialized constant Process::GID
+     gid_spec
+  1  segfault @ Process::Status#&
+     bit_and_spec
+  1  segfault @ Process::Status#==
+     equal_value_spec
+  1  segfault @ Process::Status#exitstatus
+     exitstatus_spec
+  1  segfault @ Process::Status#>>
+     right_shift_spec
+  1  segfault @ for a cleanly exited child
+     signaled_spec
+  1  segfault @ Process::Status#to_i
+     to_i_spec
+  1  exception: NameError: uninitialized constant Process::UID
+     uid_spec
+  1  exception: uninitialized constant Errno
+     wait2_spec
+  1  exception: undefined method 'spawn' for <Object>
+     waitpid_spec
+  1  segfault @ Queue#<<
+     append_spec
+  1  segfault @ Queue#clear
+     clear_spec
+  1  segfault @ Queue#close
+     close_spec
+  1  segfault @ Queue#closed?
+     closed_spec
+  1  segfault @ Queue#deq
+     deq_spec
+  1  segfault @ Queue#empty?
+     empty_spec
+  1  segfault @ Queue#enq
+     enq_spec
+  1  segfault @ Queue#freeze
+     freeze_spec
+  1  segfault @ Queue#length
+     length_spec
+  1  segfault @ Queue#num_waiting
+     num_waiting_spec
+  1  segfault @ Queue#pop
+     pop_spec
+  1  segfault @ Queue#push
+     push_spec
+  1  segfault @ Queue#shift
+     shift_spec
+  1  segfault @ Queue#size
+     size_spec
+  1  exception: undefined method 'bsearch' for 0..1
+     bsearch_spec
+  1  exception: undefined method 'clone' for 1..3
+     clone_spec
+  1  exception: undefined method 'count' for nil
+     count_spec
+  1  exception: undefined method 'cover?' for 0..5
+     cover_spec
+  1  exception: wrong number of arguments (given 0, expected 2+)
+     dup_spec
+  1  segfault @ Range#each
+     each_spec
+  1  segfault @ 3 passed, 4 failed, 0 skipped (7 total)
+     initialize_spec
+  1  exception: undefined method 'max' for 1..10
+     max_spec
+  1  exception: undefined method 'min' for 1..10
+     min_spec
+  1  segfault after: FAILED: Expected a..c but got a..c
+     new_spec
+  1  exception: undefined method 'overlap?' for 0..2
+     overlap_spec
+  1  exception: undefined method '%' for 1..10
+     percent_spec
+  1  exception: undefined method 'reverse_each' for 1..3
+     reverse_each_spec
+  1  exception: undefined method 'size' for 1..16
+     size_spec
+  1  segfault @ Range#step
+     step_spec
+  1  segfault @ Range#to_a
+     to_a_spec
+  1  exception: undefined method 'abs' for <Rational>
+     abs_spec
+  1  exception: undefined method 'ceil' for <Rational>
+     ceil_spec
+  1  exception: undefined method '<=>' for <Rational>
+     comparison_spec
+  1  exception: undefined method 'div' for <Rational>
+     div_spec
+  1  exception: undefined method '/' for <Rational>
+     divide_spec
+  1  exception: undefined method 'divmod' for <Rational>
+     divmod_spec
+  1  exception: undefined method 'floor' for <Rational>
+     floor_spec
+  1  exception: undefined method 'magnitude' for <Rational>
+     magnitude_spec
+  1  exception: undefined method 'marshal_dump' for <Rational>
+     marshal_dump_spec
+  1  exception: undefined method '-' for <Rational>
+     minus_spec
+  1  exception: undefined method '%' for <Rational>
+     modulo_spec
+  1  exception: undefined method '*' for <Rational>
+     multiply_spec
+  1  exception: undefined method '+' for <Rational>
+     plus_spec
+  1  exception: undefined method 'quo' for <Rational>
+     quo_spec
+  1  exception: undefined method 'rationalize' for <Rational>
+     rationalize_spec
+  1  exception: undefined method 'round' for <Rational>
+     round_spec
+  1  exception: undefined method 'to_r' for <Rational>
+     to_r_spec
+  1  exception: undefined method 'truncate' for <Rational>
+     truncate_spec
+  1  exception: undefined method 'zero?' for <Rational>
+     zero_spec
+  1  exception: undefined method 'refined_class' for nil
+     refined_class_spec
+  1  exception: undefined method 'target' for nil
+     target_spec
+  1  exception: undefined method 'encode' for "文字化け"
+     encoding_spec
+  1  exception: undefined method 'linear_time?' for Regexp
+     linear_time_spec
+  1  exception: undefined method 'timeout=' for Regexp
+     timeout_spec
+  1  exception: undefined method 'each_char' for "penzance"
+     union_spec
+  1  segfault @ 5 passed, 1 failed, 0 skipped (6 total)
+     add_spec
+  1  exception: undefined method 'classify' for <Set>
+     classify_spec
+  1  exception: undefined method 'be_empty' for <Object>
+     clear_spec
+  1  exception: undefined method 'collect!' for <Set>
+     collect_spec
+  1  exception: undefined method 'compare_by_identity' for <Set>
+     compare_by_identity_spec
+  1  exception: undefined method '<=>' for <Set>
+     comparison_spec
+  1  exception: undefined method 'delete_if' for <Set>
+     delete_if_spec
+  1  exception: undefined method 'difference' for <Set>
+     difference_spec
+  1  exception: undefined method 'divide' for <Set>
+     divide_spec
+  1  segfault after: FAILED: Expected #<Set: {1, 2, 3}> (object_id: -475023552), 
+     each_spec
+  1  exception: undefined method '^' for <Set>
+     exclusion_spec
+  1  exception: undefined method 'filter!' for <Set>
+     filter_spec
+  1  exception: undefined method 'have_protected_instance_method' for <Object>
+     flatten_merge_spec
+  1  exception: undefined method 'clone' for <Set>
+     initialize_clone_spec
+  1  exception: uninitialized constant MockObject
+     initialize_spec
+  1  exception: undefined method 'join' for <Set>
+     join_spec
+  1  exception: undefined method 'keep_if' for <Set>
+     keep_if_spec
+  1  exception: undefined method 'map!' for <Set>
+     map_spec
+  1  exception: undefined method 'pretty_print_cycle' for <Set>
+     pretty_print_cycle_spec
+  1  exception: undefined method 'reject!' for <Set>
+     reject_spec
+  1  exception: undefined method 'select!' for <Set>
+     select_spec
+  1  exception: undefined method 'subtract' for <Set>
+     subtract_spec
+  1  exception: uninitialized constant Signal
+     signame_spec
+  1  segfault @ SizedQueue#<<
+     append_spec
+  1  segfault @ SizedQueue#clear
+     clear_spec
+  1  segfault @ SizedQueue#close
+     close_spec
+  1  segfault @ SizedQueue#closed?
+     closed_spec
+  1  segfault @ SizedQueue#deq
+     deq_spec
+  1  segfault @ SizedQueue#empty?
+     empty_spec
+  1  segfault @ SizedQueue#enq
+     enq_spec
+  1  segfault @ SizedQueue#freeze
+     freeze_spec
+  1  segfault @ SizedQueue#length
+     length_spec
+  1  segfault @ SizedQueue#max
+     max_spec
+  1  segfault @ SizedQueue.new
+     new_spec
+  1  segfault @ SizedQueue#num_waiting
+     num_waiting_spec
+  1  segfault @ SizedQueue#pop
+     pop_spec
+  1  segfault @ SizedQueue#push
+     push_spec
+  1  segfault @ SizedQueue#shift
+     shift_spec
+  1  segfault @ SizedQueue#size
+     size_spec
+  1  exception: undefined method 'append_as_bytes' for "hello"
+     append_as_bytes_spec
+  1  exception: undefined method 'b' for "Hello"
+     b_spec
+  1  exception: undefined method 'byteindex' for "abc"
+     byteindex_spec
+  1  segfault @ String#bytes
+     bytes_spec
+  1  exception: undefined method 'bytesize' for "hello"
+     bytesize_spec
+  1  exception: undefined method 'capitalize' for ""
+     capitalize_spec
+  1  exception: undefined method 'casecmp' for "a"
+     casecmp_spec
+  1  exception: undefined method 'center' for "one"
+     center_spec
+  1  exception: undefined method 'chars' for "hello"
+     chars_spec
+  1  exception: undefined method '$VERBOSE' for <Object>
+     chomp_spec
+  1  exception: undefined method 'chop' for "abc"
+     chop_spec
+  1  exception: undefined method 'encode' for "x24"
+     chr_spec
+  1  exception: undefined method 'clear' for "Jolene"
+     clear_spec
+  1  segfault @ String#clone
+     clone_spec
+  1  exception: undefined method 'codepoints' for "foo"
+     codepoints_spec
+  1  exception: Empty string
+     count_spec
+  1  exception: undefined method 'crypt' for "mypassword"
+     crypt_spec
+  1  exception: undefined method 'dedup' for "foo"
+     dedup_spec
+  1  exception: undefined method 'delete_prefix' for "hello"
+     delete_prefix_spec
+  1  exception: undefined method 'delete' for "hello"
+     delete_spec
+  1  exception: undefined method 'delete_suffix' for "hello"
+     delete_suffix_spec
+  1  exception: undefined method 'encode' for "hELLO"
+     downcase_spec
+  1  exception: undefined method 'dump' for "foo"
+     dump_spec
+  1  segfault @ String#dup
+     dup_spec
+  1  exception: undefined method 'insert' for "hello world"
+     each_byte_spec
+  1  exception: undefined method 'each_char' for "hello"
+     each_char_spec
+  1  exception: undefined method 'each_codepoint' for "foo"
+     each_codepoint_spec
+  1  exception: undefined method 'each_grapheme_cluster' for "hello"
+     each_grapheme_cluster_spec
+  1  exception: undefined method 'each_line' for "one\ntwo\nthree"
+     each_line_spec
+  1  exception: undefined method '__to_fixnum_if_possible' for 0.0
+     element_reference_spec
+  1  segfault @ String#[]= with Integer index
+     element_set_spec
+  1  exception: undefined method 'cedilla' for <StringSpecs__ISO88599Encoding>
+     encoding_spec
+  1  segfault @ 7 passed, 2 failed, 0 skipped (9 total)
+     eql_spec
+  1  exception: uninitialized constant Shift_JIS
+     force_encoding_spec
+  1  exception: undefined method 'getbyte' for "a"
+     getbyte_spec
+  1  exception: undefined method 'grapheme_clusters' for "hello"
+     grapheme_clusters_spec
+  1  exception: undefined method 'length' for //
+     gsub_spec
+  1  exception: undefined method 'hex' for "0a"
+     hex_spec
+  1  segfault after: FAILED: Expected "some string" but got ""
+     initialize_spec
+  1  exception: undefined method 'insert' for "abcd"
+     insert_spec
+  1  exception: undefined method 'intern' for "Koala"
+     intern_spec
+  1  exception: undefined method 'lines' for "one\ntwo\nthree"
+     lines_spec
+  1  exception: undefined method 'ljust' for "hello"
+     ljust_spec
+  1  segfault after: FAILED: Expected nil but got 0
+     match_spec
+  1  segfault @ String#*
+     multiply_spec
+  1  exception: undefined method 'next' for ""
+     next_spec
+  1  exception: undefined method 'oct' for "0"
+     oct_spec
+  1  exception: undefined method 'codepoints' for "u{981}u{982}"
+     ord_spec
+  1  exception: undefined method 'partition' for "hello"
+     partition_spec
+  1  exception: undefined method 'encode' for ""
+     plus_spec
+  1  exception: undefined method 'prepend' for "world"
+     prepend_spec
+  1  exception: undefined method 'replace' for "a"
+     replace_spec
+  1  exception: undefined method 'valid_encoding?' for <Encoding>
+     reverse_spec
+  1  exception: undefined method 'rjust' for "hello"
+     rjust_spec
+  1  exception: undefined method 'rpartition' for "hello"
+     rpartition_spec
+  1  exception: undefined method 'scan' for "cruel world"
+     scan_spec
+  1  exception: undefined method 'scrub' for "foo"
+     scrub_spec
+  1  exception: undefined method 'setbyte' for "a"
+     setbyte_spec
+  1  exception: undefined method 'slice' for "hello"
+     slice_spec
+  1  exception: undefined method 'expected' for <Object>
+     split_spec
+  1  exception: undefined method 'squeeze' for "yellow moon"
+     squeeze_spec
+  1  exception: undefined method 'sub' for "hello"
+     sub_spec
+  1  exception: undefined method 'succ' for ""
+     succ_spec
+  1  exception: undefined method 'sum' for "ruby"
+     sum_spec
+  1  exception: undefined method 'swapcase' for "Hello"
+     swapcase_spec
+  1  segfault @ String#to_c
+     to_c_spec
+  1  exception: undefined method 'to_f' for "123.45e1"
+     to_f_spec
+  1  exception: undefined method 'to_r' for ""
+     to_r_spec
+  1  exception: undefined method 'encoding' for :foobar
+     to_sym_spec
+  1  exception: undefined method 'tr_s' for "hello"
+     tr_s_spec
+  1  exception: undefined method 'tr' for "hello"
+     tr_spec
+  1  exception: undefined method 'try_convert' for String
+     try_convert_spec
+  1  exception: undefined method 'instance_variable_set' for "this string is frozen"
+     uminus_spec
+  1  exception: undefined method 'undump' for "\"foo\""
+     undump_spec
+  1  exception: undefined method 'unicode_normalize' for "u1e9bu0323"
+     unicode_normalize_spec
+  1  exception: undefined method 'unicode_normalized?' for "u1e9bu0323"
+     unicode_normalized_spec
+  1  exception: undefined method 'unpack1' for "ABCD"
+     unpack1_spec
+  1  exception: undefined method 'upto' for "*+"
+     upto_spec
+  1  exception: undefined method 'valid_encoding?' for "a"
+     valid_encoding_spec
+  1  exception: undefined method '[]' for <Struct>
+     element_reference_spec
+  1  exception: undefined method 'keyword_init?' for <Struct>
+     keyword_init_spec
+  1  exception: undefined method 'include?' for <Struct>
+     struct_spec
+  1  exception: undefined method 'all_symbols' for Symbol
+     all_symbols_spec
+  1  exception: undefined method 'capitalize' for :glark
+     capitalize_spec
+  1  exception: undefined method 'casecmp' for :abcdef
+     casecmp_spec
+  1  exception: undefined method 'downcase' for :glark
+     downcase_spec
+  1  exception: undefined method 'encoding' for :foo
+     encoding_spec
+  1  exception: undefined method 'end_with?' for :hello
+     end_with_spec
+  1  exception: undefined method 'name' for :ruby
+     name_spec
+  1  exception: undefined method 'next' for :abcd
+     next_spec
+  1  exception: undefined method 'slice' for :symbol
+     slice_spec
+  1  exception: undefined method 'start_with?' for :hello
+     start_with_spec
+  1  exception: undefined method 'succ' for :abcd
+     succ_spec
+  1  exception: undefined method 'swapcase' for :glark
+     swapcase_spec
+  1  segfault after: FAILED: Expected instance of Proc, got nil
+     to_proc_spec
+  1  exception: undefined method 'upcase' for :glark
+     upcase_spec
+  1  exception: undefined method 'abort_on_exception' for <Thread>
+     abort_on_exception_spec
+  1  exception: undefined method 'each_caller_location' for Thread
+     each_caller_location_spec
+  1  exception: undefined method 'fork' for Thread
+     fork_spec
+  1  exception: undefined method 'main' for Thread
+     group_spec
+  1  exception: undefined method 'ignore_deadlock' for Thread
+     ignore_deadlock_spec
+  1  exception: uninitialized constant ThreadError
+     initialize_spec
+  1  exception: undefined method 'list' for Thread
+     list_spec
+  1  segfault @ Thread#name
+     name_spec
+  1  exception: undefined method 'pass' for Thread
+     pass_spec
+  1  exception: undefined method 'report_on_exception' for Thread
+     report_on_exception_spec
+  1  exception: undefined method 'run' for <Thread>
+     run_spec
+  1  exception: undefined method 'start' for Thread
+     start_spec
+  1  exception: undefined method 'thread_variable_get' for <Thread>
+     thread_variable_get_spec
+  1  exception: undefined method 'wakeup' for <Thread>
+     wakeup_spec
+  1  exception: NameError: uninitialized constant ThreadGroup::Default
+     default_spec
+  1  exception: uninitialized constant ThreadGroup
+     enclosed_spec
+  1  exception: undefined method 'remove_method' for TrueClass
+     singleton_method_spec
+  1  exception: undefined method 'specify' for <Object>
+     equal_value_spec
+  1  segfault @ 0 passed, 6 failed, 1 skipped (7 total)
+     BEGIN_spec
+  1  segfault @ The alias keyword
+     alias_spec
+  1  exception: undefined method 'split' for <Object>
+     array_spec
+  1  exception: undefined method 'object' for Object
+     assignments_spec
+  1  segfault @ Array
+     block_spec
+  1  exception: 743840470
+     break_spec
+  1  segfault after: The 'case'-construct
+     case_spec
+  1  exception: undefined method 'eax' for <Eigenclass_2011>
+     class_spec
+  1  exception: undefined method 'cvar_m' for ClassVariablesSpec__ClassC
+     class_variable_spec
+  1  exception: undefined method 'v' for <Object>
+     ensure_spec
+  1  segfault @ The __FILE__ pseudo-variable with require
+     file_spec
+  1  exception: undefined method 'keys' for nil
+     hash_spec
+  1  segfault @ 14 passed, 2 failed, 0 skipped (16 total)
+     heredoc_spec
+  1  segfault @ FAILED: Expected [[], {}] but got [[], []]
+     keyword_arguments_spec
+  1  exception: undefined method 'create_lambda' for Class
+     lambda_spec
+  1  segfault @ The __LINE__ pseudo-variable
+     line_spec
+  1  segfault @ in stdin
+     magic_comment_spec
+  1  segfault after: FAILED: Expected NilClass but got Eigenclass_16846
+     metaclass_spec
+  1  exception: undefined method 'superclass' for {:new=>6, :__send__=>7, :__get_symbol=>8, :__initialize=>9, :allocate=>10, :__new=>11, :name=>12, :!==>13, :superclass=>14, :define_method=>15, :attr_accessor=>16, :attr_reader=>17, :attr_writer=>18, :attr=>19, :prepend=>20, :class_eval=>21, :module_function=>22, :extend=>23, :include?=>24, :include=>25, :private=>26, :protected=>27, :public=>28, :puts=>29, :raise=>30, :fail=>31, :loop=>32, :exit=>33, :system=>34, :Array=>35, :__const_get=>36, :__const_get_on=>37, :__const_get_global=>38, :__const_set_global=>39, :require=>40, :require_relative=>41, :catch=>42, :throw=>43, :redo=>44, :fixture=>45, :proc=>46, :lambda=>47, :initialize=>48, :class=>49, :object_id=>50, :hash=>51, :eql?=>52, :====>53, :equal?=>54, :inspect=>55, :to_s=>56, :===>57, :!=>58, :nil?=>59, :freeze=>60, :frozen?=>61, :method_missing=>62, :respond_to?=>63, :is_a?=>64, :kind_of?=>65, :instance_of?=>66, :itself=>67, :tap=>68, :display=>69, :send=>70, :p=>71, :print=>72, :dup=>73, :const_defined?=>74, :eval=>75, :index=>76, :singleton_class=>77, :__set_raw=>78, :arity=>79, :to_proc=>80, :call=>81, :[]=>82, :i=>83, :numerator=>84, :denominator=>85, :to_i=>86, :to_f=>87, :%=>88, :__get_raw=>89, :zero?=>90, :>=>91, :>==>92, :<=>93, :<==>94, :__len=>95, :__ptr=>96, :__grow=>97, :__set=>98, :to_a=>99, :"&"=>100, :"|"=>101, :"^"=>102, :<<=>103, :>>=>104, :__true?=>105, :to_h=>106, :rationalize=>107, :-=>108, :exclude_end?=>109, :first=>110, :last=>111, :member?=>112, :each=>113, :to_enum=>114, :__copy_init=>115, :capacity=>116, :__get=>117, :find=>118, :reject=>119, :select=>120, :collect=>121, :sum=>122, :detect=>123, :each_with_index=>124, :+=>125, :__offset_to_pos=>126, :__range_get=>127, :[]==>128, :abbrev=>129, :slice=>130, :assoc=>131, :at=>132, :clear=>133, :collect!=>134, :compact=>135, :compact!=>136, :concat=>137, :dclone=>138, :delete=>139, :delete_at=>140, :delete_if=>141, :each_index=>142, :empty?=>143, :fetch=>144, :fill=>145, :max=>146, :min=>147, :any?=>148, :all?=>149, :none?=>150, :flatten=>151, :flatten!=>152, :replace=>153, :insert=>154, :join=>155, :length=>156, :map!=>157, :nitems=>158, :pack=>159, :pop=>160, :pretty_print=>161, :push=>162, :quote=>163, :rassoc=>164, :reject!=>165, :reverse=>166, :reverse!=>167, :reverse_each=>168, :rindex=>169, :shift=>170, :size=>171, :partition=>172, :sort_by=>173, :sort=>174, :sort!=>175, :to_ary=>176, :to_yaml=>177, :transpose=>178, :uniq=>179, :uniq!=>180, :unshift=>181, :values_at=>182, :yaml_initialize=>183, :zip=>184, :__copy_initialize=>185, :_hash=>186, :encoding=>187, :__copy_raw=>188, :chr=>189, :ord=>190, :each_byte=>191, :bytes=>192, :<=>=>193, :to_str=>194, :to_sym=>195, :slice!=>196, :upcase=>197, :downcase=>198, :start_with?=>199, :end_with?=>200, :count=>201, :+@=>202, :"-@"=>203, :*=>204, :gsub=>205, :split=>206, :__percent_I=>207, :lstrip=>208, :rstrip=>209, :strip=>210, :chomp=>211, :chomp!=>212, :force_encoding=>213, :"=~"=>214, :unpack=>215, :default=>216, :_data=>217, :_state=>218, :_alloc_data=>219, :not_deleted?=>220, :_bulkinsert=>221, :_grow=>222, :_find_slot=>223, :_find_nil_slot=>224, :_find_insertion_slot=>225, :capacity_too_low=>226, :keys=>227, :values=>228, :merge=>229, :pair=>230, :hash_splat=>231, :getc=>232, :file?=>233, :absolute_path?=>234, :path=>235, :open=>236, :exist?=>237, :readlines=>238, :basename=>239, :dirname=>240, :expand_path=>241, :pwd=>242, :between?=>243, :each_cons=>244, :each_slice=>245, :entries=>246, :find_all=>247, :inject=>248, :to_set=>249, :each_with_object=>250, :flat_map=>251, :__set_heap_data=>252, :__from_literal=>253, :__init_from_overflow_value=>254, :__is_nonzero_raw=>255, :__extract_limb=>256, :__heap_get_raw=>257, :__to_fixnum_if_possible=>258, :__subtract_fixnum_from_heap=>259, :__subtract_heap=>260, :__add_fixnum_to_heap=>261, :__add_heap=>262, :__add_heap_and_fixnum=>263, :__add_magnitudes_fixnum=>264, :__add_heap_and_heap=>265, :__add_magnitudes=>266, :__compare_magnitudes=>267, :__subtract_magnitudes=>268, :__subtract_with_borrow=>269, :__add_limbs_with_carry=>270, :__max_fixnum=>271, :__less_than=>272, :__ge_fixnum=>273, :__greater_than=>274, :__get_limb_or_zero=>275, :__normalize_limb=>276, :__limb_base_raw=>277, :__multiply_raw_full=>278, :__check_limb_overflow=>279, :__make_overflow_result=>280, :__multiply_limb_by_fixnum_with_carry=>281, :__multiply_heap_by_fixnum=>282, :__multiply_heap_by_heap=>283, :__check_limb_borrow=>284, :__multiply_heap_and_fixnum=>285, :__half_limb_base=>286, :__limb_base=>287, :__get_sign=>288, :__get_limbs=>289, :__cmp=>290, :__cmp_fixnum_fixnum=>291, :__cmp_fixnum_heap=>292, :__cmp_heap_fixnum=>293, :__cmp_heap_heap=>294, :__add_multi_limb=>295, :__divmod_limbs=>296, :__divmod_by_fixnum=>297, :__make_divmod_array=>298, :__divmod_heap_single_limb=>299, :__divmod_heap_multi_limb=>300, :__divmod_with_carry=>301, :__is_negative=>302, :__negate=>303, :__negate_heap=>304, :__to_s_multi=>305, :__modulo_via_division=>306, :modulo=>307, :remainder=>308, :__multiply_fixnum_overflow=>309, :__multiply_fixnum_by_heap=>310, :__multiply_heap=>311, :/=>312, :fdiv=>313, :__divide_fixnum_by_heap=>314, :__divide_heap=>315, :__divide_heap_by_fixnum=>316, :__divide_magnitude_by_fixnum=>317, :__divide_heap_by_heap=>318, :__divide_magnitudes=>319, :__shift_limbs_left_one_bit=>320, :__add_two_limbs_with_overflow=>321, :__shift_limb_with_carry=>322, :__subtract_magnitudes_raw=>323, :abs=>324, :__abs_heap=>325, :__check_bitwise_float=>326, :__bitand_fixnum_fixnum=>327, :__bitand_limbs=>328, :__bitand_fixnum_heap=>329, :__bitand_heap_fixnum=>330, :__magnitude_to_twos_complement=>331, :__invert_limb=>332, :__limb_max_value=>333, :__add_with_carry=>334, :__limb_base_minus_one=>335, :__subtract_one_magnitude=>336, :__add_one_magnitude=>337, :__make_heap_or_fixnum=>338, :__bitand_heap_heap=>339, :__min_fixnum=>340, :__extend_limbs_with_zeros=>341, :__trim_leading_zeros=>342, :__bitor_fixnum_fixnum=>343, :__bitor_limbs=>344, :__bitor_fixnum_heap=>345, :__bitor_heap_fixnum=>346, :__bitor_heap_heap=>347, :__bitxor_fixnum_fixnum=>348, :__bitxor_limbs=>349, :__bitxor_fixnum_heap=>350, :__bitxor_heap_fixnum=>351, :__bitxor_heap_heap=>352, :"~"=>353, :__left_shift_fixnum=>354, :__left_shift_heap=>355, :__shift_limb_with_carry_split=>356, :__right_shift_fixnum=>357, :__right_shift_heap=>358, :__shift_limb_right_with_borrow=>359, :infinite?=>360, :integer?=>361, :even?=>362, :odd?=>363, :positive?=>364, :negative?=>365, :succ=>366, :next=>367, :pred=>368, :__check_comparable=>369, :to_r=>370, :sqrt=>371, :try_convert=>372, :__is_heap_integer?=>373, :div=>374, :divmod=>375, :to_int=>376, :**=>377, :pow=>378, :allbits?=>379, :anybits?=>380, :nobits?=>381, :bit_length=>382, :__bit_length_fixnum=>383, :__bit_length_heap=>384, :ceil=>385, :floor=>386, :truncate=>387, :round=>388, :magnitude=>389, :gcd=>390, :lcm=>391, :gcdlcm=>392, :ceildiv=>393, :digits=>394, :mul=>395, :times=>396, :downto=>397, :upto=>398, :coerce=>399, :coerce_to_integer=>400, :intern=>401, :method_to_voff=>402, :__send_for_obj__=>403, :has_key?=>404, :has_value?=>405, :nan?=>406, :finite?=>407, :save_stack_state=>408, :saved_ebp=>409, :saved_esp=>410, :handler_addr=>411, :rescue_classes=>412, :rescue_classes==>413, :next==>414, :push_handler=>415, :pop_handler=>416, :current_handler=>417, :current_exception=>418, :message=>419, :source=>420, :parse_options=>421, :options=>422, :match=>423, :match?=>424, :match_internal=>425, :match_at=>426, :match_from=>427, :match_quantified=>428, :match_atom=>429, :char_digit?=>430, :char_word?=>431, :char_space?=>432, :__posix?=>433, :escape_forward_slashes=>434, :option_flags_string=>435, :negative_flags_string=>436, :casefold?=>437, :fixed_encoding?=>438, :names=>439, :named_captures=>440, :escape=>441, :compile=>442, :union=>443, :last_match=>444, :begin=>445, :end=>446, :captures=>447, :pre_match=>448, :post_match=>449, :string=>450, :regexp=>451, :rewind=>452, :add?=>453, :subset?=>454, :superset?=>455, :proper_subset?=>456, :proper_superset?=>457, :intersect?=>458, :disjoint?=>459, :delete?=>460, :imag=>461, :real=>462, :to_hash=>463, :rehash=>464, :owner=>465, :receiver=>466, :method=>467, :default_internal=>468, :default_internal==>469, :default_external=>470, :default_external==>471, :local_variables=>472, :nesting=>473, :record=>474, :recorded=>475, :desc==>476, :desc=>477, :should_receive=>478, :should_not_receive=>479, :any_number_of_times=>480, :exactly=>481, :at_least=>482, :at_most=>483, :and_return=>484, :and_raise=>485, :and_yield=>486, :with=>487, :stub!=>488, :expected=>489, :failure_message=>490, :check_exception_type=>491, :should=>492, :should_not=>493, :once=>494, :twice=>495, :__assert_fixnum=>496, :Integer=>497, :Complex=>498, :Rational=>499, :__ENCODING__=>500, :describe=>501, :quarantine!=>502, :it=>503, :mock=>504, :equal=>505, :eql=>506, :be_true=>507, :be_false=>508, :be_nil=>509, :raise_error=>510, :be_an_instance_of=>511, :be_kind_of=>512, :be_close=>513, :complain=>514, :ruby_version_is=>515, :guard=>516, :guard_not=>517, :little_endian=>518, :big_endian=>519, :as_user=>520, :as_superuser=>521, :platform_is=>522, :platform_is_not=>523, :ruby_bug=>524, :conflicts_with=>525, :not_supported_on=>526, :skip=>527, :suppress_warning=>528, :context=>529, :let=>530, :clear_let_cache=>531, :it_behaves_like=>532, :it_should_behave_like=>533, :before=>534, :after=>535, :bignum_value=>536, :infinity_value=>537, :nan_value=>538, :fixnum_max=>539, :fixnum_min=>540, :c_long_size=>541, :min_long=>542, :max_long=>543, :mock_int=>544, :ruby_exe=>545, :have_private_instance_method=>546, :have_public_instance_method=>547, :print_spec_results=>548, :run_specs=>549, :map=>550, :key?=>551, :id2name=>552, :value?=>553, :add=>554, :intersection=>555}
+     module_spec
+  1  exception: undefined method '_1' for <Object>
+     numbered_parameters_spec
+  1  segfault @ 5 passed, 17 failed, 0 skipped (22 total)
+     numbers_spec
+  1  segfault @ 10 passed, 4 failed, 1 skipped (15 total)
+     or_spec
+  1  exception: undefined method '__env__' for <Eigenclass_16457>
+     order_spec
+  1  segfault @ Predefined global $~
+     predefined_spec
+  1  exception: undefined method 'methods' for <Private__A>
+     private_spec
+  1  segfault @ FAILED: Expected 3 but got 4
+     anchors_spec
+  1  segfault @ Regexps with back-references
+     back-references_spec
+  1  exception: undefined method 'match' for "x00"
+     character_classes_spec
+  1  segfault @ 2 passed, 29 failed, 1 skipped (32 total)
+     encoding_spec
+  1  segfault after: FAILED: Expected ["foo1"] but got ["fooA", ""]
+     regexp_spec
+  1  exception: undefined method 'retry' for <Object>
+     retry_spec
+  1  exception: undefined method 'unknown' for <Object>
+     safe_navigator_spec
+  1  exception: undefined method 'fooM0' for LangSendSpecs
+     send_spec
+  1  exception: undefined method 'be_ancestor_of' for <Eigenclass_2010>
+     singleton_class_spec
+  1  exception: undefined method 'b' for "xFFxFE"
+     source_encoding_spec
+  1  exception: undefined method 'whatever' for SuperSpecs__AnonymousModuleIncludedTwice
+     super_spec
+  1  segfault @ The throw keyword
+     throw_spec
+  1  exception: undefined method 'meth' for Class
+     undef_spec
+  1  exception: undefined method 'instance_eval' for <VariablesSpecs__EvalOrder>
+     variables_spec
+  1  exception: undefined method 'and_return' for nil
+     while_spec
