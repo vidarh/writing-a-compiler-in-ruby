@@ -319,6 +319,18 @@ class Compiler
           body = E[:block, E[], body, rescue_clause, ensure_clause]
         end
 
+        # A defun body is code-generated as a SINGLE expression (output_functions: compile_eval_arg).
+        # The parser hands us the body as a statement-list, so a one-statement body that is just a bare
+        # variable -- e.g. `{|x| x}` => [:x] -- would be mis-read as the node (x), i.e. a call to method
+        # x, and crash. rewrite_let_env only wraps :defm bodies, so a TOP-LEVEL block is never wrapped.
+        # Wrap the statement-list in :do here so it is an unambiguous block for every lambda. (:do is
+        # transparent to the later env rewrites for nested blocks; already-node bodies are left alone.)
+        if body.nil?
+          body = E[:do]
+        elsif !(body.is_a?(Array) && body[0].is_a?(Symbol) && [:do, :let, :block].include?(body[0]))
+          body = E[:do, *body]
+        end
+
         # Calculate arity correctly:
         # - Count required params (those without defaults)
         # - If any optional params exist, arity is -(required_count + 1)
