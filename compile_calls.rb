@@ -410,6 +410,12 @@ class Compiler
 
       if args.last.kind_of?(Array) && args.last[0] == :to_block
         block = args.last[1]
+        # `&:sym` must pass Symbol#to_proc, not the bare symbol (Ruby's &-to_proc conversion). A symbol
+        # literal has already been rewritten to [:sexp, :__S_<name>] by this point; convert only that form
+        # so &proc / &block / &nil (plain vars / env reads) stay untouched and nil remains no-block.
+        if block.is_a?(Array) && block[0] == :sexp && block[1].is_a?(Symbol) && block[1].to_s.start_with?("__S_")
+          block = [:callm, block, :to_proc]
+        end
         args.pop
       end
 
