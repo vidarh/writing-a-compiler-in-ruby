@@ -193,6 +193,12 @@ class Mock
     self
   end
 
+  # FIXME: Stub -- should make the mocked method yield the given args to a block. For now just chain so
+  # specs using `.and_yield` don't crash with "undefined method 'and_yield'".
+  def and_yield(*args)
+    self
+  end
+
   # FIXME: Stub - should validate arguments match expectations
   def with(*args)
     self
@@ -583,6 +589,7 @@ end
 class MockExpectationStub
   def and_return(*a); self; end
   def and_raise(*a); self; end
+  def and_yield(*a); self; end
   def with(*a); self; end
   def any_number_of_times; self; end
   def exactly(*a); self; end
