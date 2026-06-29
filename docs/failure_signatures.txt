@@ -1,121 +1,31 @@
+tools/classify_failures.rb
 Failure signatures — ranked by spec count (burndown targets)
-From docs/spec_parallel_results.jsonl. One fix per signature ideally clears all its specs.
+From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
 
-  6  segfault @ <no output>
-     defined_spec, for_spec, rescue_spec, return_spec, super_spec, yield_spec
-  5  exception: wrong number of arguments (given 2, expected 1)
-     BEGIN_spec, data_spec, source_encoding_spec, symbol_spec, toplevel_binding_spec
-  3  exception: redo not supported in current compiler
-     loop_spec, redo_spec, until_spec
-  2  warn-method: a
-     constants_spec, optional_assignments_spec
-  2  segfault @ 2 passed, 29 failed, 1 skipped (32 total)
-     encoding_spec, encoding_spec
-  2  exception: undefined method 'callm' for <Object>
-     execution_spec, if_spec
-  2  exception: undefined method 'match' for nil
-     escapes_spec, repetition_spec
-  2  exception: undefined method '[]' for nil
-     grouping_spec, subexpression_call_spec
-  2  warn-method: o
-     interpolation_spec, modifiers_spec
-  1  exception: undefined method 'lines' for ""
-     END_spec
-  1  segfault @ The alias keyword
-     alias_spec
-  1  exception: undefined method 'split' for <Object>
-     array_spec
-  1  warn-method: object
-     assignments_spec
-  1  segfault @ Array
-     block_spec
-  1  segfault @ The break statement in a block
-     break_spec
-  1  segfault after: FAILED: Expected "foo" but got nil
-     case_spec
-  1  exception: undefined method 'eax' for <Eigenclass_1846>
-     class_spec
-  1  warn-method: cvar_m
-     class_variable_spec
-  1  segfault @ 0 passed, 1 failed, 0 skipped (1 total)
-     comment_spec
-  1  warn-method: puts
-     def_spec
-  1  exception: wrong number of arguments (given 1, expected 0)
-     delegation_spec
-  1  exception: undefined method 'v' for <Object>
-     ensure_spec
-  1  segfault @ The __FILE__ pseudo-variable with require
-     file_spec
-  1  exception: undefined method 'keys' for nil
-     hash_spec
-  1  segfault @ 14 passed, 2 failed, 0 skipped (16 total)
-     heredoc_spec
-  1  segfault @ FAILED: Expected [[], {}] but got [[], []]
-     keyword_arguments_spec
-  1  warn-method: create_lambda
-     lambda_spec
-  1  segfault @ The __LINE__ pseudo-variable
-     line_spec
-  1  segfault @ in stdin
-     magic_comment_spec
-  1  exception: undefined method 'local_variables' for <Object>
-     match_spec
-  1  segfault after: FAILED: Expected NilClass but got Eigenclass_15212
-     metaclass_spec
-  1  exception: undefined method 'evaluate' for <Object>
-     method_spec
-  1  compile-fail
-     module_spec
-  1  warn-method: loop
-     next_spec
-  1  exception: undefined method '_1' for <Object>
-     numbered_parameters_spec
-  1  segfault @ 5 passed, 17 failed, 0 skipped (22 total)
-     numbers_spec
-  1  segfault @ 10 passed, 4 failed, 1 skipped (15 total)
-     or_spec
-  1  exception: undefined method '__env__' for <Eigenclass_14823>
-     order_spec
-  1  exception: undefined method 'pair' for <Object>
-     pattern_matching_spec
-  1  exception: Integer can't be coerced
-     precedence_spec
-  1  segfault @ Predefined global $~
-     predefined_spec
-  1  exception: undefined method 'methods' for <Private__A>
-     private_spec
-  1  segfault after: FAILED: Expected ArgumentError to be raised but nothing was 
-     proc_spec
-  1  segfault @ ArgumentError: In __method_Range_initialize - expected a min
-     range_spec
-  1  segfault @ FAILED: Expected 3 but got 4
-     anchors_spec
-  1  segfault @ Regexps with back-references
-     back-references_spec
-  1  exception: undefined method 'match' for "x00"
-     character_classes_spec
-  1  segfault @ 0 passed, 4 failed, 0 skipped (4 total)
-     empty_checks_spec
-  1  segfault @ 4 passed, 19 failed, 2 skipped (25 total)
-     regexp_spec
-  1  exception: undefined method 'retry' for <Object>
-     retry_spec
-  1  exception: undefined method 'unknown' for <Object>
-     safe_navigator_spec
-  1  exception: wrong number of arguments (given 0, expected 1)
-     safe_spec
-  1  warn-method: fooM0
-     send_spec
-  1  exception: undefined method 'be_ancestor_of' for <Eigenclass_1845>
-     singleton_class_spec
-  1  exception: undefined method 'be_computed_by' for <Object>
-     string_spec
-  1  segfault @ The throw keyword
-     throw_spec
-  1  warn-method: meth
-     undef_spec
-  1  exception: undefined method 'instance_eval' for <VariablesSpecs__EvalOrder>
-     variables_spec
-  1  exception: undefined method 'and_return' for nil
-     while_spec
+128  segfault @ <no output>
+     Array_spec, Float_spec, Hash_spec, Integer_spec, String_spec, abort_spec, arity_spec, at_exit_spec, autoload_spec, backtick_spec, binding_spec, birthtime_spec, block_given_spec, call_spec, case_compare_spec, case_compare_spec, catch_spec, chomp_spec, chop_spec, class_spec, clone_spec, clone_spec, compose_spec, curry_spec, define_singleton_method_spec, defined_spec, display_spec, dup_spec, dup_spec, element_reference_spec, eql_spec, equal_value_spec, equal_value_spec, eval_spec, eval_spec, exec_spec, exit_spec, extend_spec, fail_spec, for_spec, fork_spec, format_spec, freeze_spec, frozen_spec, gets_spec, global_variables_spec, gsub_spec, hash_spec, import_methods_spec, inspect_spec, inspect_spec, instance_of_spec, instance_variable_defined_spec, instance_variable_get_spec, instance_variable_set_spec, instance_variables_spec, is_a_spec, itself_spec, kind_of_spec, lambda_spec, local_variable_get_spec, local_variable_set_spec, local_variables_spec, loop_spec, method_spec, methods_spec, name_spec, nil_spec, not_match_spec, open_spec, original_name_spec, owner_spec, p_spec, parameters_spec, print_spec, printf_spec, private_methods_spec, private_spec, proc_spec, protected_methods_spec, protected_spec, public_method_spec, public_methods_spec, public_send_spec, public_spec, putc_spec, puts_spec, raise_spec, rand_spec, readline_spec, readlines_spec, receiver_spec, receiver_spec, remove_instance_variable_spec, rescue_spec, respond_to_missing_spec, respond_to_spec, return_spec, select_spec, send_spec, set_trace_func_spec, singleton_methods_spec, source_location_spec, spawn_spec, sprintf_spec, srand_spec, sub_spec, super_method_spec, super_spec, syscall_spec, system_spec, taint_spec, tainted_spec, tap_spec, test_spec, throw_spec, to_proc_spec, to_s_spec, to_s_spec, trace_var_spec, trust_spec, unbind_spec, untaint_spec, untrace_var_spec, untrust_spec, untrusted_spec, warn_spec, yield_spec
+104  exception: undefined method 'tmp' for <Object>
+     atime_spec, atime_spec, binmode_spec, binread_spec, binwrite_spec, blksize_spec, blockdev_spec, blockdev_spec, blocks_spec, chardev_spec, chardev_spec, chmod_spec, close_spec, comparison_spec, ctime_spec, delete_spec, dev_major_spec, dev_minor_spec, dev_spec, directory_spec, directory_spec, dup_spec, empty_spec, empty_spec, eof_spec, executable_real_spec, executable_real_spec, executable_spec, executable_spec, external_encoding_spec, file_spec, file_spec, flock_spec, for_fd_spec, fsync_spec, gets_spec, gid_spec, grpowned_spec, grpowned_spec, identical_spec, initialize_spec, ino_spec, inspect_spec, inspect_spec, internal_encoding_spec, lstat_spec, mode_spec, mtime_spec, mtime_spec, new_spec, new_spec, new_spec, open_spec, open_spec, path_spec, pos_spec, print_spec, printf_spec, putc_spec, puts_spec, rdev_major_spec, rdev_minor_spec, rdev_spec, read_spec, readable_real_spec, readable_real_spec, readable_spec, readable_spec, realdirpath_spec, realpath_spec, rename_spec, reopen_spec, reopen_spec, seek_spec, set_encoding_by_bom_spec, set_encoding_spec, setgid_spec, setuid_spec, size_spec, size_spec, stat_spec, sticky_spec, sticky_spec, sysread_spec, sysseek_spec, syswrite_spec, tell_spec, to_path_spec, truncate_spec, try_convert_spec, uid_spec, ungetbyte_spec, unlink_spec, world_readable_spec, world_readable_spec, world_writable_spec, world_writable_spec, writable_real_spec, writable_real_spec, writable_spec, writable_spec, write_spec, zero_spec, zero_spec
+ 72  exception: undefined method 'call' for nil
+     _dump_spec, _load_spec, add_trace_func_spec, byteslice_spec, change_privilege_spec, change_privilege_spec, clear_spec, coredump_spec, count_objects_spec, eid_spec, eid_spec, entries_spec, enum_for_spec, eql_spec, exit_spec, fdatasync_spec, fdiv_spec, find_spec, getegid_spec, geteuid_spec, getgid_spec, getpgrp_spec, getuid_spec, grant_privilege_spec, grant_privilege_spec, hash_spec, insert_output_spec, inspect_spec, issetugid_spec, owned_spec, owned_spec, parameters_spec, pipe_spec, pipe_spec, re_exchange_spec, re_exchange_spec, re_exchangeable_spec, re_exchangeable_spec, remainder_spec, report_spec, rid_spec, rid_spec, set_trace_func_spec, setegid_spec, seteuid_spec, setgid_spec, setregid_spec, setresgid_spec, setresuid_spec, setreuid_spec, setrgid_spec, setruid_spec, setuid_spec, sid_available_spec, sid_available_spec, socket_spec, socket_spec, sort_by_spec, stopped_spec, stopsig_spec, switch_spec, switch_spec, to_a_spec, to_enum_spec, to_int_spec, to_r_spec, to_s_spec, tv_nsec_spec, tv_usec_spec, waitpid2_spec, world_readable_spec, world_writable_spec
+ 66  exception: wrong number of arguments (given 2, expected 1)
+     BEGIN_spec, advise_spec, argv_spec, autoclose_spec, basicobject_spec, binmode_spec, close_spec, closed_spec, closed_spec, copy_stream_spec, data_spec, dirname_spec, each_byte_spec, each_byte_spec, each_char_spec, each_char_spec, each_codepoint_spec, each_codepoint_spec, each_line_spec, each_line_spec, each_spec, each_spec, element_reference_spec, element_reference_spec, element_reference_spec, eof_spec, file_spec, filename_spec, fileno_spec, foreach_spec, getbyte_spec, getc_spec, getc_spec, gets_spec, lineno_spec, lineno_spec, merge_spec, path_spec, pid_spec, pos_spec, read_spec, readchar_spec, readchar_spec, readline_spec, readline_spec, readlines_spec, readlines_spec, readpartial_spec, rewind_spec, rewind_spec, seek_spec, set_encoding_spec, skip_spec, source_encoding_spec, symbol_spec, sync_spec, tell_spec, to_a_spec, to_i_spec, to_io_spec, to_io_spec, to_s_spec, toplevel_binding_spec, ungetc_spec, unpack_spec, uplus_spec
+ 64  exception: undefined method 'private_constant' for ModuleSpecs__PrivConstModule
+     alias_method_spec, ancestors_spec, append_features_spec, attr_accessor_spec, attr_reader_spec, attr_spec, attr_writer_spec, autoload_spec, case_compare_spec, class_eval_spec, class_exec_spec, class_variable_defined_spec, class_variable_get_spec, class_variable_set_spec, class_variables_spec, comparison_spec, const_added_spec, define_method_spec, eql_spec, equal_spec, equal_value_spec, extend_object_spec, extended_spec, freeze_spec, gt_spec, gte_spec, include_spec, included_modules_spec, included_spec, initialize_spec, instance_method_spec, instance_methods_spec, lt_spec, lte_spec, method_added_spec, method_defined_spec, method_removed_spec, method_undefined_spec, module_eval_spec, module_exec_spec, module_function_spec, nesting_spec, new_spec, prepend_features_spec, prepend_spec, private_class_method_spec, private_instance_methods_spec, private_method_defined_spec, private_spec, protected_instance_methods_spec, protected_method_defined_spec, protected_spec, public_class_method_spec, public_instance_method_spec, public_instance_methods_spec, public_method_defined_spec, public_spec, remove_class_variable_spec, remove_method_spec, ruby2_keywords_spec, subclasses_spec, to_s_spec, undef_method_spec, undefined_instance_methods_spec
+ 45  exception: uninitialized constant Time
+     _dump_spec, _load_spec, asctime_spec, at_spec, ceil_spec, comparison_spec, ctime_spec, deconstruct_keys_spec, dump_spec, dup_spec, eql_spec, floor_spec, friday_spec, getlocal_spec, gm_spec, gmt_spec, hash_spec, iso8601_spec, load_spec, minus_spec, monday_spec, new_spec, now_spec, nsec_spec, plus_spec, restore_spec, round_spec, saturday_spec, sec_spec, strftime_spec, subsec_spec, sunday_spec, thursday_spec, time_spec, to_f_spec, to_i_spec, to_r_spec, tuesday_spec, tv_sec_spec, usec_spec, utc_spec, utime_spec, wednesday_spec, xmlschema_spec, zone_spec
+ 41  exception: undefined method 'instance_variable_get' for <Object>
+     a_spec, a_spec, at_spec, at_spec, b_spec, b_spec, c_spec, c_spec, d_spec, e_spec, e_spec, f_spec, g_spec, g_spec, h_spec, h_spec, i_spec, i_spec, j_spec, l_spec, l_spec, m_spec, m_spec, n_spec, n_spec, p_spec, p_spec, q_spec, q_spec, s_spec, s_spec, u_spec, u_spec, v_spec, v_spec, w_spec, w_spec, x_spec, x_spec, z_spec, z_spec
+ 25  exception: uninitialized constant Converter
+     asciicompat_encoding_spec, constants_spec, convert_spec, convpath_spec, destination_encoding_name_spec, destination_encoding_name_spec, destination_encoding_spec, destination_encoding_spec, destination_encoding_spec, error_bytes_spec, error_char_spec, finish_spec, last_error_spec, new_spec, primitive_convert_spec, primitive_errinfo_spec, putback_spec, readagain_bytes_spec, replacement_spec, search_convpath_spec, source_encoding_name_spec, source_encoding_name_spec, source_encoding_spec, source_encoding_spec, source_encoding_spec
+ 25  exception: undefined method 'new' for <Struct>
+     clone_spec, deconstruct_keys_spec, deconstruct_spec, dig_spec, dup_spec, each_pair_spec, each_spec, element_set_spec, eql_spec, equal_value_spec, filter_spec, hash_spec, initialize_spec, inspect_spec, instance_variable_get_spec, instance_variables_spec, length_spec, members_spec, select_spec, size_spec, to_a_spec, to_h_spec, to_s_spec, values_at_spec, values_spec
+ 23  exception: undefined method 'current' for Thread
+     allow_reentry_spec, backtrace_locations_spec, binding_spec, callee_id_spec, current_spec, defined_class_spec, disable_spec, enable_spec, enabled_spec, eval_script_spec, event_spec, inspect_spec, lineno_spec, method_id_spec, native_thread_id_spec, new_spec, parameters_spec, path_spec, priority_spec, raised_exception_spec, return_value_spec, self_spec, trace_spec
+ 22  exception: undefined method 'with_timezone' for <Object>
+     day_spec, dst_spec, getgm_spec, getutc_spec, gmt_offset_spec, gmtime_spec, gmtoff_spec, hour_spec, inspect_spec, isdst_spec, local_spec, localtime_spec, mday_spec, min_spec, mktime_spec, mon_spec, month_spec, to_s_spec, utc_offset_spec, wday_spec, yday_spec, year_spec
+ 21  exception: uninitialized constant FileTest
+     blockdev_spec, chardev_spec, directory_spec, executable_real_spec, executable_spec, exist_spec, grpowned_spec, identical_spec, owned_spec, pipe_spec, readable_real_spec, readable_spec, setgid_spec, setuid_spec, size_spec, socket_spec, sticky_spec, symlink_spec, writable_real_spec, writable_spec, zero_spec
+ 18  exception: wrong number of arguments (given 1, expected 2)
+     Complex_spec, coerce_spec, comparison_spec, denominator_spec, eql_spec, equal_value_spec, fdiv_spec, hash_spec, insert_spec, inspect_spec, integer_spec, negative_spec, numerator_spec, numerator_spec, positive_spec, rect_spec, rectangular_spec, to_c_spec
+ 17  exception: undefined method 'to_enum' for <EnumeratorLazySpecs__YieldsMixed>
