@@ -258,7 +258,11 @@ class Compiler
       next :skip if e[0] == :defm
       if e[0] == :call && e[1] == :define_method &&
          e[2].is_a?(Symbol) && e[2].to_s[0] == ?: &&
-         e[3].is_a?(Array) && e[3][0] == :proc
+         e[3].is_a?(Array) && e[3][0] == :proc &&
+         e[3][1].is_a?(Array) && e[3][2].is_a?(Array)
+        # Only rewrite when the block has a well-formed params list AND body (both Arrays). Some block
+        # forms (empty/destructured) yield a nil params or body, which would make a malformed defm that
+        # crashes rewrite_let_env -- leave those as a runtime call (the no-op stub) rather than break.
         e.replace([:defm, e[2].to_s[1..-1].to_sym, e[3][1], e[3][2]])
       end
     end
