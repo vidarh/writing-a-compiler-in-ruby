@@ -48,6 +48,51 @@ RUBY_ENGINE="vidarh/compiler"
 class Thread
 end
 
+# Single-threaded Mutex: with no real threads, lock/unlock just track a flag. Enough for the non-blocking
+# specs (locked?/owned?/try_lock/synchronize). Specs that expect ThreadError on misuse (double unlock etc.)
+# will FAIL rather than crash, since we don't raise. synchronize avoids begin/ensure (exception handling is
+# limited); a raising block simply won't unlock, which is acceptable for a stub.
+class Mutex
+  def initialize
+    @locked = false
+  end
+
+  def lock
+    @locked = true
+    self
+  end
+
+  def unlock
+    @locked = false
+    self
+  end
+
+  def locked?
+    @locked
+  end
+
+  def try_lock
+    return false if @locked
+    @locked = true
+    true
+  end
+
+  def owned?
+    @locked
+  end
+
+  def synchronize
+    lock
+    r = yield
+    unlock
+    r
+  end
+
+  def sleep(timeout = nil)
+    0
+  end
+end
+
 # Stub for Module class
 # FIXME: Module should be a superclass of Class, but that requires
 # significant refactoring of the object model
