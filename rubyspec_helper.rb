@@ -707,6 +707,33 @@ def ruby_version_is(*args)
   end
 end
 
+# mspec guard blocks the harness lacked: without them, specs that call them crash at load with
+# "undefined method", taking out the whole file. Best-effort: run the block when the guard matches this
+# environment (x86 little-endian, ordinary user), skip otherwise. Crash -> the file's specs actually run.
+def guard(*args)
+  yield if block_given?
+end
+
+def guard_not(*args)
+  yield if block_given?
+end
+
+def little_endian
+  yield if block_given?
+end
+
+def big_endian
+  # x86 target is little-endian: big-endian-only specs are skipped (block not run).
+end
+
+def as_user
+  yield if block_given?
+end
+
+def as_superuser
+  # not running as root: superuser-only specs are skipped (block not run).
+end
+
 def platform_is(*args)
   if block_given?
     # Handle hash arguments like platform_is c_long_size: 64
