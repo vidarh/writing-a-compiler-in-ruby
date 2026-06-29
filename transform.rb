@@ -245,6 +245,26 @@ class Compiler
     exp
   end
 
+  # Rewrite a class/module-body `define_method(:name) { |args| body }` into a real [:defm,name,params,
+  # body] so it reuses the full method machinery instead of the no-op define_method stub. Parses as
+  # [:call,:define_method,:":name",[:proc,params,body,_,_]]. Must run BEFORE rewrite_symbol_constant
+  # (needs the bare :sym). Do NOT descend into method bodies (`next :skip if e[0]==:defm`): inside a
+  # method, define_method is a runtime op, and a static nested [:defm] is wrong AND crashes
+  # rewrite_let_env. Non-capturing blocks (the common case) become working methods; dynamic/computed-name
+  # forms fall through.
+  def rewrite_define_method(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      next :skip if e[0] == :defm
+      if e[0] == :call && e[1] == :define_method &&
+         e[2].is_a?(Symbol) && e[2].to_s[0] == ?: &&
+         e[3].is_a?(Array) && e[3][0] == :proc
+        e.replace([:defm, e[2].to_s[1..-1].to_sym, e[3][1], e[3][2]])
+      end
+    end
+    exp
+  end
+
   # The "expr rescue fallback" modifier parses as [:rescue_mod, expr, fallback]. It has no direct
   # code generation, so rewrite it into the equivalent begin/rescue block: run expr, and on any
   # exception evaluate fallback. The catch-all rescue clause has no class and no exception variable.
@@ -878,6 +898,9 @@ class Compiler
   def rewrite_let_env(exp)
     exp.depth_first(:defm) do |e|
       args   = Set[*e[2].collect{|a| a.kind_of?(Array) ? a[0] : a}]
+      # A synthesized defm node (e.g. from rewriting define_method) is a plain Array with no #position;
+      # guard every position read below so we don't crash on it (nil position is acceptable here).
+      epos = e.respond_to?(:position) ? e.position : nil
 
       # Count number of "regular" arguments (non "rest", non "block")
       # FIXME: There are cleaner ways, but in the interest of
@@ -942,11 +965,12 @@ class Compiler
 
         # FIXME: Due to compiler bug
         ex = e
+        expos = epos
         extra_assigns = (env - notargs).to_a.collect do |a|
           ai = aenv.index(a)
           # FIXME: "ex" instead of "e" due to compiler bug.
           rhs = (blockname && a == blockname) ? block_nilable : a
-          E[ex.position, :assign, E[ex.position,:index, :__env__, ai], rhs]
+          E[expos, :assign, E[expos,:index, :__env__, ai], rhs]
         end
         prologue = [E[:sexp, E[:assign, :__env__, E[:call, :__alloc_env,  aenv.size]]]]
         if !extra_assigns.empty?
@@ -1021,13 +1045,13 @@ class Compiler
       # FIXME: Compiler bug: Changing the below to "if !vars.empty?" causes seg fault.
       empty = vars.empty?
       if empty == false
-        e[3] = E[e.position,:let, vars, *e[3]]
+        e[3] = E[epos,:let, vars, *e[3]]
         # We store the variables by descending frequency for future use in register
         # allocation.
         # FIXME: Compiler bug: -v fails.
         e[3].extra[:varfreq] = freq.sort_by {|k,v| 0 - v }.collect{|a| a.first }
       else
-        e[3] = E[e.position, :do, *e[3]]
+        e[3] = E[epos, :do, *e[3]]
       end
 
       # Recursively process the rewritten body to handle nested defms (e.g., eigenclass methods)
@@ -1585,6 +1609,7 @@ class Compiler
     rewrite_strconst(exp)
     rewrite_integer_constant(exp)
     rewrite_alias_method(exp)   # must precede rewrite_symbol_constant (needs bare :sym args)
+    rewrite_define_method(exp)  # ditto -- needs the bare :sym name + the :proc block
     rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
