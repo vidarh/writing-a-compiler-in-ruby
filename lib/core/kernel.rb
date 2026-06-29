@@ -149,10 +149,11 @@ class Kernel
     raise RuntimeError.new("redo not supported in current compiler")
   end
 
-  # fixture - Test framework helper
-  # Stub: Returns path to fixture file
-  def fixture(name)
-    "fixtures/#{name}"
+  # fixture - mspec test helper: path to a fixture file beside the spec, under a "fixtures/" dir.
+  # Called as fixture(__FILE__, name...) -- variadic, NOT arity 1 (the old arity-1 stub crashed every
+  # spec that used the standard 2-arg form with "wrong number of arguments").
+  def fixture(dir, *args)
+    File.join(File.dirname(dir), "fixtures", *args)
   end
 
   # proc - Create a Proc from a block

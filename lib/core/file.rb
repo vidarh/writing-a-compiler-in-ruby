@@ -94,6 +94,33 @@ class File < IO
     return nil
   end
 
+  # File.join(a, b, ...) -- join path components with SEPARATOR, collapsing a doubled separator at each
+  # boundary (so join("a/", "/b") == "a/b", matching MRI closely enough for path building).
+  def self.join(*args)
+    result = ""
+    first = true
+    args.each do |arg|
+      s = arg.to_s
+      if first
+        result = s
+        first = false
+      else
+        # NB: String#[int] returns a byte (Integer), so compare against the ?/ char literal, not the
+        # SEPARATOR string.
+        lhs_sep = result.length > 0 && result[-1] == ?/
+        rhs_sep = s.length > 0 && s[0] == ?/
+        if lhs_sep && rhs_sep
+          result = result + s[1..-1]
+        elsif lhs_sep || rhs_sep
+          result = result + s
+        else
+          result = result + SEPARATOR + s
+        end
+      end
+    end
+    result
+  end
+
   def self.expand_path(path, dir_string = Dir.pwd)
     return path if path[0] == ?/
 
