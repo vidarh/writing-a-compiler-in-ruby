@@ -255,12 +255,15 @@ module Enumerable
     acc
   end
 
-  # NOTE: min_by/max_by/group_by are intentionally NOT defined here. Their bodies
-  # (k = yield(x); then compare/use k) trigger a compiler bug: a yield whose result is stored in a
-  # local and then used crashes when routed through a nested Proc#call (the inner block's return
-  # address is overwritten by the argument -- numargs off-by-one in the splat arg count). Defining them
-  # regressed enumerable/min_by_spec and group_by_spec FAIL->CRASH. Re-add once the nested-Proc#call
-  # ABI bug is fixed -- see the array-include-enumerable-broken memory for the gdb-backed diagnosis.
+  # NOTE: min_by/max_by/group_by are intentionally NOT defined here. The original "numargs off-by-one"
+  # diagnosis was WRONG: the bare-variable-block-body bug (a block like {|x| x} compiled as a call) was
+  # the real cause of the accumulator-yield crash, and it is now FIXED (transform.rb wraps lambda bodies
+  # in :do, commit ded635a) -- `acc = acc + yield(x)` works. But defining min_by/group_by still regressed
+  # enumerable/min_by_spec and group_by_spec FAIL->CRASH, because the SPECS exercise them deep inside the
+  # mspec harness (should -> matcher -> lambda -> ... -> each -> Proc#call), which hits a SEPARATE deep
+  # bug: the argument VALUE is clobbered to a count/index at depth (numargs is correct at 3). Re-add once
+  # that arg-corruption-at-depth bug is fixed -- see the array-include-enumerable-broken memory for the
+  # gdb-backed diagnosis (movl (%esi) with esi=tagged-int).
 
   def each_with_object obj
     each {|x| yield(x, obj) }
