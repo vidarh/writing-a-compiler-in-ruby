@@ -83,6 +83,14 @@ def quarantine!(*args, &block)
 end
 
 def it(description, &block)
+  # mspec: `it "desc"` with NO block is a PENDING example (counts as skipped, not run). Without this guard
+  # the harness fell through to `block.call` on a nil block -> "undefined method 'call' for nil", crashing
+  # the whole file. Many specs use a lone `it "needs to be reviewed for spec completeness"` placeholder.
+  if block.nil?
+    $spec_skipped = $spec_skipped + 1
+    return
+  end
+
   skipped_before = $spec_skipped
   assertions_before = $spec_assertions
 
