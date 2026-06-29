@@ -255,53 +255,12 @@ module Enumerable
     acc
   end
 
-  def min_by
-    result = nil
-    best = nil
-    seen = false
-    each do |x|
-      k = yield(x)
-      if !seen
-        best = k
-        result = x
-        seen = true
-      elsif (k <=> best) < 0
-        best = k
-        result = x
-      end
-    end
-    result
-  end
-
-  def max_by
-    result = nil
-    best = nil
-    seen = false
-    each do |x|
-      k = yield(x)
-      if !seen
-        best = k
-        result = x
-        seen = true
-      elsif (k <=> best) > 0
-        best = k
-        result = x
-      end
-    end
-    result
-  end
-
-  def group_by
-    h = Hash.new
-    each do |x|
-      k = yield(x)
-      if !h.has_key?(k)
-        h[k] = Array.new
-      end
-      h[k] << x
-    end
-    h
-  end
+  # NOTE: min_by/max_by/group_by are intentionally NOT defined here. Their bodies
+  # (k = yield(x); then compare/use k) trigger a compiler bug: a yield whose result is stored in a
+  # local and then used crashes when routed through a nested Proc#call (the inner block's return
+  # address is overwritten by the argument -- numargs off-by-one in the splat arg count). Defining them
+  # regressed enumerable/min_by_spec and group_by_spec FAIL->CRASH. Re-add once the nested-Proc#call
+  # ABI bug is fixed -- see the array-include-enumerable-broken memory for the gdb-backed diagnosis.
 
   def each_with_object obj
     each {|x| yield(x, obj) }
