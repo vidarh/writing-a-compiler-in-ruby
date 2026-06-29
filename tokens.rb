@@ -1036,6 +1036,26 @@ module Tokens
 
     attr_reader :lasttoken
 
+    # Non-destructive lookahead used for leading-dot continuation: with the scanner positioned at a `#`
+    # comment, report whether the FIRST non-blank character of the NEXT line is `.`. Uses only the
+    # scanner's character primitives (peek/get/unget) and restores the position before returning.
+    def comment_then_leading_dot?
+      consumed = []
+      while (c = @s.peek) && c != "\n"
+        consumed << @s.get
+      end
+      result = false
+      if @s.peek == "\n"
+        consumed << @s.get
+        while (c = @s.peek) && (c == " " || c == "\t")
+          consumed << @s.get
+        end
+        result = (@s.peek == ".")
+      end
+      consumed.reverse.each {|ch| @s.unget(ch) }
+      result
+    end
+
     def get
       @lasttoken = @curtoken
 
@@ -1068,6 +1088,13 @@ module Tokens
           @s.ws
         else
           @s.nolfws
+          # Leading-dot method-chain continuation across a trailing comment: `foo(...) # note\n .bar`.
+          # After a value, nolfws stops at the `#`; if the next line begins with `.`, the comment and
+          # newline are insignificant and `.method` chains onto the value. Handled here in the tokenizer
+          # alongside the trailing-dot continuation above -- the Scanner stays grammar-agnostic.
+          if @s.peek == "#" && comment_then_leading_dot?
+            @s.ws  # consume the comment and its newline, leaving the scanner positioned at the `.`
+          end
         end
 
         # Parser bug fix: Track newlines for @lastop to fix negative number parsing
