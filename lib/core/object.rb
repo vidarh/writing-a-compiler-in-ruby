@@ -161,12 +161,14 @@ class Object
   end
 
   # FIXME: Private
-  def send sym, *args
-    __send__(sym, *args)
+  def send sym, *args, &block
+    __send__(sym, *args, &block)
   end
 
-  def __send__ sym, *args
-    self.class.__send_for_obj__(self,sym,*args)
+  # Forward a block so `obj.send(:each, &blk)` / to_enum work (the block becomes the callee's __closure__
+  # via the 4th element of the callm s-expr in __send_for_obj__).
+  def __send__ sym, *args, &block
+    self.class.__send_for_obj__(self, sym, block, *args)
   end
 
   # FIXME: Add splat support for s-expressions / call so that

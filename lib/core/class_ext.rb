@@ -22,8 +22,9 @@ class Class
     other.is_a?(self)
   end
 
-  # This is called by __send__
-  def __send_for_obj__ obj,sym,*args
+  # This is called by __send__. `blk` is the block to forward (nil when none) -- passed as the 4th element
+  # of the callm s-expr, which compile_callm threads in as the callee's __closure__, so send/to_enum work.
+  def __send_for_obj__ obj,sym,blk,*args
     sym  = sym.to_sym
     voff = Class.method_to_voff[sym]
     if !voff
@@ -34,7 +35,13 @@ class Class
       # doesn't allow method/function calls in the method slot
       # for simplicity, for now anyway.
       %s(assign raw (callm voff __get_raw))
-      %s(callm obj (index self raw) ((splat args)))
+      # With no block, use the block-less callm so the closure slot gets raw 0 (the no-block convention);
+      # passing a tagged nil there would make the callee mis-read it as a present closure.
+      if blk
+        %s(callm obj (index self raw) ((splat args)) blk)
+      else
+        %s(callm obj (index self raw) ((splat args)))
+      end
     end
   end
 
