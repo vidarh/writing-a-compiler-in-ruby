@@ -911,30 +911,30 @@ class Compiler
   #    (index [position])
   #    => This can be done in a separate function.
 
-  def rewrite_let_env(exp)
-    exp.depth_first(:defm) do |e|
-      args   = Set[*e[2].collect{|a| a.kind_of?(Array) ? a[0] : a}]
-      # A synthesized defm node (e.g. from rewriting define_method) is a plain Array with no #position;
-      # guard every position read below so we don't crash on it (nil position is acceptable here).
-      epos = e.respond_to?(:position) ? e.position : nil
+  # Build the let/env-wrapped body for a scope with parameter list `e2` and body `body_in`. Extracted
+  # verbatim from the :defm handler so the SAME machinery can serve both real methods and (later) the
+  # top-level/main scope. Mutates e2 in place (the rest-param marker) like the original, and RETURNS the
+  # new body. The recursive rewrite_let_env on the result stays with the caller.
+  def process_scope_env(e2, body_in, epos)
+    args   = Set[*e2.collect{|a| a.kind_of?(Array) ? a[0] : a}]
 
       # Count number of "regular" arguments (non "rest", non "block")
       # FIXME: There are cleaner ways, but in the interest of
       # self-hosting, I'll do this for now.
       ac = 0
-      e[2].each{|a| ac += 1 if ! a.kind_of?(Array)}
+      e2.each{|a| ac += 1 if ! a.kind_of?(Array)}
 
-      scopes = [args.dup] # We don't want "args" above to get updated 
+      scopes = [args.dup] # We don't want "args" above to get updated
 
       ri = -1
-      r = e[2][ri]
+      r = e2[ri]
       # FIXME: compiler bug; rest does not correctly get initialized to
       # nil in the control flows where it's not assigned.
       rest = nil
       if r
         if r[-1] != :rest
           ri -= 1
-          r = e[2][ri]
+          r = e2[ri]
         end
         if r && r[-1] == :rest
           rest = r[0]
@@ -951,7 +951,7 @@ class Compiler
       freq   = Hash.new(0)
 
       s = Set.new
-      vars,env= find_vars(e[3],scopes,s, freq)
+      vars,env= find_vars(body_in,scopes,s, freq)
 
       env << :__closure__
 
@@ -959,7 +959,7 @@ class Compiler
       aenv = [:__stackframe__] + env.to_a
       env << :__stackframe__
 
-      body = e[3]
+      body = body_in
       prologue = nil
       vars -= args.to_a
       seen = false
@@ -970,7 +970,7 @@ class Compiler
       # nilable view of the closure slot: block_given? ? __closure__ : nil. Two cases:
       #  - captured (used inside a nested closure -> lives in __env__): make its env-copy nilable below;
       #  - plain local: inject an assignment after the prologue (see further down).
-      blockparam = e[2].find { |a| a.is_a?(Array) && a[1] == :block }
+      blockparam = e2.find { |a| a.is_a?(Array) && a[1] == :block }
       blockname  = blockparam ? blockparam[0] : nil
       block_nilable = E[:if, :"block_given?", :__closure__, :nil]
 
@@ -979,12 +979,9 @@ class Compiler
 
         notargs = env - args - [:__closure__]
 
-        # FIXME: Due to compiler bug
-        ex = e
         expos = epos
         extra_assigns = (env - notargs).to_a.collect do |a|
           ai = aenv.index(a)
-          # FIXME: "ex" instead of "e" due to compiler bug.
           rhs = (blockname && a == blockname) ? block_nilable : a
           E[expos, :assign, E[expos,:index, :__env__, ai], rhs]
         end
@@ -1024,20 +1021,20 @@ class Compiler
         rest_func = nil
       end
 
-      e[3] = []
+      b3 = []
       if rest_func
-        e[3].concat(rest_func)
+        b3.concat(rest_func)
       end
 
       if seen && prologue # seen && prologue
-        e[3].concat(prologue)
+        b3.concat(prologue)
       end
 
       # Plain-local &block case (not captured into __env__): bind a real local to the nilable closure.
       # Declared in `vars`, the LocalVarScope resolves it before function.rb's __closure__ alias.
       if blockname && !env.include?(blockname)
         vars << blockname if !vars.include?(blockname)
-        e[3] << E[:assign, blockname, block_nilable]
+        b3 << E[:assign, blockname, block_nilable]
       end
 
       # When body is a single expression node (like :block from ensure), concat would flatten its
@@ -1053,22 +1050,31 @@ class Compiler
       single_node = body.is_a?(Array) && body[0].is_a?(Symbol) && Compiler::Keywords.include?(body[0]) &&
         (body.length > 1 || [:return, :break, :next, :redo, :retry].include?(body[0]))
       if single_node
-        e[3] << body
+        b3 << body
       else
-        e[3].concat(body)
+        b3.concat(body)
       end
 
       # FIXME: Compiler bug: Changing the below to "if !vars.empty?" causes seg fault.
       empty = vars.empty?
       if empty == false
-        e[3] = E[epos,:let, vars, *e[3]]
+        b3 = E[epos,:let, vars, *b3]
         # We store the variables by descending frequency for future use in register
         # allocation.
         # FIXME: Compiler bug: -v fails.
-        e[3].extra[:varfreq] = freq.sort_by {|k,v| 0 - v }.collect{|a| a.first }
+        b3.extra[:varfreq] = freq.sort_by {|k,v| 0 - v }.collect{|a| a.first }
       else
-        e[3] = E[epos, :do, *e[3]]
+        b3 = E[epos, :do, *b3]
       end
+      b3
+  end
+
+  def rewrite_let_env(exp)
+    exp.depth_first(:defm) do |e|
+      # A synthesized defm node (e.g. from rewriting define_method) is a plain Array with no #position;
+      # guard the position read so we don't crash on it (nil position is acceptable here).
+      epos = e.respond_to?(:position) ? e.position : nil
+      e[3] = process_scope_env(e[2], e[3], epos)
 
       # Recursively process the rewritten body to handle nested defms (e.g., eigenclass methods)
       rewrite_let_env(e[3])
