@@ -113,7 +113,10 @@ class Symbol
   # Used for: array.map(&:to_s) which becomes array.map(&:to_s.to_proc)
   def to_proc
     method_name = @name
-    Proc.new { |obj, *args| obj.__send__(method_name, *args) }
+    # NB: a splat block param (|obj, *args|) currently segfaults when the proc is called, so handle the
+    # common arities explicitly instead. One arg covers map/each/select(&:sym); the optional second covers
+    # inject/reduce(&:+) where the proc is called with (memo, item).
+    Proc.new { |obj, other| other.nil? ? obj.__send__(method_name) : obj.__send__(method_name, other) }
   end
 
   # FIXME

@@ -7,6 +7,18 @@ class Proc
     @closure = nil  # outer closure for yield support
   end
 
+  # Proc.new { ... } must capture the block it is given and return a callable Proc. The default Class#new
+  # (allocate + initialize) drops the block, leaving @addr nil -> calling the result segfaults (null call).
+  # The block passed here is ALREADY a Proc (blocks are compiled to Procs via __new_proc), so just return
+  # it. The no-block path is the internal __new_proc allocation (`Proc.new` with no block): fall back to a
+  # blank allocate+initialize so that path keeps working.
+  def self.new(&block)
+    return block if block
+    p = allocate
+    p.initialize
+    p
+  end
+
   # We do this here rather than allow it to be
   # set in initialize because we want to
   # eventually "seal" access to this method
