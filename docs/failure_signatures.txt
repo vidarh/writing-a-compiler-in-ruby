@@ -1,8 +1,6 @@
 Failure signatures — ranked by spec count (burndown targets)
 From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
 
- 81  exception: undefined method 'call' for nil
-     _dump_spec, _load_spec, add_trace_func_spec, byteslice_spec, change_privilege_spec, change_privilege_spec, clear_spec, coredump_spec, count_objects_spec, display_spec, eid_spec, eid_spec, entries_spec, enum_for_spec, eql_spec, exit_spec, fdatasync_spec, fdiv_spec, find_spec, getegid_spec, geteuid_spec, getgid_spec, getpgrp_spec, getuid_spec, grant_privilege_spec, grant_privilege_spec, hash_spec, insert_output_spec, inspect_spec, issetugid_spec, owned_spec, owned_spec, parameters_spec, pipe_spec, pipe_spec, re_exchange_spec, re_exchange_spec, re_exchangeable_spec, re_exchangeable_spec, readline_spec, readlines_spec, remainder_spec, report_spec, rid_spec, rid_spec, set_trace_func_spec, set_trace_func_spec, setegid_spec, seteuid_spec, setgid_spec, setregid_spec, setresgid_spec, setresuid_spec, setreuid_spec, setrgid_spec, setruid_spec, setuid_spec, sid_available_spec, sid_available_spec, socket_spec, socket_spec, sort_by_spec, sticky_spec, sticky_spec, stopped_spec, stopsig_spec, sub_spec, switch_spec, switch_spec, syscall_spec, to_a_spec, to_enum_spec, to_int_spec, to_r_spec, to_s_spec, tv_nsec_spec, tv_usec_spec, untrace_var_spec, waitpid2_spec, world_readable_spec, world_writable_spec
  61  exception: undefined method 'm' for ModuleSpecs
      alias_method_spec, ancestors_spec, append_features_spec, attr_spec, autoload_spec, case_compare_spec, class_eval_spec, class_exec_spec, class_variable_defined_spec, class_variable_get_spec, class_variable_set_spec, class_variables_spec, comparison_spec, const_added_spec, define_method_spec, eql_spec, equal_spec, equal_value_spec, extend_object_spec, extended_spec, freeze_spec, gt_spec, gte_spec, include_spec, included_modules_spec, included_spec, initialize_spec, instance_method_spec, instance_methods_spec, lt_spec, lte_spec, method_added_spec, method_defined_spec, method_removed_spec, method_undefined_spec, module_eval_spec, module_exec_spec, module_function_spec, nesting_spec, new_spec, prepend_features_spec, prepend_spec, private_class_method_spec, private_instance_methods_spec, private_method_defined_spec, private_spec, protected_instance_methods_spec, protected_method_defined_spec, protected_spec, public_class_method_spec, public_instance_method_spec, public_instance_methods_spec, public_method_defined_spec, public_spec, remove_class_variable_spec, remove_method_spec, ruby2_keywords_spec, subclasses_spec, to_s_spec, undef_method_spec, undefined_instance_methods_spec
  46  exception: uninitialized constant Time
@@ -11,6 +9,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      a_spec, a_spec, at_spec, at_spec, b_spec, b_spec, c_spec, c_spec, d_spec, d_spec, e_spec, e_spec, f_spec, f_spec, g_spec, g_spec, h_spec, h_spec, i_spec, i_spec, j_spec, j_spec, l_spec, l_spec, m_spec, m_spec, n_spec, n_spec, p_spec, p_spec, q_spec, q_spec, s_spec, s_spec, u_spec, u_spec, v_spec, v_spec, w_spec, w_spec, x_spec, x_spec, z_spec, z_spec
  37  segfault @ <no output>
      arity_spec, birthtime_spec, call_spec, case_compare_spec, clone_spec, compose_spec, curry_spec, dup_spec, element_reference_spec, eql_spec, equal_value_spec, eval_spec, for_spec, hash_spec, import_methods_spec, inspect_spec, local_variable_get_spec, local_variable_set_spec, name_spec, original_name_spec, owner_spec, owner_spec, parameters_spec, private_spec, protected_spec, public_spec, receiver_spec, receiver_spec, rescue_spec, return_spec, source_location_spec, super_method_spec, super_method_spec, to_proc_spec, to_s_spec, unbind_spec, yield_spec
+ 28  segfault @ 0 passed, 1 failed, 0 skipped (1 total)
+     allocate_spec, allocate_spec, allocate_spec, auto_compact_spec, ceil_spec, comment_spec, daemon_spec, disable_spec, dup_spec, dup_spec, enable_spec, exit_value_spec, fchdir_spec, fcntl_spec, finite_spec, hash_spec, imag_spec, initialize_spec, measure_total_time_spec, numerator_spec, percent_spec, reason_spec, signm_spec, signo_spec, sortedset_spec, to_f_spec, to_s_spec, trap_spec
  25  exception: uninitialized constant Converter
      asciicompat_encoding_spec, constants_spec, convert_spec, convpath_spec, destination_encoding_name_spec, destination_encoding_name_spec, destination_encoding_spec, destination_encoding_spec, destination_encoding_spec, error_bytes_spec, error_char_spec, finish_spec, last_error_spec, new_spec, primitive_convert_spec, primitive_errinfo_spec, putback_spec, readagain_bytes_spec, replacement_spec, search_convpath_spec, source_encoding_name_spec, source_encoding_name_spec, source_encoding_spec, source_encoding_spec, source_encoding_spec
  25  exception: undefined method 'new' for <Struct>
@@ -23,60 +23,50 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      day_spec, dst_spec, getgm_spec, getutc_spec, gmt_offset_spec, gmtime_spec, gmtoff_spec, hour_spec, inspect_spec, isdst_spec, local_spec, localtime_spec, mday_spec, min_spec, mktime_spec, mon_spec, month_spec, to_s_spec, utc_offset_spec, wday_spec, yday_spec, year_spec
  21  exception: uninitialized constant FileTest
      blockdev_spec, chardev_spec, directory_spec, executable_real_spec, executable_spec, exist_spec, grpowned_spec, identical_spec, owned_spec, pipe_spec, readable_real_spec, readable_spec, setgid_spec, setuid_spec, size_spec, socket_spec, sticky_spec, symlink_spec, writable_real_spec, writable_spec, zero_spec
- 18  exception: wrong number of arguments (given 1, expected 2)
-     Complex_spec, coerce_spec, comparison_spec, denominator_spec, eql_spec, equal_value_spec, fdiv_spec, hash_spec, insert_spec, inspect_spec, integer_spec, negative_spec, numerator_spec, numerator_spec, positive_spec, rect_spec, rectangular_spec, to_c_spec
- 18  exception: uninitialized constant Process
-     _fork_spec, abort_spec, argv0_spec, clock_getres_spec, clock_gettime_spec, constants_spec, egid_spec, euid_spec, exit_spec, fork_spec, getrlimit_spec, gid_spec, last_status_spec, pid_spec, set_proctitle_spec, setrlimit_spec, times_spec, warmup_spec
+ 20  exception: uninitialized constant Process
+     _fork_spec, abort_spec, argv0_spec, clock_getres_spec, clock_gettime_spec, constants_spec, egid_spec, euid_spec, exit_spec, fork_spec, getrlimit_spec, gid_spec, last_status_spec, pid_spec, set_proctitle_spec, setrlimit_spec, sleep_spec, times_spec, waitall_spec, warmup_spec
+ 17  exception: wrong number of arguments (given 1, expected 2+)
+     begin_spec, case_compare_spec, end_spec, eql_spec, equal_value_spec, exclude_end_spec, first_spec, frozen_spec, hash_spec, include_spec, inspect_spec, last_spec, member_spec, minmax_spec, range_spec, size_spec, to_s_spec
  17  exception: undefined method 'to_enum' for <EnumeratorLazySpecs__YieldsMixed>
      chunk_spec, collect_concat_spec, collect_spec, drop_spec, drop_while_spec, filter_spec, find_all_spec, flat_map_spec, force_spec, grep_spec, grep_v_spec, map_spec, reject_spec, select_spec, take_spec, take_while_spec, zip_spec
+ 17  exception: undefined method 'stat' for File
+     atime_spec, blksize_spec, blocks_spec, ctime_spec, dev_major_spec, dev_minor_spec, dev_spec, ino_spec, inspect_spec, mtime_spec, owned_spec, pipe_spec, rdev_major_spec, rdev_minor_spec, rdev_spec, stat_spec, uid_spec
+ 16  segfault @ 1 passed, 1 failed, 0 skipped (2 total)
+     count_spec, denominator_spec, each_spec, eql_spec, has_value_spec, hash_spec, hash_spec, initialize_spec, minus_spec, not_spec, plus_spec, rational_spec, to_i_spec, to_i_spec, to_s_spec, value_spec
  16  exception: NameError: uninitialized constant ObjectSpace::WeakMap
      delete_spec, each_key_spec, each_pair_spec, each_spec, each_value_spec, element_reference_spec, element_set_spec, include_spec, inspect_spec, key_spec, keys_spec, length_spec, member_spec, size_spec, values_spec, weakmap_spec
- 16  exception: wrong number of arguments (given 1, expected 2+)
-     begin_spec, case_compare_spec, end_spec, eql_spec, equal_value_spec, exclude_end_spec, first_spec, frozen_spec, hash_spec, include_spec, inspect_spec, last_spec, member_spec, minmax_spec, range_spec, to_s_spec
  15  exception: undefined method 'argf' for <Object>
      binmode_spec, close_spec, closed_spec, eof_spec, file_spec, filename_spec, fileno_spec, lineno_spec, path_spec, pos_spec, set_encoding_spec, tell_spec, to_i_spec, to_io_spec, to_s_spec
- 15  segfault @ 0 passed, 1 failed, 0 skipped (1 total)
-     allocate_spec, allocate_spec, allocate_spec, comment_spec, dup_spec, dup_spec, fcntl_spec, hash_spec, imag_spec, numerator_spec, percent_spec, sortedset_spec, to_f_spec, to_s_spec, trap_spec
- 15  exception: undefined method 'stat' for File
-     atime_spec, blksize_spec, blocks_spec, ctime_spec, dev_major_spec, dev_minor_spec, dev_spec, ino_spec, inspect_spec, mtime_spec, rdev_major_spec, rdev_minor_spec, rdev_spec, stat_spec, uid_spec
- 14  segfault @ 0 passed, 2 failed, 0 skipped (2 total)
-     exponent_spec, falseclass_spec, hash_spec, isatty_spec, minus_spec, new_spec, nilclass_spec, plus_spec, prepended_spec, to_f_spec, to_i_spec, to_int_spec, trueclass_spec, tty_spec
- 13  segfault @ 1 passed, 1 failed, 0 skipped (2 total)
-     block_pass_spec, eql_spec, has_value_spec, hash_spec, initialize_spec, minus_spec, not_spec, plus_spec, rational_spec, to_i_spec, to_i_spec, to_s_spec, value_spec
+ 15  segfault @ 0 passed, 2 failed, 0 skipped (2 total)
+     exponent_spec, falseclass_spec, hash_spec, isatty_spec, minus_spec, new_spec, nilclass_spec, plus_spec, prepended_spec, stress_spec, to_f_spec, to_i_spec, to_int_spec, trueclass_spec, tty_spec
+ 14  exception: undefined method 'do' for <Object>
+     Complex_spec, Rational_spec, chilled_string_spec, close_on_exec_spec, exponent_spec, flush_spec, inspect_spec, integer_spec, ioctl_spec, performance_warning_spec, pread_spec, pwrite_spec, to_s_spec, to_s_spec
  13  exception: undefined method 'obj' for Object
      byterindex_spec, case_compare_spec, case_equality_spec, fail_spec, include_spec, member_spec, modulo_spec, printf_spec, result_spec, rindex_spec, singleton_method_added_spec, singleton_method_spec, sprintf_spec
- 13  exception: undefined method 'do' for <Object>
-     Rational_spec, chilled_string_spec, close_on_exec_spec, exponent_spec, flush_spec, inspect_spec, integer_spec, ioctl_spec, performance_warning_spec, pread_spec, pwrite_spec, to_s_spec, to_s_spec
  13  exception: uninitialized constant Data
      constants_spec, deconstruct_keys_spec, deconstruct_spec, define_spec, eql_spec, equal_value_spec, hash_spec, initialize_spec, inspect_spec, members_spec, to_h_spec, to_s_spec, with_spec
  13  exception: undefined method 'new_io' for <Object>
      binmode_spec, close_spec, printf_spec, printf_spec, putc_spec, putc_spec, puts_spec, puts_spec, reopen_spec, set_encoding_by_bom_spec, set_encoding_spec, try_convert_spec, ungetbyte_spec
  10  exception: wrong number of arguments (given 1, expected 0)
      comment_spec, comparison_spec, count_spec, default_spec, delegation_spec, each_slice_spec, empty_spec, new_spec, size_spec, to_i_spec
- 10  exception: undefined method 'mock_numeric' for <Object>
-     ceil_spec, denominator_spec, fdiv_spec, finite_spec, infinite_spec, modulo_spec, to_f_spec, to_i_spec, to_r_spec, uminus_spec
- 10  exception: undefined method 'step' for 1
-     begin_spec, each_spec, end_spec, eq_spec, exclude_end_spec, first_spec, hash_spec, inspect_spec, last_spec, size_spec
- 10  exception: uninitialized constant Random
-     bytes_spec, default_spec, equal_value_spec, new_seed_spec, new_spec, rand_spec, random_number_spec, seed_spec, srand_spec, urandom_spec
+ 10  exception: undefined method 'pair' for <Object>
+     clone_spec, deconstruct_keys_spec, element_set_spec, encode_spec, merge_spec, pattern_matching_spec, stat_spec, store_spec, to_proc_spec, update_spec
   9  segfault @ Failed to open '/home/vidarh/Desktop/Projects/Compiler/fixtu
      each_line_spec, each_spec, gets_spec, readline_spec, readlines_spec, rewind_spec, seek_spec, skip_spec, to_a_spec
-  9  exception: uninitialized constant Mutex
-     broadcast_spec, lock_spec, locked_spec, owned_spec, signal_spec, sleep_spec, synchronize_spec, try_lock_spec, unlock_spec
-  9  exception: uninitialized constant GC
-     count_spec, disable_spec, enable_spec, garbage_collect_spec, measure_total_time_spec, start_spec, stat_spec, stress_spec, total_time_spec
-  9  exception: undefined method 'pair' for <Object>
-     clone_spec, deconstruct_keys_spec, element_set_spec, encode_spec, merge_spec, pattern_matching_spec, store_spec, to_proc_spec, update_spec
   9  exception: undefined method 'a' for ConstantSpecs
      const_defined_spec, const_get_spec, const_missing_spec, const_set_spec, const_source_location_spec, constants_spec, constants_spec, optional_assignments_spec, remove_const_spec
-  8  exception: wrong number of arguments (given 0, expected 2)
-     collect_spec, compact_spec, constructor_spec, dup_spec, dup_spec, flatten_spec, join_spec, map_spec
   8  exception: wrong number of arguments (given 2, expected 1)
      basename_spec, dirname_spec, element_reference_spec, element_reference_spec, merge_spec, respond_to_missing_spec, respond_to_spec, unpack_spec
   8  exception: undefined method 'chmod' for File
      executable_real_spec, executable_real_spec, executable_spec, executable_spec, mode_spec, new_spec, world_readable_spec, world_readable_spec
+  8  segfault @ 3 passed, 2 failed, 0 skipped (5 total)
+     case_compare_spec, eql_spec, equal_value_spec, equal_value_spec, gt_spec, gte_spec, rationalize_spec, seed_spec
+  8  exception: undefined method 'join' for <Thread>
+     element_reference_spec, element_set_spec, exit_spec, fetch_spec, join_spec, key_spec, keys_spec, main_spec
   7  exception: undefined method 'read' for File
      each_byte_spec, each_char_spec, each_codepoint_spec, getc_spec, read_spec, readchar_spec, readpartial_spec
+  7  exception: wrong number of arguments (given 0, expected 2)
+     collect_spec, compact_spec, constructor_spec, dup_spec, flatten_spec, join_spec, map_spec
   7  segfault @ 1 passed, 2 failed, 0 skipped (3 total)
      allocate_spec, float_spec, gt_spec, gte_spec, hash_spec, lte_spec, symbol_spec
   7  exception: undefined method 'lazy' for 0..268435456
@@ -85,26 +75,20 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      clear_spec, each_key_spec, each_pair_spec, each_spec, each_value_spec, length_spec, size_spec
   7  exception: wrong number of arguments (given 0, expected 1)
      case_compare_spec, equal_value_spec, new_spec, path_spec, safe_spec, singleton_class_spec, system_call_error_spec
-  7  segfault @ 3 passed, 2 failed, 0 skipped (5 total)
-     case_compare_spec, eql_spec, equal_value_spec, equal_value_spec, gt_spec, gte_spec, rationalize_spec
   7  exception: undefined method 'pipe' for IO
      inspect_spec, pipe_spec, read_nonblock_spec, readpartial_spec, select_spec, select_spec, write_nonblock_spec
   7  exception: NameError: uninitialized constant ObjectSpace::WeakKeyMap
      clear_spec, delete_spec, element_reference_spec, element_set_spec, getkey_spec, inspect_spec, key_spec
   7  exception: undefined method 'caller_locations' for ThreadBacktraceLocationSpecs
      absolute_path_spec, base_label_spec, inspect_spec, label_spec, lineno_spec, path_spec, to_s_spec
-  7  exception: undefined method 'join' for <Thread>
-     element_reference_spec, element_set_spec, fetch_spec, join_spec, key_spec, keys_spec, main_spec
   6  exception: uninitialized constant PI
      angle_spec, arg_spec, constants_spec, cos_spec, phase_spec, sin_spec
-  6  exception: uninitialized constant NotImplementedError
-     auto_compact_spec, birthtime_spec, daemon_spec, fchdir_spec, fileno_spec, waitall_spec
   6  exception: uninitialized constant Product
      each_spec, initialize_copy_spec, initialize_spec, inspect_spec, rewind_spec, size_spec
-  6  exception: uninitialized constant SystemExit
-     exit_spec, initialize_spec, status_spec, success_spec, success_spec, system_exit_spec
   6  exception: undefined method 'callm' for <Object>
      backtick_spec, constants_spec, execution_spec, if_spec, index_spec, inspect_spec
+  6  exception: wrong number of arguments (given 0, expected 1+)
+     chomp_spec, chop_spec, compile_spec, dup_spec, element_reference_spec, new_spec
   6  exception: undefined method 'public' for <Object>
      define_method_spec, include_spec, private_spec, public_spec, ruby2_keywords_spec, using_spec
   6  exception: undefined method 'unbind' for <Method>
@@ -113,42 +97,56 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      case_compare_spec, delete_spec, equal_value_spec, find_index_spec, index_spec
   5  exception: undefined method 'o' for Object
      include_spec, interpolation_spec, modifiers_spec, next_values_spec, peek_values_spec
+  5  exception: undefined method 'call' for nil
+     entries_spec, find_spec, new_spec, sort_by_spec, to_a_spec
   5  exception: uninitialized constant Chain
      each_spec, initialize_spec, inspect_spec, rewind_spec, size_spec
   5  exception: undefined method 'delete' for ENV
      delete_spec, fetch_spec, include_spec, inspect_spec, replace_spec
-  5  exception: NameError: uninitialized constant GC::Profiler
+  5  exception: undefined method 'value' for <Thread>
+     alive_spec, inspect_spec, status_spec, try_lock_spec, value_spec
+  5  exception: uninitialized constant Profiler
      disable_spec, enable_spec, enabled_spec, result_spec, total_time_spec
   5  exception: undefined method 'false' for ProcessSpecs
      kill_spec, popen_spec, spawn_spec, wait_spec, wait_spec
-  5  exception: wrong number of arguments (given 0, expected 1+)
-     chomp_spec, chop_spec, compile_spec, element_reference_spec, new_spec
+  5  segfault @ 0 passed, 1 failed, 1 skipped (2 total)
+     readline_spec, readlines_spec, set_trace_func_spec, syscall_spec, untrace_var_spec
+  5  exception: undefined method 'pass' for Thread
+     locked_spec, owned_spec, pass_spec, synchronize_spec, unlock_spec
   5  exception: undefined method 'false' for <Object>
      defined_spec, flatten_spec, freeze_spec, proper_subset_spec, subset_spec
   4  exception: undefined method '+' for :c
      all_spec, drop_while_spec, none_spec, one_spec
+  4  exception: wrong number of arguments (given 1, expected 2)
+     denominator_spec, insert_spec, numerator_spec, to_c_spec
   4  exception: undefined method '<=>' for nil
      max_spec, max_spec, min_spec, min_spec
   4  exception: Integer can't be coerced
      exponent_spec, multiply_spec, pow_spec, precedence_spec
   4  exception: undefined method 'arity' for <Method>
      __send___spec, extend_spec, send_spec, warn_spec
+  4  segfault @ 0 passed, 4 failed, 0 skipped (4 total)
+     empty_checks_spec, equal_value_spec, inspect_spec, used_refinements_spec
+  4  exception: uninitialized constant ConditionVariable
+     broadcast_spec, marshal_dump_spec, signal_spec, wait_spec
   4  exception: undefined method 'list' for Encoding
      inspect_spec, list_spec, name_spec, to_s_spec
+  4  exception: undefined method 'step' for 1..10
+     eq_spec, hash_spec, inspect_spec, step_spec
   4  exception: uninitialized constant Yielder
      append_spec, initialize_spec, to_proc_spec, yield_spec
   4  segfault @ 0 passed, 3 failed, 0 skipped (3 total)
      clone_spec, initialize_spec, multiply_spec, to_f_spec
   4  exception: undefined method 'resume' for <Fiber>
      blocking_spec, new_spec, resume_spec, yield_spec
-  4  exception: undefined method 'value' for <Thread>
-     alive_spec, inspect_spec, status_spec, value_spec
   4  exception: undefined method '__get_raw' for true
      dup_spec, flock_spec, inspect_spec, reopen_spec
   4  segfault after: FAILED: Expected ArgumentError to be raised but nothing was 
      proc_spec, step_spec, writable_real_spec, writable_real_spec
   4  exception: undefined method 'new_fd' for <Object>
      for_fd_spec, initialize_spec, new_spec, open_spec
+  4  exception: undefined method 'lambda?' for <Proc>
+     lambda_spec, lambda_spec, proc_spec, to_proc_spec
   4  exception: undefined method '[]' for nil
      element_reference_spec, grouping_spec, subexpression_call_spec, to_a_spec
   4  exception: undefined method 'match' for "haystack"
@@ -167,14 +165,16 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      delete_at_spec, encoding_spec, name_spec
   3  segfault @ 8 passed, 1 failed, 0 skipped (9 total)
      eql_spec, equal_value_spec, options_spec
+  3  segfault @ 4 passed, 2 failed, 0 skipped (6 total)
+     case_compare_spec, eql_spec, inspect_spec
+  3  exception: undefined method 'polar' for Complex
+     polar_spec, rect_spec, rectangular_spec
   3  exception: undefined method 'mkdir_p' for <Object>
      directory_spec, directory_spec, empty_spec
   3  exception: uninitialized constant ASCII
      default_external_spec, default_internal_spec, replicate_spec
   3  exception: undefined method '__dir__' for <Object>
      __dir___spec, equal_value_spec, test_spec
-  3  exception: uninitialized constant SignalException
-     signal_exception_spec, signm_spec, signo_spec
   3  segfault @ 2 passed, 1 failed, 0 skipped (3 total)
      eql_spec, replace_spec, standard_error_spec
   3  exception: undefined method 'lines' for ""
@@ -197,14 +197,14 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      output_spec, spawn_spec, system_spec
   3  exception: undefined method 'open' for <Object>
      open_spec, pos_spec, tell_spec
-  3  exception: undefined method 'lambda?' for <Proc>
-     lambda_spec, lambda_spec, proc_spec
   3  exception: undefined method 'match' for nil
      escapes_spec, match_spec, repetition_spec
   3  exception: undefined method '[]=' for Object
      attr_accessor_spec, attr_reader_spec, attr_writer_spec
   3  exception: nil can't be coerced into Integer
      imag_spec, imaginary_spec, real_spec
+  3  exception: undefined method 'to_sym' for nil
+     match_spec, match_spec, modulo_spec
   3  exception: undefined method 'evaluate' for <Object>
      arity_spec, arity_spec, method_spec
   3  segfault @ for a child that exited normally
@@ -237,8 +237,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      assoc_spec, lt_spec
   2  exception: undefined method 'i' for <Object>
      finite_spec, infinite_spec
-  2  exception: uninitialized constant ConditionVariable
-     marshal_dump_spec, wait_spec
+  2  exception: undefined method 'methods' for <Complex>
+     negative_spec, positive_spec
   2  exception: undefined method 'aliases' for Encoding
      aliases_spec, find_spec
   2  exception: undefined method 'name_list' for Encoding
@@ -249,6 +249,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      comparison_spec, each_cons_spec
   2  exception: undefined method 'to_set' for [1, 2, 3]
      to_set_spec, to_set_spec
+  2  exception: undefined method 'first' for <Enumerator>
+     first_spec, first_spec
   2  exception: undefined method 'to_enum' for [1, 2, 3, 4]
      each_with_index_spec, with_index_spec
   2  exception: undefined method 'to_enum' for [:a, :b]
@@ -269,16 +271,22 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      case_compare_spec, errno_spec
   2  segfault @ 0 passed, 5 failed, 0 skipped (5 total)
      comment_spec, inspect_spec
-  2  exception: uninitialized constant KeyError
-     fetch_spec, key_error_spec
+  2  exception: uninitialized constant Signal
+     signal_exception_spec, signame_spec
+  2  exception: undefined method 'status' for <SystemExit>
+     initialize_spec, system_exit_spec
   2  exception: undefined method 'alive?' for <Fiber>
      alive_spec, kill_spec
+  2  exception: system() not implemented - backtick/command execution not supported
+     expand_path_spec, sticky_spec
   2  exception: uninitialized constant Constants
      file_spec, io_spec
   2  exception: NameError: uninitialized constant Errno::ENOENT
      exec_spec, ftype_spec
   2  exception: undefined method 'Float' for <Object>
      ceil_spec, floor_spec
+  2  exception: undefined method 'fdiv' for 0.0
+     fdiv_spec, fdiv_spec
   2  exception: undefined method '>' for nil
      gt_spec, include_spec
   2  exception: undefined method 'to_f' for "0.21611564636388508"
@@ -319,23 +327,17 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      eql_spec, equal_value_spec
   2  exception: undefined method 'each_char' for "/home/vidarh/Desktop/Projects/Compiler/rubyspec_helper.rb"
      inspect_spec, to_s_spec
-  2  segfault @ 0 passed, 4 failed, 0 skipped (4 total)
-     empty_checks_spec, equal_value_spec
-  2  segfault @ 4 passed, 2 failed, 0 skipped (6 total)
-     case_compare_spec, inspect_spec
+  2  exception: undefined method 'map' for <IntegerEnumerator>
+     new_seed_spec, srand_spec
   2  exception: undefined method 'each_char' for "\\*?{}.+^$[]()- "
      escape_spec, quote_spec
   2  segfault @ 6 passed, 2 failed, 0 skipped (8 total)
      fixed_encoding_spec, source_spec
-  2  exception: uninitialized constant IndexError
-     bytesplice_spec, last_match_spec
-  2  exception: undefined method 'to_sym' for nil
-     match_spec, match_spec
   2  segfault @ 2 passed, 3 failed, 1 skipped (6 total)
      named_captures_spec, names_spec
   2  segfault @ 2 passed, 2 failed, 0 skipped (4 total)
      intersection_spec, union_spec
-  2  exception: undefined method 'call' for :inspect
+  2  exception: undefined method 'subset?' for <SetSpecs__SetLike>
      proper_superset_spec, superset_spec
   2  exception: undefined method 'encode!' for "!"
      append_spec, concat_spec
@@ -365,7 +367,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      name_spec, original_name_spec
   2  exception: uninitialized constant Warning
      element_set_spec, warn_spec
-  1  segfault @ FAILED: Expected 0 but got -600126848
+  1  segfault @ FAILED: Expected 0 but got -511133456
      allocate_spec
   1  segfault @ with no block given (a default block of { |x| x } is implici
      any_spec
@@ -519,9 +521,9 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      not_equal_spec
   1  exception: undefined method 'binding' for BindingSpecs__LocationMethod
      source_location_spec
-  1  exception: undefined method 'constants' for pY
+  1  exception: undefined method 'constants' for '^
      allocate_spec
-  1  exception: undefined method 'attached_object' for Eigenclass_1102
+  1  exception: undefined method 'attached_object' for Eigenclass_1112
      attached_object_spec
   1  segfault @ Class#dup
      dup_spec
@@ -531,7 +533,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      initialize_spec
   1  exception: undefined method 'message' for Class
      new_spec
-  1  exception: undefined method 'superclass' for {:new=>6, :__send__=>7, :__get_symbol=>8, :__initialize=>9, :allocate=>10, :__new=>11, :name=>12, :!==>13, :superclass=>14, :define_method=>15, :attr_accessor=>16, :attr_reader=>17, :attr_writer=>18, :attr=>19, :prepend=>20, :class_eval=>21, :module_function=>22, :extend=>23, :include?=>24, :include=>25, :private=>26, :protected=>27, :public=>28, :puts=>29, :raise=>30, :fail=>31, :loop=>32, :exit=>33, :system=>34, :Array=>35, :__const_get=>36, :__const_get_on=>37, :__const_get_global=>38, :__const_set_global=>39, :require=>40, :require_relative=>41, :catch=>42, :throw=>43, :redo=>44, :fixture=>45, :proc=>46, :lambda=>47, :initialize=>48, :class=>49, :object_id=>50, :hash=>51, :eql?=>52, :====>53, :equal?=>54, :inspect=>55, :to_s=>56, :===>57, :!=>58, :nil?=>59, :freeze=>60, :frozen?=>61, :method_missing=>62, :respond_to?=>63, :is_a?=>64, :kind_of?=>65, :instance_of?=>66, :itself=>67, :tap=>68, :display=>69, :send=>70, :p=>71, :print=>72, :dup=>73, :const_defined?=>74, :eval=>75, :index=>76, :singleton_class=>77, :__set_raw=>78, :arity=>79, :to_proc=>80, :call=>81, :[]=>82, :i=>83, :numerator=>84, :denominator=>85, :to_i=>86, :to_f=>87, :%=>88, :__get_raw=>89, :zero?=>90, :>=>91, :>==>92, :<=>93, :<==>94, :__len=>95, :__ptr=>96, :__grow=>97, :__set=>98, :to_a=>99, :"&"=>100, :"|"=>101, :"^"=>102, :<<=>103, :>>=>104, :__true?=>105, :to_h=>106, :rationalize=>107, :-=>108, :exclude_end?=>109, :first=>110, :last=>111, :member?=>112, :each=>113, :to_enum=>114, :__copy_init=>115, :capacity=>116, :__get=>117, :find=>118, :reject=>119, :select=>120, :collect=>121, :sum=>122, :detect=>123, :each_with_index=>124, :+=>125, :__offset_to_pos=>126, :__range_get=>127, :[]==>128, :abbrev=>129, :slice=>130, :assoc=>131, :at=>132, :clear=>133, :collect!=>134, :compact=>135, :compact!=>136, :concat=>137, :dclone=>138, :delete=>139, :delete_at=>140, :delete_if=>141, :each_index=>142, :empty?=>143, :fetch=>144, :fill=>145, :max=>146, :min=>147, :any?=>148, :all?=>149, :none?=>150, :flatten=>151, :flatten!=>152, :replace=>153, :insert=>154, :join=>155, :length=>156, :map!=>157, :nitems=>158, :pack=>159, :pop=>160, :pretty_print=>161, :push=>162, :quote=>163, :rassoc=>164, :reject!=>165, :reverse=>166, :reverse!=>167, :reverse_each=>168, :rindex=>169, :shift=>170, :size=>171, :partition=>172, :sort_by=>173, :sort=>174, :sort!=>175, :to_ary=>176, :to_yaml=>177, :transpose=>178, :uniq=>179, :uniq!=>180, :unshift=>181, :values_at=>182, :yaml_initialize=>183, :zip=>184, :__copy_initialize=>185, :_hash=>186, :encoding=>187, :__copy_raw=>188, :chr=>189, :ord=>190, :each_byte=>191, :bytes=>192, :<=>=>193, :to_str=>194, :to_sym=>195, :slice!=>196, :upcase=>197, :downcase=>198, :start_with?=>199, :end_with?=>200, :count=>201, :+@=>202, :"-@"=>203, :*=>204, :gsub=>205, :split=>206, :__percent_I=>207, :lstrip=>208, :rstrip=>209, :strip=>210, :chomp=>211, :chomp!=>212, :force_encoding=>213, :"=~"=>214, :unpack=>215, :default=>216, :_data=>217, :_state=>218, :_alloc_data=>219, :not_deleted?=>220, :_bulkinsert=>221, :_grow=>222, :_find_slot=>223, :_find_nil_slot=>224, :_find_insertion_slot=>225, :capacity_too_low=>226, :keys=>227, :values=>228, :merge=>229, :pair=>230, :hash_splat=>231, :getc=>232, :file?=>233, :absolute_path?=>234, :path=>235, :open=>236, :exist?=>237, :readlines=>238, :basename=>239, :dirname=>240, :expand_path=>241, :pwd=>242, :between?=>243, :each_cons=>244, :each_slice=>245, :entries=>246, :find_all=>247, :inject=>248, :to_set=>249, :each_with_object=>250, :flat_map=>251, :__set_heap_data=>252, :__from_literal=>253, :__init_from_overflow_value=>254, :__is_nonzero_raw=>255, :__extract_limb=>256, :__heap_get_raw=>257, :__to_fixnum_if_possible=>258, :__subtract_fixnum_from_heap=>259, :__subtract_heap=>260, :__add_fixnum_to_heap=>261, :__add_heap=>262, :__add_heap_and_fixnum=>263, :__add_magnitudes_fixnum=>264, :__add_heap_and_heap=>265, :__add_magnitudes=>266, :__compare_magnitudes=>267, :__subtract_magnitudes=>268, :__subtract_with_borrow=>269, :__add_limbs_with_carry=>270, :__max_fixnum=>271, :__less_than=>272, :__ge_fixnum=>273, :__greater_than=>274, :__get_limb_or_zero=>275, :__normalize_limb=>276, :__limb_base_raw=>277, :__multiply_raw_full=>278, :__check_limb_overflow=>279, :__make_overflow_result=>280, :__multiply_limb_by_fixnum_with_carry=>281, :__multiply_heap_by_fixnum=>282, :__multiply_heap_by_heap=>283, :__check_limb_borrow=>284, :__multiply_heap_and_fixnum=>285, :__half_limb_base=>286, :__limb_base=>287, :__get_sign=>288, :__get_limbs=>289, :__cmp=>290, :__cmp_fixnum_fixnum=>291, :__cmp_fixnum_heap=>292, :__cmp_heap_fixnum=>293, :__cmp_heap_heap=>294, :__add_multi_limb=>295, :__divmod_limbs=>296, :__divmod_by_fixnum=>297, :__make_divmod_array=>298, :__divmod_heap_single_limb=>299, :__divmod_heap_multi_limb=>300, :__divmod_with_carry=>301, :__is_negative=>302, :__negate=>303, :__negate_heap=>304, :__to_s_multi=>305, :__modulo_via_division=>306, :modulo=>307, :remainder=>308, :__multiply_fixnum_overflow=>309, :__multiply_fixnum_by_heap=>310, :__multiply_heap=>311, :/=>312, :fdiv=>313, :__divide_fixnum_by_heap=>314, :__divide_heap=>315, :__divide_heap_by_fixnum=>316, :__divide_magnitude_by_fixnum=>317, :__divide_heap_by_heap=>318, :__divide_magnitudes=>319, :__shift_limbs_left_one_bit=>320, :__add_two_limbs_with_overflow=>321, :__shift_limb_with_carry=>322, :__subtract_magnitudes_raw=>323, :abs=>324, :__abs_heap=>325, :__check_bitwise_float=>326, :__bitand_fixnum_fixnum=>327, :__bitand_limbs=>328, :__bitand_fixnum_heap=>329, :__bitand_heap_fixnum=>330, :__magnitude_to_twos_complement=>331, :__invert_limb=>332, :__limb_max_value=>333, :__add_with_carry=>334, :__limb_base_minus_one=>335, :__subtract_one_magnitude=>336, :__add_one_magnitude=>337, :__make_heap_or_fixnum=>338, :__bitand_heap_heap=>339, :__min_fixnum=>340, :__extend_limbs_with_zeros=>341, :__trim_leading_zeros=>342, :__bitor_fixnum_fixnum=>343, :__bitor_limbs=>344, :__bitor_fixnum_heap=>345, :__bitor_heap_fixnum=>346, :__bitor_heap_heap=>347, :__bitxor_fixnum_fixnum=>348, :__bitxor_limbs=>349, :__bitxor_fixnum_heap=>350, :__bitxor_heap_fixnum=>351, :__bitxor_heap_heap=>352, :"~"=>353, :__left_shift_fixnum=>354, :__left_shift_heap=>355, :__shift_limb_with_carry_split=>356, :__right_shift_fixnum=>357, :__right_shift_heap=>358, :__shift_limb_right_with_borrow=>359, :infinite?=>360, :integer?=>361, :even?=>362, :odd?=>363, :positive?=>364, :negative?=>365, :succ=>366, :next=>367, :pred=>368, :__check_comparable=>369, :to_r=>370, :sqrt=>371, :try_convert=>372, :__is_heap_integer?=>373, :div=>374, :divmod=>375, :to_int=>376, :**=>377, :pow=>378, :allbits?=>379, :anybits?=>380, :nobits?=>381, :bit_length=>382, :__bit_length_fixnum=>383, :__bit_length_heap=>384, :ceil=>385, :floor=>386, :truncate=>387, :round=>388, :magnitude=>389, :gcd=>390, :lcm=>391, :gcdlcm=>392, :ceildiv=>393, :digits=>394, :mul=>395, :times=>396, :downto=>397, :upto=>398, :coerce=>399, :coerce_to_integer=>400, :intern=>401, :method_to_voff=>402, :__send_for_obj__=>403, :has_key?=>404, :has_value?=>405, :nan?=>406, :finite?=>407, :save_stack_state=>408, :saved_ebp=>409, :saved_esp=>410, :handler_addr=>411, :rescue_classes=>412, :rescue_classes==>413, :next==>414, :push_handler=>415, :pop_handler=>416, :current_handler=>417, :current_exception=>418, :message=>419, :source=>420, :parse_options=>421, :options=>422, :match=>423, :match?=>424, :match_internal=>425, :match_at=>426, :match_from=>427, :match_quantified=>428, :match_atom=>429, :char_digit?=>430, :char_word?=>431, :char_space?=>432, :__posix?=>433, :escape_forward_slashes=>434, :option_flags_string=>435, :negative_flags_string=>436, :casefold?=>437, :fixed_encoding?=>438, :names=>439, :named_captures=>440, :escape=>441, :compile=>442, :union=>443, :last_match=>444, :begin=>445, :end=>446, :captures=>447, :pre_match=>448, :post_match=>449, :string=>450, :regexp=>451, :rewind=>452, :add?=>453, :subset?=>454, :superset?=>455, :proper_subset?=>456, :proper_superset?=>457, :intersect?=>458, :disjoint?=>459, :delete?=>460, :imag=>461, :real=>462, :to_hash=>463, :rehash=>464, :owner=>465, :receiver=>466, :method=>467, :default_internal=>468, :default_internal==>469, :default_external=>470, :default_external==>471, :local_variables=>472, :nesting=>473, :record=>474, :recorded=>475, :desc==>476, :desc=>477, :should_receive=>478, :should_not_receive=>479, :any_number_of_times=>480, :exactly=>481, :at_least=>482, :at_most=>483, :and_return=>484, :and_raise=>485, :and_yield=>486, :with=>487, :stub!=>488, :expected=>489, :failure_message=>490, :check_exception_type=>491, :should=>492, :should_not=>493, :once=>494, :twice=>495, :inherited=>496, :__assert_fixnum=>497, :Integer=>498, :Complex=>499, :Rational=>500, :__ENCODING__=>501, :describe=>502, :quarantine!=>503, :it=>504, :mock=>505, :equal=>506, :eql=>507, :be_true=>508, :be_false=>509, :be_nil=>510, :raise_error=>511, :be_an_instance_of=>512, :be_kind_of=>513, :be_close=>514, :complain=>515, :ruby_version_is=>516, :guard=>517, :guard_not=>518, :little_endian=>519, :big_endian=>520, :as_user=>521, :as_superuser=>522, :tmp=>523, :touch=>524, :mock_to_path=>525, :platform_is=>526, :platform_is_not=>527, :ruby_bug=>528, :conflicts_with=>529, :not_supported_on=>530, :skip=>531, :suppress_warning=>532, :context=>533, :let=>534, :clear_let_cache=>535, :it_behaves_like=>536, :it_should_behave_like=>537, :before=>538, :after=>539, :bignum_value=>540, :infinity_value=>541, :nan_value=>542, :fixnum_max=>543, :fixnum_min=>544, :c_long_size=>545, :min_long=>546, :max_long=>547, :mock_int=>548, :ruby_exe=>549, :have_private_instance_method=>550, :have_public_instance_method=>551, :print_spec_results=>552, :run_specs=>553, :map=>554, :key?=>555, :id2name=>556, :value?=>557, :add=>558, :intersection=>559}
+  1  exception: undefined method 'superclass' for {:new=>6, :__send__=>7, :__get_symbol=>8, :__initialize=>9, :allocate=>10, :__new=>11, :name=>12, :!==>13, :superclass=>14, :define_method=>15, :attr_accessor=>16, :attr_reader=>17, :attr_writer=>18, :attr=>19, :prepend=>20, :class_eval=>21, :module_function=>22, :extend=>23, :include?=>24, :include=>25, :private=>26, :protected=>27, :public=>28, :puts=>29, :raise=>30, :fail=>31, :loop=>32, :exit=>33, :system=>34, :Array=>35, :__const_get=>36, :__const_get_on=>37, :__const_get_global=>38, :__const_set_global=>39, :require=>40, :require_relative=>41, :catch=>42, :throw=>43, :redo=>44, :fixture=>45, :proc=>46, :lambda=>47, :initialize=>48, :class=>49, :object_id=>50, :hash=>51, :eql?=>52, :====>53, :equal?=>54, :inspect=>55, :to_s=>56, :===>57, :!=>58, :nil?=>59, :freeze=>60, :frozen?=>61, :method_missing=>62, :respond_to?=>63, :is_a?=>64, :kind_of?=>65, :instance_of?=>66, :itself=>67, :tap=>68, :display=>69, :send=>70, :p=>71, :print=>72, :dup=>73, :const_defined?=>74, :eval=>75, :index=>76, :singleton_class=>77, :__set_raw=>78, :arity=>79, :to_proc=>80, :call=>81, :[]=>82, :i=>83, :numerator=>84, :denominator=>85, :to_i=>86, :to_f=>87, :%=>88, :__get_raw=>89, :zero?=>90, :>=>91, :>==>92, :<=>93, :<==>94, :__len=>95, :__ptr=>96, :__grow=>97, :__set=>98, :to_a=>99, :"&"=>100, :"|"=>101, :"^"=>102, :<<=>103, :>>=>104, :__true?=>105, :to_h=>106, :rationalize=>107, :-=>108, :exclude_end?=>109, :first=>110, :last=>111, :member?=>112, :each=>113, :to_enum=>114, :__copy_init=>115, :capacity=>116, :__get=>117, :find=>118, :reject=>119, :select=>120, :collect=>121, :sum=>122, :detect=>123, :each_with_index=>124, :+=>125, :__offset_to_pos=>126, :__range_get=>127, :[]==>128, :abbrev=>129, :slice=>130, :assoc=>131, :at=>132, :clear=>133, :collect!=>134, :compact=>135, :compact!=>136, :concat=>137, :dclone=>138, :delete=>139, :delete_at=>140, :delete_if=>141, :each_index=>142, :empty?=>143, :fetch=>144, :fill=>145, :max=>146, :min=>147, :any?=>148, :all?=>149, :none?=>150, :flatten=>151, :flatten!=>152, :replace=>153, :insert=>154, :join=>155, :length=>156, :map!=>157, :nitems=>158, :pack=>159, :pop=>160, :pretty_print=>161, :push=>162, :quote=>163, :rassoc=>164, :reject!=>165, :reverse=>166, :reverse!=>167, :reverse_each=>168, :rindex=>169, :shift=>170, :size=>171, :partition=>172, :sort_by=>173, :sort=>174, :sort!=>175, :to_ary=>176, :to_yaml=>177, :transpose=>178, :uniq=>179, :uniq!=>180, :unshift=>181, :values_at=>182, :yaml_initialize=>183, :zip=>184, :__copy_initialize=>185, :_hash=>186, :encoding=>187, :__copy_raw=>188, :chr=>189, :ord=>190, :each_byte=>191, :bytes=>192, :<=>=>193, :to_str=>194, :to_sym=>195, :slice!=>196, :upcase=>197, :downcase=>198, :start_with?=>199, :end_with?=>200, :count=>201, :+@=>202, :"-@"=>203, :*=>204, :gsub=>205, :split=>206, :__percent_I=>207, :lstrip=>208, :rstrip=>209, :strip=>210, :chomp=>211, :chomp!=>212, :force_encoding=>213, :"=~"=>214, :unpack=>215, :default=>216, :_data=>217, :_state=>218, :_alloc_data=>219, :not_deleted?=>220, :_bulkinsert=>221, :_grow=>222, :_find_slot=>223, :_find_nil_slot=>224, :_find_insertion_slot=>225, :capacity_too_low=>226, :keys=>227, :values=>228, :merge=>229, :pair=>230, :hash_splat=>231, :getc=>232, :file?=>233, :absolute_path?=>234, :path=>235, :open=>236, :exist?=>237, :readlines=>238, :basename=>239, :dirname=>240, :expand_path=>241, :pwd=>242, :between?=>243, :each_cons=>244, :each_slice=>245, :entries=>246, :find_all=>247, :inject=>248, :to_set=>249, :each_with_object=>250, :flat_map=>251, :__set_heap_data=>252, :__from_literal=>253, :__init_from_overflow_value=>254, :__is_nonzero_raw=>255, :__extract_limb=>256, :__heap_get_raw=>257, :__to_fixnum_if_possible=>258, :__subtract_fixnum_from_heap=>259, :__subtract_heap=>260, :__add_fixnum_to_heap=>261, :__add_heap=>262, :__add_heap_and_fixnum=>263, :__add_magnitudes_fixnum=>264, :__add_heap_and_heap=>265, :__add_magnitudes=>266, :__compare_magnitudes=>267, :__subtract_magnitudes=>268, :__subtract_with_borrow=>269, :__add_limbs_with_carry=>270, :__max_fixnum=>271, :__less_than=>272, :__ge_fixnum=>273, :__greater_than=>274, :__get_limb_or_zero=>275, :__normalize_limb=>276, :__limb_base_raw=>277, :__multiply_raw_full=>278, :__check_limb_overflow=>279, :__make_overflow_result=>280, :__multiply_limb_by_fixnum_with_carry=>281, :__multiply_heap_by_fixnum=>282, :__multiply_heap_by_heap=>283, :__check_limb_borrow=>284, :__multiply_heap_and_fixnum=>285, :__half_limb_base=>286, :__limb_base=>287, :__get_sign=>288, :__get_limbs=>289, :__cmp=>290, :__cmp_fixnum_fixnum=>291, :__cmp_fixnum_heap=>292, :__cmp_heap_fixnum=>293, :__cmp_heap_heap=>294, :__add_multi_limb=>295, :__divmod_limbs=>296, :__divmod_by_fixnum=>297, :__make_divmod_array=>298, :__divmod_heap_single_limb=>299, :__divmod_heap_multi_limb=>300, :__divmod_with_carry=>301, :__is_negative=>302, :__negate=>303, :__negate_heap=>304, :__to_s_multi=>305, :__modulo_via_division=>306, :modulo=>307, :remainder=>308, :__multiply_fixnum_overflow=>309, :__multiply_fixnum_by_heap=>310, :__multiply_heap=>311, :/=>312, :fdiv=>313, :__divide_fixnum_by_heap=>314, :__divide_heap=>315, :__divide_heap_by_fixnum=>316, :__divide_magnitude_by_fixnum=>317, :__divide_heap_by_heap=>318, :__divide_magnitudes=>319, :__shift_limbs_left_one_bit=>320, :__add_two_limbs_with_overflow=>321, :__shift_limb_with_carry=>322, :__subtract_magnitudes_raw=>323, :abs=>324, :__abs_heap=>325, :__check_bitwise_float=>326, :__bitand_fixnum_fixnum=>327, :__bitand_limbs=>328, :__bitand_fixnum_heap=>329, :__bitand_heap_fixnum=>330, :__magnitude_to_twos_complement=>331, :__invert_limb=>332, :__limb_max_value=>333, :__add_with_carry=>334, :__limb_base_minus_one=>335, :__subtract_one_magnitude=>336, :__add_one_magnitude=>337, :__make_heap_or_fixnum=>338, :__bitand_heap_heap=>339, :__min_fixnum=>340, :__extend_limbs_with_zeros=>341, :__trim_leading_zeros=>342, :__bitor_fixnum_fixnum=>343, :__bitor_limbs=>344, :__bitor_fixnum_heap=>345, :__bitor_heap_fixnum=>346, :__bitor_heap_heap=>347, :__bitxor_fixnum_fixnum=>348, :__bitxor_limbs=>349, :__bitxor_fixnum_heap=>350, :__bitxor_heap_fixnum=>351, :__bitxor_heap_heap=>352, :"~"=>353, :__left_shift_fixnum=>354, :__left_shift_heap=>355, :__shift_limb_with_carry_split=>356, :__right_shift_fixnum=>357, :__right_shift_heap=>358, :__shift_limb_right_with_borrow=>359, :infinite?=>360, :integer?=>361, :even?=>362, :odd?=>363, :positive?=>364, :negative?=>365, :succ=>366, :next=>367, :pred=>368, :__check_comparable=>369, :to_r=>370, :sqrt=>371, :try_convert=>372, :__is_heap_integer?=>373, :div=>374, :divmod=>375, :to_int=>376, :**=>377, :pow=>378, :allbits?=>379, :anybits?=>380, :nobits?=>381, :bit_length=>382, :__bit_length_fixnum=>383, :__bit_length_heap=>384, :ceil=>385, :floor=>386, :truncate=>387, :round=>388, :magnitude=>389, :gcd=>390, :lcm=>391, :gcdlcm=>392, :ceildiv=>393, :digits=>394, :mul=>395, :times=>396, :downto=>397, :upto=>398, :step=>399, :coerce=>400, :coerce_to_integer=>401, :intern=>402, :method_to_voff=>403, :__send_for_obj__=>404, :has_key?=>405, :has_value?=>406, :nan?=>407, :finite?=>408, :save_stack_state=>409, :saved_ebp=>410, :saved_esp=>411, :handler_addr=>412, :rescue_classes=>413, :rescue_classes==>414, :next==>415, :push_handler=>416, :pop_handler=>417, :current_handler=>418, :current_exception=>419, :message=>420, :source=>421, :parse_options=>422, :options=>423, :match=>424, :match?=>425, :match_internal=>426, :match_at=>427, :match_from=>428, :match_quantified=>429, :match_atom=>430, :char_digit?=>431, :char_word?=>432, :char_space?=>433, :__posix?=>434, :escape_forward_slashes=>435, :option_flags_string=>436, :negative_flags_string=>437, :casefold?=>438, :fixed_encoding?=>439, :names=>440, :named_captures=>441, :escape=>442, :compile=>443, :union=>444, :last_match=>445, :begin=>446, :end=>447, :captures=>448, :pre_match=>449, :post_match=>450, :string=>451, :regexp=>452, :rewind=>453, :add?=>454, :subset?=>455, :superset?=>456, :proper_subset?=>457, :proper_superset?=>458, :intersect?=>459, :disjoint?=>460, :delete?=>461, :start=>462, :enable=>463, :disable=>464, :stat=>465, :stress=>466, :stress==>467, :measure_total_time=>468, :measure_total_time==>469, :total_time=>470, :auto_compact=>471, :auto_compact==>472, :seed=>473, :_next=>474, :rand=>475, :srand=>476, :new_seed=>477, :urandom=>478, :imag=>479, :real=>480, :to_hash=>481, :rehash=>482, :owner=>483, :receiver=>484, :method=>485, :default_internal=>486, :default_internal==>487, :default_external=>488, :default_external==>489, :local_variables=>490, :lock=>491, :unlock=>492, :locked?=>493, :try_lock=>494, :owned?=>495, :synchronize=>496, :sleep=>497, :nesting=>498, :record=>499, :recorded=>500, :desc==>501, :desc=>502, :should_receive=>503, :should_not_receive=>504, :any_number_of_times=>505, :exactly=>506, :at_least=>507, :at_most=>508, :and_return=>509, :and_raise=>510, :and_yield=>511, :with=>512, :stub!=>513, :expected=>514, :failure_message=>515, :check_exception_type=>516, :should=>517, :should_not=>518, :once=>519, :twice=>520, :inherited=>521, :__assert_fixnum=>522, :Integer=>523, :Complex=>524, :Rational=>525, :__ENCODING__=>526, :describe=>527, :quarantine!=>528, :it=>529, :mock=>530, :equal=>531, :eql=>532, :be_true=>533, :be_false=>534, :be_nil=>535, :raise_error=>536, :be_an_instance_of=>537, :be_kind_of=>538, :be_close=>539, :complain=>540, :ruby_version_is=>541, :guard=>542, :guard_not=>543, :little_endian=>544, :big_endian=>545, :as_user=>546, :as_superuser=>547, :tmp=>548, :touch=>549, :mock_to_path=>550, :mock_numeric=>551, :platform_is=>552, :platform_is_not=>553, :ruby_bug=>554, :conflicts_with=>555, :not_supported_on=>556, :skip=>557, :suppress_warning=>558, :context=>559, :let=>560, :clear_let_cache=>561, :it_behaves_like=>562, :it_should_behave_like=>563, :before=>564, :after=>565, :bignum_value=>566, :infinity_value=>567, :nan_value=>568, :fixnum_max=>569, :fixnum_min=>570, :c_long_size=>571, :min_long=>572, :max_long=>573, :mock_int=>574, :ruby_exe=>575, :have_private_instance_method=>576, :have_public_instance_method=>577, :print_spec_results=>578, :run_specs=>579, :map=>580, :key?=>581, :id2name=>582, :value?=>583, :add=>584, :intersection=>585}
      superclass_spec
   1  exception: undefined method 'clamp' for <ComparableSpecs__Weird>
      clamp_spec
@@ -541,6 +543,10 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      abs2_spec
   1  exception: undefined method 'abs' for <Complex>
      abs_spec
+  1  exception: undefined method 'coerce' for <Complex>
+     coerce_spec
+  1  exception: undefined method '<=>' for <Complex>
+     comparison_spec
   1  exception: undefined method 'conj' for <Complex>
      conj_spec
   1  exception: undefined method 'conjugate' for <Complex>
@@ -551,10 +557,16 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      denominator_spec
   1  exception: undefined method '/' for <Complex>
      divide_spec
+  1  segfault @ 1 passed, 5 failed, 0 skipped (6 total)
+     equal_value_spec
   1  exception: undefined method '**' for <Complex>
      exponent_spec
+  1  exception: undefined method 'fdiv' for <Complex>
+     fdiv_spec
   1  exception: undefined method 'imaginary' for <Complex>
      imaginary_spec
+  1  exception: undefined method 'integer?' for <Complex>
+     integer_spec
   1  exception: undefined method 'magnitude' for <Complex>
      magnitude_spec
   1  exception: undefined method 'marshal_dump' for <Complex>
@@ -563,10 +575,10 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      minus_spec
   1  exception: undefined method '*' for <Complex>
      multiply_spec
+  1  exception: undefined method 'numerator' for <Complex>
+     numerator_spec
   1  exception: undefined method '+' for <Complex>
      plus_spec
-  1  exception: undefined method 'polar' for Complex
-     polar_spec
   1  exception: undefined method 'quo' for <Complex>
      quo_spec
   1  exception: undefined method 'rationalize' for <Complex>
@@ -575,6 +587,14 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      real_spec
   1  exception: undefined method 'to_c' for <Complex>
      to_c_spec
+  1  exception: undefined method 'to_f' for <Complex>
+     to_f_spec
+  1  exception: undefined method 'to_i' for <Complex>
+     to_i_spec
+  1  exception: undefined method 'to_r' for <Complex>
+     to_r_spec
+  1  exception: undefined method '-@' for <Complex>
+     uminus_spec
   1  segfault @ Dir.chdir
      chdir_spec
   1  segfault @ Dir.children
@@ -593,6 +613,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      entries_spec
   1  segfault @ Dir.exist?
      exist_spec
+  1  exception: undefined method 'dir' for <Object>
+     fileno_spec
   1  segfault @ Dir.foreach
      foreach_spec
   1  segfault @ Dir.getwd
@@ -651,13 +673,13 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      chunk_while_spec
   1  exception: undefined method 'collect_concat' for <EnumerableSpecs__Numerous>
      collect_concat_spec
-  1  segfault @ Enumerable#collect
+  1  exception: 842090773
      collect_spec
   1  exception: undefined method 'compact' for <EnumerableSpecs__Numerous>
      compact_spec
   1  exception: undefined method 'splat' for <Object>
      cycle_spec
-  1  exception: 836638790
+  1  segfault @ Enumerable#detect
      detect_spec
   1  exception: undefined method 'drop' for <EnumerableSpecs__Numerous>
      drop_spec
@@ -665,7 +687,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      drop_while_spec
   1  exception: undefined method 'each_entry' for <EnumerableSpecs__YieldsMixed>
      each_entry_spec
-  1  segfault after: FAILED: Expected #<EnumerableSpecs__Numerous:0x5ec4aeb0>, go
+  1  segfault after: FAILED: Expected #<EnumerableSpecs__Numerous:0x5ec1d5e0>, go
      each_with_index_spec
   1  segfault @ Enumerable#each_with_object
      each_with_object_spec
@@ -673,13 +695,13 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      filter_map_spec
   1  exception: undefined method 'filter' for <EnumerableSpecs__Numerous>
      filter_spec
-  1  segfault @ Enumerable#find_all
+  1  exception: 769445991
      find_all_spec
   1  exception: undefined method 'find_index' for <EnumerableSpecs__Numerous>
      find_index_spec
   1  exception: undefined method 'first' for <EnumerableSpecs__Numerous>
      first_spec
-  1  segfault @ Enumerable#flat_map
+  1  exception: 739064017
      flat_map_spec
   1  exception: undefined method 'grep' for <EnumerableSpecs__Numerous>
      grep_spec
@@ -689,11 +711,11 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      group_by_spec
   1  segfault after: Enumerable#include?
      include_spec
-  1  exception: 740039016
+  1  segfault @ Enumerable#inject
      inject_spec
   1  exception: undefined method 'lazy' for <EnumerableSpecs__Numerous>
      lazy_spec
-  1  segfault @ Enumerable#map
+  1  exception: 808902929
      map_spec
   1  exception: undefined method 'max_by' for <EnumerableSpecs__Numerous>
      max_by_spec
@@ -709,15 +731,15 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      none_spec
   1  exception: undefined method 'one?' for <EnumerableSpecs__Empty>
      one_spec
-  1  segfault after: Enumerable#partition
+  1  exception: 809621677
      partition_spec
   1  exception: undefined method 'reduce' for <EnumerableSpecs__Numerous>
      reduce_spec
-  1  segfault after: Enumerable#reject
+  1  exception: 743536784
      reject_spec
   1  exception: undefined method 'reverse_each' for <EnumerableSpecs__Numerous>
      reverse_each_spec
-  1  segfault @ Enumerable#select
+  1  exception: 814504037
      select_spec
   1  exception: undefined method 'slice_after' for <EnumerableSpecs__Numerous>
      slice_after_spec
@@ -741,15 +763,19 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      uniq_spec
   1  exception: undefined method '[]' for <EnumerableSpecs__ArrayConvertible>
      zip_spec
-  1  exception: undefined method 'step' for 1..10
-     step_spec
+  1  exception: undefined method 'begin' for <Enumerator>
+     begin_spec
+  1  exception: undefined method 'end' for <Enumerator>
+     end_spec
+  1  exception: undefined method 'exclude_end?' for <Enumerator>
+     exclude_end_spec
+  1  exception: undefined method 'last' for <Enumerator>
+     last_spec
   1  exception: undefined method 'object_each_with_arguments' for Object
      each_spec
   1  exception: undefined method 'to_enum' for <EnumeratorSpecs__Feed>
      feed_spec
-  1  exception: undefined method 'first' for <Enumerator>
-     first_spec
-  1  segfault @ shows a representation of the Enumerator
+  1  exception: 852323976
      inspect_spec
   1  exception: undefined method 'to_enum' for [1, nil, 3, false, 5]
      compact_spec
@@ -833,18 +859,18 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      dup_spec
   1  exception: undefined method 'exception' for Exception
      exception_spec
-  1  segfault @ LocalJumpError#exit_value
-     exit_value_spec
   1  exception: undefined method 'receiver' for <FrozenError>
      frozen_error_spec
   1  exception: undefined method 'set_backtrace' for <RuntimeError>
      full_message_spec
-  1  exception: uninitialized constant NoMemoryError
+  1  exception: uninitialized constant ClosedQueueError
      hierarchy_spec
-  1  exception: uninitialized constant Interrupt
+  1  exception: undefined method 'signo' for <Interrupt>
      interrupt_spec
   1  exception: uninitialized constant EAGAINWaitReadable
      io_error_spec
+  1  segfault @ KeyError
+     key_error_spec
   1  exception: undefined method 'path' for <LoadError>
      load_error_spec
   1  exception: undefined method 'e' for Object
@@ -855,10 +881,12 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      new_spec
   1  exception: undefined method 'args' for <NoMethodError>
      no_method_error_spec
-  1  segfault @ LocalJumpError#reason
-     reason_spec
   1  segfault after: FAILED: Expected NameError to be raised but nothing was rais
      receiver_spec
+  1  segfault @ SystemExit#status
+     status_spec
+  1  segfault @ SystemExit#success?
+     success_spec
   1  compile-fail
      syntax_error_spec
   1  segfault @ NameError#to_s
@@ -881,6 +909,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      absolute_path_spec
   1  exception: undefined method 'atime' for File
      atime_spec
+  1  segfault @ File.birthtime
+     birthtime_spec
   1  segfault @ File.blockdev?
      blockdev_spec
   1  segfault @ File.chardev?
@@ -897,8 +927,6 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      delete_spec
   1  segfault @ File.exist?
      exist_spec
-  1  exception: system() not implemented - backtick/command execution not supported
-     expand_path_spec
   1  exception: undefined method 'extname' for File
      extname_spec
   1  exception: undefined method 'fnmatch' for File
@@ -917,8 +945,12 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      new_spec
   1  exception: uninitialized constant NULL
      null_spec
+  1  exception: undefined method 'owned?' for File
+     owned_spec
   1  exception: undefined method '__get_raw' for nil
      path_spec
+  1  exception: undefined method 'pipe?' for File
+     pipe_spec
   1  exception: NameError: uninitialized constant Errno::EISDIR
      read_spec
   1  segfault after: File.readable_real?
@@ -935,6 +967,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      setuid_spec
   1  segfault @ File.size?
      size_spec
+  1  exception: undefined method 'socket?' for File
+     socket_spec
   1  exception: undefined method 'split' for File
      split_spec
   1  segfault @ File::Stat#blockdev?
@@ -985,8 +1019,6 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      divide_spec
   1  exception: undefined method 'divmod' for 0.0
      divmod_spec
-  1  exception: undefined method 'fdiv' for 0.0
-     fdiv_spec
   1  exception: undefined method 'finite?' for 268435456
      finite_spec
   1  exception: undefined method '>=' for nil
@@ -1023,6 +1055,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      uplus_spec
   1  exception: undefined method 'zero?' for 0.0
      zero_spec
+  1  exception: undefined method 'extend' for <Object>
+     garbage_collect_spec
   1  exception: undefined method '/' for nil
      allocate_spec
   1  exception: undefined method 'assoc' for {:apple=>:green, :orange=>:orange, :grape=>:green, :banana=>:yellow}
@@ -1045,7 +1079,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      each_key_spec
   1  exception: undefined method 'each_pair' for {1=>2, 3=>4}
      each_pair_spec
-  1  exception: 784568225
+  1  segfault @ Hash#each
      each_spec
   1  exception: undefined method 'each_value' for {:a=>-5, :b=>-3, :c=>-2, :d=>-1, :e=>-1}
      each_value_spec
@@ -1053,6 +1087,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      element_reference_spec
   1  exception: undefined method 'except' for {:a=>1, :b=>2, :c=>3}
      except_spec
+  1  segfault @ when the key is not found
+     fetch_spec
   1  exception: undefined method 'fetch_values' for {:a=>1, :b=>2, :c=>3}
      fetch_values_spec
   1  exception: undefined method 'filter' for {1=>2, 3=>4}
@@ -1089,7 +1125,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      ruby2_keywords_hash_spec
   1  exception: undefined method 'select' for {1=>2, 3=>4}
      select_spec
-  1  exception: undefined method 'first' for nil
+  1  exception: undefined method 'each_pair' for {:a=>1, :b=>2, :c=>3}
      shift_spec
   1  exception: undefined method 'slice' for {:a=>1, :b=>2, :c=>3}
      slice_spec
@@ -1195,6 +1231,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      define_singleton_method_spec
   1  segfault @ eval not supported in AOT compiler
      eval_spec
+  1  segfault after: FAILED: Expected Kernel to have private instance method exit
+     exit_spec
   1  segfault after: FAILED: Expected Kernel to have private instance method fork
      fork_spec
   1  exception: undefined method 'format' for Kernel
@@ -1223,9 +1261,9 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      instance_variable_set_spec
   1  exception: undefined method 'instance_variables' for 0
      instance_variables_spec
-  1  exception: undefined method 'extend' for "0#_"
+  1  exception: undefined method 'extend' for "P=c"
      is_a_spec
-  1  exception: undefined method 'extend' for "0`"
+  1  exception: undefined method 'extend' for "Pm`"
      kind_of_spec
   1  segfault @ Kernel#load
      load_spec
@@ -1267,6 +1305,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      sleep_spec
   1  exception: undefined method 'srand' for <Object>
      srand_spec
+  1  segfault @ 0 passed, 2 failed, 2 skipped (4 total)
+     sub_spec
   1  exception: undefined method 'then' for <Object>
      then_spec
   1  exception: throw didn't transfer the control
@@ -1371,17 +1411,17 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      refinements_spec
   1  exception: undefined method 'singleton_class?' for Object
      singleton_class_spec
-  1  exception: undefined method 'call' for :object_id
-     used_refinements_spec
   1  exception: undefined method 'call_foo' for <Module>
      using_spec
+  1  exception: undefined method 'block_caller' for <Object>
+     lock_spec
   1  exception: undefined method '&' for nil
      and_spec
   1  exception: undefined method '=~' for nil
      match_spec
   1  exception: undefined method '|' for nil
      or_spec
-  1  segfault after: FAILED: Expected #<Rational:0x577b1310> but got nil
+  1  segfault after: FAILED: Expected #<Rational:0x64b4f760> but got nil
      rationalize_spec
   1  exception: undefined method 'remove_method' for NilClass
      singleton_method_spec
@@ -1453,7 +1493,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      zero_spec
   1  exception: undefined method 'binding' for <Proc>
      binding_spec
-  1  segfault @ Proc#call
+  1  segfault after: Proc#call
      call_spec
   1  exception: undefined method 'clone' for <Proc>
      clone_spec
@@ -1463,10 +1503,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      curry_spec
   1  segfault @ Proc#dup
      dup_spec
-  1  segfault @ Proc#[]
+  1  segfault after: Proc#[]
      element_reference_spec
-  1  segfault @ Proc.new with an associated block
-     new_spec
   1  exception: undefined method 'parameters' for <Proc>
      parameters_spec
   1  exception: undefined method 'ruby2_keywords' for <Proc>
@@ -1523,6 +1561,18 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      shift_spec
   1  segfault @ Queue#size
      size_spec
+  1  segfault @ Random#bytes
+     bytes_spec
+  1  exception: undefined method 'state' for <Random>
+     equal_value_spec
+  1  exception: undefined method 'map' for 0..20
+     new_spec
+  1  segfault @ Random.rand
+     rand_spec
+  1  segfault @ Random.random_number
+     random_number_spec
+  1  exception: undefined method 'length' for 249
+     urandom_spec
   1  exception: undefined method 'bsearch' for 0..1
      bsearch_spec
   1  exception: undefined method 'clone' for 1..3
@@ -1599,6 +1649,8 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      target_spec
   1  exception: undefined method 'encode' for "文字化け"
      encoding_spec
+  1  segfault @ 1 passed, 7 failed, 0 skipped (8 total)
+     last_match_spec
   1  exception: undefined method 'linear_time?' for Regexp
      linear_time_spec
   1  exception: undefined method 'timeout=' for Regexp
@@ -1623,7 +1675,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      difference_spec
   1  exception: undefined method 'divide' for <Set>
      divide_spec
-  1  exception: 832756950
+  1  segfault after: FAILED: Expected #<Set: {1, 2, 3}> (object_id: -486896464), 
      each_spec
   1  exception: undefined method '^' for <Set>
      exclusion_spec
@@ -1649,8 +1701,6 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      select_spec
   1  exception: undefined method 'subtract' for <Set>
      subtract_spec
-  1  exception: uninitialized constant Signal
-     signame_spec
   1  segfault @ SizedQueue#<<
      append_spec
   1  segfault @ SizedQueue#clear
@@ -1693,6 +1743,10 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      bytes_spec
   1  exception: undefined method 'bytesize' for "hello"
      bytesize_spec
+  1  exception: undefined method 'byteslice' for "hello"
+     byteslice_spec
+  1  exception: undefined method 'bytesplice' for "hello"
+     bytesplice_spec
   1  exception: undefined method 'capitalize' for ""
      capitalize_spec
   1  exception: undefined method 'casecmp' for "a"
@@ -1871,10 +1925,10 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      succ_spec
   1  exception: undefined method 'swapcase' for :glark
      swapcase_spec
-  1  segfault after: FAILED: Expected instance of Proc, got nil
-     to_proc_spec
   1  exception: undefined method 'upcase' for :glark
      upcase_spec
+  1  exception: undefined method 'success?' for <SystemExit>
+     success_spec
   1  exception: undefined method 'abort_on_exception' for <Thread>
      abort_on_exception_spec
   1  exception: undefined method 'each_caller_location' for Thread
@@ -1885,14 +1939,10 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      group_spec
   1  exception: undefined method 'ignore_deadlock' for Thread
      ignore_deadlock_spec
-  1  exception: uninitialized constant ThreadError
-     initialize_spec
   1  exception: undefined method 'list' for Thread
      list_spec
   1  segfault @ Thread#name
      name_spec
-  1  exception: undefined method 'pass' for Thread
-     pass_spec
   1  exception: undefined method 'report_on_exception' for Thread
      report_on_exception_spec
   1  exception: undefined method 'run' for <Thread>
@@ -1921,11 +1971,11 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      assignments_spec
   1  segfault @ Array
      block_spec
-  1  segfault @ The break statement in a block
+  1  exception: 728980467
      break_spec
   1  segfault after: The 'case'-construct
      case_spec
-  1  exception: undefined method 'eax' for <Eigenclass_2017>
+  1  exception: undefined method 'eax' for <Eigenclass_2160>
      class_spec
   1  exception: undefined method 'cvar_m' for ClassVariablesSpec__ClassC
      class_variable_spec
@@ -1947,9 +1997,9 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      line_spec
   1  segfault @ in stdin
      magic_comment_spec
-  1  segfault after: FAILED: Expected NilClass but got Eigenclass_16882
+  1  segfault after: FAILED: Expected NilClass but got Eigenclass_17344
      metaclass_spec
-  1  exception: undefined method 'superclass' for {:new=>6, :__send__=>7, :__get_symbol=>8, :__initialize=>9, :allocate=>10, :__new=>11, :name=>12, :!==>13, :superclass=>14, :define_method=>15, :attr_accessor=>16, :attr_reader=>17, :attr_writer=>18, :attr=>19, :prepend=>20, :class_eval=>21, :module_function=>22, :extend=>23, :include?=>24, :include=>25, :private=>26, :protected=>27, :public=>28, :puts=>29, :raise=>30, :fail=>31, :loop=>32, :exit=>33, :system=>34, :Array=>35, :__const_get=>36, :__const_get_on=>37, :__const_get_global=>38, :__const_set_global=>39, :require=>40, :require_relative=>41, :catch=>42, :throw=>43, :redo=>44, :fixture=>45, :proc=>46, :lambda=>47, :initialize=>48, :class=>49, :object_id=>50, :hash=>51, :eql?=>52, :====>53, :equal?=>54, :inspect=>55, :to_s=>56, :===>57, :!=>58, :nil?=>59, :freeze=>60, :frozen?=>61, :method_missing=>62, :respond_to?=>63, :is_a?=>64, :kind_of?=>65, :instance_of?=>66, :itself=>67, :tap=>68, :display=>69, :send=>70, :p=>71, :print=>72, :dup=>73, :const_defined?=>74, :eval=>75, :index=>76, :singleton_class=>77, :__set_raw=>78, :arity=>79, :to_proc=>80, :call=>81, :[]=>82, :i=>83, :numerator=>84, :denominator=>85, :to_i=>86, :to_f=>87, :%=>88, :__get_raw=>89, :zero?=>90, :>=>91, :>==>92, :<=>93, :<==>94, :__len=>95, :__ptr=>96, :__grow=>97, :__set=>98, :to_a=>99, :"&"=>100, :"|"=>101, :"^"=>102, :<<=>103, :>>=>104, :__true?=>105, :to_h=>106, :rationalize=>107, :-=>108, :exclude_end?=>109, :first=>110, :last=>111, :member?=>112, :each=>113, :to_enum=>114, :__copy_init=>115, :capacity=>116, :__get=>117, :find=>118, :reject=>119, :select=>120, :collect=>121, :sum=>122, :detect=>123, :each_with_index=>124, :+=>125, :__offset_to_pos=>126, :__range_get=>127, :[]==>128, :abbrev=>129, :slice=>130, :assoc=>131, :at=>132, :clear=>133, :collect!=>134, :compact=>135, :compact!=>136, :concat=>137, :dclone=>138, :delete=>139, :delete_at=>140, :delete_if=>141, :each_index=>142, :empty?=>143, :fetch=>144, :fill=>145, :max=>146, :min=>147, :any?=>148, :all?=>149, :none?=>150, :flatten=>151, :flatten!=>152, :replace=>153, :insert=>154, :join=>155, :length=>156, :map!=>157, :nitems=>158, :pack=>159, :pop=>160, :pretty_print=>161, :push=>162, :quote=>163, :rassoc=>164, :reject!=>165, :reverse=>166, :reverse!=>167, :reverse_each=>168, :rindex=>169, :shift=>170, :size=>171, :partition=>172, :sort_by=>173, :sort=>174, :sort!=>175, :to_ary=>176, :to_yaml=>177, :transpose=>178, :uniq=>179, :uniq!=>180, :unshift=>181, :values_at=>182, :yaml_initialize=>183, :zip=>184, :__copy_initialize=>185, :_hash=>186, :encoding=>187, :__copy_raw=>188, :chr=>189, :ord=>190, :each_byte=>191, :bytes=>192, :<=>=>193, :to_str=>194, :to_sym=>195, :slice!=>196, :upcase=>197, :downcase=>198, :start_with?=>199, :end_with?=>200, :count=>201, :+@=>202, :"-@"=>203, :*=>204, :gsub=>205, :split=>206, :__percent_I=>207, :lstrip=>208, :rstrip=>209, :strip=>210, :chomp=>211, :chomp!=>212, :force_encoding=>213, :"=~"=>214, :unpack=>215, :default=>216, :_data=>217, :_state=>218, :_alloc_data=>219, :not_deleted?=>220, :_bulkinsert=>221, :_grow=>222, :_find_slot=>223, :_find_nil_slot=>224, :_find_insertion_slot=>225, :capacity_too_low=>226, :keys=>227, :values=>228, :merge=>229, :pair=>230, :hash_splat=>231, :getc=>232, :file?=>233, :absolute_path?=>234, :path=>235, :open=>236, :exist?=>237, :readlines=>238, :basename=>239, :dirname=>240, :expand_path=>241, :pwd=>242, :between?=>243, :each_cons=>244, :each_slice=>245, :entries=>246, :find_all=>247, :inject=>248, :to_set=>249, :each_with_object=>250, :flat_map=>251, :__set_heap_data=>252, :__from_literal=>253, :__init_from_overflow_value=>254, :__is_nonzero_raw=>255, :__extract_limb=>256, :__heap_get_raw=>257, :__to_fixnum_if_possible=>258, :__subtract_fixnum_from_heap=>259, :__subtract_heap=>260, :__add_fixnum_to_heap=>261, :__add_heap=>262, :__add_heap_and_fixnum=>263, :__add_magnitudes_fixnum=>264, :__add_heap_and_heap=>265, :__add_magnitudes=>266, :__compare_magnitudes=>267, :__subtract_magnitudes=>268, :__subtract_with_borrow=>269, :__add_limbs_with_carry=>270, :__max_fixnum=>271, :__less_than=>272, :__ge_fixnum=>273, :__greater_than=>274, :__get_limb_or_zero=>275, :__normalize_limb=>276, :__limb_base_raw=>277, :__multiply_raw_full=>278, :__check_limb_overflow=>279, :__make_overflow_result=>280, :__multiply_limb_by_fixnum_with_carry=>281, :__multiply_heap_by_fixnum=>282, :__multiply_heap_by_heap=>283, :__check_limb_borrow=>284, :__multiply_heap_and_fixnum=>285, :__half_limb_base=>286, :__limb_base=>287, :__get_sign=>288, :__get_limbs=>289, :__cmp=>290, :__cmp_fixnum_fixnum=>291, :__cmp_fixnum_heap=>292, :__cmp_heap_fixnum=>293, :__cmp_heap_heap=>294, :__add_multi_limb=>295, :__divmod_limbs=>296, :__divmod_by_fixnum=>297, :__make_divmod_array=>298, :__divmod_heap_single_limb=>299, :__divmod_heap_multi_limb=>300, :__divmod_with_carry=>301, :__is_negative=>302, :__negate=>303, :__negate_heap=>304, :__to_s_multi=>305, :__modulo_via_division=>306, :modulo=>307, :remainder=>308, :__multiply_fixnum_overflow=>309, :__multiply_fixnum_by_heap=>310, :__multiply_heap=>311, :/=>312, :fdiv=>313, :__divide_fixnum_by_heap=>314, :__divide_heap=>315, :__divide_heap_by_fixnum=>316, :__divide_magnitude_by_fixnum=>317, :__divide_heap_by_heap=>318, :__divide_magnitudes=>319, :__shift_limbs_left_one_bit=>320, :__add_two_limbs_with_overflow=>321, :__shift_limb_with_carry=>322, :__subtract_magnitudes_raw=>323, :abs=>324, :__abs_heap=>325, :__check_bitwise_float=>326, :__bitand_fixnum_fixnum=>327, :__bitand_limbs=>328, :__bitand_fixnum_heap=>329, :__bitand_heap_fixnum=>330, :__magnitude_to_twos_complement=>331, :__invert_limb=>332, :__limb_max_value=>333, :__add_with_carry=>334, :__limb_base_minus_one=>335, :__subtract_one_magnitude=>336, :__add_one_magnitude=>337, :__make_heap_or_fixnum=>338, :__bitand_heap_heap=>339, :__min_fixnum=>340, :__extend_limbs_with_zeros=>341, :__trim_leading_zeros=>342, :__bitor_fixnum_fixnum=>343, :__bitor_limbs=>344, :__bitor_fixnum_heap=>345, :__bitor_heap_fixnum=>346, :__bitor_heap_heap=>347, :__bitxor_fixnum_fixnum=>348, :__bitxor_limbs=>349, :__bitxor_fixnum_heap=>350, :__bitxor_heap_fixnum=>351, :__bitxor_heap_heap=>352, :"~"=>353, :__left_shift_fixnum=>354, :__left_shift_heap=>355, :__shift_limb_with_carry_split=>356, :__right_shift_fixnum=>357, :__right_shift_heap=>358, :__shift_limb_right_with_borrow=>359, :infinite?=>360, :integer?=>361, :even?=>362, :odd?=>363, :positive?=>364, :negative?=>365, :succ=>366, :next=>367, :pred=>368, :__check_comparable=>369, :to_r=>370, :sqrt=>371, :try_convert=>372, :__is_heap_integer?=>373, :div=>374, :divmod=>375, :to_int=>376, :**=>377, :pow=>378, :allbits?=>379, :anybits?=>380, :nobits?=>381, :bit_length=>382, :__bit_length_fixnum=>383, :__bit_length_heap=>384, :ceil=>385, :floor=>386, :truncate=>387, :round=>388, :magnitude=>389, :gcd=>390, :lcm=>391, :gcdlcm=>392, :ceildiv=>393, :digits=>394, :mul=>395, :times=>396, :downto=>397, :upto=>398, :coerce=>399, :coerce_to_integer=>400, :intern=>401, :method_to_voff=>402, :__send_for_obj__=>403, :has_key?=>404, :has_value?=>405, :nan?=>406, :finite?=>407, :save_stack_state=>408, :saved_ebp=>409, :saved_esp=>410, :handler_addr=>411, :rescue_classes=>412, :rescue_classes==>413, :next==>414, :push_handler=>415, :pop_handler=>416, :current_handler=>417, :current_exception=>418, :message=>419, :source=>420, :parse_options=>421, :options=>422, :match=>423, :match?=>424, :match_internal=>425, :match_at=>426, :match_from=>427, :match_quantified=>428, :match_atom=>429, :char_digit?=>430, :char_word?=>431, :char_space?=>432, :__posix?=>433, :escape_forward_slashes=>434, :option_flags_string=>435, :negative_flags_string=>436, :casefold?=>437, :fixed_encoding?=>438, :names=>439, :named_captures=>440, :escape=>441, :compile=>442, :union=>443, :last_match=>444, :begin=>445, :end=>446, :captures=>447, :pre_match=>448, :post_match=>449, :string=>450, :regexp=>451, :rewind=>452, :add?=>453, :subset?=>454, :superset?=>455, :proper_subset?=>456, :proper_superset?=>457, :intersect?=>458, :disjoint?=>459, :delete?=>460, :imag=>461, :real=>462, :to_hash=>463, :rehash=>464, :owner=>465, :receiver=>466, :method=>467, :default_internal=>468, :default_internal==>469, :default_external=>470, :default_external==>471, :local_variables=>472, :nesting=>473, :record=>474, :recorded=>475, :desc==>476, :desc=>477, :should_receive=>478, :should_not_receive=>479, :any_number_of_times=>480, :exactly=>481, :at_least=>482, :at_most=>483, :and_return=>484, :and_raise=>485, :and_yield=>486, :with=>487, :stub!=>488, :expected=>489, :failure_message=>490, :check_exception_type=>491, :should=>492, :should_not=>493, :once=>494, :twice=>495, :__assert_fixnum=>496, :Integer=>497, :Complex=>498, :Rational=>499, :__ENCODING__=>500, :describe=>501, :quarantine!=>502, :it=>503, :mock=>504, :equal=>505, :eql=>506, :be_true=>507, :be_false=>508, :be_nil=>509, :raise_error=>510, :be_an_instance_of=>511, :be_kind_of=>512, :be_close=>513, :complain=>514, :ruby_version_is=>515, :guard=>516, :guard_not=>517, :little_endian=>518, :big_endian=>519, :as_user=>520, :as_superuser=>521, :tmp=>522, :touch=>523, :mock_to_path=>524, :platform_is=>525, :platform_is_not=>526, :ruby_bug=>527, :conflicts_with=>528, :not_supported_on=>529, :skip=>530, :suppress_warning=>531, :context=>532, :let=>533, :clear_let_cache=>534, :it_behaves_like=>535, :it_should_behave_like=>536, :before=>537, :after=>538, :bignum_value=>539, :infinity_value=>540, :nan_value=>541, :fixnum_max=>542, :fixnum_min=>543, :c_long_size=>544, :min_long=>545, :max_long=>546, :mock_int=>547, :ruby_exe=>548, :have_private_instance_method=>549, :have_public_instance_method=>550, :print_spec_results=>551, :run_specs=>552, :map=>553, :key?=>554, :id2name=>555, :value?=>556, :add=>557, :intersection=>558}
+  1  exception: undefined method 'superclass' for {:new=>6, :__send__=>7, :__get_symbol=>8, :__initialize=>9, :allocate=>10, :__new=>11, :name=>12, :!==>13, :superclass=>14, :define_method=>15, :attr_accessor=>16, :attr_reader=>17, :attr_writer=>18, :attr=>19, :prepend=>20, :class_eval=>21, :module_function=>22, :extend=>23, :include?=>24, :include=>25, :private=>26, :protected=>27, :public=>28, :puts=>29, :raise=>30, :fail=>31, :loop=>32, :exit=>33, :system=>34, :Array=>35, :__const_get=>36, :__const_get_on=>37, :__const_get_global=>38, :__const_set_global=>39, :require=>40, :require_relative=>41, :catch=>42, :throw=>43, :redo=>44, :fixture=>45, :proc=>46, :lambda=>47, :initialize=>48, :class=>49, :object_id=>50, :hash=>51, :eql?=>52, :====>53, :equal?=>54, :inspect=>55, :to_s=>56, :===>57, :!=>58, :nil?=>59, :freeze=>60, :frozen?=>61, :method_missing=>62, :respond_to?=>63, :is_a?=>64, :kind_of?=>65, :instance_of?=>66, :itself=>67, :tap=>68, :display=>69, :send=>70, :p=>71, :print=>72, :dup=>73, :const_defined?=>74, :eval=>75, :index=>76, :singleton_class=>77, :__set_raw=>78, :arity=>79, :to_proc=>80, :call=>81, :[]=>82, :i=>83, :numerator=>84, :denominator=>85, :to_i=>86, :to_f=>87, :%=>88, :__get_raw=>89, :zero?=>90, :>=>91, :>==>92, :<=>93, :<==>94, :__len=>95, :__ptr=>96, :__grow=>97, :__set=>98, :to_a=>99, :"&"=>100, :"|"=>101, :"^"=>102, :<<=>103, :>>=>104, :__true?=>105, :to_h=>106, :rationalize=>107, :-=>108, :exclude_end?=>109, :first=>110, :last=>111, :member?=>112, :each=>113, :to_enum=>114, :__copy_init=>115, :capacity=>116, :__get=>117, :find=>118, :reject=>119, :select=>120, :collect=>121, :sum=>122, :detect=>123, :each_with_index=>124, :+=>125, :__offset_to_pos=>126, :__range_get=>127, :[]==>128, :abbrev=>129, :slice=>130, :assoc=>131, :at=>132, :clear=>133, :collect!=>134, :compact=>135, :compact!=>136, :concat=>137, :dclone=>138, :delete=>139, :delete_at=>140, :delete_if=>141, :each_index=>142, :empty?=>143, :fetch=>144, :fill=>145, :max=>146, :min=>147, :any?=>148, :all?=>149, :none?=>150, :flatten=>151, :flatten!=>152, :replace=>153, :insert=>154, :join=>155, :length=>156, :map!=>157, :nitems=>158, :pack=>159, :pop=>160, :pretty_print=>161, :push=>162, :quote=>163, :rassoc=>164, :reject!=>165, :reverse=>166, :reverse!=>167, :reverse_each=>168, :rindex=>169, :shift=>170, :size=>171, :partition=>172, :sort_by=>173, :sort=>174, :sort!=>175, :to_ary=>176, :to_yaml=>177, :transpose=>178, :uniq=>179, :uniq!=>180, :unshift=>181, :values_at=>182, :yaml_initialize=>183, :zip=>184, :__copy_initialize=>185, :_hash=>186, :encoding=>187, :__copy_raw=>188, :chr=>189, :ord=>190, :each_byte=>191, :bytes=>192, :<=>=>193, :to_str=>194, :to_sym=>195, :slice!=>196, :upcase=>197, :downcase=>198, :start_with?=>199, :end_with?=>200, :count=>201, :+@=>202, :"-@"=>203, :*=>204, :gsub=>205, :split=>206, :__percent_I=>207, :lstrip=>208, :rstrip=>209, :strip=>210, :chomp=>211, :chomp!=>212, :force_encoding=>213, :"=~"=>214, :unpack=>215, :default=>216, :_data=>217, :_state=>218, :_alloc_data=>219, :not_deleted?=>220, :_bulkinsert=>221, :_grow=>222, :_find_slot=>223, :_find_nil_slot=>224, :_find_insertion_slot=>225, :capacity_too_low=>226, :keys=>227, :values=>228, :merge=>229, :pair=>230, :hash_splat=>231, :getc=>232, :file?=>233, :absolute_path?=>234, :path=>235, :open=>236, :exist?=>237, :readlines=>238, :basename=>239, :dirname=>240, :expand_path=>241, :pwd=>242, :between?=>243, :each_cons=>244, :each_slice=>245, :entries=>246, :find_all=>247, :inject=>248, :to_set=>249, :each_with_object=>250, :flat_map=>251, :__set_heap_data=>252, :__from_literal=>253, :__init_from_overflow_value=>254, :__is_nonzero_raw=>255, :__extract_limb=>256, :__heap_get_raw=>257, :__to_fixnum_if_possible=>258, :__subtract_fixnum_from_heap=>259, :__subtract_heap=>260, :__add_fixnum_to_heap=>261, :__add_heap=>262, :__add_heap_and_fixnum=>263, :__add_magnitudes_fixnum=>264, :__add_heap_and_heap=>265, :__add_magnitudes=>266, :__compare_magnitudes=>267, :__subtract_magnitudes=>268, :__subtract_with_borrow=>269, :__add_limbs_with_carry=>270, :__max_fixnum=>271, :__less_than=>272, :__ge_fixnum=>273, :__greater_than=>274, :__get_limb_or_zero=>275, :__normalize_limb=>276, :__limb_base_raw=>277, :__multiply_raw_full=>278, :__check_limb_overflow=>279, :__make_overflow_result=>280, :__multiply_limb_by_fixnum_with_carry=>281, :__multiply_heap_by_fixnum=>282, :__multiply_heap_by_heap=>283, :__check_limb_borrow=>284, :__multiply_heap_and_fixnum=>285, :__half_limb_base=>286, :__limb_base=>287, :__get_sign=>288, :__get_limbs=>289, :__cmp=>290, :__cmp_fixnum_fixnum=>291, :__cmp_fixnum_heap=>292, :__cmp_heap_fixnum=>293, :__cmp_heap_heap=>294, :__add_multi_limb=>295, :__divmod_limbs=>296, :__divmod_by_fixnum=>297, :__make_divmod_array=>298, :__divmod_heap_single_limb=>299, :__divmod_heap_multi_limb=>300, :__divmod_with_carry=>301, :__is_negative=>302, :__negate=>303, :__negate_heap=>304, :__to_s_multi=>305, :__modulo_via_division=>306, :modulo=>307, :remainder=>308, :__multiply_fixnum_overflow=>309, :__multiply_fixnum_by_heap=>310, :__multiply_heap=>311, :/=>312, :fdiv=>313, :__divide_fixnum_by_heap=>314, :__divide_heap=>315, :__divide_heap_by_fixnum=>316, :__divide_magnitude_by_fixnum=>317, :__divide_heap_by_heap=>318, :__divide_magnitudes=>319, :__shift_limbs_left_one_bit=>320, :__add_two_limbs_with_overflow=>321, :__shift_limb_with_carry=>322, :__subtract_magnitudes_raw=>323, :abs=>324, :__abs_heap=>325, :__check_bitwise_float=>326, :__bitand_fixnum_fixnum=>327, :__bitand_limbs=>328, :__bitand_fixnum_heap=>329, :__bitand_heap_fixnum=>330, :__magnitude_to_twos_complement=>331, :__invert_limb=>332, :__limb_max_value=>333, :__add_with_carry=>334, :__limb_base_minus_one=>335, :__subtract_one_magnitude=>336, :__add_one_magnitude=>337, :__make_heap_or_fixnum=>338, :__bitand_heap_heap=>339, :__min_fixnum=>340, :__extend_limbs_with_zeros=>341, :__trim_leading_zeros=>342, :__bitor_fixnum_fixnum=>343, :__bitor_limbs=>344, :__bitor_fixnum_heap=>345, :__bitor_heap_fixnum=>346, :__bitor_heap_heap=>347, :__bitxor_fixnum_fixnum=>348, :__bitxor_limbs=>349, :__bitxor_fixnum_heap=>350, :__bitxor_heap_fixnum=>351, :__bitxor_heap_heap=>352, :"~"=>353, :__left_shift_fixnum=>354, :__left_shift_heap=>355, :__shift_limb_with_carry_split=>356, :__right_shift_fixnum=>357, :__right_shift_heap=>358, :__shift_limb_right_with_borrow=>359, :infinite?=>360, :integer?=>361, :even?=>362, :odd?=>363, :positive?=>364, :negative?=>365, :succ=>366, :next=>367, :pred=>368, :__check_comparable=>369, :to_r=>370, :sqrt=>371, :try_convert=>372, :__is_heap_integer?=>373, :div=>374, :divmod=>375, :to_int=>376, :**=>377, :pow=>378, :allbits?=>379, :anybits?=>380, :nobits?=>381, :bit_length=>382, :__bit_length_fixnum=>383, :__bit_length_heap=>384, :ceil=>385, :floor=>386, :truncate=>387, :round=>388, :magnitude=>389, :gcd=>390, :lcm=>391, :gcdlcm=>392, :ceildiv=>393, :digits=>394, :mul=>395, :times=>396, :downto=>397, :upto=>398, :step=>399, :coerce=>400, :coerce_to_integer=>401, :intern=>402, :method_to_voff=>403, :__send_for_obj__=>404, :has_key?=>405, :has_value?=>406, :nan?=>407, :finite?=>408, :save_stack_state=>409, :saved_ebp=>410, :saved_esp=>411, :handler_addr=>412, :rescue_classes=>413, :rescue_classes==>414, :next==>415, :push_handler=>416, :pop_handler=>417, :current_handler=>418, :current_exception=>419, :message=>420, :source=>421, :parse_options=>422, :options=>423, :match=>424, :match?=>425, :match_internal=>426, :match_at=>427, :match_from=>428, :match_quantified=>429, :match_atom=>430, :char_digit?=>431, :char_word?=>432, :char_space?=>433, :__posix?=>434, :escape_forward_slashes=>435, :option_flags_string=>436, :negative_flags_string=>437, :casefold?=>438, :fixed_encoding?=>439, :names=>440, :named_captures=>441, :escape=>442, :compile=>443, :union=>444, :last_match=>445, :begin=>446, :end=>447, :captures=>448, :pre_match=>449, :post_match=>450, :string=>451, :regexp=>452, :rewind=>453, :add?=>454, :subset?=>455, :superset?=>456, :proper_subset?=>457, :proper_superset?=>458, :intersect?=>459, :disjoint?=>460, :delete?=>461, :start=>462, :enable=>463, :disable=>464, :stat=>465, :stress=>466, :stress==>467, :measure_total_time=>468, :measure_total_time==>469, :total_time=>470, :auto_compact=>471, :auto_compact==>472, :seed=>473, :_next=>474, :rand=>475, :srand=>476, :new_seed=>477, :urandom=>478, :imag=>479, :real=>480, :to_hash=>481, :rehash=>482, :owner=>483, :receiver=>484, :method=>485, :default_internal=>486, :default_internal==>487, :default_external=>488, :default_external==>489, :local_variables=>490, :lock=>491, :unlock=>492, :locked?=>493, :try_lock=>494, :owned?=>495, :synchronize=>496, :sleep=>497, :nesting=>498, :record=>499, :recorded=>500, :desc==>501, :desc=>502, :should_receive=>503, :should_not_receive=>504, :any_number_of_times=>505, :exactly=>506, :at_least=>507, :at_most=>508, :and_return=>509, :and_raise=>510, :and_yield=>511, :with=>512, :stub!=>513, :expected=>514, :failure_message=>515, :check_exception_type=>516, :should=>517, :should_not=>518, :once=>519, :twice=>520, :__assert_fixnum=>521, :Integer=>522, :Complex=>523, :Rational=>524, :__ENCODING__=>525, :describe=>526, :quarantine!=>527, :it=>528, :mock=>529, :equal=>530, :eql=>531, :be_true=>532, :be_false=>533, :be_nil=>534, :raise_error=>535, :be_an_instance_of=>536, :be_kind_of=>537, :be_close=>538, :complain=>539, :ruby_version_is=>540, :guard=>541, :guard_not=>542, :little_endian=>543, :big_endian=>544, :as_user=>545, :as_superuser=>546, :tmp=>547, :touch=>548, :mock_to_path=>549, :mock_numeric=>550, :platform_is=>551, :platform_is_not=>552, :ruby_bug=>553, :conflicts_with=>554, :not_supported_on=>555, :skip=>556, :suppress_warning=>557, :context=>558, :let=>559, :clear_let_cache=>560, :it_behaves_like=>561, :it_should_behave_like=>562, :before=>563, :after=>564, :bignum_value=>565, :infinity_value=>566, :nan_value=>567, :fixnum_max=>568, :fixnum_min=>569, :c_long_size=>570, :min_long=>571, :max_long=>572, :mock_int=>573, :ruby_exe=>574, :have_private_instance_method=>575, :have_public_instance_method=>576, :print_spec_results=>577, :run_specs=>578, :map=>579, :key?=>580, :id2name=>581, :value?=>582, :add=>583, :intersection=>584}
      module_spec
   1  exception: undefined method '_1' for <Object>
      numbered_parameters_spec
@@ -1957,7 +2007,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      numbers_spec
   1  segfault @ 10 passed, 4 failed, 1 skipped (15 total)
      or_spec
-  1  exception: undefined method '__env__' for <Eigenclass_16493>
+  1  exception: undefined method '__env__' for <Eigenclass_16955>
      order_spec
   1  exception: undefined method 'binread' for File
      data_spec
@@ -1981,7 +2031,7 @@ From docs/spec_status.jsonl. One fix per signature ideally clears all its specs.
      safe_navigator_spec
   1  exception: undefined method 'fooM0' for LangSendSpecs
      send_spec
-  1  exception: undefined method 'be_ancestor_of' for <Eigenclass_2016>
+  1  exception: undefined method 'be_ancestor_of' for <Eigenclass_2159>
      singleton_class_spec
   1  exception: undefined method 'b' for "xFFxFE"
      source_encoding_spec
