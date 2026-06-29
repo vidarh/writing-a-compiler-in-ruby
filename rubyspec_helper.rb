@@ -776,6 +776,13 @@ def mock_to_path(path)
   m
 end
 
+# mspec helper: mock_numeric(name) returns a mock that stands in for a Numeric (specs then add expectations
+# like should_receive(:coerce)/:to_r). The harness lacked it, so numeric coercion specs crashed at load with
+# "undefined method 'mock_numeric'". Back it with the existing mock framework.
+def mock_numeric(name)
+  mock(name)
+end
+
 def platform_is(*args)
   if block_given?
     # Handle hash arguments like platform_is c_long_size: 64
