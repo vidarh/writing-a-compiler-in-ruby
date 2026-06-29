@@ -37,5 +37,9 @@ end
 class IOError
 end
 
+# EOFError < IOError in MRI; defined here so IOError (above) is already in scope.
+class EOFError < IOError
+end
+
 class IOSpecs
 end

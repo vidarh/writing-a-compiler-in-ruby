@@ -231,6 +231,59 @@ end
 class LoadError < StandardError
 end
 
+# ScriptError and its NotImplementedError subclass were missing, so specs referencing NotImplementedError
+# at load (e.g. `.should raise_error(NotImplementedError)`) crashed with "uninitialized constant". In Ruby
+# these descend from Exception (NOT StandardError), so a bare rescue does not catch them.
+class ScriptError < Exception
+end
+
+class NotImplementedError < ScriptError
+end
+
+# Standard exception classes that were missing, so specs referencing them (in raise_error matchers or the
+# exception hierarchy specs) crashed with "uninitialized constant". Empty leaf classes referencing nothing,
+# so they are safe to add (cf. Set; unlike FileTest which delegated to missing methods). Parent choice
+# follows MRI: NoMemoryError/SecurityError/SystemExit/SystemStackError/SignalException descend from
+# Exception (NOT StandardError), so a bare rescue won't catch them; Interrupt < SignalException.
+class NoMemoryError < Exception
+end
+
+class SecurityError < Exception
+end
+
+class SystemExit < Exception
+end
+
+class SystemStackError < Exception
+end
+
+class SignalException < Exception
+end
+
+class Interrupt < SignalException
+end
+
+class IndexError < StandardError
+end
+
+class KeyError < IndexError
+end
+
+class StopIteration < IndexError
+end
+
+class EncodingError < StandardError
+end
+
+class ThreadError < StandardError
+end
+
+class FiberError < StandardError
+end
+
+class SystemCallError < StandardError
+end
+
 # Initialize special exception globals
 # $! holds the current exception message (set by raise, cleared after rescue)
 $! = nil
