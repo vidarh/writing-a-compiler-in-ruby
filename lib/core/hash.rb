@@ -193,6 +193,17 @@ class Hash
     @first.nil?
   end
 
+  # Ruby: fetch(key) -> value, or fetch(key) { |k| ... }, or fetch(key, default). Raises KeyError when the
+  # key is absent and neither a block nor a default is given. Hash#fetch was missing, so specs calling it
+  # hit undefined-method dispatch (a crash) instead of raising; with KeyError now defined this also lets
+  # the raise_error(KeyError, ...) matcher work.
+  def fetch(key, *rest)
+    return self[key] if member?(key)
+    return yield(key) if block_given?
+    return rest[0] if rest.length > 0
+    raise KeyError.new("key not found: #{key.inspect}")
+  end
+
   def [] key
     # Handle nil keys specially since nil is also used as empty slot marker
     if key.nil?
