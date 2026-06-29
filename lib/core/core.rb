@@ -93,6 +93,7 @@ require 'core/matchdata'
 require 'core/enumerator'
 require 'set'              # Set is a core autoloaded class in modern Ruby; load it after Array/Hash/Enumerable
 require 'core/gc'          # GC module: no-op stubs (real collector is tgc.c, not Ruby-introspectable)
+require 'core/random'      # Random: deterministic seeded LCG (Float-limited, but stops crashes)
 require 'core/complex'
 require 'core/env'
 require 'core/method'
