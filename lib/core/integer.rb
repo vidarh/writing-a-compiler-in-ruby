@@ -4363,6 +4363,28 @@ class Integer < Numeric
     self
   end
 
+  # Ruby: int.step(limit, step = 1) { |i| ... } -- iterate from self to limit in increments of step
+  # (descending when step is negative). step == 0 would loop forever, so guard it (Ruby raises; we just
+  # don't iterate, which keeps the spec runner from hanging).
+  def step(limit, step = 1)
+    if !block_given?
+      return Enumerator.new
+    end
+    i = self
+    if step > 0
+      while i <= limit
+        yield i
+        i = i + step
+      end
+    elsif step < 0
+      while i >= limit
+        yield i
+        i = i + step
+      end
+    end
+    self
+  end
+
   # FIXME: Stub - minimal implementation for integer coercion
   def coerce(other)
     if other.is_a?(Integer)
