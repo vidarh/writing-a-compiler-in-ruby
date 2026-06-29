@@ -226,6 +226,25 @@ class Compiler
     exp
   end
 
+  # Rewrite `alias_method :new, :old` (a receiver-less call, so it targets the enclosing class) into the
+  # same [:alias, new, old] node the `alias` keyword produces, when both names are literal symbols.
+  # Routing it through the alias path means alloc_vtable_offsets emits __voff__<new> (so calling the
+  # alias by name links) and compile_alias copies the vtable slot. Must run BEFORE rewrite_symbol_constant,
+  # while the args are still bare colon-prefixed symbols (:":new"); dynamic forms are left as calls.
+  def rewrite_alias_method(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      if e[0] == :call && e[1] == :alias_method && e[2].is_a?(Array) && e[2].length == 2
+        a = e[2][0]
+        b = e[2][1]
+        if a.is_a?(Symbol) && a.to_s[0] == ?: && b.is_a?(Symbol) && b.to_s[0] == ?:
+          e.replace([:alias, a.to_s[1..-1].to_sym, b.to_s[1..-1].to_sym])
+        end
+      end
+    end
+    exp
+  end
+
   # The "expr rescue fallback" modifier parses as [:rescue_mod, expr, fallback]. It has no direct
   # code generation, so rewrite it into the equivalent begin/rescue block: run expr, and on any
   # exception evaluate fallback. The catch-all rescue clause has no class and no exception variable.
@@ -1565,6 +1584,7 @@ class Compiler
     rewrite_defined(exp)  # Must run before rewrite_strconst
     rewrite_strconst(exp)
     rewrite_integer_constant(exp)
+    rewrite_alias_method(exp)   # must precede rewrite_symbol_constant (needs bare :sym args)
     rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
