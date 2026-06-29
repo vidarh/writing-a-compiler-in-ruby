@@ -75,6 +75,13 @@ def describe(description, options = nil, &block)
   end
 end
 
+# mspec: quarantine! marks an example as quarantined (known-broken / environment-dependent). The block
+# is NOT run; it counts as skipped. Without this, specs that call quarantine! crash with
+# "undefined method 'quarantine!'" while loading, taking out the whole file.
+def quarantine!(*args, &block)
+  $spec_skipped = $spec_skipped + 1
+end
+
 def it(description, &block)
   skipped_before = $spec_skipped
   assertions_before = $spec_assertions
