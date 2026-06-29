@@ -760,6 +760,14 @@ def touch(file, mode = "w")
   nil
 end
 
+# mspec helper: mock_to_path(path) returns an object whose #to_path returns the given path (used to test
+# that File/IO methods call #to_path on their argument). Backed by the existing mock framework.
+def mock_to_path(path)
+  m = mock(path.to_s)
+  m.should_receive(:to_path).and_return(path)
+  m
+end
+
 def platform_is(*args)
   if block_given?
     # Handle hash arguments like platform_is c_long_size: 64
