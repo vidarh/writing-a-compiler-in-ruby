@@ -52,6 +52,12 @@ end
 # FIXME: Module should be a superclass of Class, but that requires
 # significant refactoring of the object model
 class Module
+  # Module.nesting returns the lexically-enclosing modules at the call site. We don't track lexical
+  # nesting at runtime, so return an empty array: enough for fixtures that merely record it at load
+  # time (only nesting_spec checks the actual value).
+  def self.nesting
+    []
+  end
 end
 
 # Stub for Fiber class (not implemented)
