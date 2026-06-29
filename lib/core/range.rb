@@ -23,14 +23,27 @@ class Range
     @exclude_end == true
   end
 
-  def first
-    @min
+  # Ruby: first/last with no arg return the endpoint; with a count n they return up to n elements from the
+  # start/end as an Array. The no-arg call must still work (begin/end alias it). A 1-arg call previously
+  # raised ArgumentError ("given 1, expected 0").
+  def first(n = nil)
+    return @min if n.nil?
+    result = []
+    each do |x|
+      break if result.length >= n
+      result << x
+    end
+    result
   end
 
   alias begin first
 
-  def last
-    @max
+  def last(n = nil)
+    return @max if n.nil?
+    a = to_a
+    start = a.length - n
+    start = 0 if start < 0
+    a[start..-1]
   end
 
   alias end last
