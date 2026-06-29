@@ -741,6 +741,14 @@ def as_superuser
   # not running as root: superuser-only specs are skipped (block not run).
 end
 
+# mspec helper: tmp(name) returns a path for a temporary file. The harness lacked it, so the ~110 file/io
+# specs that build paths via tmp(...) at load time crashed with "undefined method 'tmp'", losing the whole
+# file. Use a flat prefix under /tmp (which exists) so no temp subdir needs creating.
+SPEC_TEMP_PREFIX = "/tmp/rubyspec_"
+def tmp(name, uniquify = true)
+  SPEC_TEMP_PREFIX + name.to_s
+end
+
 def platform_is(*args)
   if block_given?
     # Handle hash arguments like platform_is c_long_size: 64
