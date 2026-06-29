@@ -749,6 +749,17 @@ def tmp(name, uniquify = true)
   SPEC_TEMP_PREFIX + name.to_s
 end
 
+# mspec helper: touch(file) creates (and truncates) the file so later File.open(read) finds it. Real mspec
+# yields a writable IO for the block form; File here has no write mode, so we create an EMPTY file and do
+# not run the block (writes are dropped -> content specs FAIL rather than crash). Flags: O_WRONLY|O_CREAT|
+# O_TRUNC = 577, mode 0644 = 420.
+def touch(file, mode = "w")
+  %s(assign rpath (callm file __get_raw))
+  %s(assign fd (open rpath 577 420))
+  %s(if (ge fd 0) (close fd))
+  nil
+end
+
 def platform_is(*args)
   if block_given?
     # Handle hash arguments like platform_is c_long_size: 64
