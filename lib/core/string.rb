@@ -739,6 +739,80 @@ class String
     return nil
   end
 
+  # Byte-wise search for the first occurrence of substring `sub` at or after `start`; nil if absent.
+  def __substr_index(sub, start)
+    my_len = length
+    sub_len = sub.length
+    return start if sub_len == 0
+    return nil if sub_len > my_len
+    pos = start
+    pos = 0 if pos < 0
+    max_start = my_len - sub_len
+    while pos <= max_start
+      match = true
+      i = 0
+      while i < sub_len
+        if self[pos + i] != sub[i]
+          match = false
+          break
+        end
+        i = i + 1
+      end
+      return pos if match
+      pos = pos + 1
+    end
+    nil
+  end
+
+  # Byte-wise search for the LAST occurrence of substring `sub`; nil if absent.
+  def __substr_rindex(sub)
+    my_len = length
+    sub_len = sub.length
+    return my_len if sub_len == 0
+    return nil if sub_len > my_len
+    pos = my_len - sub_len
+    while pos >= 0
+      match = true
+      i = 0
+      while i < sub_len
+        if self[pos + i] != sub[i]
+          match = false
+          break
+        end
+        i = i + 1
+      end
+      return pos if match
+      pos = pos - 1
+    end
+    nil
+  end
+
+  # Coerce a partition separator to a String (via #to_str), raising TypeError otherwise.
+  # Regexp separators are not yet supported (Regexp has no #to_str -> TypeError).
+  def __partition_sep(sep)
+    return sep if sep.is_a?(String)
+    return sep.to_str if sep.respond_to?(:to_str)
+    raise TypeError.new("type mismatch: separant is not a String")
+  end
+
+  # Split self at the FIRST occurrence of sep into [before, sep, after]; [self, "", ""] if absent.
+  def partition(sep)
+    sep = __partition_sep(sep)
+    idx = __substr_index(sep, 0)
+    return [dup, "", ""] if idx.nil?
+    slen = sep.length
+    [slice(0, idx), slice(idx, slen), slice(idx + slen, length - idx - slen)]
+  end
+
+  # Split self at the LAST occurrence of sep into [before, sep, after]; ["", "", self] if absent.
+  def rpartition(sep)
+    sep = __partition_sep(sep)
+    idx = __substr_rindex(sep)
+    return ["", "", dup] if idx.nil?
+    slen = sep.length
+    [slice(0, idx), slice(idx, slen), slice(idx + slen, length - idx - slen)]
+  end
+
   # FIXME: Currently only supports a string pattern
   # of a single character, with a simple string replace
   #
