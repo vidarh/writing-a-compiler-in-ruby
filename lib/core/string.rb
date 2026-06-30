@@ -297,6 +297,10 @@ class String
     result
   end
 
+  def bytesize
+    length
+  end
+
   def map!
     i = 0
     len = length
