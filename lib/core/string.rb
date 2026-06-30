@@ -771,6 +771,20 @@ class String
     pattern =~ self
   end
 
+  # String#match(pattern, pos=0) -> MatchData or nil. A String pattern is treated as a Regexp source.
+  def match(pattern, pos = 0)
+    pattern = Regexp.new(pattern) if pattern.is_a?(String)
+    return nil if pattern.nil?
+    pattern.match(self, pos)
+  end
+
+  # String#match?(pattern, pos=0) -> true/false (no MatchData / no $~ side effects).
+  def match?(pattern, pos = 0)
+    pattern = Regexp.new(pattern) if pattern.is_a?(String)
+    return false if pattern.nil?
+    !pattern.match(self, pos).nil?
+  end
+
   # Minimal String#unpack: supports the 8-bit directives C (unsigned) and c (signed), each
   # with an optional count or '*'. Multi-byte/endian directives and inputs containing NUL
   # bytes are not handled yet (the latter needs a binary-safe String).
