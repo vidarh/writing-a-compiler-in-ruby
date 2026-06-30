@@ -21,6 +21,7 @@ module Enumerable
 
 
   def collect
+    return to_enum(:collect) if !block_given?
     items = Array.new
     self.each do |item|
       items << yield(item)
@@ -30,6 +31,7 @@ module Enumerable
 
 
   def detect(ifnone = nil)
+    return to_enum(:detect) if !block_given?
     self.each do |item|
       if yield(item)
         return item
@@ -70,6 +72,7 @@ module Enumerable
 
 
   def each_with_index
+    return to_enum(:each_with_index) if !block_given?
     i = 0
     self.each do |item|
       yield(item, i)
@@ -189,6 +192,7 @@ module Enumerable
 
 
   def reject
+    return to_enum(:reject) if !block_given?
     items = Array.new
     self.each do |item|
       if !yield(item)
@@ -200,6 +204,7 @@ module Enumerable
 
 
   def select
+    return to_enum(:select) if !block_given?
     items = Array.new
     self.each do |item|
       if yield(item)
@@ -266,6 +271,7 @@ module Enumerable
   # gdb-backed diagnosis (movl (%esi) with esi=tagged-int).
 
   def each_with_object obj
+    return to_enum(:each_with_object, obj) if !block_given?
     each {|x| yield(x, obj) }
     obj
   end

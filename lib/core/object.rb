@@ -72,11 +72,11 @@ class Object
     [self]
   end
 
-  def to_enum(meth = :each)
-    GenericEnumerator.new(self, meth)
+  def to_enum(meth = :each, *args)
+    GenericEnumerator.new(self, meth, *args)
   end
-  def enum_for(meth = :each)
-    GenericEnumerator.new(self, meth)
+  def enum_for(meth = :each, *args)
+    GenericEnumerator.new(self, meth, *args)
   end
 
   def == other

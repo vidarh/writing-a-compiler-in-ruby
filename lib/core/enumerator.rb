@@ -88,13 +88,14 @@ class RangeEnumerator < Enumerator
 end
 
 class GenericEnumerator < Enumerator
-  def initialize(receiver, gmethod = :each)
+  def initialize(receiver, gmethod = :each, *gargs)
     @receiver = receiver
     @gmethod = gmethod
+    @gargs = gargs
   end
   def each(&block)
     return self if !block
-    @receiver.__send__(@gmethod, &block)
+    @receiver.__send__(@gmethod, *@gargs, &block)
   end
   def to_a
     r = []
