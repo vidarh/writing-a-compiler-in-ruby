@@ -1191,8 +1191,25 @@ class Array
   # Returns an array containing the elements in self corresponding to the given selector(s).
   # The selectors may be either integer indices or ranges.
   # See also Array#select.
-  def values_at
-    %s(puts "Array#values_at not implemented")
+  def values_at(*indices)
+    result = []
+    indices.each do |idx|
+      if idx.is_a?(Range)
+        a = idx.first
+        b = idx.last
+        a = a + length if a < 0
+        b = b + length if b < 0
+        b = b - 1 if idx.exclude_end?
+        i = a
+        while i <= b
+          result << self[i]
+          i = i + 1
+        end
+      else
+        result << self[idx]
+      end
+    end
+    result
   end
 
 
