@@ -204,7 +204,13 @@ class Compiler
     # bodies that call undef_method (common in rubyspec fixtures) crash with "undefined method
     # 'undef_method'" while the fixture loads, taking out every spec that requires that fixture.
     if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor, :module_function, :undef_method, :private_constant, :public_constant, :private_class_method, :public_class_method, :autoload].include?(func)
-      if scope.is_a?(ModuleScope)
+      # Normally these are no-ops in a class/module body (ModuleScope). When the body wraps its statements
+      # in a LocalVarScope (compile_class does this to provide __env__ for class-level closures), the scope
+      # is a LocalVarScope whose immediate parent is that ModuleScope -- still a class-body context, so the
+      # no-op must apply there too (otherwise `protected`/`attr_*`/... fall through to a bogus self.<name>
+      # call -> "undefined method 'protected'").
+      if scope.is_a?(ModuleScope) ||
+         (scope.is_a?(LocalVarScope) && scope.respond_to?(:next) && scope.next.is_a?(ModuleScope))
         # In class/module body - just return nil
         @e.movl("nil", :eax)
         return Value.new([:subexpr])

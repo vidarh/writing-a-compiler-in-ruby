@@ -474,12 +474,49 @@ class Compiler
     # Without this, calls like `private :method_name` fail because %esi isn't set
     reload_self(cscope)
 
-    exps.each do |e|
-      addr = compile_do(cscope, *e)
+    if class_body_creates_closure?(exps)
+      # A closure created directly in the class body needs an __env__ to reference (class bodies are
+      # their own compile unit, so an outer/top-level __env__ is out of scope -> it resolves to the class
+      # object and the closure prologue corrupts it). Allocate one in a LocalVarScope (the `let` helper,
+      # as compile_eigenclass uses, manages self/scope properly). __alloc_env and __new_proc are low-level
+      # calls that clobber %esi, so reload self before EACH statement (a class body's self lives in %esi,
+      # set once -- unlike a method's reloadable stack-arg self).
+      let(cscope, :__env__, :__closure__, :__tmp_proc) do |lscope|
+        compile_eval_arg(lscope, [:sexp, [:assign, :__closure__, 0]])
+        compile_eval_arg(lscope, [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]])
+        exps.each do |e|
+          stmts = e.is_a?(Array) ? e : [e]
+          stmts.each do |stmt|
+            reload_self(lscope)
+            compile_do(lscope, stmt)
+          end
+        end
+      end
+    else
+      exps.each do |e|
+        addr = compile_do(cscope, *e)
+      end
     end
 
     @e.comment("=== end class #{fq_name} ===")
     return Value.new([:global, fq_name], :object)
+  end
+
+  # True if any statement in a class/module body DIRECTLY creates a closure (a `__new_proc` call not nested
+  # inside a further class/module/method scope, which would carry its own __env__).
+  def class_body_creates_closure?(exps)
+    found = false
+    walk = lambda do |n|
+      return if found || !n.is_a?(Array)
+      return if [:class, :module, :defm, :defun].include?(n[0])
+      if n[0] == :call && n[1] == :__new_proc
+        found = true
+        return
+      end
+      n.each { |c| walk.call(c) }
+    end
+    exps.each { |e| walk.call(e) }
+    found
   end
 
 end
