@@ -69,16 +69,19 @@ class Range
   end
 
   def each
+    # Use #succ (not `+= 1`) so non-integer ranges work too. For a String/char range like ('0'..'5'),
+    # `i += 1` invoked String#+(Integer) which read past the buffer and SEGFAULTED; Integer#succ is self+1
+    # so integer ranges are unchanged.
     i = @min
     if @exclude_end
       while i < @max
         yield i
-        i += 1
+        i = i.succ
       end
     else
       while i <= @max
         yield i
-        i += 1
+        i = i.succ
       end
     end
   end
