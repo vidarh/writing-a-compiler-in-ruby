@@ -1695,7 +1695,42 @@ class Compiler
     rewrite_forward_args(exp)    # Must run before rewrite_keyword_args
     rewrite_keyword_args(exp)   # Must run before rewrite_default_args
     rewrite_default_args(exp)
+    rewrite_splat_to_array(exp)
     rewrite_let_env(exp)
+  end
+
+  # Coerce a calling-side splat operand to an Array: `obj.m(*x)` / `f(*x)` for a non-Array x reads x's
+  # @len/buffer as garbage -> SIGSEGV (e.g. mspec `@object.send(*@method)` where @method is a Symbol). Only
+  # the SOLE-splat case is handled (no fixed args), so evaluating the receiver then the coerced operand keeps
+  # Ruby left-to-right order. The operand is coerced ONCE into a temp via __splat_to_a (a bare defun), so the
+  # splat stack-manipulation never re-runs a method call mid-setup. :__copysplat (block/arg forwarding) and an
+  # already-coerced :__splat_a are left alone.
+  def rewrite_splat_to_array(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      if e.is_a?(Array) && (e[0] == :callm || e[0] == :call)
+        ai = (e[0] == :callm) ? 3 : 2
+        args = e[ai]
+        if args.is_a?(Array) && args.length == 1 && args[0].is_a?(Array) && args[0][0] == :splat
+          op = args[0][1]
+          if op != :__copysplat && op != :__splat_a
+            if e[0] == :callm
+              newcall = E[:callm, :__splat_r, e[2], [E[:splat, :__splat_a]]]
+              newcall << e[4] if e[4]
+              e.replace(E[:let, [:__splat_r, :__splat_a],
+                E[:assign, :__splat_r, e[1]],
+                E[:assign, :__splat_a, E[:callm, op, :__splat_to_a]],
+                newcall])
+            else
+              e.replace(E[:let, [:__splat_a],
+                E[:assign, :__splat_a, E[:callm, op, :__splat_to_a]],
+                E[:call, e[1], [E[:splat, :__splat_a]]]])
+            end
+          end
+        end
+      end
+      :next
+    end
   end
 
   # Transform argument forwarding (...) into explicit parameter capture and forwarding

@@ -64,6 +64,14 @@ class Object
     inspect
   end
 
+  # Coerce a calling-side splat operand to an Array. `f(*x)`/`obj.send(*sym)` for a non-Array x reads x's
+  # @len/buffer as garbage -> SIGSEGV; Ruby splats a non-Array (no #to_a) to [x]. Called via the
+  # rewrite_splat_to_array transform, which evaluates this ONCE into a temp BEFORE the splat stack setup.
+  def __splat_to_a
+    return self if is_a?(Array)
+    [self]
+  end
+
   def == other
     object_id == other.object_id
   end
