@@ -1115,6 +1115,31 @@ class Compiler
     end
   end
 
+  # Runtime `Class.new(superclass)` is broken: the eigenclass dispatch of `.new` on Class does not build a
+  # real class (garbage vtable/superclass), so instances get a wrong class pointer and crash on
+  # inspect/is_a?/==. Intercept the literal `Class.new(...)` callm at compile time and build a proper class
+  # object via __new_class_object (the helper the compiler uses for `class X < Y`). For an empty subclass the
+  # new class shares the superclass's vtable (size == ssize == __vtable_size); also copy the superclass's
+  # @instance_size (slot 1) and @name (slot 2). Only matches a literal `Class` receiver; dynamic forms left alone.
+  def rewrite_class_new(exp)
+    exp.depth_first do |e|
+      if e.is_a?(Array) && e[0] == :callm && e[1] == :Class && e[2] == :new
+        args = e[3]
+        if args.is_a?(Array) && args.length > 0
+          sup = args[0]
+        else
+          sup = :Object
+        end
+        e.replace(E[:sexp, E[:let, [:__tmpcls],
+          E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, :Class]],
+          E[:assign, E[:index, :__tmpcls, 1], E[:index, sup, 1]],
+          E[:assign, E[:index, :__tmpcls, 2], E[:index, sup, 2]],
+          :__tmpcls]])
+      end
+      :next
+    end
+  end
+
   def rewrite_range(exp)
     exp.depth_first do |e|
       if e[0] == :range
@@ -1628,6 +1653,7 @@ class Compiler
     group_keyword_arguments(exp)   # Group :pair and :hash_splat nodes into :hash
     rewrite_concat(exp)
     rewrite_range(exp)
+    rewrite_class_new(exp)
     rewrite_defined(exp)  # Must run before rewrite_strconst
     rewrite_strconst(exp)
     rewrite_integer_constant(exp)
