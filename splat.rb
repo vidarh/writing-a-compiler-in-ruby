@@ -1,24 +1,27 @@
 
 class Compiler
 
-  def handle_splat(scope,args)
+  def handle_splat(scope,arglist)
     # FIXME: Quick and dirty splat handling:
     # - If the last node has a splat, we cheat and assume it's
     #   from the arguments rather than a proper Ruby Array.
-    # - We assume we can just allocate args.length+1+numargs
+    # - We assume we can just allocate arglist.length+1+numargs
     # - We wastefully do it in two rounds and muck directly
     #   with %esp for now until I figure out how to do this
     #   more cleanly.
-    splat = args.last.is_a?(Array) && args.last.first == :splat
+    # NOTE: the parameter is `arglist`, NOT `args`: the inner with_register blocks capture it, and naming it
+    # `args` collided with the `m.args` method call below -- rewrite_env_vars then rewrote that method name
+    # into an __env__ slot (a latent miscompile). Keep it distinct from any method named `args`.
+    splat = arglist.last.is_a?(Array) && arglist.last.first == :splat
     numargs = nil
 
     if !splat
-      return yield(args,false)
+      return yield(arglist,false)
     end
 
     # FIXME: This is just a disaster waiting to happen
     # (needs proper register allocation)
-    @e.comment("*#{args.last.last.to_s}")
+    @e.comment("*#{arglist.last.last.to_s}")
     reg = compile_eval_arg(scope,:numargs)
 
     # "reg" is set to numargs - (number of non-splat arguments to the *method we're in*)
@@ -30,7 +33,7 @@ class Compiler
     @e.with_register do |argend|
       @e.movl(reg,argend) 
       
-      reg = compile_eval_arg(scope,args.last.last)
+      reg = compile_eval_arg(scope,arglist.last.last)
       @e.addl(reg,argend)
       
       @e.with_register do |dest|
@@ -55,17 +58,17 @@ class Compiler
         @e.subl(@e.sp,dest)
         @e.sarl(2,dest)
         @e.movl(dest,@e.scratch)
-        @e.comment("*#{args.last.last.to_s} end")
-        
-        args.pop
+        @e.comment("*#{arglist.last.last.to_s} end")
+
+        arglist.pop
       end
     end
 
-    yield(args, true)
+    yield(arglist, true)
 
     @e.pushl(@e.result)
     reg = compile_eval_arg(scope,:numargs)
-    @e.subl(args.size+1,reg)
+    @e.subl(arglist.size+1,reg)
     @e.sall(2,reg)
     @e.movl(reg,@e.scratch)
     @e.popl(@e.result)
