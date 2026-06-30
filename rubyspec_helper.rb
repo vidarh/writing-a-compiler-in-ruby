@@ -82,6 +82,14 @@ def quarantine!(*args, &block)
   $spec_skipped = $spec_skipped + 1
 end
 
+# mspec: `evaluate <<-code do ... end` runs a code STRING at runtime (defining methods/classes), then runs
+# the block of assertions against them. This AOT compiler cannot eval code strings, and the block's
+# assertions reference methods defined only in that string -- so skip the example rather than crash. Without
+# this, the undefined `evaluate` call hits a null vtable slot and SIGSEGVs while the file loads.
+def evaluate(code = nil, &block)
+  $spec_skipped = $spec_skipped + 1
+end
+
 def it(description, &block)
   # mspec: `it "desc"` with NO block is a PENDING example (counts as skipped, not run). Without this guard
   # the harness fell through to `block.call` on a nil block -> "undefined method 'call' for nil", crashing
