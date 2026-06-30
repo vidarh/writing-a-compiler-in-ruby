@@ -255,6 +255,11 @@ class String
 
   def __set_raw(str)
     @buffer = str
+    # Rebind @capacity to the new buffer. Leaving it at the previous value is unsafe: concat trusts
+    # @capacity to decide between an in-place strcat and a realloc, so a stale (larger) capacity after
+    # the buffer shrinks lets a later `<<` write past the new allocation and corrupt the heap. A
+    # conservative capacity (valid length + 1) never overflows -- concat just reallocs when it must.
+    %s(assign @capacity (add (strlen @buffer) 1))
   end
 
   def __get_raw
@@ -386,33 +391,34 @@ class String
   end
 
   def slice!(b,e)
-
     l = length
-    # Negative offset?
     if b < 0
       b = l + b
     end
-    
-    if b < 0
+    if b < 0 || b > l
       return nil
     end
-
-    endp = b + e
-    if endp > l
+    if b + e > l
       e = l - b
     end
+    removed = slice(b, e)
+    rest = slice(0, b)
+    rest.concat(slice(b + e, l - b - e))
+    self.__set_raw(rest.__get_raw)
+    removed
+  end
 
+  def slice(a, len = nil)
+    return self[a] if len.nil?
+    l = length
+    start = a < 0 ? l + a : a
+    return nil if start < 0 || start > l || len < 0
+    len = l - start if start + len > l
     n = String.new
-    %s(assign src (add @buffer (callm b __get_raw)))
-    n.__copy_raw(src, e)
-
-    endp = b + e
-    %s(assign dest (add @buffer (callm b __get_raw)))
-    %s(assign src (add @buffer (callm endp __get_raw)))
-    %s(memmove dest src (callm e __get_raw))
-
+    %s(assign src (add @buffer (callm start __get_raw)))
+    n.__copy_raw(src, len)
     n
-   end
+  end
 
 
   def reverse
