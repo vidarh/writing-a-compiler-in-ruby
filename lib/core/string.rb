@@ -672,6 +672,29 @@ class String
     result
   end
 
+  # Insert `other` before the character at `index`, modifying self in place and returning self.
+  # A negative index counts from the end such that -1 appends after the last character.
+  def insert(index, other)
+    index = __just_width(index)
+    if !other.is_a?(String)
+      if other.respond_to?(:to_str)
+        other = other.to_str
+      else
+        raise TypeError.new("no implicit conversion into String")
+      end
+    end
+    len = length
+    pos = index < 0 ? len + index + 1 : index
+    if pos < 0 || pos > len
+      raise IndexError.new("index out of string")
+    end
+    head = slice(0, pos)
+    head.concat(other)
+    head.concat(slice(pos, len - pos))
+    self.__set_raw(head.__get_raw)
+    self
+  end
+
 
   def rindex(ch)
     l  = length
