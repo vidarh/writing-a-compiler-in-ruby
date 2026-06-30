@@ -951,6 +951,12 @@ class Compiler
         if num
           seen = true
           e[i] = E[:index, :__env__, num]
+          # If this was a BARE single argument of a call -- e.g. `m(x)` parsed as [:call,:m,:x] (not
+          # [:call,:m,[:x]]) -- rewriting it in place leaves [:index,__env__,N] sitting directly in the
+          # argument slot, which the caller side then reads as a 3-element ARG LIST (:index,__env__,N) and
+          # passes three garbage args ("wrong number of arguments"). Wrap it back into a one-element list.
+          # (Same parser-quirk fixup rewrite_strconst applies to a bare String argument.)
+          e[i] = E[e[i]] if (e[0] == :call || e[0] == :callm) && i > 1
         end
       end
     end
