@@ -222,16 +222,24 @@ class Array
       return false
     end
 
-    if self.size == other.size
-      self.each_index do |i|
-        if self[i] != other[i]
-          return false
-        end
-      end
-      return true
+    if self.size != other.size
+      return false
     end
 
-    return false
+    # Recursion guard: if self is already mid-comparison higher up the stack, this is a cyclic
+    # (self-referential) structure -- treat the back-edge as equal so we terminate instead of
+    # recursing forever (-> heap exhaustion / SIGSEGV). The flag is a plain ivar, set on entry and
+    # cleared on exit, so no global state is needed (a load-time global init breaks core bootstrap).
+    return true if @__comparing
+    @__comparing = true
+    result = true
+    self.each_index do |i|
+      if self[i] != other[i]
+        result = false
+      end
+    end
+    @__comparing = false
+    result
   end
 
 

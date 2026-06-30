@@ -388,11 +388,22 @@ class Hash
     return true if self.equal?(other)
     return false if !other.is_a?(Hash)
     return false if size != other.size
+    # Recursion guard: if self is already mid-comparison higher up the stack, this is a cyclic
+    # (self-referential) structure -- treat the back-edge as equal so we terminate instead of
+    # recursing forever (-> heap exhaustion / SIGSEGV). The flag is a plain ivar set on entry and
+    # cleared on exit (no global state, which would break core bootstrap to initialise).
+    return true if @__comparing
+    @__comparing = true
+    result = true
     each do |k, v|
-      return false if !other.member?(k)
-      return false if other[k] != v
+      if !other.member?(k)
+        result = false
+      elsif other[k] != v
+        result = false
+      end
     end
-    true
+    @__comparing = false
+    result
   end
 
   # pair - return first key-value pair as array
