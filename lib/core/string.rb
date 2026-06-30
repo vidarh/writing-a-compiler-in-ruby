@@ -219,6 +219,19 @@ class String
     str
   end
 
+  # String#succ: successor string for String ranges (e.g. ('0'..'5').to_a) via Range#each. Increments the
+  # last byte. Because the byte strictly increases, Range#each terminates correctly for same-length ranges
+  # (the common case in specs). NOTE: does NOT implement Ruby's alphabetic/carry wrap ('9'->'10', 'z'->'aa')
+  # -- that needs a prepend (String#+) which currently breaks self-host (selftest-c). See memory.
+  def succ
+    return dup if length == 0
+    s = dup
+    i = length - 1
+    c = s[i]
+    s[i] = c + 1
+    s
+  end
+
   def == other
     s = other.is_a?(String)
     return false if !s
