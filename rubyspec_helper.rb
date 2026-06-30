@@ -888,9 +888,13 @@ $spec_shared_method = nil
 def it_behaves_like(name, *args)
   block = $shared_examples[name]
   if block
-    # Set global variable for shared examples to use
-    # (preprocessing replaces @method with $spec_shared_method)
+    # Set global variables for shared examples to use
+    # (preprocessing replaces @method with $spec_shared_method and other @ivars with $spec_<name>).
+    # mspec's it_behaves_like(desc, method, object) binds @method and @object; the second extra arg
+    # becomes @object (used by e.g. shared/string/times.rb as `@object.call(...)`). Without setting
+    # $spec_object, @object stayed nil and `@object.call` SEGFAULTED.
     $spec_shared_method = args[0] if args.length > 0
+    $spec_object = args[1] if args.length > 1
     block.call
   else
     msg = "behaves like '#{name}' (shared example not found)"
