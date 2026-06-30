@@ -583,8 +583,9 @@ class Compiler
       # FIXME: e seems to get aliased by v
       ex = e
       e.each_with_index do |v,i|
+        next unless v.is_a?(Symbol)
         name = v.to_s
-        if v.is_a?(Symbol) && name[0] == ?:
+        if name[0] == ?:
           #STDERR.puts v.inspect
           if !@symbols.member?(v)
             @symbols << name[1..-1]
