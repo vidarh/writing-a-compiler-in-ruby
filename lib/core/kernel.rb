@@ -72,6 +72,7 @@ class Kernel
 
   # Infinite loop - executes block repeatedly until break
   def loop
+    return to_enum(:loop) if !block_given?
     while true
       yield
     end
