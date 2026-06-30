@@ -1216,8 +1216,12 @@ class Compiler
         else
           sup = :Object
         end
+        # classob (slot 0, the metaclass) = the superclass's metaclass, NOT a bare `Class`, so the new class
+        # inherits the superclass's CLASS methods (e.g. Proc's custom `def self.new` that captures the block;
+        # with a bare Class metaclass, `sub.new {..}` dispatched to plain Class#new, dropping the block and
+        # leaving @addr nil -> the resulting proc segfaulted on call).
         e.replace(E[:sexp, E[:let, [:__tmpcls],
-          E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, :Class]],
+          E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, E[:index, sup, 0]]],
           E[:assign, E[:index, :__tmpcls, 1], E[:index, sup, 1]],
           E[:assign, E[:index, :__tmpcls, 2], E[:index, sup, 2]],
           :__tmpcls]])
