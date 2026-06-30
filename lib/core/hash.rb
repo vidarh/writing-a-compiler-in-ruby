@@ -371,16 +371,57 @@ class Hash
     value
   end
 
-  def merge(other)
-    result = Hash[]
-    each do |k, v|
-      result[k] = v
-    end
-    other.each do |k, v|
-      result[k] = v
+  # merge(*others) { |key, oldval, newval| ... } -> a new Hash with each other merged in. Without a
+  # block, later values win; with a block, it resolves key collisions. Iteration uses keys + [] and
+  # while-loops (not nested each-blocks) so the conflict `yield` happens directly in the method body,
+  # avoiding the fragile yield-from-inside-a-block path.
+  def merge(*others)
+    result = dup
+    has_block = block_given?
+    i = 0
+    while i < others.length
+      other = others[i]
+      ks = other.keys
+      j = 0
+      while j < ks.length
+        k = ks[j]
+        v = other[k]
+        if has_block && result.member?(k)
+          result[k] = yield(k, result[k], v)
+        else
+          result[k] = v
+        end
+        j = j + 1
+      end
+      i = i + 1
     end
     result
   end
+
+  # In-place merge (also aliased as #update).
+  def merge!(*others)
+    has_block = block_given?
+    i = 0
+    while i < others.length
+      other = others[i]
+      ks = other.keys
+      j = 0
+      while j < ks.length
+        k = ks[j]
+        v = other[k]
+        if has_block && member?(k)
+          self[k] = yield(k, self[k], v)
+        else
+          self[k] = v
+        end
+        j = j + 1
+      end
+      i = i + 1
+    end
+    self
+  end
+
+  alias update merge!
 
   def ==(other)
     # Identity short-circuit: prevents infinite recursion (segfault) on self-referential hashes
