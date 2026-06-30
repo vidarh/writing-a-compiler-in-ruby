@@ -189,18 +189,22 @@ class Array
   # of the array lengths. Thus, two arrays are ``equal’’ according to Array#<=>
   # if and only if they have the same length and the value of each element is
   # equal to the value of the corresponding element in the other array.
- # def <=>(other_array)
- #   if self.size == other_array.size
- #     self.each_index do |i|
-#        cmp_val = (self[i] <=> other_array[i])
-#        if cmp_val != 0
-#          return cmp_val
-#        end
-#      end
-#    else
-#      return self.size <=> other_array.size
-#    end
-#  end
+  # Comparison: element-by-element using <=>, returning the first non-zero result; if all compared
+  # elements are equal, the shorter array is "less". Returns nil if other is not an Array or an element
+  # comparison is nil. Needed for sorting arrays-of-arrays (e.g. collected yielded args) which previously
+  # raised "undefined method '<=>'".
+  def <=>(other)
+    return nil if !other.is_a?(Array)
+    len = self.size < other.size ? self.size : other.size
+    i = 0
+    while i < len
+      cmp = (self[i] <=> other[i])
+      return nil if cmp.nil?
+      return cmp if cmp != 0
+      i = i + 1
+    end
+    self.size <=> other.size
+  end
 
 
   # Equality.
