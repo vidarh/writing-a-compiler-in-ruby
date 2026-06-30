@@ -302,6 +302,37 @@ class String
     result
   end
 
+  # Yield each character (as a 1-char String -- note self[i] returns a byte value, so use slice) to
+  # the block, returning self; with no block, return an Enumerator.
+  def each_char
+    return to_enum(:each_char) if !block_given?
+    i = 0
+    len = length
+    while i < len
+      yield slice(i, 1)
+      i = i + 1
+    end
+    self
+  end
+
+  # With no block, return an Array of the characters; with a block, yield each and return self.
+  def chars
+    result = []
+    i = 0
+    len = length
+    while i < len
+      result << slice(i, 1)
+      i = i + 1
+    end
+    return result if !block_given?
+    i = 0
+    while i < len
+      yield result[i]
+      i = i + 1
+    end
+    self
+  end
+
   def bytesize
     length
   end
