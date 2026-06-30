@@ -264,6 +264,16 @@ class Compiler
         # forms (empty/destructured) yield a nil params or body, which would make a malformed defm that
         # crashes rewrite_let_env -- leave those as a runtime call (the no-op stub) rather than break.
         e.replace([:defm, e[2].to_s[1..-1].to_sym, e[3][1], e[3][2]])
+      elsif e[0] == :call && e[1] == :define_method &&
+         e[2].is_a?(Array) && e[2].length == 2 &&
+         e[2][0].is_a?(Symbol) && e[2][0].to_s[0] == ?: &&
+         e[2][1].is_a?(Array) && e[2][1][0] == :callm && e[2][1][1] == :Proc && e[2][1][2] == :new &&
+         e[2][1][4].is_a?(Array) && e[2][1][4][0] == :proc &&
+         e[2][1][4][1].is_a?(Array) && e[2][1][4][2].is_a?(Array)
+        # 2-arg form `define_method(:name, Proc.new { ... })`: the parser wraps the two args in an array at
+        # e[2], and the body is the Proc's block. Same well-formed-params/body guard as the block form.
+        prc = e[2][1][4]
+        e.replace([:defm, e[2][0].to_s[1..-1].to_sym, prc[1], prc[2]])
       end
     end
     exp

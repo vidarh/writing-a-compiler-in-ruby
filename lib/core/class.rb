@@ -201,8 +201,12 @@ class Class
   # It also means adding a function to look up a vtable offset from
   # a symbol, which effectively means a simple hash table implementation
   #
-  def define_method sym, &block
-    %s(printf "define_method %s\n" (callm (callm sym to_s) __get_raw))
+  # Runtime fallback no-op. Most define_method calls are rewritten to a real `def` at compile time
+  # (transform.rb rewrite_define_method); forms it can't statically rewrite (exotic block params, a dynamic
+  # body) reach here. Accept the optional body arg (`define_method(:name, proc)`) so it doesn't raise
+  # "wrong number of arguments", and do nothing rather than crash while a fixture loads.
+  def define_method(sym, body = nil, &block)
+    nil
   end
 
   # FIXME: Should handle multiple symbols
