@@ -679,6 +679,10 @@ class Compiler
     e = [e] if !e.is_a?(Array)
     e.each do |n|
       if n.is_a?(Array)
+        # :defm/:defun have their own scopes (processed by rewrite_let_env's depth_first(:defm)); :required
+        # nodes are inlined library files. When find_vars scans a TOP-LEVEL scope it must not descend into
+        # any of them, or it captures/rewrites library + method-body vars into the top-level __env__.
+        next if n[0] == :defm || n[0] == :defun || n[0] == :required
         if n[0] == :assign
           target = n[1]
           if target.is_a?(Array) && target[0] == :deref
@@ -784,6 +788,10 @@ class Compiler
   def rewrite_env_vars(exp, env)
     seen = false
     exp.depth_first do |e|
+      # Never redirect inside an inlined library (:required) subtree: a top-level capture pass redirects by
+      # NAME, and a common user-captured name (a/acc/...) would get rewritten to __env__[k] inside library
+      # startup code -> crash. The library's own scopes are handled separately.
+      next :skip if e.is_a?(Array) && e[0] == :required
       # Handle lambda/proc/defun/defm specially - process body but not parameter list
       if e.is_a?(Array) && (e[0] == :lambda || e[0] == :proc || e[0] == :defun || e[0] == :defm)
         # Get parameter list and body index
@@ -891,6 +899,9 @@ class Compiler
         # is never a variable reference. (Only :callm slot 2; a bare `[:call, name, args]` whose name is a
         # captured proc/lambda-valued local IS legitimately rewritten, so do NOT guard :call here.)
         next if i == 2 && e[0] == :callm && ex.is_a?(Symbol)
+        # Likewise a bare :call's method name (slot 1). At the top level a library-captured name can collide
+        # with a user method call; never redirect a method NAME to __env__.
+        next if i == 1 && e[0] == :call && ex.is_a?(Symbol)
         num = env.index(ex)
         if num
           seen = true
@@ -1090,9 +1101,19 @@ class Compiler
       :skip
     end
 
-    # Handle top-level procs (those not inside any :defm)
-    # These need environment setup and lambda rewriting too
-    # This fixes blocks like: [1].each { |x| puts x } at top level
+    # Handle top-level procs (those not inside any :defm). These need the SAME find_vars/rewrite_env_vars
+    # capture pass that process_scope_env gives method bodies -- without it, a nested top-level block that
+    # captures an enclosing block's param/local reads garbage (the param is never written to __env__). Run it
+    # BEFORE rewrite_lambda (which converts :lambda->:defun), matching process_scope_env's order. find_vars
+    # skips :defm/:defun/:required, so only the user top-level scope is analysed.
+    tenv = nil
+    if exp[0] == :do
+      tvars, te = find_vars(exp, [Set.new], Set.new, Hash.new(0))
+      if te && !te.to_a.empty?
+        tenv = te
+        rewrite_env_vars(exp, [:__stackframe__] + te.to_a)
+      end
+    end
     if rewrite_lambda(exp)
       # If we found any procs at top level, we need to set up the environment
       # Look for the first :do or :let that wraps top-level code and add __env__ and __tmp_proc
@@ -1109,12 +1130,14 @@ class Compiler
           # Wrap the top-level code in a let that declares __env__, __tmp_proc, and __closure__
           # __closure__ must be 0 at top level since there's no enclosing closure
           # __tmp_proc is used by rewrite_lambda to hold the temporary proc
+          # __env__ must be sized to hold the captured vars (stackframe slot + each captured var), not just 2.
+          envsize = tenv ? [2, ([:__stackframe__] + tenv.to_a).size].max : 2
           inner = exp[1..-1].dup
           exp.clear
           exp << :do
           let_body = E[:do,
             E[:sexp, E[:assign, :__closure__, 0]],
-            E[:sexp, E[:assign, :__env__, E[:call, :__alloc_env, 2]]]]
+            E[:sexp, E[:assign, :__env__, E[:call, :__alloc_env, envsize]]]]
           inner.each { |e| let_body << e }
           exp << E[:let, [:__closure__, :__tmp_proc, :__env__], let_body]
         end
