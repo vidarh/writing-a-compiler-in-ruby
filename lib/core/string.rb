@@ -764,6 +764,10 @@ class String
   # Delegates to pattern's =~ method
   def =~(pattern)
     return nil if pattern.nil?
+    # `str =~ obj` delegates to `obj =~ str` so a Regexp (or any object defining =~) does the match.
+    # But a String pattern would re-enter String#=~ forever -> infinite recursion / stack overflow.
+    # MRI raises TypeError for `String =~ String`; do the same instead of recursing.
+    raise TypeError.new("type mismatch: String given") if pattern.is_a?(String)
     pattern =~ self
   end
 
