@@ -986,7 +986,12 @@ class Compiler
       # FIXME: There are cleaner ways, but in the interest of
       # self-hosting, I'll do this for now.
       ac = 0
-      e2.each{|a| ac += 1 if ! a.kind_of?(Array)}
+      # Count positional params that precede a splat: plain required params (bare symbols) AND
+      # default-valued params ([name, :default, val] -- an Array, so the bare `!kind_of?(Array)` test
+      # missed them). A default param still consumes one positional slot, so omitting it from `ac` made
+      # `*rest = __splat_to_Array(__splat, numargs - ac)` collect one element too many -- the default
+      # param's own value leaked into the splat (e.g. `def f(a, b=1, *r); end; f(1,2)` gave r==[2]).
+      e2.each{|a| ac += 1 if (! a.kind_of?(Array)) || a[1] == :default }
 
       scopes = [args.dup] # We don't want "args" above to get updated
 
