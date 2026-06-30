@@ -36,6 +36,13 @@ class Kernel
   # - raise(string) - raise RuntimeError with message
   # - raise(ExceptionClass) - raise exception class with no message
   # - raise(ExceptionClass, message) - raise exception class with message
+  # Called by the compiler at a `yield` with no block (transform.rb rewrite_yield). Keeping the message
+  # literal HERE (not injected into the AST after rewrite_strconst) means it is compiled to a real String
+  # rather than a raw label address (which became a garbage Integer message and corrupted the caller).
+  def __raise_no_block
+    raise LocalJumpError.new("no block given (yield)")
+  end
+
   def raise(exc_or_msg = nil, msg = nil)
     if exc_or_msg.nil?
       # raise with nil - should re-raise $! but that's handled by compiler

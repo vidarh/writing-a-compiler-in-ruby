@@ -896,7 +896,7 @@ class Compiler
         e[0] = :if
         e[1] = E[:ne, :__closure__, 0]
         e[2] = E[:callm, :__closure__, :call, args]
-        e[3] = E[:call, :raise, [:LocalJumpError, "no block given (yield)"]]
+        e[3] = E[:call, :__raise_no_block, []]
       end
 
       e.each_with_index do |ex, i|
