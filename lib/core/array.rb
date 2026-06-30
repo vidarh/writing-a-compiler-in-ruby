@@ -799,31 +799,45 @@ class Array
   end
 
 
-  # Inserts the given values before the element with the given index
-  # (which may be negative).
-  def insert(idx, obj)
+  # insert(index, *objects) -> inserts the objects before the element at index (a non-negative index
+  # pads with nils if it is past the end; a negative index inserts AFTER that element, so -1 appends).
+  # Raises IndexError if the negative index is out of bounds. Modifies self in place and returns self.
+  def insert(idx, *objects)
+    return self if objects.empty?
+    len = length
     if idx < 0
-      #FIXME: -idx does not work
-      if 0 - idx > length
-        STDERR.puts("IndexError: index #{idx} too small for array; minimum #{-length}")
-        exit(1)
+      pos = len + idx + 1
+      if pos < 0
+        raise IndexError.new("index #{idx} too small for array; minimum #{0 - len - 1}")
       end
-      idx = length + 1 + idx
+    else
+      pos = idx
     end
 
-    pos = length
-    # FIXME: This can be done much more efficiently
-    # by dipping down and copying memory...
-    prev = nil
-    while pos > idx
-      # FIXME: If you remove the spaces here it fails.
-      prev = pos - 1
-      self[pos] = self[prev]
-      pos -= 1
+    result = []
+    i = 0
+    # Head: elements before pos, padding with nil when pos is past the current end.
+    while i < pos
+      if i < len
+        result << self[i]
+      else
+        result << nil
+      end
+      i = i + 1
+    end
+    # The inserted objects.
+    j = 0
+    while j < objects.length
+      result << objects[j]
+      j = j + 1
+    end
+    # Tail: the remaining original elements from pos onward.
+    while i < len
+      result << self[i]
+      i = i + 1
     end
 
-    self[idx] = obj
-
+    replace(result)
     self
   end
 
