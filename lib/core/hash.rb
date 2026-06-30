@@ -315,6 +315,9 @@ class Hash
     end
   end
 
+  # each_pair is an alias of each (yields [key, value] for each pair).
+  alias each_pair each
+
   # FIXME: This is a very crude way of handling deletion:
   # It simply removes the key by replacing it with 
   # Deleted that compares false against everyhing
