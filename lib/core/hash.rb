@@ -301,6 +301,7 @@ class Hash
   end
 
   def each
+    return to_enum(:each) if !block_given?
     slot = @first
     while slot
       key = @data[slot]

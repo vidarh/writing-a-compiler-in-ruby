@@ -86,3 +86,19 @@ class RangeEnumerator < Enumerator
     end
   end
 end
+
+class GenericEnumerator < Enumerator
+  def initialize(receiver, gmethod = :each)
+    @receiver = receiver
+    @gmethod = gmethod
+  end
+  def each(&block)
+    return self if !block
+    @receiver.__send__(@gmethod, &block)
+  end
+  def to_a
+    r = []
+    each { |*x| r << (x.length == 1 ? x[0] : x) }
+    r
+  end
+end
