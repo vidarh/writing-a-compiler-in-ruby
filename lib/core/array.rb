@@ -194,16 +194,38 @@ class Array
   # comparison is nil. Needed for sorting arrays-of-arrays (e.g. collected yielded args) which previously
   # raised "undefined method '<=>'".
   def <=>(other)
-    return nil if !other.is_a?(Array)
+    # Identity short-circuit: a <=> a is 0, and this stops infinite recursion (-> segfault) when an
+    # array contains itself (recursive_array <=> recursive_array compares element i==self forever).
+    return 0 if self.equal?(other)
+    if !other.is_a?(Array)
+      return nil if !other.respond_to?(:to_ary)
+      other = other.to_ary
+    end
+    # Recursion guard for two DIFFERENT mutually-recursive arrays: treat the cyclic back-edge as equal
+    # (0) so the comparison terminates (mirrors the @__comparing guard in #==).
+    return 0 if @__comparing
+    @__comparing = true
     len = self.size < other.size ? self.size : other.size
+    result = nil
+    decided = false
     i = 0
     while i < len
       cmp = (self[i] <=> other[i])
-      return nil if cmp.nil?
-      return cmp if cmp != 0
-      i = i + 1
+      if cmp.nil?
+        result = nil
+        decided = true
+        i = len
+      elsif cmp != 0
+        result = cmp
+        decided = true
+        i = len
+      else
+        i = i + 1
+      end
     end
-    self.size <=> other.size
+    result = (self.size <=> other.size) if !decided
+    @__comparing = false
+    result
   end
 
 
