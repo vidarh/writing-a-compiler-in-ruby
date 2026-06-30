@@ -609,6 +609,69 @@ class String
     s
   end
 
+  # Coerce a justification width to an Integer (via #to_int), raising TypeError otherwise.
+  def __just_width(width)
+    return width if width.is_a?(Integer)
+    if width.respond_to?(:to_int)
+      r = width.to_int
+      return r if r.is_a?(Integer)
+    end
+    raise TypeError.new("no implicit conversion into Integer")
+  end
+
+  # Coerce a pad string (via #to_str), raising TypeError for non-strings and ArgumentError when empty.
+  def __just_pad(padstr)
+    if !padstr.is_a?(String)
+      if padstr.respond_to?(:to_str)
+        padstr = padstr.to_str
+      else
+        raise TypeError.new("no implicit conversion into String")
+      end
+    end
+    raise ArgumentError.new("zero width padding") if padstr.empty?
+    padstr
+  end
+
+  # Build a fresh String of exactly n characters by repeating padstr and truncating.
+  def __pad_fill(padstr, n)
+    s = ""
+    return s if n <= 0
+    while s.length < n
+      s.concat(padstr)
+    end
+    s.slice(0, n)
+  end
+
+  def ljust(width, padstr = " ")
+    width = __just_width(width)
+    padstr = __just_pad(padstr)
+    len = length
+    return dup if width <= len
+    dup.concat(__pad_fill(padstr, width - len))
+  end
+
+  def rjust(width, padstr = " ")
+    width = __just_width(width)
+    padstr = __just_pad(padstr)
+    len = length
+    return dup if width <= len
+    __pad_fill(padstr, width - len).concat(self)
+  end
+
+  def center(width, padstr = " ")
+    width = __just_width(width)
+    padstr = __just_pad(padstr)
+    len = length
+    return dup if width <= len
+    total = width - len
+    left = total / 2
+    right = total - left
+    result = __pad_fill(padstr, left)
+    result.concat(self)
+    result.concat(__pad_fill(padstr, right))
+    result
+  end
+
 
   def rindex(ch)
     l  = length
