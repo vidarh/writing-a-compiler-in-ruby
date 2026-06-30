@@ -910,6 +910,13 @@ class Compiler
         # Skip hash-pair / hash-splat node tags at position 0 so a local variable named e.g. `pair`
         # does not cause the [:pair, k, v] tag itself to be rewritten into a closure reference.
         next if i == 0 && (ex == :pair || ex == :hash_splat)
+        # Likewise the literal-container node tags ([:array,...], [:hash,...], [:splat,...]). These are AST
+        # node types, never variable references, but a captured local variable named `array`/`hash`/`splat`
+        # would otherwise make `num = env.index(ex)` match and rewrite the TAG into an [:index,__env__,k] --
+        # turning e.g. an array literal `[]`/`[1,2]` into a read of the captured variable. (Same class of bug
+        # as the :pair / :hash_splat guard above; surfaced via a spec with both a `def m(*foo)` literal and a
+        # captured `array` local.)
+        next if i == 0 && (ex == :array || ex == :hash || ex == :splat)
         # Skip constant names in :deref nodes - they're constant/module names, not variables
         # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
         # The parent might be a variable like: a = Object; a::CONST
