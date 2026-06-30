@@ -582,8 +582,16 @@ class Array
   # exception, the second form returns default, and the third form returns
   # the value of invoking the block, passing in the index. Negative values of
   # index count from the end of the array.
-  def fetch(idx, default = nil)
-    %s(puts "Array#fetch not implemented")
+  # fetch(index) / fetch(index, default) / fetch(index) { |i| ... } -> element at index. A negative
+  # index counts from the end. When out of range: a block (passed the original index) takes precedence,
+  # else the default argument is returned, else IndexError is raised.
+  def fetch(idx, *rest)
+    len = length
+    i = idx < 0 ? len + idx : idx
+    return self[i] if i >= 0 && i < len
+    return yield(idx) if block_given?
+    return rest[0] if rest.length > 0
+    raise IndexError.new("index #{idx} outside of array bounds: #{0 - len}...#{len}")
   end
 
 
@@ -730,8 +738,14 @@ class Array
 
   # Flattens self in place. Returns nil if no modifications were made.
   # (i.e., array contains no subarrays.)
-  def flatten!
-    %s(puts "Array#flatten! not implemented")
+  def flatten!(level = nil)
+    nested = false
+    each do |e|
+      nested = true if e.is_a?(Array)
+    end
+    return nil if !nested
+    replace(flatten(level))
+    self
   end
 
 
@@ -1147,8 +1161,8 @@ class Array
   # or using an optional code block. The block implements a comparison between
   # a and b, returning -1, 0, or +1.
   # See also Enumerable#sort_by.
-  def sort!
-    %s(puts "Array#sort! not implemented")
+  def sort!(&block)
+    replace(sort(&block))
     self
   end
 
@@ -1171,8 +1185,41 @@ class Array
 
 
   # Assumes that self is an array of arrays and transposes the rows and columns.
+  # transpose -> swap rows and columns of an array of arrays. Each element is coerced via #to_ary
+  # (TypeError otherwise); all rows must be the same length (IndexError otherwise). [] -> [].
   def transpose
-    %s(puts "Array#transpose not implemented")
+    return [] if length == 0
+    rows = []
+    each do |row|
+      if row.is_a?(Array)
+        rows << row
+      elsif row.respond_to?(:to_ary)
+        rows << row.to_ary
+      else
+        raise TypeError.new("no implicit conversion of #{row.class} into Array")
+      end
+    end
+    ncols = rows[0].length
+    i = 0
+    while i < rows.length
+      if rows[i].length != ncols
+        raise IndexError.new("element size differs (#{rows[i].length} should be #{ncols})")
+      end
+      i = i + 1
+    end
+    result = []
+    c = 0
+    while c < ncols
+      col = []
+      r = 0
+      while r < rows.length
+        col << rows[r][c]
+        r = r + 1
+      end
+      result << col
+      c = c + 1
+    end
+    result
   end
 
   # Returns a new array by removing duplicate values in self.
