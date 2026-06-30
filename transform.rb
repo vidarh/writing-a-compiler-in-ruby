@@ -884,6 +884,13 @@ class Compiler
         #
         # See docs/KNOWN_ISSUES.md - "Pattern Matching with Nested Closures"
         next if i == 1 && e[0] == :pattern_key && ex.is_a?(Symbol)
+        # Don't rewrite a callm's METHOD NAME (slot 2) into an __env__ slot. When a local variable shadows a
+        # method name (e.g. `bytes = []; "abc".bytes { |b| bytes << b }`), the captured local `bytes` is in
+        # env, so without this guard rewrite_env_vars rewrites the method-name `:bytes` of `"abc".bytes(...)`
+        # into `[:index,__env__,k]` -- calling the captured array as a method -> SIGSEGV. The method-name slot
+        # is never a variable reference. (Only :callm slot 2; a bare `[:call, name, args]` whose name is a
+        # captured proc/lambda-valued local IS legitimately rewritten, so do NOT guard :call here.)
+        next if i == 2 && e[0] == :callm && ex.is_a?(Symbol)
         num = env.index(ex)
         if num
           seen = true
