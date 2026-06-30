@@ -384,19 +384,47 @@ class Compiler
           end
         end
 
+        # Bind a block's splat (rest) param. process_scope_env adds the `rest = __splat_to_Array(__splat,
+        # numargs-ac)` prologue for :defm methods, but blocks become :defun HERE and never got it -- so
+        # `{|*x|}`'s x was unbound garbage. Mirror that prologue. Proc#call invokes the defun as
+        # `@addr(self, __closure__, __env__, *args)`, so the defun has a 3-slot prefix (vs a method's 1 self):
+        # with rest at full-params index rest_idx, ac = rest_idx - 2 makes __splat_to_Array collect exactly
+        # the trailing user args. :__copysplat (forwarding) is left alone.
+        full_params = [:self, :__closure__, :__env__] + normalized_args
+        rest_idx = nil
+        rest_target = nil
+        fpi = 0
+        while fpi < full_params.length
+          fp = full_params[fpi]
+          if fp.is_a?(Array) && fp[1] == :rest && fp[0] != :__copysplat
+            rest_idx = fpi
+            rest_target = fp[0]
+          end
+          fpi += 1
+        end
+        if rest_idx
+          full_params[rest_idx] = [:__splat, :rest]
+          ac = rest_idx - 2
+          prologue = E[:sexp, [:assign, rest_target, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]]
+          newbody = E[:do, prologue]
+          bi = 1
+          while bi < body.length
+            newbody << body[bi]
+            bi += 1
+          end
+          body = newbody
+        end
+
         e.replace(
           E[:do,
             [:assign, [:index, :__env__,0], [:stackframe]],
             [:assign, :__tmp_proc,
               [:defun, "__lambda_#{@e.get_local[1..-1]}",
-                [:self,:__closure__,:__env__] + normalized_args,
+                full_params,
                 body
               ]
             ],
-            # FIXME: Compiler bug: This works
             [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, len, :__closure__]]]
-            # But this crashes:
-            #E[exp.position,:sexp, E[:call, :__new_proc, E[:__tmp_proc, :__env__, :self, len]]]
           ]
         )
       end
