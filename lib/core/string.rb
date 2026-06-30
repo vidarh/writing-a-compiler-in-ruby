@@ -813,6 +813,26 @@ class String
     [slice(0, idx), slice(idx, slen), slice(idx + slen, length - idx - slen)]
   end
 
+  # First byte index of `needle` (a String, or anything with #to_str) at or after `offset`; nil if
+  # absent. Overrides the nil-returning Object#index stub. (Regexp needles are not yet supported.)
+  def index(needle, offset = 0)
+    len = length
+    offset = offset.to_int if !offset.is_a?(Integer)
+    if offset < 0
+      offset = len + offset
+      return nil if offset < 0
+    end
+    return nil if offset > len
+    if needle.is_a?(String)
+      str = needle
+    elsif needle.respond_to?(:to_str)
+      str = needle.to_str
+    else
+      raise TypeError.new("type mismatch: given object is not a String")
+    end
+    __substr_index(str, offset)
+  end
+
   # FIXME: Currently only supports a string pattern
   # of a single character, with a simple string replace
   #
