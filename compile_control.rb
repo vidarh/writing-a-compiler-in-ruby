@@ -8,6 +8,11 @@ class Compiler
       @e.je(target)
       @e.cmpl(@e.result_value, "false")
       @e.je(target)
+      # A raw 0 (null) is an uninitialized global/ivar slot -- MRI reads those as nil, which is falsy.
+      # Without this, `$g ||= x` (or any `if $unset`) saw 0 as truthy, kept the raw 0, and SIGSEGV'd on use.
+      # Safe: a Ruby Integer 0 is the tagged value 1, never raw 0, so this only catches genuinely-null slots.
+      @e.testl(@e.result_value, @e.result_value)
+      @e.je(target)
     else
       @e.evict_all
       @e.jmp_on_false(target, r)
@@ -25,6 +30,9 @@ class Compiler
       @e.cmpl(@e.result_value, "nil")
       @e.je(skip)
       @e.cmpl(@e.result_value, "false")
+      @e.je(skip)
+      # Raw 0 (null/uninitialized slot) is falsy too -- see compile_jmp_on_false.
+      @e.testl(@e.result_value, @e.result_value)
       @e.je(skip)
       # Value is truthy - jump to target
       @e.jmp(target)
