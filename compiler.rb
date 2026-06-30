@@ -1363,6 +1363,14 @@ class Compiler
       # that is for later.
       compile_eval_arg(@global_scope, [:sexp, [:assign, :__stack_top, [:stackframe]]])
 
+      # Start the garbage collector before ANY allocation. tgc_start must precede the first tgc_add: it sets
+      # the stack bottom + static-root range and a non-zero loadfactor (without it the GC's slot table never
+      # grows, so tgc_add_ptr does `% nslots` with nslots==0 -> SIGFPE on the very first allocation). It used
+      # to live at base.rb top-level, but the user program's top-level runs before lib/core, so a top-level
+      # closure's env was allocated first and crashed. main's frame here is the true stack bottom.
+      # (Paired with the tgc_add/tgc_realloc/tgc_stop wiring in lib/core/base.rb.)
+      compile_eval_arg(@global_scope, [:sexp, [:tgc_start, :__stack_top, :__roots_start, :__roots_end]])
+
       # Initialize all global variables (starting with $) to nil
       @global_scope.globals.keys.each do |g|
         if g.to_s[0] == ?$

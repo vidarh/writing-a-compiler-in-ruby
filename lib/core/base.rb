@@ -18,8 +18,10 @@
     0)
 )
 
-# Initialize the garbage collector
-%s(tgc_start (stackframe) __roots_start __roots_end)
+# The garbage collector is started from compile_main (compiler.rb) BEFORE any allocation -- it must run
+# before the first tgc_add. It cannot live here: this file's top-level runs after the user program's
+# top-level, so a top-level closure's env would be allocated (and the GC used) before this line.
+#%s(tgc_start (stackframe) __roots_start __roots_end)
 
 %s(defun __alloc (size opt)
   (let (ptr)
