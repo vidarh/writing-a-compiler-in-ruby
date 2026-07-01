@@ -29,6 +29,57 @@ class IO < Object
     new(fd)
   end
 
+  def __set_pid(p)
+    @pid = p
+    p
+  end
+
+  # IO.popen(cmd, mode="r") -> an IO connected to a child process running `cmd` via /bin/sh -c. In "r"
+  # mode the IO reads the child's stdout; in "w" mode writes to its stdin. With a block, yields the IO,
+  # closes it, and returns the block's value. The command STRINGS are held in Ruby locals so the GC does
+  # not free the buffers whose raw pointers are handed to execve. (mspec ruby_exe still won't work -- it
+  # needs a ruby interpreter to spawn -- but real external commands do.)
+  def self.popen(cmd, mode = "r")
+    sh = "/bin/sh"
+    dashc = "-c"
+    cmdstr = cmd.to_s
+    writing = mode.to_s[0] == ?w
+    wflag = writing ? 1 : 0
+    fd = -1
+    childpid = -1
+    %s(do
+      (assign pb (__array 4))
+      (pipe pb)
+      (assign kidpid (fork))
+      (if (eq kidpid 0)
+        (do
+          (if (eq (callm wflag __get_raw) 1)
+            (dup2 (index pb 0) 0)
+            (dup2 (index pb 1) 1))
+          (close (index pb 0))
+          (close (index pb 1))
+          (assign argv (__array 4))
+          (assign (index argv 0) (callm sh __get_raw))
+          (assign (index argv 1) (callm dashc __get_raw))
+          (assign (index argv 2) (callm cmdstr __get_raw))
+          (assign (index argv 3) 0)
+          (assign envp (__array 1))
+          (assign (index envp 0) 0)
+          (execve (callm sh __get_raw) argv envp)
+          (exit 127))
+        (do
+          (assign childpid (__int kidpid))
+          (if (eq (callm wflag __get_raw) 1)
+            (do (close (index pb 0)) (assign fd (__int (index pb 1))))
+            (do (close (index pb 1)) (assign fd (__int (index pb 0))))))))
+    io = new(fd)
+    io.__set_pid(childpid)
+    return io if !block_given?
+    result = yield(io)
+    io.close
+    result
+  end
+
   # IO.pipe -> [read_io, write_io] over a pipe(2) pair. With a block, yields the pair, closes both, and
   # returns the block's value. (No fork -- unlike popen.)
   def self.pipe(*args)
