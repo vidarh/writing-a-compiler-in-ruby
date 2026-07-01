@@ -165,9 +165,9 @@ class Class
   end
 
   # FIXME: Optimizing this will shave massively off __splat_to_Array calls.
-  def new *__copysplat
+  def new *__copysplat, &blk
     ob = allocate
-    ob.initialize(*__copysplat)
+    ob.initialize(*__copysplat, &blk)
     ob
   end
 
