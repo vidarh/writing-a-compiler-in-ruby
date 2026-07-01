@@ -599,6 +599,20 @@ class String
     n
   end
 
+  # Replace this string's contents in place with `other`'s (String#replace), returning self.
+  def replace(other)
+    o = other.to_s
+    %s(do
+      (assign ro (callm o __get_raw))
+      (assign osize (strlen ro))
+      (assign @capacity (add osize 8))
+      (assign @buffer (__stralloc @capacity))
+      (strcpy @buffer ro)
+      (assign @length osize)
+    )
+    self
+  end
+
   # Remove every character that is in ALL the given sets.
   def delete(*sets)
     css = sets.map { |s| __charset_spec(s) }
@@ -607,6 +621,14 @@ class String
       out = out + ch unless css.all? { |cs| __charset_has?(cs, ch) }
     end
     out
+  end
+
+  # In-place delete; returns self if anything was removed, else nil.
+  def delete!(*sets)
+    r = delete(*sets)
+    return nil if r == self
+    replace(r)
+    self
   end
 
   # Collapse runs of the same character. With no argument every run is squeezed; with set arguments only
@@ -621,6 +643,14 @@ class String
       prev = ch
     end
     out
+  end
+
+  # In-place squeeze; returns self if anything was collapsed, else nil.
+  def squeeze!(*sets)
+    r = squeeze(*sets)
+    return nil if r == self
+    replace(r)
+    self
   end
 
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
