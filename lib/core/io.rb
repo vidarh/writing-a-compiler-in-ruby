@@ -13,6 +13,22 @@ class IO < Object
     @rawbuf = tmp
   end
 
+  # IO.sysopen(name, mode="r") -> the raw file descriptor (a tagged Integer, so it round-trips through
+  # IO.new/#fileno). Mode may carry an :encoding suffix, ignored by File.__mode_to_flags. 420 = 0644.
+  def self.sysopen(name, mode = "r")
+    name = name.to_s
+    flags = File.__mode_to_flags(mode)
+    fd = -1
+    %s(assign fd (__int (open (callm name __get_raw) (callm flags __get_raw) 420)))
+    raise Errno::ENOENT.new("No such file or directory - #{name}") if fd < 0
+    fd
+  end
+
+  # IO.for_fd(fd, *) / IO.open(fd) -> wrap an existing fd in an IO (opts ignored).
+  def self.for_fd(fd, *opts)
+    new(fd)
+  end
+
   def to_i
     @fd
   end

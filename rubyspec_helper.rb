@@ -865,6 +865,13 @@ def new_io(name, mode = "w")
   File.new(name, mode)
 end
 
+# mspec helper: new_fd(name, mode) opens a file and returns its raw fd (mspec uses IO.sysopen). Default
+# "w" creates the file, matching new_io.
+def new_fd(name, mode = "w")
+  mode = "w" if !mode.is_a?(String)
+  IO.sysopen(name, mode)
+end
+
 # mspec helper: mock_numeric(name) returns a mock that stands in for a Numeric (specs then add expectations
 # like should_receive(:coerce)/:to_r). The harness lacked it, so numeric coercion specs crashed at load with
 # "undefined method 'mock_numeric'". Back it with the existing mock framework.
