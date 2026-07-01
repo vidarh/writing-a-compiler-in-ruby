@@ -1009,6 +1009,98 @@ class Array
     end
   end
 
+  # All n-length permutations (n defaults to the array length). Block form yields each and returns self.
+  def permutation(n = nil, &block)
+    len = length
+    n = len if n.nil?
+    result = []
+    if n >= 0 && n <= len
+      used = []
+      i = 0
+      while i < len
+        used << false
+        i = i + 1
+      end
+      __permutation_into(n, [], used, result)
+    end
+    if block
+      result.each { |p| block.call(p) }
+      self
+    else
+      result
+    end
+  end
+
+  def __permutation_into(n, current, used, result)
+    if current.length == n
+      result << current.dup
+      return
+    end
+    i = 0
+    while i < length
+      if !used[i]
+        used[i] = true
+        current << self[i]
+        __permutation_into(n, current, used, result)
+        current.pop
+        used[i] = false
+      end
+      i = i + 1
+    end
+  end
+
+  # All n-length sequences drawn from self WITH repetition.
+  def repeated_permutation(n, &block)
+    result = []
+    __repeated_perm_into(n, [], result) if n >= 0
+    if block
+      result.each { |p| block.call(p) }
+      self
+    else
+      result
+    end
+  end
+
+  def __repeated_perm_into(n, current, result)
+    if current.length == n
+      result << current.dup
+      return
+    end
+    i = 0
+    while i < length
+      current << self[i]
+      __repeated_perm_into(n, current, result)
+      current.pop
+      i = i + 1
+    end
+  end
+
+  # All n-length non-decreasing-index combinations drawn from self WITH repetition.
+  def repeated_combination(n, &block)
+    result = []
+    __repeated_comb_into(n, 0, [], result) if n >= 0
+    if block
+      result.each { |c| block.call(c) }
+      self
+    else
+      result
+    end
+  end
+
+  def __repeated_comb_into(n, start, current, result)
+    if current.length == n
+      result << current.dup
+      return
+    end
+    i = start
+    while i < length
+      current << self[i]
+      __repeated_comb_into(n, i, current, result)
+      current.pop
+      i = i + 1
+    end
+  end
+
   def __combination_into(n, start, current, result)
     if current.length == n
       result << current.dup

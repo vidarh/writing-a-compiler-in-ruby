@@ -3892,14 +3892,27 @@ class Integer < Numeric
       return nil
     end
 
-    # Ruby's Integer#pow can take a second modulo parameter: pow(exp, mod)
-    # For now, just support the single-argument form
+    # pow(exp, mod) == (self ** exp) % mod, computed by modular exponentiation (so it stays cheap even for
+    # large exponents).
     if args.length == 2
-      raise ArgumentError.new("Integer#pow with modulo not yet implemented")
-      return nil
+      return __pow_mod(args[0], args[1])
     end
 
     self ** args[0]
+  end
+
+  def __pow_mod(exp, mod)
+    raise RangeError.new("Integer#pow() 2nd argument not allowed unless all arguments are integers") if !exp.is_a?(Integer) || !mod.is_a?(Integer)
+    raise RangeError.new("Integer#pow() 1st argument cannot be negative when 2nd argument specified") if exp < 0
+    result = 1
+    base = self % mod
+    e = exp
+    while e > 0
+      result = (result * base) % mod if e % 2 == 1
+      e = e / 2
+      base = (base * base) % mod
+    end
+    result
   end
 
   def [](*args)
