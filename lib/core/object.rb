@@ -203,6 +203,184 @@ class Object
     ob
   end
 
+  # Minimal sprintf: parses %[flags][width][.prec]type. Types: d/i/u, s, x/X, o, b, c, f/e/g, p, %.
+  # Flags: - (left), 0 (zero-pad), + / space (sign). char-code comparisons (no regex; self-host safe).
+  def __sprintf(fmt, args)
+    out = ""
+    ai = 0
+    i = 0
+    flen = fmt.length
+    while i < flen
+      c = fmt[i]
+      if c != 37   # not '%'
+        out = out + c.chr
+        i = i + 1
+      else
+        i = i + 1
+        left = false
+        zero = false
+        plus = false
+        space = false
+        cont = true
+        while cont && i < flen
+          fc = fmt[i]
+          if fc == 45
+            left = true; i = i + 1
+          elsif fc == 48
+            zero = true; i = i + 1
+          elsif fc == 43
+            plus = true; i = i + 1
+          elsif fc == 32
+            space = true; i = i + 1
+          else
+            cont = false
+          end
+        end
+        width = 0
+        while i < flen && fmt[i] >= 48 && fmt[i] <= 57
+          width = width * 10 + (fmt[i] - 48)
+          i = i + 1
+        end
+        prec = -1
+        if i < flen && fmt[i] == 46
+          i = i + 1
+          prec = 0
+          while i < flen && fmt[i] >= 48 && fmt[i] <= 57
+            prec = prec * 10 + (fmt[i] - 48)
+            i = i + 1
+          end
+        end
+        type = fmt[i]
+        i = i + 1
+        if type == 37
+          out = out + "%"
+        else
+          val = args[ai]
+          ai = ai + 1
+          body = ""
+          numeric = false
+          neg = false
+          if type == 100 || type == 105 || type == 117   # d i u
+            n = val.to_i
+            numeric = true
+            if n < 0
+              neg = true
+              body = (0 - n).to_s
+            else
+              body = n.to_s
+            end
+          elsif type == 115   # s
+            body = val.to_s
+            body = body.slice(0, prec) if prec >= 0
+          elsif type == 120   # x
+            body = val.to_i.to_s(16); numeric = true
+          elsif type == 88    # X
+            body = val.to_i.to_s(16).upcase; numeric = true
+          elsif type == 111   # o
+            body = val.to_i.to_s(8); numeric = true
+          elsif type == 98    # b
+            body = val.to_i.to_s(2); numeric = true
+          elsif type == 99    # c
+            body = val.is_a?(Integer) ? val.chr : val.to_s
+          elsif type == 102 || type == 101 || type == 103   # f e g
+            body = __format_float(val.to_f, prec < 0 ? 6 : prec)
+            numeric = true
+            if body.length > 0 && body[0] == 45
+              neg = true
+              body = body.slice(1, body.length - 1)
+            end
+          elsif type == 112   # p
+            body = val.inspect
+          else
+            body = val.to_s
+          end
+          sign = ""
+          if numeric
+            if neg
+              sign = "-"
+            elsif plus
+              sign = "+"
+            elsif space
+              sign = " "
+            end
+          end
+          total = sign.length + body.length
+          if width > total
+            pad = width - total
+            if left
+              out = out + sign + body + (" " * pad)
+            elsif zero && numeric && prec < 0
+              out = out + sign + ("0" * pad) + body
+            else
+              out = out + (" " * pad) + sign + body
+            end
+          else
+            out = out + sign + body
+          end
+        end
+      end
+    end
+    out
+  end
+
+  # Format a Float with `decimals` places (rounded). Approximate but adequate for %f in the common cases.
+  def __format_float(f, decimals)
+    neg = f < 0
+    f = f * -1 if neg
+    mult = 1
+    d = 0
+    while d < decimals
+      mult = mult * 10
+      d = d + 1
+    end
+    intpart = (f * mult).to_i
+    whole = intpart / mult
+    frac = intpart - (whole * mult)
+    result = whole.to_s
+    if decimals > 0
+      fracstr = frac.to_s
+      while fracstr.length < decimals
+        fracstr = "0" + fracstr
+      end
+      result = result + "." + fracstr
+    end
+    result = "-" + result if neg
+    result
+  end
+
+  def sprintf(fmt, *args)
+    __sprintf(fmt.to_s, args)
+  end
+
+  def format(fmt, *args)
+    __sprintf(fmt.to_s, args)
+  end
+
+  def printf(fmt, *args)
+    s = __sprintf(fmt.to_s, args)
+    %s(printf "%s" (callm s __get_raw))
+    nil
+  end
+
+  def warn(*msgs)
+    msgs.each do |m|
+      $stderr.write(m.to_s + "\n")
+    end
+    nil
+  end
+
+  def putc(ch)
+    if ch.is_a?(Integer)
+      %s(printf "%c" (callm ch __get_raw))
+    else
+      b = ch.to_s[0]
+      if b
+        %s(printf "%c" (callm b __get_raw))
+      end
+    end
+    ch
+  end
+
   def print *str
     na = str.length
     

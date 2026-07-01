@@ -864,6 +864,12 @@ class String
     out
   end
 
+  # "fmt" % arg -> sprintf-style formatting (arg is a single value or an Array of values).
+  def %(arg)
+    args = arg.is_a?(Array) ? arg : [arg]
+    __sprintf(self, args)
+  end
+
   # tr(from, to): translate characters. Supports ranges ("a-z"), a leading "^" in `from` to
   # negate the set, and a shorter `to` (its last char repeats). An empty `to` deletes the matches.
   def tr(from_str, to_str)
