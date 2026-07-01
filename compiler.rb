@@ -1099,25 +1099,28 @@ class Compiler
       compile_eval_arg(lscope,
         [:callm, :__handler, :save_stack_state, [[:stackframe], [:stackpointer], [:addr, rescue_label]]])
 
-      # Compile try block
+      # Compile try block -- its result is the value of the whole begin unless an else clause is present
+      # (an else REPLACES the body value in Ruby).
       compile_do(lscope, *exps)
 
-      # Normal completion - pop handler
-      compile_eval_arg(lscope, [:callm, :$__exception_runtime, :pop_handler])
-
-      # Execute else clause if present (only runs when NO exception was raised)
-      compile_do(lscope, *else_body) if else_body
-
-      # Save result before ensure clause (ensure might overwrite eax)
-      if ensure_body
+      if else_body
+        # else runs only on no-exception and is NOT protected by the rescue, so pop the handler first,
+        # then run else; its result becomes the value (the body result is intentionally discarded).
+        compile_eval_arg(lscope, [:callm, :$__exception_runtime, :pop_handler])
+        compile_do(lscope, *else_body)
+      else
+        # The body result is the value; pop_handler returns a value and would clobber eax, so save the
+        # body result across it. (This was the bug: pop_handler overwrote eax before it was saved, so a
+        # `x = begin V rescue .. ensure .. end` evaluated to nil instead of V.)
         @e.pushl(:eax)
+        compile_eval_arg(lscope, [:callm, :$__exception_runtime, :pop_handler])
+        @e.popl(:eax)
       end
 
-      # Execute ensure clause if present (always runs on normal completion)
-      compile_do(lscope, *ensure_body) if ensure_body
-
-      # Restore result after ensure clause
+      # Execute ensure clause if present (always runs on normal completion) without disturbing the value.
       if ensure_body
+        @e.pushl(:eax)
+        compile_do(lscope, *ensure_body)
         @e.popl(:eax)
       end
 
