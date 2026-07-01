@@ -51,23 +51,11 @@ class Regexp
   def match(string, pos = 0)
     return nil if string.nil?
     text = string.to_s
-    if pos > 0
-      # Skip first pos characters. Use a Range slice: the 2-arg String#[](start, length) form is not
-      # supported self-hosted (it raises "wrong number of arguments"), which broke match with a position
-      # (and hence sub/gsub, scan) for any non-zero pos.
-      text = text[pos..-1]
-    end
-    result = match_internal(text)
+    # Search from `pos` over the WHOLE text (no slicing) so positions come back absolute and \b sees the
+    # character before pos.
+    result = match_internal(text, pos)
     if result
-      start_pos = result[0]
-      end_pos = result[1]
-      captures = result[2]
-      # Adjust positions if we started at an offset
-      if pos > 0
-        start_pos = start_pos + pos
-        end_pos = end_pos + pos
-      end
-      MatchData.new(self, string.to_s, start_pos, end_pos, captures)
+      MatchData.new(self, text, result[0], result[1], result[2])
     else
       nil
     end
@@ -84,8 +72,10 @@ class Regexp
     result ? true : false
   end
 
-  # Internal match - returns [start_pos, end_pos, captures] or nil
-  def match_internal(string)
+  # Internal match - returns [start_pos, end_pos, captures] or nil. `start` is the (absolute) text position
+  # to begin searching from; the whole text is passed so lookbehind-style checks (e.g. \b) see the real
+  # preceding character rather than a sliced-off start.
+  def match_internal(string, start = 0)
     return nil if string.nil?
     text = string.to_s
     tlen = text.length
@@ -96,19 +86,19 @@ class Regexp
     @match_text = text  # Store text for capture extraction
 
     # Handle empty pattern
-    return [0, 0, []] if @source.length == 0
+    return [start, start, []] if @source.length == 0
 
     # Check for start anchor
     anchored_start = (@source[0] == 94)  # '^'
 
-    # If anchored at start, only try position 0
+    # If anchored at start, only try the start position
     if anchored_start
-      end_pos = match_at(text, 0, tlen)
-      return end_pos ? [0, end_pos, @match_captures] : nil
+      end_pos = match_at(text, start, tlen)
+      return end_pos ? [start, end_pos, @match_captures] : nil
     end
 
-    # Try matching at each position
-    i = 0
+    # Try matching at each position from `start` onward
+    i = start
     while i <= tlen
       # Reset captures for each starting position
       @match_captures = []
@@ -126,6 +116,19 @@ class Regexp
   # Returns end position if match succeeds, nil otherwise
   def match_at(text, pos, tlen)
     match_from(@source, 0, text, pos, tlen)
+  end
+
+  # A "word" character for \b/\w purposes: [A-Za-z0-9_]. text[i] yields a character CODE here.
+  def __word_char?(c)
+    (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95
+  end
+
+  # True when position ti sits on a word boundary: exactly one of the characters straddling it is a word
+  # character (treating positions before the start / at the end as non-word).
+  def __word_boundary?(text, ti, tlen)
+    before = ti > 0 ? __word_char?(text[ti - 1]) : false
+    after = ti < tlen ? __word_char?(text[ti]) : false
+    before != after
   end
 
   # Core matching engine with backtracking support
@@ -207,6 +210,16 @@ class Regexp
       if pc == 92  # '\'
         pi += 1
         return nil if pi >= plen  # Incomplete escape
+        esc = pattern[pi]
+        # \b (word boundary) and \B (non-boundary) are ZERO-WIDTH assertions: test the position, consume no
+        # text, and carry on with the rest of the pattern at the same ti. (Previously \b was matched as an
+        # ordinary escaped 'b'/blank, so /\bword\b/ never matched.)
+        if esc == 98 || esc == 66
+          at_b = __word_boundary?(text, ti, tlen)
+          return nil if (esc == 98) != at_b
+          pi += 1
+          next
+        end
         atom_end = pi + 1
 
       # Handle '[' - character class
