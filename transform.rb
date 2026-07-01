@@ -1251,9 +1251,11 @@ class Compiler
   # @instance_size (slot 1) and @name (slot 2). Only matches a literal `Class` receiver; dynamic forms left alone.
   def rewrite_class_new(exp)
     exp.depth_first do |e|
-      if e.is_a?(Array) && e[0] == :callm && e[1] == :Class && e[2] == :new
+      if e.is_a?(Array) && e[0] == :callm && (e[1] == :Class || e[1] == :Module) && e[2] == :new
         args = e[3]
-        if args.is_a?(Array) && args.length > 0
+        # Class.new(sup) takes an optional superclass; Module.new takes none (modules do not inherit) --
+        # base an anonymous module on Object so it has a valid layout, and rely on the block for its methods.
+        if e[1] == :Class && args.is_a?(Array) && args.length > 0
           sup = args[0]
         else
           sup = :Object
