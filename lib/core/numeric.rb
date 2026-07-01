@@ -4,6 +4,12 @@ class Numeric
     self
   end
 
+  # Numbers are immediates (or value objects): clone/dup return self. Object#clone's slot copy would
+  # dereference the tagged fixnum and SIGSEGV, so override here.
+  def clone(*args)
+    self
+  end
+
   def i
     Complex.new(0,self)
   end

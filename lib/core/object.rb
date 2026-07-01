@@ -245,19 +245,11 @@ class Object
 
   # clone: like #dup but in full Ruby also copies frozen state and the singleton class. We do the same
   # shallow slot (ivar) copy as #dup; the freeze: keyword is accepted and ignored.
+  # clone: like #dup here (we do not model frozen state or the singleton class). Delegate to the proven
+  # #dup path (a tagged fixnum returns self via the guard below; heap objects get a shallow slot copy).
   def clone(*args)
-    copy = nil
-    klass = self.class
-    %s(let (sz i)
-        (assign sz (index klass 1))
-        (assign copy (__array sz))
-        (assign (index copy 0) klass)
-        (assign i 1)
-        (while (lt i sz) (do
-          (assign (index copy i) (index self i))
-          (assign i (add i 1)))))
-    copy.initialize_copy(self)
-    copy
+    %s(if (ne (bitand self 1) 0) (return self))
+    dup
   end
 
   # Default #initialize_copy: the ivars were already copied by #dup/#clone, so there is nothing more
