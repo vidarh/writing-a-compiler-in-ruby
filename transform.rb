@@ -798,6 +798,25 @@ class Compiler
             # But parent could be an expression or variable that needs processing
             parent = n[1].is_a?(Array) ? [n[1]] : n[1]
             vars, env = find_vars(parent, scopes, env, freq, in_lambda, false, current_params)
+          elsif n[0] == :block
+            # begin/rescue/ensure: [:block, args, exps, rescue_clause, ensure_body]. Body [2] and ensure
+            # [4] are BARE statement-lists (not tagged :do nodes) that run in the ENCLOSING scope, so
+            # locals they assign are locals of the enclosing method. The generic n[1..-1] path treats
+            # such a bare list child as a tagged node and drops its first statement, so `begin x = 1 end`
+            # left x unbound and a later `x`/`x.foo` compiled to a method call. Recurse per statement in
+            # the CURRENT scopes so those assignments are captured; the rescue clause [3] is a single
+            # tagged node, recursed as-is.
+            vars = []
+            [n[2], n[4]].each do |part|
+              next if !part
+              part.each do |s|
+                _v, env = find_vars([s], scopes, env, freq, in_lambda, false, current_params)
+              end
+            end
+            if n[3]
+              v3, env = find_vars([n[3]], scopes, env, freq, in_lambda, false, current_params)
+              vars += v3
+            end
           else
             vars, env = find_vars(n[1..-1], scopes, env, freq, in_lambda, false, current_params)
           end
