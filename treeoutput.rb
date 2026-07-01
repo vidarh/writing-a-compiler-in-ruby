@@ -254,7 +254,7 @@ module OpPrec
         else
           @vstack << leftv + args
         end
-      elsif la and leftv[0] == :callm and o.sym == :assign
+      elsif la and (leftv[0] == :callm || leftv[0] == :safe_callm) and o.sym == :assign
         rightv = E[rightv]
         lv = leftv[3]
         lv = [lv] if lv && !lv.is_a?(Array)
@@ -268,7 +268,15 @@ module OpPrec
         # FIXME: For some reason "eq" gets mis-identified as method call.
         eq = "#{leftv[2].to_s}="
         args = E[args] if args[0] == :callm
-        @vstack << E[:callm, leftv[1], eq.to_sym,args]
+        if leftv[0] == :safe_callm
+          # `obj&.foo = v`: a SAFE attribute assignment -- a nil receiver short-circuits to nil, else it
+          # calls obj.foo=(v). Emit a safe_callm wrapping the setter as a nested [:call, ...] node so
+          # compile_safe_callm applies the nil-check. Without handling :safe_callm here the assignment
+          # fell through to generic multiple-assignment and was destructured into bogus locals.
+          @vstack << E[:safe_callm, leftv[1], E[:call, eq.to_sym, args]]
+        else
+          @vstack << E[:callm, leftv[1], eq.to_sym,args]
+        end
       elsif o.sym == :index
         if ra and rightv[0] == :array
           @vstack << E[:callm, leftv, :[], flatten(rightv[1..-1])]
