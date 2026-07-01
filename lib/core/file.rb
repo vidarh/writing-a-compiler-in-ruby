@@ -58,16 +58,43 @@ class File < IO
 
   # File.size(path) -> byte size via stat (st_size at word [11] of the stat buffer).
   def self.size(path)
-    path = path.to_str if !path.is_a?(String)
+    path = __coerce_path(path)
     result = -1
     %s(let (rpath buf r)
       (assign rpath (callm path __get_raw))
       (assign buf (__array 40))
       (assign r (stat rpath buf))
       (if (eq r 0) (assign result (__int (index buf 11)))))
-    raise "No such file or directory - #{path}" if result < 0
+    raise Errno::ENOENT.new("No such file or directory - #{path}") if result < 0
     result
   end
+
+  # File.link(old, new) -> 0. Creates a hard link. File.symlink(old, new) -> 0. Creates a symlink.
+  def self.link(old, new)
+    old = __coerce_path(old)
+    new = __coerce_path(new)
+    %s(link (callm old __get_raw) (callm new __get_raw))
+    0
+  end
+
+  def self.symlink(old, new)
+    old = __coerce_path(old)
+    new = __coerce_path(new)
+    %s(symlink (callm old __get_raw) (callm new __get_raw))
+    0
+  end
+
+  def self.unlink(*paths)
+    n = 0
+    paths.each do |p|
+      p = __coerce_path(p)
+      %s(unlink (callm p __get_raw))
+      n = n + 1
+    end
+    n
+  end
+
+  def self.delete(*paths); unlink(*paths); end
 
   def self.readlines(path)
     lines = []
@@ -173,7 +200,7 @@ end
 module FileTest
   # Tagged S_IFMT (file-type) bits of path via stat (follows symlinks), or -1 if stat fails.
   def self.__type(path)
-    path = path.to_str if !path.is_a?(String)
+    path = __coerce_path(path)
     result = -1
     %s(let (rpath buf r)
       (assign rpath (callm path __get_raw))
@@ -185,7 +212,7 @@ module FileTest
 
   # True if access(path, mode) succeeds. mode: R_OK=4, W_OK=2, X_OK=1.
   def self.__access(path, mode)
-    path = path.to_str if !path.is_a?(String)
+    path = __coerce_path(path)
     ok = false
     %s(let (rpath r)
       (assign rpath (callm path __get_raw))
@@ -212,7 +239,7 @@ module FileTest
 
   # symlink? needs lstat (stat follows the link).
   def self.symlink?(path)
-    path = path.to_str if !path.is_a?(String)
+    path = __coerce_path(path)
     result = false
     %s(let (rpath buf r)
       (assign rpath (callm path __get_raw))
@@ -224,7 +251,7 @@ module FileTest
 
   # st_size is word [11] of the stat buffer. Returns the byte size, or -1 if stat fails.
   def self.__size(path)
-    path = path.to_str if !path.is_a?(String)
+    path = __coerce_path(path)
     result = -1
     %s(let (rpath buf r)
       (assign rpath (callm path __get_raw))
@@ -236,7 +263,7 @@ module FileTest
 
   def self.size(path)
     s = __size(path)
-    raise "No such file or directory - #{path}" if s < 0
+    raise Errno::ENOENT.new("No such file or directory - #{path}") if s < 0
     s
   end
 
@@ -249,4 +276,25 @@ module FileTest
 
   def self.zero?(path);  __size(path) == 0; end
   def self.empty?(path); __size(path) == 0; end
+
+  # identical?(a, b): true if both name the same file -- same device (st_dev, word [0]) and inode
+  # (st_ino, word [3]). This is how hard links (and a file vs itself) compare equal.
+  def self.identical?(a, b)
+    a = __coerce_path(a)
+    b = __coerce_path(b)
+    same = false
+    %s(let (ra rb bufa bufb r1 r2)
+      (assign ra (callm a __get_raw))
+      (assign rb (callm b __get_raw))
+      (assign bufa (__array 40))
+      (assign bufb (__array 40))
+      (assign r1 (stat ra bufa))
+      (assign r2 (stat rb bufb))
+      (if (eq r1 0)
+        (if (eq r2 0)
+          (if (eq (index bufa 0) (index bufb 0))
+            (if (eq (index bufa 3) (index bufb 3))
+              (assign same true))))))
+    same
+  end
 end

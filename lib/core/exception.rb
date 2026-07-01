@@ -312,6 +312,51 @@ end
 class SystemCallError < StandardError
 end
 
+# Errno namespace: each system errno is a SystemCallError subclass (Errno::ENOENT, Errno::EACCES, ...).
+# Specs reference these in raise_error matchers and rescue clauses; without the module the constant
+# lookup crashed at load with "uninitialized constant Errno". Only the commonly-referenced members are
+# defined -- a full errno table is unnecessary and most are never used by the suite.
+module Errno
+  class EPERM < SystemCallError; end
+  class ENOENT < SystemCallError; end
+  class ESRCH < SystemCallError; end
+  class EINTR < SystemCallError; end
+  class EIO < SystemCallError; end
+  class ENXIO < SystemCallError; end
+  class EBADF < SystemCallError; end
+  class ECHILD < SystemCallError; end
+  class EAGAIN < SystemCallError; end
+  class ENOMEM < SystemCallError; end
+  class EACCES < SystemCallError; end
+  class EFAULT < SystemCallError; end
+  class EBUSY < SystemCallError; end
+  class EEXIST < SystemCallError; end
+  class EXDEV < SystemCallError; end
+  class ENODEV < SystemCallError; end
+  class ENOTDIR < SystemCallError; end
+  class EISDIR < SystemCallError; end
+  class EINVAL < SystemCallError; end
+  class ENFILE < SystemCallError; end
+  class EMFILE < SystemCallError; end
+  class ENOTTY < SystemCallError; end
+  class EFBIG < SystemCallError; end
+  class ENOSPC < SystemCallError; end
+  class ESPIPE < SystemCallError; end
+  class EROFS < SystemCallError; end
+  class EPIPE < SystemCallError; end
+  class ERANGE < SystemCallError; end
+  class ENAMETOOLONG < SystemCallError; end
+  class ENOTEMPTY < SystemCallError; end
+  class ELOOP < SystemCallError; end
+  class EWOULDBLOCK < SystemCallError; end
+  class EINPROGRESS < SystemCallError; end
+  class ECONNRESET < SystemCallError; end
+  class ECONNREFUSED < SystemCallError; end
+  class ECONNABORTED < SystemCallError; end
+  class EADDRINUSE < SystemCallError; end
+  class ETIMEDOUT < SystemCallError; end
+end
+
 # Initialize special exception globals
 # $! holds the current exception message (set by raise, cleared after rescue)
 $! = nil

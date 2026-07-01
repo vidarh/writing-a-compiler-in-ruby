@@ -574,13 +574,29 @@ class Parser < ParserBase
     return E[pos, :for, var, enumerable, [:do]+exps]
   end
 
+  # Parse the (optional) exception class of a rescue clause. parse_name reads only a single atom, so a
+  # namespaced constant like Errno::ENOENT would leave "::ENOENT" to leak into the rescue body (and be
+  # evaluated as the top-level constant ::ENOENT, raising "uninitialized constant ENOENT"). Consume any
+  # "::Name" continuation here and build the [:deref, ...] node the compiler expects. Returns nil for a
+  # bare `rescue` with no class.
+  def parse_rescue_class
+    pos = position
+    c = parse_name
+    return nil if !c
+    while literal("::")
+      n = parse_name or expected("constant name after '::'")
+      c = E[pos, :deref, c, n]
+    end
+    c
+  end
+
   # rescue ::= "rescue" (nolfws* name nolfws* ("=>" ws* name)?)? ws defexp*
   # Supports: rescue, rescue => e, rescue Error, rescue Error => e
   def parse_rescue
     pos = position
     keyword(:rescue) or return
     nolfws
-    c = parse_name  # Optional exception class
+    c = parse_rescue_class  # Optional exception class (may be a namespaced constant)
     nolfws
     name = nil
     # Check for => regardless of whether exception class was provided
@@ -616,7 +632,7 @@ class Parser < ParserBase
       if keyword(:rescue)
         # Found rescue keyword - parse it properly
         nolfws
-        c = parse_name  # Optional exception class
+        c = parse_rescue_class  # Optional exception class (may be a namespaced constant)
         nolfws
         name = nil
         if literal("=>")
@@ -643,7 +659,7 @@ class Parser < ParserBase
       if keyword(:rescue)
         pos = position
         nolfws
-        c = parse_name
+        c = parse_rescue_class
         nolfws
         name = nil
         if literal("=>")
@@ -924,7 +940,7 @@ class Parser < ParserBase
     ws
     if keyword(:rescue)
       nolfws
-      c = parse_name  # Optional exception class
+      c = parse_rescue_class  # Optional exception class (may be a namespaced constant)
       nolfws
       name_var = nil
       if literal("=>")

@@ -85,6 +85,16 @@ class Kernel
     []
   end
 
+  # Coerce a path argument to a String the way File/Dir/FileTest methods do: a String passes through,
+  # an object with #to_path (e.g. Pathname, or a mock in the specs) is asked for its path, otherwise
+  # #to_str is used. Raises TypeError if none applies.
+  def __coerce_path(obj)
+    return obj if obj.is_a?(String)
+    return obj.to_path if obj.respond_to?(:to_path)
+    return obj.to_str if obj.respond_to?(:to_str)
+    raise TypeError.new("no implicit conversion into String")
+  end
+
   # Exit the program with given code
   def exit(code)
     %s(exit (callm code __get_raw))
