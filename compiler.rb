@@ -574,6 +574,11 @@ class Compiler
     # Otherwise use === comparison
     if compare_exp.nil?
       cmp = test_value
+    elsif test_value.is_a?(Array) && test_value[0] == :splat
+      # `when *a`: match if ANY element of the splatted array === compare_exp. Emitting the plain
+      # `(*a).===(x)` splats the array into the argument list of === (given N, expected 1). Delegate to
+      # a runtime helper that coerces to an array and iterates.
+      cmp = [:callm, test_value[1], :__when_splat_match, [compare_exp]]
     else
       cmp = [:callm, test_value, :===, [compare_exp]]
     end

@@ -459,6 +459,28 @@ class Object
     true
   end
 
+  # Support `case x; when *recv` -- true if any element of the splatted receiver === target.
+  # The splat operand is array-like (Ruby coerces via to_a); we handle Array directly, nil as empty,
+  # and fall back to a single-element check. Uses a while loop (no block) so it is self-host safe.
+  def __when_splat_match(target)
+    if is_a?(Array)
+      ary = self
+    elsif self.nil?
+      ary = []
+    elsif respond_to?(:to_a)
+      ary = to_a
+    else
+      ary = [self]
+    end
+    i = 0
+    n = ary.length
+    while i < n
+      return true if ary[i] === target
+      i = i + 1
+    end
+    false
+  end
+
   # FIXME: eval cannot be implemented in AOT compiler
   # Specs using eval will skip/fail but won't crash
   def eval(code, *args)
