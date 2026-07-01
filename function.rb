@@ -32,6 +32,12 @@ end
 class Function
   attr_reader :args, :body, :scope, :name, :break_label, :arity_check
 
+  # True for a method defined inside a block (`Class.new(Base) do def m; ...; end end`). Such a method is
+  # installed on a class only known at runtime, so its lexical class_scope (the enclosing Object) is NOT
+  # the class it ends up on -- `super` must therefore resolve via self.class.superclass at runtime rather
+  # than by the (wrong) lexical class name. Set by compile_defm.
+  attr_accessor :block_def
+
   # Number of variables with defaults that we need to
   # allocate local stack space for.
   attr_reader :defaultvars

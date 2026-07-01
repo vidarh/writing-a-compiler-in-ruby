@@ -37,6 +37,9 @@ class Compiler
     # class (install a singleton method) -- so `self` itself never changes. (`:self` here resolves in
     # orig_scope, which inside a block is [:arg,0], the block's runtime receiver.)
     if scope_has_funcscope?(orig_scope)
+      # Block-def: installed on a runtime-determined class, so super in its body must use the runtime
+      # self.class.superclass path rather than the lexical (wrong) class_scope name.
+      f.block_def = true
       compile_eval_arg(orig_scope,
         [:let, [:__deftgt],
           [:assign, :__deftgt, [:callm, :self, :__def_target]],

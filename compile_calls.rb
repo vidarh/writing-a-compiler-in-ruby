@@ -376,7 +376,22 @@ class Compiler
     # (not self.class.superclass which would be wrong for deep hierarchies)
     # For eigenclasses, fall back to runtime lookup since they don't have globals
     cs = scope.class_scope
-    if cs.is_a?(EigenclassScope)
+    # A method defined inside a block (Class.new(Base) do def m; super; end end) is installed on a class
+    # only known at runtime; its lexical class_scope is the enclosing Object, NOT the class it lands on, so
+    # loading that class by name and taking its superclass gives the wrong (or a crashing) result. Resolve
+    # such supers -- and eigenclass supers, which likewise have no global -- via self.class.superclass at
+    # runtime. Find the enclosing method's Function to check the block_def flag.
+    mfunc = nil
+    s2 = scope
+    while s2
+      if s2.respond_to?(:method) && s2.method && s2.method.name.is_a?(Symbol)
+        mfunc = s2.method
+        break
+      end
+      s2 = s2.is_a?(Scope) ? s2.next : nil
+    end
+    block_def = mfunc.respond_to?(:block_def) && mfunc.block_def
+    if cs.is_a?(EigenclassScope) || block_def
       defining_class = :runtime
     else
       defining_class = cs.name
