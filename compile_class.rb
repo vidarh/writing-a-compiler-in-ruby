@@ -29,14 +29,21 @@ class Compiler
     scope.set_vtable_entry(name, fname, f)
     v = scope.vtable[name]
 
-    # Install the method at runtime on `self`. Resolve :self in the scope where the def actually lives:
-    # when the def is inside a real block (a FuncScope in the chain) its `self` is that block's runtime
-    # receiver ([:arg,0]) -- which class_eval/Class.new-do/Data.define-do set to the target class -- so
-    # the method registers on the receiver, not the lexically-enclosing class. A class-body def has
-    # orig_scope == scope (a ClassScope), and a top-level def resolves to Object, so both are unchanged;
-    # only the block case previously mis-registered on the lexical class.
-    self_scope = scope_has_funcscope?(orig_scope) ? orig_scope : scope
-    compile_eval_arg(self_scope,[:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
+    # Install the method at runtime on the def's target. A bare `def` in a class body / at top level targets
+    # the lexical class/Object (resolved via class_scope). Inside a real block (a FuncScope in the chain)
+    # the def belongs to the block's RUNTIME self, whatever it is: for class_eval/Class.new-do that self is
+    # the target class, for instance_eval it is an ordinary object. `self.__def_target` dispatches on the
+    # type -- Class/Module return self (install an instance method), any other object returns its singleton
+    # class (install a singleton method) -- so `self` itself never changes. (`:self` here resolves in
+    # orig_scope, which inside a block is [:arg,0], the block's runtime receiver.)
+    if scope_has_funcscope?(orig_scope)
+      compile_eval_arg(orig_scope,
+        [:let, [:__deftgt],
+          [:assign, :__deftgt, [:callm, :self, :__def_target]],
+          [:sexp, [:call, :__set_vtable, [:__deftgt, v.offset, fname.to_sym]]]])
+    else
+      compile_eval_arg(scope, [:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
+    end
 
 
     # This is taken from compile_defun - it does not necessarily make sense for defm

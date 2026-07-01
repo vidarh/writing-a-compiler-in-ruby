@@ -498,11 +498,33 @@ class Object
     nil
   end
 
-  # singleton_class - Get object's singleton class
-  # Stub: Returns the regular class (not correct but prevents crashes)
-  # Full implementation would require singleton class support
+  # singleton_class - the object's own metaclass, created on demand: a fresh class whose superclass is the
+  # object's current class, spliced in as the object's class (slot 0). Idempotent via a registry keyed by
+  # object_id, so repeated calls (and multiple singleton `def`s) share one singleton. `self` is unchanged;
+  # only where methods get installed differs.
   def singleton_class
-    self.class
+    reg = Object.__singleton_registry
+    oid = object_id
+    existing = reg[oid]
+    return existing if existing
+    sc = nil
+    %s(assign sc (__new_class_object __vtable_size (index self 0) __vtable_size (index (index self 0) 0)))
+    %s(assign (index sc 2) "#<Class:singleton>")
+    %s(assign (index self 0) sc)
+    reg[oid] = sc
+    sc
+  end
+
+  def self.__singleton_registry
+    @@__singleton_registry ||= {}
+    @@__singleton_registry
+  end
+
+  # The class object that a bare `def` in a context whose self is this object should install into. An
+  # ordinary object installs a singleton method (on its singleton class); Module/Class override to return
+  # self (a bare def there is an instance method). Used by compile_defm for defs inside blocks.
+  def __def_target
+    singleton_class
   end
 end
 

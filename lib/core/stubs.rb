@@ -104,6 +104,11 @@ class Module
     []
   end
 
+  # A bare `def` whose self is a module installs an instance method directly on the module (no singleton).
+  def __def_target
+    self
+  end
+
   # Module is a separate class from Class here (Class is NOT a subclass of Module -- see the FIXME
   # above), so a Module instance (e.g. Module.new) does not inherit the reflection methods defined on
   # Class. Provide the common ones so they work on modules too. self is the module; the same vtable/

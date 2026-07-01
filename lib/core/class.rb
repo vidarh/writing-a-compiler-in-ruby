@@ -128,6 +128,11 @@
 #
 class Class
 
+  # A bare `def` whose self is a class installs an instance method directly on the class (no singleton).
+  def __def_target
+    self
+  end
+
   # We first introduce three "low-level" methods that should eventually be
   # hidden from normal users somehow. These are necessary in order to implement
   # functionality that might otherwise  trigger infinite recursion during object
