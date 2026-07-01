@@ -1319,6 +1319,22 @@ class String
     self
   end
 
+  # Byte-oriented runtime: every byte sequence is "valid", so valid_encoding? is always true and scrub
+  # (which replaces invalid byte sequences) is a plain copy. ascii_only? is a real check: no byte >= 128.
+  def valid_encoding?
+    true
+  end
+
+  def ascii_only?
+    # each_byte may yield signed bytes, so a high byte (>= 128) can appear as a negative number.
+    each_byte { |b| return false if b >= 128 || b < 0 }
+    true
+  end
+
+  def scrub(*args)
+    dup
+  end
+
   def encode(*args)
     dup
   end
