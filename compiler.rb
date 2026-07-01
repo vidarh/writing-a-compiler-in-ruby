@@ -1379,6 +1379,10 @@ class Compiler
       end
 
       compile_eval_arg(@global_scope, exp)
+      # Run at_exit handlers on normal termination too (Kernel#exit runs them for the explicit-exit path).
+      # Use a plain method call for the handlers, then the raw exit syscall -- routing the terminator
+      # through Kernel#exit itself (a callm in main's epilogue context) segfaulted.
+      compile_eval_arg(@global_scope, [:call, :__run_at_exit, []])
       compile_eval_arg(@global_scope, [:sexp,[:exit, 0]])
       nil
     end

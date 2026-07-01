@@ -95,8 +95,33 @@ class Kernel
     raise TypeError.new("no implicit conversion into String")
   end
 
-  # Exit the program with given code
-  def exit(code)
+  # at_exit { ... } registers a block to run (LIFO) when the program terminates. Returns the block.
+  def at_exit(&blk)
+    $__at_exit_handlers ||= []
+    $__at_exit_handlers.unshift(blk)   # newest first -> handlers run in reverse registration order
+    blk
+  end
+
+  # Run the registered at_exit handlers exactly once. Called from #exit (and from main's terminating
+  # exit, which the compiler routes through #exit). Guarded so a handler that itself calls exit doesn't
+  # re-enter. A raising handler is swallowed (its exit code effect is not modelled).
+  def __run_at_exit
+    return if $__at_exit_running
+    $__at_exit_running = true
+    handlers = $__at_exit_handlers
+    return if handlers.nil?
+    handlers.each do |blk|
+      blk.call rescue nil
+    end
+    nil
+  end
+
+  # Exit the program with the given status (true -> 0, false -> 1, else the integer), running at_exit
+  # handlers first.
+  def exit(code = 0)
+    __run_at_exit
+    code = 0 if code == true
+    code = 1 if code == false
     %s(exit (callm code __get_raw))
   end
 
