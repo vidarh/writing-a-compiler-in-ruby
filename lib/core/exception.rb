@@ -178,6 +178,34 @@ class Exception
       self.class.to_s
     end
   end
+
+  # Backtraces are not captured (no stack unwinding). An unraised exception's backtrace is nil in Ruby,
+  # so returning @backtrace (nil unless #set_backtrace was called) is the correct type. #backtrace was
+  # missing entirely, so any spec touching it raised NoMethodError.
+  def backtrace
+    @backtrace
+  end
+
+  def backtrace_locations
+    nil
+  end
+
+  def set_backtrace(bt)
+    @backtrace = bt
+    bt
+  end
+
+  # Exception#cause: the exception active when this one was raised (nil if none). Not tracked; nil.
+  def cause
+    nil
+  end
+
+  # Exception#exception: with no argument returns self; with a message returns a copy with that message.
+  def exception(msg = nil)
+    return self if msg.nil?
+    e = self.class.new(msg)
+    e
+  end
 end
 
 class StandardError < Exception
