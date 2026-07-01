@@ -271,8 +271,14 @@ class Compiler
     # Only wrap if it's an AST node (not a symbol/constant name)
     if !args.is_a?(Array)
       args = [args]
-    elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) && [:hash, :array, :proc, :block, :lambda].include?(args[0])
-      # With block, single AST node arg (like [:hash, ...]) needs wrapping
+    elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) &&
+          (@@keywords.include?(args[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(args[0]))
+      # With a block, a SINGLE AST-node argument arrives unwrapped, e.g. `foo(-> {}) do..end` (the lambda
+      # is rewritten to a [:do,...] node by this point) or `foo(recv.m) do..end` ([:callm,...]). args[0]
+      # is then the node's tag, and treating args as an arg LIST would iterate the tag as a bogus method
+      # (`undefined method 'do'/'callm'`). Recognise any node tag -- @@keywords covers :do/:hash/:array/
+      # :if/... and the call forms are added explicitly (they are excluded from @@keywords). A genuine
+      # multi-arg list has a value/[:node]-array/non-keyword-symbol first element, so it is not wrapped.
       args = [args]
     end
     compile_args(scope, func, args) do
@@ -417,8 +423,13 @@ class Compiler
       # Only wrap if it's an AST node (not a symbol/constant name)
       if !args.is_a?(Array)
         args = [args]
-      elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) && [:hash, :array, :proc, :block, :lambda].include?(args[0])
-        # With block, single AST node arg (like [:hash, ...]) needs wrapping
+      elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) &&
+            (@@keywords.include?(args[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(args[0]))
+        # With a block, a SINGLE AST-node argument arrives unwrapped (e.g. `obj.m(-> {}) do..end`, where
+        # the lambda is a [:do,...] node by now, or `obj.m(recv.x) do..end` -> [:callm,...]). args[0] is
+        # then the node tag; treating args as an arg LIST would iterate the tag as a bogus method. Any
+        # node tag qualifies (@@keywords + the call forms, which are excluded from @@keywords). A real
+        # multi-arg list has a value/[:node]-array/non-keyword-symbol first element, so it is left alone.
         args = [args]
       end
 
