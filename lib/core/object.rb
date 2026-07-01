@@ -243,9 +243,34 @@ class Object
     copy
   end
 
+  # clone: like #dup but in full Ruby also copies frozen state and the singleton class. We do the same
+  # shallow slot (ivar) copy as #dup; the freeze: keyword is accepted and ignored.
+  def clone(*args)
+    copy = nil
+    klass = self.class
+    %s(let (sz i)
+        (assign sz (index klass 1))
+        (assign copy (__array sz))
+        (assign (index copy 0) klass)
+        (assign i 1)
+        (while (lt i sz) (do
+          (assign (index copy i) (index self i))
+          (assign i (add i 1)))))
+    copy.initialize_copy(self)
+    copy
+  end
+
   # Default #initialize_copy: the ivars were already copied by #dup/#clone, so there is nothing more
   # to do. Subclasses override this to deep-copy or record, calling super for the default.
   def initialize_copy(other)
+    self
+  end
+
+  # extend(*mods): full Ruby adds each module's instance methods to this object's singleton class.
+  # Runtime singleton-method injection is not modelled, so this is a no-op that returns self (methods
+  # from the module won't actually be added) -- but it stops the crash on objects that lacked #extend
+  # (only Class had it). Kept on Object so every instance responds to it.
+  def extend(*mods)
     self
   end
 
