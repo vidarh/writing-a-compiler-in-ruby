@@ -18,6 +18,11 @@ class IO < Object
   end
 
   def getc
+    if @pushback
+      b = @pushback
+      @pushback = nil
+      return b
+    end
     c = 0
     tmp = 0
     len = nil
@@ -31,6 +36,116 @@ class IO < Object
 
   def file?
     false
+  end
+
+  # getbyte: like getc here (getc returns the next byte as an Integer, or nil at EOF).
+  def getbyte
+    getc
+  end
+
+  # gets(sep="\n"): read one line up to and including the separator byte (default newline), or nil at EOF.
+  def gets(sep = "\n")
+    line = ""
+    got = false
+    while (b = getc)
+      got = true
+      line = line + b.chr
+      break if b == 10
+    end
+    return nil if !got
+    line
+  end
+
+  def readline(sep = "\n")
+    line = gets(sep)
+    raise EOFError.new("end of file reached") if line.nil?
+    line
+  end
+
+  def each_line(sep = "\n")
+    return to_enum(:each_line) if !block_given?
+    while (line = gets(sep))
+      yield line
+    end
+    self
+  end
+
+  def each(sep = "\n")
+    return to_enum(:each) if !block_given?
+    while (line = gets(sep))
+      yield line
+    end
+    self
+  end
+
+  def readlines(sep = "\n")
+    result = []
+    while (line = gets(sep))
+      result << line
+    end
+    result
+  end
+
+  def each_byte
+    return to_enum(:each_byte) if !block_given?
+    while (b = getc)
+      yield b
+    end
+    self
+  end
+
+  def each_char
+    return to_enum(:each_char) if !block_given?
+    while (b = getc)
+      yield b.chr
+    end
+    self
+  end
+
+  # each_codepoint yields Integer codepoints. Byte-oriented here (no multibyte decoding).
+  def each_codepoint
+    return to_enum(:each_codepoint) if !block_given?
+    while (b = getc)
+      yield b
+    end
+    self
+  end
+
+  # read(length=nil): with no length, read to EOF and return a String (possibly ""). With a length, read
+  # up to that many bytes and return a String, or nil once at EOF.
+  def read(length = nil)
+    if length
+      s = ""
+      n = 0
+      while n < length && (b = getc)
+        s = s + b.chr
+        n = n + 1
+      end
+      return nil if s.length == 0 && length > 0
+      return s
+    end
+    s = ""
+    while (b = getc)
+      s = s + b.chr
+    end
+    s
+  end
+
+  def eof?
+    b = getc
+    return true if b.nil?
+    ungetc(b)
+    false
+  end
+
+  def eof
+    eof?
+  end
+
+  # ungetc: push a single byte back so the next getc returns it. Backed by a one-slot pushback buffer.
+  def ungetc(c)
+    @pushback = c.is_a?(String) ? c[0] : c
+    nil
   end
 
   # Close the underlying fd (idempotent). @fd is a tagged Integer; __get_raw untags to the raw fd.
