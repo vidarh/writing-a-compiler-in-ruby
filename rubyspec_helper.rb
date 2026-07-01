@@ -859,8 +859,9 @@ end
 # mspec helper: new_io(name, mode) opens a file-backed IO. In real mspec this is a top-level helper, so
 # it is reachable both bare and as IOSpecs.new_io (a module is an object). File < IO here, so File.new
 # gives an IO; the mode may carry an :encoding suffix ("w:utf-8") which File.__mode_to_flags ignores.
-def new_io(name, mode = "r")
-  mode = "r" if !mode.is_a?(String)
+# Default mode is "w" (matching mspec's "w:utf-8"): a bare new_io(name) CREATES a fresh writable file.
+def new_io(name, mode = "w")
+  mode = "w" if !mode.is_a?(String)
   File.new(name, mode)
 end
 
