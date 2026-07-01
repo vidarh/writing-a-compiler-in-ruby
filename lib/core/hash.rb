@@ -318,6 +318,27 @@ class Hash
   # each_pair is an alias of each (yields [key, value] for each pair).
   alias each_pair each
 
+  # A copy with all nil-valued pairs removed.
+  def compact
+    h = {}
+    each { |k, v| h[k] = v if !v.nil? }
+    h
+  end
+
+  # Remove all nil-valued pairs in place; returns self if anything was removed, else nil.
+  def compact!
+    removed = []
+    each { |k, v| removed << k if v.nil? }
+    removed.each { |k| delete(k) }
+    removed.empty? ? nil : self
+  end
+
+  # A proc that maps a key to its value (h.to_proc.call(k) == h[k]).
+  def to_proc
+    h = self
+    lambda { |k| h[k] }
+  end
+
   # FIXME: This is a very crude way of handling deletion:
   # It simply removes the key by replacing it with 
   # Deleted that compares false against everyhing
