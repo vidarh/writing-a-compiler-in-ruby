@@ -112,14 +112,15 @@ class Data
 
   def inspect
     m = members
-    s = "#<data "
+    parts = []
     i = 0
     while i < m.length
-      s = s + m[i].to_s + "=" + @__data[m[i]].inspect
-      s = s + ", " if i < m.length - 1
+      name = m[i].to_s
+      val = @__data[m[i]].inspect
+      parts << (name + "=" + val)
       i = i + 1
     end
-    s + ">"
+    "#<data " + parts.join(", ") + ">"
   end
 
   def to_s
