@@ -59,6 +59,29 @@ class Proc
   def [] *__copysplat
     %s(call @addr (@s @closure @env (splat __copysplat)))
   end
+
+  # Proc#yield is an alias of #call (kept separate rather than a raw duplicate so it does not have the
+  # "nothing after the raw call" restriction that #call/#[] have).
+  def yield(*args)
+    call(*args)
+  end
+
+  # Proc#=== invokes the proc, so a proc can act as a case/when condition (`case x; when some_proc`).
+  def ===(other)
+    call(other)
+  end
+
+  # Proc#source_location: [file, line] where the proc was defined. We do not track that yet, so return nil
+  # (a valid MRI result for procs with no meaningful location) rather than raising.
+  def source_location
+    nil
+  end
+
+  # Proc#parameters: a description of the proc's parameters. We do not retain parameter metadata after
+  # compilation, so return an empty list rather than raising (tests needing real data will fail, not crash).
+  def parameters(*)
+    []
+  end
 end
 
 %s(defun __new_proc (addr env self arity closure)
