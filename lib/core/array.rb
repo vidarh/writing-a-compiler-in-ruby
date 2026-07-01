@@ -802,6 +802,53 @@ class Array
 
   # Returns a new array that is a one-dimensional flattening of this array (recursively).
   # That is, for every element that is an array, extract its elements into the new array.
+  # A copy with the first `count` elements moved to the end (negative rotates the other way).
+  def rotate(count = 1)
+    n = length
+    return dup if n == 0
+    c = count % n
+    self[c..-1] + self[0...c]
+  end
+
+  def rotate!(count = 1)
+    replace(rotate(count))
+    self
+  end
+
+  # Nested element access: dig(a, b, ...) == self[a].dig(b, ...), stopping at the first nil.
+  def dig(key, *rest)
+    v = self[key]
+    return v if rest.empty? || v.nil?
+    v.dig(*rest)
+  end
+
+  # Binary search over a sorted array. find-minimum mode: block returns true/false, returns the first
+  # element for which it is true. find-any mode: block returns a number, returns an element for which it
+  # is 0 (narrowing on the sign). Returns nil if nothing matches. The array must be sorted for the mode.
+  def bsearch(&block)
+    lo = 0
+    hi = length
+    found = nil
+    while lo < hi
+      mid = (lo + hi) / 2
+      v = self[mid]
+      r = block.call(v)
+      if r == true
+        found = v
+        hi = mid
+      elsif r == false || r.nil?
+        lo = mid + 1
+      elsif r == 0
+        return v
+      elsif r > 0
+        lo = mid + 1
+      else
+        hi = mid
+      end
+    end
+    found
+  end
+
   # All n-element combinations (order within the array preserved, no repeats). With a block, yields each
   # and returns self; without a block returns the array of combinations (answers .to_a/.each like MRI's
   # Enumerator for the common use).

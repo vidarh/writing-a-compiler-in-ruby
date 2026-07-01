@@ -318,6 +318,34 @@ class Hash
   # each_pair is an alias of each (yields [key, value] for each pair).
   alias each_pair each
 
+  # Nested element access: dig(a, b, ...) == self[a].dig(b, ...), stopping at the first nil.
+  def dig(key, *rest)
+    v = self[key]
+    return v if rest.empty? || v.nil?
+    v.dig(*rest)
+  end
+
+  # A new hash with the same keys and each value passed through the block.
+  def transform_values(&block)
+    h = {}
+    each { |k, v| h[k] = block.call(v) }
+    h
+  end
+
+  # In-place transform_values (returns self). Keys are snapshotted first so re-assigning values during the
+  # walk is safe.
+  def transform_values!(&block)
+    keys.each { |k| self[k] = block.call(self[k]) }
+    self
+  end
+
+  # A new hash with each key passed through the block (later keys win on collision).
+  def transform_keys(&block)
+    h = {}
+    each { |k, v| h[block.call(k)] = v }
+    h
+  end
+
   # A copy with all nil-valued pairs removed.
   def compact
     h = {}
