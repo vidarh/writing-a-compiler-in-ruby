@@ -206,6 +206,30 @@ class Class
     result
   end
 
+  # The method names available on instances of this class/module. Iterates the global name->vtable-offset
+  # map and keeps names whose slot in THIS class holds a real method (outside the shared thunk range) --
+  # the same test Object#respond_to? uses. `include_super` is accepted but not yet honoured (inherited
+  # methods are always included, since the vtable copies them down). Returns Symbols.
+  def instance_methods(include_super = true)
+    result = []
+    m = Class.method_to_voff
+    names = m.keys
+    i = 0
+    n = names.length
+    while i < n
+      name = names[i]
+      voff = m[name]
+      real = false
+      %s(assign raw (callm voff __get_raw))
+      %s(assign ptr (index self raw))
+      %s(if (lt ptr __vtable_thunks_start) (assign real true))
+      %s(if (gt ptr __vtable_thunks_end) (assign real true))
+      result << name if real
+      i = i + 1
+    end
+    result
+  end
+
   # FIXME
   # &block will be a "bare" %s(lambda) (that needs to be implemented),
   # define_method needs to attach that to the vtable (for now) and/or

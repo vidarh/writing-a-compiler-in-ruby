@@ -159,6 +159,11 @@ class Object
     self
   end
 
+  # The methods callable on this object (its class's instance methods).
+  def methods
+    self.class.instance_methods
+  end
+
   # Kernel#tap: yield self to the block, then return self (for method chaining).
   def tap
     yield self
