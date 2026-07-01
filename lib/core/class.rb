@@ -232,7 +232,7 @@ class Class
 
   # True if instances of this class/module respond to `name` (a real method in this class's vtable,
   # outside the shared thunk range). Visibility is not tracked, so public_method_defined? is the same.
-  def method_defined?(name)
+  def method_defined?(name, inherit = true)
     name = name.to_sym if name.is_a?(String)
     voff = Class.method_to_voff[name]
     return false if voff.nil?
