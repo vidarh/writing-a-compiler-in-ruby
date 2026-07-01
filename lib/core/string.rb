@@ -570,16 +570,57 @@ class String
     length
   end
 
-  def count c = nil
-    return length if !c
-    l = 0
-    c = c.ord
-    each_byte do |b|
-      if b == c
-        l = l + 1
-      end
+  # Shared character-set parsing for count/delete/squeeze arguments: returns [negated, chars] where chars
+  # is the expanded character list (ranges via __tr_expand) and negated is set when the spec begins with
+  # '^'. (String#[] yields a char CODE here, so the leading '^' is compared as 94.)
+  def __charset_spec(spec)
+    s = spec.to_str
+    neg = false
+    if s.length > 0 && s[0] == 94
+      neg = true
+      s = s.slice(1, s.length - 1)
     end
-    l
+    [neg, __tr_expand(s)]
+  end
+
+  def __charset_has?(cs, ch)
+    member = !cs[1].index(ch).nil?
+    cs[0] ? !member : member
+  end
+
+  # Count characters that are in ALL the given sets (Ruby intersects multiple set arguments).
+  def count(*sets)
+    return length if sets.empty?
+    css = sets.map { |s| __charset_spec(s) }
+    n = 0
+    each_char do |ch|
+      n = n + 1 if css.all? { |cs| __charset_has?(cs, ch) }
+    end
+    n
+  end
+
+  # Remove every character that is in ALL the given sets.
+  def delete(*sets)
+    css = sets.map { |s| __charset_spec(s) }
+    out = ""
+    each_char do |ch|
+      out = out + ch unless css.all? { |cs| __charset_has?(cs, ch) }
+    end
+    out
+  end
+
+  # Collapse runs of the same character. With no argument every run is squeezed; with set arguments only
+  # runs of characters that are in ALL the sets are squeezed.
+  def squeeze(*sets)
+    css = sets.empty? ? nil : sets.map { |s| __charset_spec(s) }
+    out = ""
+    prev = nil
+    each_char do |ch|
+      matched = css.nil? || css.all? { |cs| __charset_has?(cs, ch) }
+      out = out + ch unless ch == prev && matched
+      prev = ch
+    end
+    out
   end
 
   # FIXME: This is horrible: Need to keep track of capacity separate from length,
@@ -883,7 +924,7 @@ class String
   def tr(from_str, to_str)
     from = from_str.to_str
     negate = false
-    if from.length > 0 && from[0] == "^"
+    if from.length > 0 && from[0] == 94  # leading '^' (String#[] yields a char CODE here, not "^")
       negate = true
       from = from.slice(1, from.length - 1)
     end
