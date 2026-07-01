@@ -161,8 +161,10 @@ class Struct
 
   def [](key)
     if key.is_a?(Integer)
-      i = key
-      i = @__struct_values.length + i if i < 0
+      n = @__struct_values.length
+      i = key < 0 ? n + key : key
+      raise IndexError.new("offset #{key} too large for struct(size:#{n})") if i >= n
+      raise IndexError.new("offset #{key} too small for struct(size:#{n})") if i < 0
       @__struct_values[i]
     else
       idx = __member_index(key.to_sym)
@@ -202,16 +204,17 @@ class Struct
   alias deconstruct_keys to_h
 
   def each(&block)
-    return to_a.each unless block
+    return to_enum(:each) unless block
     @__struct_values.each(&block)
     self
   end
 
-  def each_pair
+  def each_pair(&block)
+    return to_enum(:each_pair) unless block
     m = members
     i = 0
     while i < m.length
-      yield m[i], @__struct_values[i]
+      block.call(m[i], @__struct_values[i])
       i = i + 1
     end
     self
@@ -222,18 +225,31 @@ class Struct
   end
   alias length size
 
-  def values_at(*indices)
+  def values_at(*args)
+    n = @__struct_values.length
     r = []
-    indices.each do |i|
-      r << self[i]
+    args.each do |a|
+      if a.is_a?(Range)
+        # Range elements beyond the struct produce nil (no error), matching MRI.
+        a.each do |j|
+          idx = j < 0 ? n + j : j
+          r << (idx >= 0 && idx < n ? @__struct_values[idx] : nil)
+        end
+      else
+        idx = a < 0 ? n + a : a
+        raise IndexError.new("offset #{a} too large for struct(size:#{n})") if idx >= n
+        raise IndexError.new("offset #{a} too small for struct(size:#{n})") if idx < 0
+        r << @__struct_values[idx]
+      end
     end
     r
   end
 
-  def select
+  def select(&block)
+    return to_enum(:select) unless block
     r = []
     @__struct_values.each do |v|
-      r << v if yield(v)
+      r << v if block.call(v)
     end
     r
   end
