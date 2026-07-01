@@ -343,14 +343,26 @@ module OpPrec
         end
 
         opstate = shunt_subexpr([op], src, should_index)
+        pushed_index = false
         if treat_as_argument
           # Push @opcall2 to make this a method call with the array as argument
           ostack << @opcall2
         elsif should_index
-          ostack << (op.sym == :array ? Operators["#index#"] : @opcall)
+          idx = (op.sym == :array ? Operators["#index#"] : @opcall)
+          ostack << idx
+          pushed_index = idx.sym == :index
         end
 
-        reduce(@ostack, @opcall2) if @ostack[-1].nil? || @ostack[-1].sym != :call
+        if pushed_index
+          # Fire the just-pushed #index# directly: its receiver and subscript are already on the value
+          # stack, so the index binds to its receiver now. We must NOT route this through the
+          # priority-based reduce with @opcall2 (pri 9), which pops EVERY operator whose right_pri > 9 --
+          # including a pending lower-priority infix. e.g. `a + b[1].c` would then reduce the `+` before
+          # the `.c` arrives, mis-parsing as `(a + b[1]).c` instead of `a + (b[1].c)`.
+          @out.oper(@ostack.pop)
+        elsif @ostack[-1].nil? || @ostack[-1].sym != :call
+          reduce(@ostack, @opcall2)
+        end
       elsif op
         reduce(ostack, op)
         opstate = :prefix

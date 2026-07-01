@@ -46,36 +46,28 @@
 
 ## Active Issues
 
-### 0. Chained `arr[i].method` operands corrupt each other in a `+` chain (DETERMINISTIC codegen bug)
+### 0. `expr OP arr[i].method` mis-parsed — trailing method bound to the whole operator expression (FIXED)
 
-**Status**: Open, reproducible, high-value. Deterministic — a likely source of the "wild write" heap
-corruption described in issue #5 below.
+**Status**: FIXED (shunting.rb). Was originally mis-diagnosed as a codegen/register bug; it is a parser
+precedence bug in the shunting yard.
 
-**Symptom**: When two or more *indexed* method calls (`arr[i].meth`) appear as operands of the same
-binary-operator chain, the result of the second (and later) operand is silently corrupted. Minimal repro:
+**Symptom**: When the right operand of a binary operator was an indexed method call (`arr[i].meth`), the
+trailing `.meth` bound to the entire operator expression instead of to `arr[i]`:
 
 ```ruby
-v = ["Ford", "Ranger"]
-p v[0].inspect + "=" + v[1].inspect   # => "\"Ford\"=Ranger"   (want "\"Ford\"=\"Ranger\"")
-p v[0].inspect + v[1].inspect         # => "\"Ford\"Ranger"      (2nd inspect loses its quotes)
+a + b[1].c                       #  parsed as  (a + b[1]).c    (want  a + (b[1].c))
+v[0].inspect + v[1].inspect      #  parsed as  (v[0].inspect + v[1]).inspect
 ```
 
-**Scope (narrowed)**:
-- Trigger is specifically the `[]` (index) call syntax on a receiver, *then* a method: `v[i].inspect`.
-- `foo.inspect + "=" + bar.inspect` (plain method calls) works.
-- `geta(0).inspect + "=" + geta(1).inspect` (index hidden inside a helper method) works.
-- `v[0].inspect + "=" + v[1]` (only ONE indexed-method operand) works.
-- `v[0] + "=" + v[1]` (indices without a trailing method) works.
-- Breaks with local arrays and ivar arrays alike; independent of `defined?`/String changes.
+**Root cause**: After parsing an index subscript, the just-pushed `#index#` operator (pri 100) was fired
+via `reduce(@ostack, @opcall2)`. `#call2#` has priority **9**, and `reduce` pops every operator whose
+`right_pri > pri`, so it also popped a pending lower-priority infix (e.g. `+`, pri 14) — reducing the
+`+` before the following `.method` arrived, which then attached to the reduced result.
 
-**Hypothesis**: The `[]` method call in operand position does not preserve the register/temporary
-holding the partially-accumulated left-hand string, so evaluating the second `arr[j].meth` clobbers it.
-Regular `call`/`callm` operands preserve it; the `[]` path does not. Look at how `compile_callm` for the
-`[]` operator spills/reloads around binary-operator operand evaluation.
-
-**Workaround in library code**: pull each `arr[i].method` into a local before combining (see
-`lib/core/struct.rb#inspect`). Fixing the codegen properly would remove the need for such workarounds and
-may resolve a class of "wild write" corruption.
+**Fix**: When the pushed operator is `#index#`, fire it directly (`@out.oper(@ostack.pop)`) instead of
+going through the pri-9 reduce, so only the index binds and pending lower-priority infix operators are
+left untouched. Chained `a[1][2]`, index assignment `a[1] = 2` (→ `[]=`), and paren-less `foo bar[1]`
+all still parse correctly. Both gates green.
 
 ### 1. Break from Blocks - Wrong Return Target (Partial)
 

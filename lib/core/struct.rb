@@ -251,13 +251,7 @@ class Struct
     parts = []
     i = 0
     while i < m.length
-      # NOTE: the key and value are pulled into locals rather than written as one
-      # `m[i].to_s + "=" + @__struct_values[i].inspect` chain: chaining two indexed `[]` method calls as
-      # operands of `+` currently mis-generates code (the second operand's result is corrupted). See
-      # docs/KNOWN_ISSUES.md.
-      key = m[i].to_s
-      val = @__struct_values[i].inspect
-      parts << (key + "=" + val)
+      parts << (m[i].to_s + "=" + @__struct_values[i].inspect)
       i = i + 1
     end
     "#<struct " + parts.join(", ") + ">"
