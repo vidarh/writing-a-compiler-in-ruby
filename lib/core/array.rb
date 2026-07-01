@@ -81,6 +81,7 @@ class Array
 
   # FIXME: Belongs in enumerable
   def reject
+    return to_enum(:reject) if !block_given?
     a = self.class.new
     each do |item|
       if !yield(item)
@@ -354,7 +355,22 @@ class Array
   # lot of really low level code, and so anything trying to call any
   # other Ruby code, to e.g. use Symbol's or similar, is likely to fail.
   #
-  def [](idx)
+  def [](idx, len = nil)
+    # a[start, length] -> a subarray of at most `length` elements starting at `start`.
+    if !len.nil?
+      n = length
+      s = idx < 0 ? n + idx : idx
+      return nil if s < 0 || s > n || len < 0
+      e = s + len
+      e = n if e > n
+      r = []
+      i = s
+      while i < e
+        r << self[i]
+        i = i + 1
+      end
+      return r
+    end
 
     return __range_get(idx) if idx.is_a?(Range)
 
@@ -456,8 +472,43 @@ class Array
     %s(puts "Array#abbrev not implemented")
   end
 
-  def slice(idx)
-    self[idx]
+  # slice(index) / slice(start, length) / slice(range) -- same selection as #[].
+  def slice(*args)
+    args.length == 1 ? self[args[0]] : self[args[0], args[1]]
+  end
+
+  # Like #slice but also removes the selected element(s) from self, returning what was removed.
+  def slice!(*args)
+    n = length
+    if args.length == 1 && args[0].is_a?(Integer)
+      i = args[0]
+      i = n + i if i < 0
+      return nil if i < 0 || i >= n
+      return delete_at(i)
+    end
+    if args.length == 1 && args[0].is_a?(Range)
+      r = args[0]
+      s = r.begin
+      s = n + s if s < 0
+      e = r.exclude_end? ? r.end : r.end + 1
+      e = n + e if e < 0
+    else
+      s = args[0]
+      s = n + s if s < 0
+      e = s + (args[1] || 0)
+    end
+    return nil if s < 0 || s > n
+    e = n if e > n
+    removed = self[s, e - s]
+    # Rebuild self without the [s, e) span.
+    rest = []
+    i = 0
+    while i < n
+      rest << self[i] if i < s || i >= e
+      i = i + 1
+    end
+    replace(rest)
+    removed
   end
 
   # Searches through an array whose elements are also arrays comparing obj with the
@@ -588,10 +639,39 @@ class Array
 
   # Deletes every element of self for which block evaluates to true.
   def delete_if
+    return to_enum(:delete_if) if !block_given?
     kept = []
     each {|x| kept << x if !yield(x) }
     replace(kept)
     self
+  end
+
+  # Keep only the elements for which the block is true (in place), returning self.
+  def keep_if
+    return to_enum(:keep_if) if !block_given?
+    kept = []
+    each { |x| kept << x if yield(x) }
+    replace(kept)
+    self
+  end
+
+  # First index of obj (==) or of the first element for which the block is true; nil if none.
+  def find_index(*args, &block)
+    i = 0
+    n = length
+    if block
+      while i < n
+        return i if block.call(self[i])
+        i = i + 1
+      end
+    else
+      obj = args[0]
+      while i < n
+        return i if self[i] == obj
+        i = i + 1
+      end
+    end
+    nil
   end
 
   # FIXME: Highly inefficient...
