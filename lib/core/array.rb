@@ -4,6 +4,18 @@ class Array
   # FIXME: still need to make including modules work
   # include Enumerable
 
+  # Override Class#new so an Array subclass whose #initialize skips `super` still gets valid internals:
+  # run #__initialize (which sets @len/@ptr/@capacity = 0) on the fresh instance BEFORE the user
+  # #initialize. Without this, `class MyArray < Array; def initialize(a,b); self << a << b; end` (no
+  # super) uses uninitialised @len/@ptr and segfaults. Uses `allocate` (inherited Class#allocate) and
+  # instance methods only -- no eigenclass `super`, which recurses on Array's metaclass.
+  def self.new *__copysplat
+    ob = allocate
+    ob.__initialize
+    ob.initialize(*__copysplat)
+    ob
+  end
+
   # Let's start with the basics:
 
   # FIXME: initialize should take two optional arguments,
