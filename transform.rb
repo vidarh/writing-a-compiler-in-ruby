@@ -1553,8 +1553,16 @@ class Compiler
         e[0] = :let
         e[1] = [:__destruct]
         # If RHS is a flat array (comma expression like `1, 2, 3`), wrap it in :array
-        # Without this, `a, b, c = 1, 2, 3` passes 3 args to Array() instead of 1
-        if r.is_a?(Array) && !r.empty? && !r[0].is_a?(Symbol)
+        # Without this, `a, b, c = 1, 2, 3` passes 3 args to Array() instead of 1.
+        # A single AST-operator node (e.g. [:callm, ...], [:array, ...], [:add, ...]) must NOT be
+        # wrapped -- it is already one value. The old test `!r[0].is_a?(Symbol)` misfired when the
+        # first comma element was a bare variable/global reference (e.g. `a, b = $foo, 5` parses to
+        # [:"$foo", 5], whose head :"$foo" is a Symbol but NOT an operator), leaving it unwrapped and
+        # miscompiled as the call `$foo(5)`. Distinguish by recognising real node tags: only heads that
+        # are keywords or call forms mark a single node; any other symbol head is a comma tuple.
+        node_head = r.is_a?(Array) && !r.empty? && r[0].is_a?(Symbol) &&
+          (Compiler::Keywords.include?(r[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(r[0]))
+        if r.is_a?(Array) && !r.empty? && !node_head
           r = [:array] + r
         end
         # Convert right-hand side to array using Array() for proper destructuring
