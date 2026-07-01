@@ -1270,6 +1270,11 @@ class Array
     return self
   end
 
+  # lazy: a lazy enumerator over this array (Array does not include Enumerable here, so define directly).
+  def lazy
+    Enumerator::Lazy.new(self)
+  end
+
 
   # Returns self.
   def to_ary

@@ -1,5 +1,10 @@
 # Enumerable module implementation
 module Enumerable
+  # lazy: a lazy enumerator over self (self must respond to #each).
+  def lazy
+    Enumerator::Lazy.new(self)
+  end
+
   def all?
     self.each do |item|
 #      unless yield(item)

@@ -97,4 +97,8 @@ class Range
   def to_enum
     RangeEnumerator.new(self)
   end
+
+  def lazy
+    Enumerator::Lazy.new(self)
+  end
 end
