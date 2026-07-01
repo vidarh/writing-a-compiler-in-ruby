@@ -431,10 +431,16 @@ class Compiler
     # runtime superclass -- :Object/:Class/:Kernel with a nil sscope are the bootstrap case and keep ssize 0.
     runtime_super = !sscope && superclass.is_a?(Symbol) &&
       ![:Object, :Class, :Kernel].include?(superclass) && fq_name != superclass
+    # A superclass given as an EXPRESSION (`class Sub < Struct.new(:a)` / `class Sub < Class.new`) is only
+    # known at runtime too. It is evaluated into __superclass__ (see the superclass.is_a?(Array) branch
+    # below), so it needs the same full-vtable copy as runtime_super. Otherwise ssize stays 0, __new_class_
+    # object copies no methods, and every call -- including method_missing itself -- lands on a
+    # method_missing thunk that recurses forever (hang).
+    expr_super = !sscope && superclass.is_a?(Array)
     if sscope
       ssize = sscope.klass_size
       class_alloc_size = cscope.klass_size
-    elsif runtime_super
+    elsif runtime_super || expr_super
       ssize = :__vtable_size
       class_alloc_size = :__vtable_size
     else
@@ -449,6 +455,8 @@ class Compiler
       classob = [:index, superc.name.to_sym , 0]
     elsif runtime_super
       classob = [:index, superclass, 0]
+    elsif expr_super
+      classob = [:index, :__superclass__, 0]
     end
 
     # When using explicit namespace (class Foo::Bar from outside Foo),
@@ -514,7 +522,21 @@ class Compiler
     # this broke, as obviously we should not be able to directly mess with the superclass's instance
     # variables, so we're intentionally violating encapsulation here.
 
-    compile_exp(cscope, [:assign, [:index, :self, 1], cscope.instance_size])
+    # For a superclass known only at RUNTIME (`class Sub < A` where A = Class.new(...), or an expression
+    # superclass), the compile-time cscope has no @superclass, so cscope.instance_size counts only Sub's own
+    # ivars and OMITS the ivars the superclass adds (e.g. a Struct subclass's @__struct_values). An instance
+    # allocated with that too-small size is then corrupted when an inherited method writes an inherited ivar
+    # slot. Take the larger of the compile-time size and the runtime superclass's instance_size. We read the
+    # superclass via self's slot 3 (set by __new_class_object) so this works whether the superclass came in
+    # as a symbol or an expression.
+    if runtime_super || expr_super
+      compile_exp(cscope, [:assign, [:index, :self, 1],
+                           [:if, [:lt, cscope.instance_size, [:index, [:index, :self, 3], 1]],
+                            [:index, [:index, :self, 3], 1],
+                            cscope.instance_size]])
+    else
+      compile_exp(cscope, [:assign, [:index, :self, 1], cscope.instance_size])
+    end
 
     # We need to store the "raw" name here, rather than a String object,
     # as String may not have been initialized yet

@@ -102,6 +102,24 @@ class Struct
     @__struct_values
   end
 
+  # A subclass initializer may set a member (via the a= writer) BEFORE calling super, e.g.
+  #   def initialize(*a); self.make = "Honda"; super(*a); end
+  # at which point @__struct_values has not been created yet. Lazily allocate a nil-filled array so such
+  # a write does not dereference nil. super's own initialize then overwrites it with the real values.
+  def __ensure_values
+    if @__struct_values.nil?
+      m = Struct.__members_for(self.class)
+      vals = []
+      i = 0
+      while i < m.length
+        vals << nil
+        i = i + 1
+      end
+      @__struct_values = vals
+    end
+    @__struct_values
+  end
+
   def __member_index(sym)
     members = Struct.__members_for(self.class)
     i = 0
@@ -119,13 +137,13 @@ class Struct
       base = s[0...(s.length - 1)].to_sym
       idx = __member_index(base)
       if idx >= 0
-        @__struct_values[idx] = args[0]
+        __ensure_values[idx] = args[0]
         return args[0]
       end
     else
       idx = __member_index(name)
       if idx >= 0
-        return @__struct_values[idx]
+        return __ensure_values[idx]   # tolerate a read before initialize (super) has populated the array
       end
     end
     super
