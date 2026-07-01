@@ -1729,12 +1729,63 @@ class Compiler
     end
   end
 
+  # Bare `super` (no parens) forwards the enclosing method's arguments; the parser emits it as the bare
+  # symbol :super, which otherwise compiles to self.super() with NO args. `super()`/`super(x)` are already
+  # [:call,:super,...] nodes and are left untouched. Build the forwarded-argument list from a method's
+  # formal params: a simple/`=default` param forwards by name (its current value); `*rest` forwards as a
+  # splat; a `&block` forwards implicitly (blocks are already forwarded), and keyword params are left for
+  # a later pass. See memory bare-super-does-not-forward-args.
+  def bare_super_fwd(params)
+    fwd = []
+    (params || []).each do |p|
+      if p.is_a?(Symbol)
+        fwd << p
+      elsif p.is_a?(Array)
+        nm = p[0]
+        kind = p[1]
+        if kind == :rest
+          fwd << E[:splat, nm]
+        elsif kind == :block || kind == :keyrest || kind == :key || kind == :keyreq
+          # block forwards implicitly; keyword forwarding not handled here yet
+        else
+          fwd << nm   # [:name, :default, expr] and any other positional -> forward by name
+        end
+      end
+    end
+    fwd
+  end
+
+  # Replace every BARE :super in a method body with a call that forwards `fwd`. Descends into blocks
+  # (a block inherits the enclosing method's super) but stops at a nested :defm/:defun (its own params,
+  # rewritten when depth_first visits it). Leaves the :super method-name of an explicit [:call,:super,...].
+  def replace_bare_super(node, fwd)
+    return if !node.is_a?(Array)
+    return if node[0] == :defm || node[0] == :defun
+    node.each_index do |i|
+      child = node[i]
+      if child == :super
+        next if node[0] == :call && i == 1
+        node[i] = E[:call, :super, fwd.map { |a| a.is_a?(Array) ? a.dup : a }]
+      elsif child.is_a?(Array)
+        replace_bare_super(child, fwd)
+      end
+    end
+  end
+
+  def rewrite_bare_super(exp)
+    exp.depth_first(:defm) do |e|
+      replace_bare_super(e[3], bare_super_fwd(e[2]))
+    end
+    exp
+  end
+
   def preprocess exp
     # The global scope is needed for some rewrites
     setup_global_scope(exp)
 
     rewrite_for(exp)
     rewrite_destruct(exp)
+    rewrite_bare_super(exp)   # expand bare `super` to forward the method's args (before splat/symbol rewrites)
 
     # Pre-register constants after for/destruct rewrites create assignments
     register_constants(exp, @global_scope)
