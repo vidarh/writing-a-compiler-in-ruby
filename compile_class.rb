@@ -29,14 +29,31 @@ class Compiler
     scope.set_vtable_entry(name, fname, f)
     v = scope.vtable[name]
 
-    # Call __set_vtable with :self (resolved through scope chain)
-    # For EigenclassScope, :self resolves to the eigenclass object from LocalVarScope
-    # For regular ClassScope, :self resolves to the class object
-    compile_eval_arg(scope,[:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
+    # Install the method at runtime on `self`. Resolve :self in the scope where the def actually lives:
+    # when the def is inside a real block (a FuncScope in the chain) its `self` is that block's runtime
+    # receiver ([:arg,0]) -- which class_eval/Class.new-do/Data.define-do set to the target class -- so
+    # the method registers on the receiver, not the lexically-enclosing class. A class-body def has
+    # orig_scope == scope (a ClassScope), and a top-level def resolves to Object, so both are unchanged;
+    # only the block case previously mis-registered on the lexical class.
+    self_scope = scope_has_funcscope?(orig_scope) ? orig_scope : scope
+    compile_eval_arg(self_scope,[:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
 
 
     # This is taken from compile_defun - it does not necessarily make sense for defm
     return Value.new([:subexpr]) #addr, clean_method_name(fname)])
+  end
+
+  # True when `scope`'s chain reaches a FuncScope before its enclosing class/module scope: the def is
+  # lexically inside a block/method body, so its `self` is that scope's runtime receiver ([:arg,0]) rather
+  # than the lexical class. (A class-body def hits a ModuleScope first; a top-level def has none.)
+  def scope_has_funcscope?(scope)
+    s = scope
+    while s
+      return true  if s.is_a?(FuncScope)
+      return false if s.is_a?(ModuleScope)
+      s = s.respond_to?(:next) ? s.next : nil
+    end
+    false
   end
 
 
