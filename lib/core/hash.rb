@@ -339,6 +339,37 @@ class Hash
   end
   alias filter select
 
+  # In-place reject!/select!: delete the matching / non-matching pairs, returning self if anything was
+  # removed and nil otherwise. delete_if/keep_if are the same walks but always return self.
+  def reject!(&block)
+    return to_enum(:reject!) if !block
+    removed = []
+    each { |k, v| removed << k if block.call(k, v) }
+    removed.each { |k| delete(k) }
+    removed.empty? ? nil : self
+  end
+
+  def select!(&block)
+    return to_enum(:select!) if !block
+    removed = []
+    each { |k, v| removed << k if !block.call(k, v) }
+    removed.each { |k| delete(k) }
+    removed.empty? ? nil : self
+  end
+  alias filter! select!
+
+  def delete_if(&block)
+    return to_enum(:delete_if) if !block
+    reject!(&block)
+    self
+  end
+
+  def keep_if(&block)
+    return to_enum(:keep_if) if !block
+    select!(&block)
+    self
+  end
+
   # A new hash with only the given keys that are present.
   def slice(*keys)
     h = {}
