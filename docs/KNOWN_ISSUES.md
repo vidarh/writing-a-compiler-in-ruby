@@ -135,6 +135,25 @@ result = obj.method1 + obj.method2  # May crash
 
 ---
 
+### 4. Deferred crash-adjacent findings (2026-07-01)
+
+Root-caused but intentionally not yet fixed (need larger features / deeper semantics work):
+
+- **`Class.new do ... end` drops the block.** `rewrite_class_new` (transform.rb) intercepts
+  `Class.new(sup)` at compile time to build a real class object, but discards `e[4]` (the block),
+  so an anonymous class defined with a method block has NO methods (`Class.new { def foo; end }.new.foo`
+  → "undefined method 'foo'"). Needs real `class_eval` + runtime method injection into the new class's
+  vtable. `class_eval` is currently a stub that just `block.call`s in the block's own context.
+- **`for` loop variable does not leak.** In Ruby a `for i in ...` variable stays visible after the loop;
+  here it is block-scoped, so `for i in 1..3; end; p i` raises "undefined method 'i'".
+- **`|&block|` (block param of a block/lambda) is unbound.** `rewrite_lambda` leaves it as an
+  uninitialised positional defun param, and `block_given?`/`__closure__` inside a yielded-to block do not
+  reflect a block passed to the block, so `{ |&b| b }` reads garbage. Binding it to
+  `block_given? ? __closure__ : nil` (mirroring methods) does not help until block-to-block `block_given?`
+  semantics are correct — reverted pending that.
+
+---
+
 ## Known Limitations (Cannot Fix)
 
 1. **eval() with dynamic strings** - AOT compilation cannot evaluate runtime strings
