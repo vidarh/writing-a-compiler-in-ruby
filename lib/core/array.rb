@@ -377,24 +377,71 @@ class Array
   # Inserts elements if length is zero. If nil is used in the second and third form,
   # deletes elements from self. An IndexError is raised if a negative index points
   # past the beginning of the array. See also Array#push, and Array#unshift.
-  def []=(idx, obj)
-    %s(assign idx (callm idx __get_raw))
-    # assign position/range at given index with object/array
-#    if idx < 0
-#      idx = @len - idx
-#    end
-#    if idx < 0
-#      # FIXME Oops. Error.
-#      return nil
-#    end
-
-    # FIXME the logic here needs lots of cleanup
-    %s(if (ge idx @capacity) (callm self __grow (idx)))
-
-    %s(if (ge idx @len) (assign @len (add idx 1)))
-
-    %s(assign (index @ptr idx) obj)
+  # a[index] = obj / a[start, length] = obj / a[range] = obj. The last argument is the value; for the
+  # span forms it may be an Array (spliced in) or a scalar (inserted as one element).
+  def []=(*args)
+    argc = args.length
+    obj = args[argc - 1]
+    if argc == 3
+      return __span_set(args[0], args[1], obj)
+    end
+    idx = args[0]
+    if idx.is_a?(Range)
+      l = length
+      b = idx.first
+      e = idx.last
+      b = l + b if b < 0
+      e = l + e if e < 0
+      count = idx.exclude_end? ? (e - b) : (e - b + 1)
+      count = 0 if count < 0
+      return __span_set(b, count, obj)
+    end
+    __index_set(idx, obj)
   end
+
+  # a[i] = obj for an Integer index. A negative index counts from the end; too-negative raises
+  # IndexError. Writing past the end grows (the gap reads as nil, since the buffer is zeroed).
+  def __index_set(idx, obj)
+    len = length
+    if idx < 0
+      idx = len + idx
+      raise IndexError.new("index too small for array; minimum #{0 - len}") if idx < 0
+    end
+    %s(assign idx (callm idx __get_raw))
+    %s(if (ge idx @capacity) (callm self __grow (idx)))
+    %s(if (ge idx @len) (assign @len (add idx 1)))
+    %s(assign (index @ptr idx) obj)
+    obj
+  end
+
+  # Replace the `count` elements starting at `start` with `obj` (an Array is spliced element-wise, a
+  # scalar is inserted as one element). Rebuilds via head + inserted + tail and replace().
+  def __span_set(start, count, obj)
+    l = length
+    start = l + start if start < 0
+    raise IndexError.new("index #{start} out of array bounds") if start < 0
+    count = 0 if count < 0
+    ins = obj.is_a?(Array) ? obj : [obj]
+    result = []
+    i = 0
+    while i < start
+      result << (i < l ? self[i] : nil)
+      i = i + 1
+    end
+    j = 0
+    while j < ins.length
+      result << ins[j]
+      j = j + 1
+    end
+    i = start + count
+    while i < l
+      result << self[i]
+      i = i + 1
+    end
+    replace(result)
+    obj
+  end
+
 
 
   # Calculates the set of unambiguous abbreviations for the strings in self.
