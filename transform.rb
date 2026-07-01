@@ -1275,6 +1275,51 @@ class Compiler
     end
   end
 
+  # Class/module *instance* variables. A `@x` written DIRECTLY in a class/module body (not inside an
+  # instance method) belongs to the class object, and the class's singleton methods (`def self.x`) already
+  # read it from the global __classivar__<Class>__<x> (see EigenclassScope#get_instance_var). But the class
+  # body resolves @x through ClassScope#get_instance_var as an INSTANCE-slot offset, so `@x = 0` in the body
+  # and `@x` in a `def self.` read different storage (the class-body write is lost -> reads nil). Rewrite
+  # only the DIRECT body @ivars to the same global; instance-method (:defm) and nested class/module bodies
+  # are left untouched so their @ivars keep instance semantics.
+  def rewrite_class_ivars(exp, prefix = "")
+    return if !exp.is_a?(Array)
+    if (exp[0] == :class || exp[0] == :module) && exp[1].is_a?(Symbol)
+      # Accumulate the nesting path so the global name matches EigenclassScope's prefix (which is built from
+      # the @next scope chain), e.g. `module ModuleSpecs; module Nesting; @tests` -> ModuleSpecs__Nesting.
+      cname = prefix.empty? ? exp[1].to_s : "#{prefix}__#{exp[1]}"
+      first = exp[0] == :class ? 3 : 2
+      i = first
+      while i < exp.length
+        rewrite_direct_ivars(exp[i], cname)   # rewrite this body statement's DIRECT @ivars (skips nested scopes)
+        rewrite_class_ivars(exp[i], cname)    # recurse into nested class/module bodies with the new prefix
+        i += 1
+      end
+    else
+      exp.each { |c| rewrite_class_ivars(c, prefix) }
+    end
+  end
+
+  def rewrite_direct_ivars(node, cname)
+    return if !node.is_a?(Array)
+    # Do not descend into a nested scope -- its @ivars have their own (instance / inner-class) meaning.
+    return if node[0] == :defm || node[0] == :defs || node[0] == :class || node[0] == :module
+    i = 0
+    while i < node.length
+      child = node[i]
+      if child.is_a?(Symbol) && child.to_s[0] == ?@ && child.to_s[1] != ?@
+        gname = "__classivar__#{cname}__#{child.to_s[1..-1]}".to_sym
+        @global_scope.add_global(gname) if @global_scope   # register so output_global_init nil-inits it
+        # Emit the bare global-storage symbol (not a resolved [:global,...] node): get_arg maps it to the
+        # global in read AND assignment-target position, whereas a pre-resolved node is rejected as an lvalue.
+        node[i] = gname
+      elsif child.is_a?(Array)
+        rewrite_direct_ivars(child, cname)
+      end
+      i += 1
+    end
+  end
+
   def rewrite_class_new(exp)
     exp.depth_first do |e|
       if e.is_a?(Array) && e[0] == :callm && (e[1] == :Class || e[1] == :Module) && e[2] == :new
@@ -1890,6 +1935,7 @@ class Compiler
     group_keyword_arguments(exp)   # Group :pair and :hash_splat nodes into :hash
     rewrite_concat(exp)
     rewrite_range(exp)
+    rewrite_class_ivars(exp)  # direct class/module-body @ivars -> __classivar__ globals (before class_new)
     rewrite_class_new(exp)
     rewrite_defined(exp)  # Must run before rewrite_strconst
     rewrite_strconst(exp)
