@@ -229,9 +229,10 @@ class Compiler
         # args is array of module names, but we only support single module for now
         mod_name = args.is_a?(Array) ? args[0] : args
 
-        # Only handle compile-time constant names - if module name is dynamic expression,
-        # fall through to runtime method call
-        if mod_name.is_a?(Symbol)
+        # Handle compile-time constant names, including a nested constant (include Foo::Bar, which
+        # arrives as [:deref, :Foo, :Bar] -- compile_include resolves that form). A dynamic expression
+        # falls through to a runtime method call.
+        if mod_name.is_a?(Symbol) || (mod_name.is_a?(Array) && mod_name[0] == :deref)
           return compile_include(scope, mod_name, pos)
         end
         # Fall through to regular method call for dynamic module names
