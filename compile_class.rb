@@ -8,7 +8,11 @@ class Compiler
     scope = scope.class_scope
 
     if name.is_a?(Array)
-      compile_eigenclass(scope, name[0], [[:defm, name[1], args, body]])
+      # Singleton def `def recv.name`: the receiver (name[0]) is evaluated in the ENCLOSING scope, which
+      # may hold locals or a closure __env__ (e.g. `obj = Object.new; def obj.to_i; ...` inside a block).
+      # Use orig_scope, not the class_scope narrowed above -- otherwise a receiver rewritten to
+      # [:index, __env__, n] cannot resolve __env__ and is miscompiled as a method call.
+      compile_eigenclass(orig_scope, name[0], [[:defm, name[1], args, body]])
       return Value.new([:subexpr])
     end
 

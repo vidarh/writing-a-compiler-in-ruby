@@ -863,6 +863,24 @@ class Compiler
           body_index = 2
         end
 
+        # A singleton method def `def recv.name` carries its receiver in the name tuple
+        # (e[1] == [recv, methname]). The receiver is evaluated in the ENCLOSING scope, so a captured
+        # local used there (e.g. `obj = Object.new; def obj.to_i; ...` inside a block) must be redirected
+        # into __env__ HERE -- the param/body handling below and the `next :skip` never touch e[1], so
+        # without this the receiver stays a bare symbol and fails to resolve as a method call.
+        if e[0] == :defm && e[1].is_a?(Array)
+          recv = e[1][0]
+          if recv.is_a?(Symbol)
+            rnum = env.index(recv)
+            if rnum
+              e[1][0] = E[:index, :__env__, rnum]
+              seen = true
+            end
+          elsif rewrite_env_vars(recv, env)
+            seen = true
+          end
+        end
+
         # Extract parameter names (handle tuples like [:param, :default, :nil])
         # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
         # param_list can be an array or a symbol like :block (for block arguments)
