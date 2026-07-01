@@ -87,6 +87,7 @@ require 'core/hash_ext'
 require 'core/float'
 require 'core/struct'
 require 'core/exception'
+require 'core/process'     # After exception (uses NotImplementedError); only real syscall primitives
 require 'core/pp'
 require 'core/regexp'
 require 'core/matchdata'
