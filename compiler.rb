@@ -787,7 +787,11 @@ class Compiler
       callm_method = :callm
 
       if left.size == 3  # no arguments: foo.bar = baz or foo&.bar = baz
-        return compile_callm(scope, obj, setter_method, right)
+        # The setter takes exactly the assigned value as its single argument. `right` is one expression
+        # node (e.g. the `foo.m + 3` of a `foo.m += 3` op-assign), so it MUST be wrapped in an argument
+        # list -- passing it bare made compile_callm iterate the node and treat its head (:callm) as an
+        # argument ("undefined method 'callm'"). Mirrors the all_args wrapping in the has-arguments case.
+        return compile_callm(scope, obj, setter_method, [right])
       else  # has arguments: foo[idx] = baz or foo.method(arg) = baz
         args = left[3] || []
         # args may be a single arg or array of args
