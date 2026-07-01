@@ -62,6 +62,72 @@ module Enumerable
   end
 
 
+  # The element for which the block returns the smallest / largest value.
+  def min_by
+    return to_enum(:min_by) if !block_given?
+    best = nil
+    best_key = nil
+    first = true
+    each do |x|
+      k = yield(x)
+      if first || (k <=> best_key) < 0
+        best = x
+        best_key = k
+        first = false
+      end
+    end
+    best
+  end
+
+  def max_by
+    return to_enum(:max_by) if !block_given?
+    best = nil
+    best_key = nil
+    first = true
+    each do |x|
+      k = yield(x)
+      if first || (k <=> best_key) > 0
+        best = x
+        best_key = k
+        first = false
+      end
+    end
+    best
+  end
+
+  # Group elements by the block's return value into a Hash of key => [elements].
+  def group_by
+    return to_enum(:group_by) if !block_given?
+    h = {}
+    each do |x|
+      k = yield(x)
+      h[k] = [] if !h.has_key?(k)
+      h[k] << x
+    end
+    h
+  end
+
+  # Chunk CONSECUTIVE elements with the same block value into [key, [elements]] pairs.
+  def chunk
+    return to_enum(:chunk) if !block_given?
+    result = []
+    prev_key = nil
+    cur = nil
+    first = true
+    each do |x|
+      k = yield(x)
+      if first || k != prev_key
+        cur = [x]
+        result << [k, cur]
+        prev_key = k
+        first = false
+      else
+        cur << x
+      end
+    end
+    result
+  end
+
   # Split into runs of consecutive elements: start a new chunk between adjacent elements a, b whenever the
   # block returns false for (a, b). Returns an Array of Arrays (MRI returns an Enumerator, but an Array
   # answers #to_a/#each the same way for the common `.chunk_while{...}.to_a` usage).

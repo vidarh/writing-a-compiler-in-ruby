@@ -1128,6 +1128,81 @@ class String
     __split_regex(pattern, limit)
   end
 
+  # Yield each line (including its trailing separator). sep defaults to "\n"; nil yields the whole string.
+  def each_line(sep = "\n", &block)
+    return to_enum(:each_line, sep) if !block
+    if sep.nil?
+      block.call(dup)
+      return self
+    end
+    start = 0
+    n = length
+    sl = sep.length
+    while start < n
+      idx = index(sep, start)
+      if idx.nil?
+        block.call(self[start..-1])
+        start = n
+      else
+        block.call(self[start...(idx + sl)])
+        start = idx + sl
+      end
+    end
+    self
+  end
+
+  def lines(sep = "\n")
+    result = []
+    each_line(sep) { |l| result << l }
+    result
+  end
+
+  # tr followed by squeezing runs of characters that were produced by the translation.
+  def tr_s(from_str, to_str)
+    from = from_str.to_str
+    negate = false
+    if from.length > 0 && from[0] == 94
+      negate = true
+      from = from.slice(1, from.length - 1)
+    end
+    from_chars = __tr_expand(from)
+    to_chars = to_str.nil? ? [] : __tr_expand(to_str.to_str)
+    tlen = to_chars.length
+    result = ""
+    prev = nil
+    prev_tr = false
+    each_char do |ch|
+      idx = from_chars.index(ch)
+      matched = negate ? idx.nil? : !idx.nil?
+      if matched
+        rep = nil
+        if tlen == 0
+          rep = nil
+        elsif negate
+          rep = to_chars[tlen - 1]
+        else
+          ti = idx
+          ti = tlen - 1 if ti >= tlen
+          rep = to_chars[ti]
+        end
+        if rep.nil?
+          # deletion: emit nothing
+        elsif prev_tr && rep == prev
+          # squeeze consecutive translated duplicates
+        else
+          result = result + rep
+          prev = rep
+        end
+        prev_tr = true
+      else
+        result = result + ch
+        prev = ch
+        prev_tr = false
+      end
+    end
+    result
+  end
+
   def __split_ws(limit)
     result = []
     cur = ""
