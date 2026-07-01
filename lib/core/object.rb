@@ -203,6 +203,15 @@ class Object
     ob
   end
 
+  # Coerce a format argument to an Integer the way Ruby's integer conversions do: an Integer is used
+  # directly, otherwise #to_int is preferred (Integer() semantics) and #to_i is the fallback. This lets
+  # objects that expose only #to_int (a common mspec mock idiom) format under %d/%x/%o/%b.
+  def __fmt_to_int(val)
+    return val if val.is_a?(Integer)
+    return val.to_int if val.respond_to?(:to_int)
+    val.to_i
+  end
+
   # Minimal sprintf: parses %[flags][width][.prec]type. Types: d/i/u, s, x/X, o, b, c, f/e/g, p, %.
   # Flags: - (left), 0 (zero-pad), + / space (sign). char-code comparisons (no regex; self-host safe).
   def __sprintf(fmt, args)
@@ -261,7 +270,7 @@ class Object
           numeric = false
           neg = false
           if type == 100 || type == 105 || type == 117   # d i u
-            n = val.to_i
+            n = __fmt_to_int(val)
             numeric = true
             if n < 0
               neg = true
@@ -273,13 +282,13 @@ class Object
             body = val.to_s
             body = body.slice(0, prec) if prec >= 0
           elsif type == 120   # x
-            body = val.to_i.to_s(16); numeric = true
+            body = __fmt_to_int(val).to_s(16); numeric = true
           elsif type == 88    # X
-            body = val.to_i.to_s(16).upcase; numeric = true
+            body = __fmt_to_int(val).to_s(16).upcase; numeric = true
           elsif type == 111   # o
-            body = val.to_i.to_s(8); numeric = true
+            body = __fmt_to_int(val).to_s(8); numeric = true
           elsif type == 98    # b
-            body = val.to_i.to_s(2); numeric = true
+            body = __fmt_to_int(val).to_s(2); numeric = true
           elsif type == 99    # c
             body = val.is_a?(Integer) ? val.chr : val.to_s
           elsif type == 102 || type == 101 || type == 103   # f e g
