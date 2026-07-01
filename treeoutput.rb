@@ -232,20 +232,19 @@ module OpPrec
         block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
         to_block = ra && rightv[0] == :to_block
         comma = ra && rightv[0] == :comma
-        # FIXME: @bug - the following evaluates to false in compiler
-        # but not yet been able to reproduce exact conditions.
-        #args = comma || block ? flatten(rightv) : rightv
-        args = comma
-        if !args
-          if block
-            args = flatten(rightv)
-          elsif to_block
-            # &block parameter forwarding: [:to_block, block_var]
-            # Wrap it in an array to be added as the last argument
-            args = E[rightv]
-          else
-            args = rightv
-          end
+        # A paren-less call on a receiver with several comma-separated args (`recv.m a, b`) arrives here
+        # with rightv == [:comma, a, b]; flatten it into the argument list. The previous `args = comma`
+        # left args as the boolean `true` for that case (so `recv.m a, b` compiled to `(callm recv m
+        # true)`); the intended `comma || block ? flatten(rightv) : rightv` was avoided because the
+        # ternary mis-evaluated when self-hosted -- an explicit if/elsif sidesteps that.
+        if comma || block
+          args = flatten(rightv)
+        elsif to_block
+          # &block parameter forwarding: [:to_block, block_var]
+          # Wrap it in an array to be added as the last argument
+          args = E[rightv]
+        else
+          args = rightv
         end
 
         args = E[args] if !comma && !block && !to_block && args.is_a?(Array)
