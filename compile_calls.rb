@@ -518,6 +518,18 @@ class Compiler
   # Compile safe navigation operator: obj&.method
   # Returns nil if obj is nil, otherwise calls method
   def compile_safe_callm(scope, ob, method, args, block = nil)
+    # With arguments and/or a block, the parser nests the call in the method slot:
+    #   a&.m        => [:safe_callm, a, :m]                     (bare symbol; args/block nil)
+    #   a&.m(x)     => [:safe_callm, a, [:call, :m, [x]]]       (args in the :call node, outer args nil)
+    #   a&.m { }    => [:safe_callm, a, [:call, :m, [], [:do]]] (block in the :call node too)
+    # Destructure so compile_callm receives a real method name plus the argument list and block;
+    # otherwise the whole [:call, ...] node was passed as the "method name" -> SIGSEGV.
+    if method.is_a?(Array) && method[0] == :call
+      args   = method[2] if args.nil?
+      block  = method[3] if block.nil?
+      method = method[1]
+    end
+
     @e.comment("safe_callm #{ob.to_s}&.#{method.to_s} START")
 
     # Generate labels
