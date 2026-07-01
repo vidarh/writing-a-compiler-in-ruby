@@ -6,7 +6,7 @@ class MatchData
   # @param match_start [Integer] start position of match
   # @param match_end [Integer] end position of match
   # @param captures [Array] array of captured groups (empty for now)
-  def initialize(regexp, string, match_start, match_end, captures = nil)
+  def initialize(regexp, string, match_start, match_end, captures = nil, begins = nil, ends = nil)
     @regexp = regexp
     @string = string
     @match_start = match_start
@@ -15,6 +15,9 @@ class MatchData
     if @captures.nil?
       @captures = []
     end
+    # Per-group begin/end char offsets (parallel to @captures), for #begin/#end/#offset.
+    @begins = begins.nil? ? [] : begins
+    @ends = ends.nil? ? [] : ends
   end
 
   # The entire matched string or capture group by index/name
@@ -56,20 +59,21 @@ class MatchData
 
   # Beginning position of match (or capture group)
   def begin(n = 0)
-    if n == 0
-      @match_start
-    else
-      nil  # Capture groups not yet supported
-    end
+    return @match_start if n == 0
+    @begins[n - 1]
   end
 
   # End position of match (or capture group)
   def end(n = 0)
-    if n == 0
-      @match_end
-    else
-      nil  # Capture groups not yet supported
-    end
+    return @match_end if n == 0
+    @ends[n - 1]
+  end
+
+  # offset(n) -> [begin(n), end(n)] (nil pair for an unmatched group).
+  def offset(n = 0)
+    b = self.begin(n)
+    return [nil, nil] if b.nil?
+    [b, self.end(n)]
   end
 
   # Number of captures

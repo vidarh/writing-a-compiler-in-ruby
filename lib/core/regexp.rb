@@ -55,7 +55,7 @@ class Regexp
     # character before pos.
     result = match_internal(text, pos)
     if result
-      MatchData.new(self, text, result[0], result[1], result[2])
+      MatchData.new(self, text, result[0], result[1], result[2], result[3], result[4])
     else
       nil
     end
@@ -82,11 +82,13 @@ class Regexp
 
     # Initialize capture tracking
     @match_captures = []
+    @match_begins = []
+    @match_ends = []
     @next_capture_index = 0
     @match_text = text  # Store text for capture extraction
 
     # Handle empty pattern
-    return [start, start, []] if @source.length == 0
+    return [start, start, [], [], []] if @source.length == 0
 
     # Check for start anchor
     anchored_start = (@source[0] == 94)  # '^'
@@ -94,7 +96,7 @@ class Regexp
     # If anchored at start, only try the start position
     if anchored_start
       end_pos = match_at(text, start, tlen)
-      return end_pos ? [start, end_pos, @match_captures] : nil
+      return end_pos ? [start, end_pos, @match_captures, @match_begins, @match_ends] : nil
     end
 
     # Try matching at each position from `start` onward
@@ -102,10 +104,12 @@ class Regexp
     while i <= tlen
       # Reset captures for each starting position
       @match_captures = []
+      @match_begins = []
+      @match_ends = []
       @next_capture_index = 0
       end_pos = match_at(text, i, tlen)
       if end_pos
-        return [i, end_pos, @match_captures]
+        return [i, end_pos, @match_captures, @match_begins, @match_ends]
       end
       i += 1
     end
@@ -478,6 +482,9 @@ class Regexp
         cs = cs + 1
       end
       @match_captures[cont[2]] = captured
+      # Record the group's begin/end char offsets (for MatchData#begin/#end/#offset).
+      @match_begins[cont[2]] = cont[3]
+      @match_ends[cont[2]] = ti
     end
     match_from(cont[0], cont[1], text, ti, tlen, conts[0...-1], cont[4])
   end
