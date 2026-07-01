@@ -914,6 +914,13 @@ class String
 
   # Split self at the FIRST occurrence of sep into [before, sep, after]; [self, "", ""] if absent.
   def partition(sep)
+    if sep.is_a?(Regexp)
+      m = sep.match(self)
+      return [dup, "", ""] if m.nil?
+      b = m.begin(0)
+      e = m.end(0)
+      return [slice(0, b), slice(b, e - b), slice(e, length - e)]
+    end
     sep = __partition_sep(sep)
     idx = __substr_index(sep, 0)
     return [dup, "", ""] if idx.nil?
@@ -923,6 +930,23 @@ class String
 
   # Split self at the LAST occurrence of sep into [before, sep, after]; ["", "", self] if absent.
   def rpartition(sep)
+    if sep.is_a?(Regexp)
+      # Scan left-to-right keeping the LAST match (the engine has no right-anchored search).
+      last = nil
+      pos = 0
+      n = length
+      while pos <= n
+        m = sep.match(self, pos)
+        break if m.nil?
+        last = m
+        e = m.end(0)
+        pos = e > m.begin(0) ? e : e + 1
+      end
+      return ["", "", dup] if last.nil?
+      b = last.begin(0)
+      e = last.end(0)
+      return [slice(0, b), slice(b, e - b), slice(e, length - e)]
+    end
     sep = __partition_sep(sep)
     idx = __substr_rindex(sep)
     return ["", "", dup] if idx.nil?
