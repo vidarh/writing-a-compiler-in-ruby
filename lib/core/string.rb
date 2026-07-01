@@ -568,30 +568,71 @@ class String
     self
   end
 
-  def start_with?(prefix)
-    prefix_len = prefix.length
-    return false if prefix_len > length
-
-    i = 0
-    while i < prefix_len
-      return false if self[i] != prefix[i]
-      i += 1
+  # True if the string starts with ANY of the given prefixes (String or Regexp).
+  def start_with?(*prefixes)
+    prefixes.each do |prefix|
+      if prefix.is_a?(Regexp)
+        m = prefix.match(self, 0)
+        return true if !m.nil? && m.begin(0) == 0
+      else
+        p = prefix.to_s
+        pl = p.length
+        if pl <= length
+          matched = true
+          i = 0
+          while i < pl
+            if self[i] != p[i]
+              matched = false
+              break
+            end
+            i += 1
+          end
+          return true if matched
+        end
+      end
     end
-    true
+    false
   end
 
-  def end_with?(suffix)
-    suffix_len = suffix.length
-    my_len = length
-    return false if suffix_len > my_len
-
-    offset = my_len - suffix_len
-    i = 0
-    while i < suffix_len
-      return false if self[offset + i] != suffix[i]
-      i += 1
+  # Remove the last character (or a trailing "\r\n" pair) and return the result.
+  def chop
+    n = length
+    return dup if n == 0
+    if n >= 2 && self[n - 2] == 13 && self[n - 1] == 10
+      self[0...(n - 2)]
+    else
+      self[0...(n - 1)]
     end
-    true
+  end
+
+  def chop!
+    r = chop
+    return nil if r == self
+    replace(r)
+    self
+  end
+
+  # True if the string ends with ANY of the given (String) suffixes.
+  def end_with?(*suffixes)
+    my_len = length
+    suffixes.each do |suffix|
+      s = suffix.to_s
+      sl = s.length
+      if sl <= my_len
+        offset = my_len - sl
+        matched = true
+        i = 0
+        while i < sl
+          if self[offset + i] != s[i]
+            matched = false
+            break
+          end
+          i += 1
+        end
+        return true if matched
+      end
+    end
+    false
   end
 
   def include?(substring)
@@ -869,16 +910,38 @@ class String
   end
 
 
-  def rindex(ch)
-    l  = length
-    ch = ch.ord
-    while l > 0
-      l -= 1
-      if self[l].ord == ch.ord
-        return l
+  # Last index of a String or Regexp match at or before `stop` (default end of string), or nil.
+  def rindex(needle, stop = nil)
+    n = length
+    stop = n if stop.nil?
+    stop = n + stop if stop < 0
+    return nil if stop < 0
+    if needle.is_a?(Regexp)
+      last = nil
+      pos = 0
+      while pos <= n
+        m = needle.match(self, pos)
+        break if m.nil?
+        b = m.begin(0)
+        break if b > stop
+        last = b
+        e = m.end(0)
+        pos = e > b ? e : e + 1
       end
+      return last
     end
-    return nil
+    needle = needle.to_str if !needle.is_a?(String) && needle.respond_to?(:to_str)
+    slen = needle.length
+    return (stop > n ? n : stop) if slen == 0
+    last = nil
+    pos = 0
+    while true
+      idx = __substr_index(needle, pos)
+      break if idx.nil? || idx > stop
+      last = idx
+      pos = idx + 1
+    end
+    last
   end
 
   # Byte-wise search for the first occurrence of substring `sub` at or after `start`; nil if absent.
@@ -989,6 +1052,10 @@ class String
       return nil if offset < 0
     end
     return nil if offset > len
+    if needle.is_a?(Regexp)
+      m = needle.match(self, offset)
+      return m.nil? ? nil : m.begin(0)
+    end
     if needle.is_a?(String)
       str = needle
     elsif needle.respond_to?(:to_str)

@@ -1355,15 +1355,32 @@ class Array
 
 
   # Returns the index of the last object in array == to obj. Returns nil if no match is found.
-  def rindex(obj)
-    # self.reverse.index(obj) # this might be faster:
+  # Last index of obj (==), or of the last element for which the block is true.
+  def rindex(*args, &block)
     found_index = nil
-    self.each_with_index do |item, idx|
-      if item == obj
-        found_index = idx
-      end
+    if block
+      each_with_index { |item, idx| found_index = idx if block.call(item) }
+    else
+      obj = args[0]
+      each_with_index { |item, idx| found_index = idx if item == obj }
     end
-    return found_index
+    found_index
+  end
+
+  # count -> size; count(obj) -> number == obj; count { |x| } -> number for which the block is true.
+  def count(*args, &block)
+    if block
+      n = 0
+      each { |x| n = n + 1 if block.call(x) }
+      n
+    elsif args.length > 0
+      obj = args[0]
+      n = 0
+      each { |x| n = n + 1 if x == obj }
+      n
+    else
+      length
+    end
   end
 
 
