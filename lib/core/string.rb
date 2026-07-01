@@ -962,6 +962,31 @@ class String
     out
   end
 
+  # String#scan(pattern) -> every non-overlapping match. Without capture groups each element is the matched
+  # string; with groups each element is the array of that match's captures. A block yields each element and
+  # scan returns self. pattern may be a String (literal, via Regexp) or a Regexp.
+  def scan(pattern, &block)
+    pattern = Regexp.new(pattern) if pattern.is_a?(String)
+    results = []
+    pos = 0
+    len = length
+    while pos <= len
+      m = pattern.match(self, pos)
+      break if m.nil?
+      b = m.begin(0)
+      e = m.end(0)
+      caps = m.captures
+      elem = caps.length > 0 ? caps : m.to_s
+      if block
+        block.call(elem)
+      else
+        results << elem
+      end
+      pos = e > b ? e : e + 1
+    end
+    block ? self : results
+  end
+
   def __sub_gsub_string(pat, replacement, global, block)
     out = ""
     pos = 0
