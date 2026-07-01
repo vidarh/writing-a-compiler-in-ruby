@@ -215,9 +215,32 @@ class Object
     end
   end
 
+  # Shallow copy: allocate a fresh instance of the same class and copy every ivar slot, then run
+  # #initialize_copy (so subclasses can customise). The old `self.class.new` was wrong -- it re-ran
+  # #initialize (with no args) and copied no ivars. Objects are @instance_size-slot arrays (slot 0 =
+  # class, slots 1.. = ivars, per Class#allocate). String/Array/Hash override #dup, so this covers
+  # Exception and plain objects.
   def dup
-    # FIXME
-    self.class.new
+    copy = nil
+    klass = self.class
+    # sz (@instance_size) and the loop counter are RAW machine ints, so keep them in an s-expr `let`
+    # scope -- a Ruby local would be a tagged Integer and (lt i sz)/(index copy i) would misbehave.
+    %s(let (sz i)
+        (assign sz (index klass 1))
+        (assign copy (__array sz))
+        (assign (index copy 0) klass)
+        (assign i 1)
+        (while (lt i sz) (do
+          (assign (index copy i) (index self i))
+          (assign i (add i 1)))))
+    copy.initialize_copy(self)
+    copy
+  end
+
+  # Default #initialize_copy: the ivars were already copied by #dup/#clone, so there is nothing more
+  # to do. Subclasses override this to deep-copy or record, calling super for the default.
+  def initialize_copy(other)
+    self
   end
 
   # FIXME: Stub - should check if constant is actually defined
