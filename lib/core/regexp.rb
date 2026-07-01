@@ -220,6 +220,23 @@ class Regexp
           pi += 1
           next
         end
+        # \A / \z / \Z string anchors -- also zero-width. (\A/\Z were previously mis-handled as ordinary
+        # escaped chars that consumed a character, so /\Ahello/ etc. never matched.) ti is an absolute
+        # position, so \A matches only at 0, \z only at the very end, \Z at the end or just before a
+        # trailing newline.
+        if esc == 65        # \A - start of string
+          return nil if ti != 0
+          pi += 1
+          next
+        elsif esc == 122    # \z - end of string
+          return nil if ti != tlen
+          pi += 1
+          next
+        elsif esc == 90     # \Z - end of string, or immediately before a trailing "\n"
+          return nil if !(ti == tlen || (ti == tlen - 1 && text[ti] == 10))
+          pi += 1
+          next
+        end
         atom_end = pi + 1
 
       # Handle '[' - character class
