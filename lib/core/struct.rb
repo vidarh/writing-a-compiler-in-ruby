@@ -24,13 +24,25 @@ class Struct
     if self.equal?(Struct)
       # --- class-creation mode: Struct.new(:a, :b) or Struct.new("Name", :a, :b) ---
       start = 0
-      if args.length > 0 && args[0].is_a?(String)
-        start = 1   # leading String is the (constant) name; we don't register the constant, just skip it
+      # A leading String or nil occupies the (optional) name position. A String names the struct
+      # (Struct::Name); nil means anonymous. We cannot register the constant here (no const_set yet), so we
+      # skip the slot either way rather than treating it as a member (nil.to_sym would crash).
+      if args.length > 0 && (args[0].is_a?(String) || args[0].nil?)
+        start = 1
       end
       syms = []
       i = start
       while i < args.length
-        syms << args[i].to_sym
+        a = args[i]
+        # Only Symbols and Strings are valid member names. Anything else -- a Float, nil, an Array, or an
+        # object that merely defines #to_sym -- is a TypeError in MRI. Match that instead of crashing on a
+        # missing #to_sym (NoMethodError).
+        if !a.is_a?(Symbol) && !a.is_a?(String)
+          raise TypeError.new("#{a.inspect} is not a symbol nor a string")
+        end
+        sym = a.to_sym
+        raise ArgumentError.new("duplicate member: #{sym}") if syms.include?(sym)
+        syms << sym
         i = i + 1
       end
       klass = Class.new(Struct)

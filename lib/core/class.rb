@@ -318,7 +318,10 @@ class Class
   # register on it and self-relative calls (attr_reader, include, ...) act on it.
   def class_eval &block
     if block
-      block.__call_with_self(self)
+      # Ruby yields the receiver to the block as its argument too (module_eval/class_eval), so a block
+      # written as `Struct.new(:a) { |klass| ... }` receives the class. Pass self as the argument as well
+      # as rebinding self; blocks tolerate an unused extra argument.
+      block.__call_with_self(self, self)
     end
   end
 
