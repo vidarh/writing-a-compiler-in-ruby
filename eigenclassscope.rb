@@ -25,4 +25,22 @@ class EigenclassScope < ClassScope
     end
     super(var, save)
   end
+
+  # Instance variables inside an eigenclass method (`def self.foo`, `class << self`) belong to the
+  # CLASS OBJECT, not to instances. The class object's slots hold its vtable/metadata, so a slot-based
+  # ivar offset (the ClassScope default) lands on a method pointer: writing corrupts a method, and
+  # reading an *uninitialized* one yields a code address -- non-nil, so `@x ||= v` keeps it and then
+  # dereferences it as an object => SIGSEGV. Store class-object ivars in a global keyed by the enclosing
+  # class instead (as ClassScope does for @@class vars), so all of a class's singleton methods share one
+  # location. `prefix` is the enclosing class path with a trailing "__" (derived from the @next chain and
+  # identical for every def-self of that class); strip the "__" to get the class name.
+  def get_instance_var(a)
+    # NB: use a Range slice, not the 2-arg String#[](start,len) form -- the self-hosted String#[] only
+    # accepts a single Integer/Range argument, so `prefix[0, n]` breaks selftest-c.
+    p = prefix
+    cname = p.length >= 3 ? p[0..(p.length - 3)] : "__main"
+    g = "__classivar__#{cname}__#{a.to_s[1..-1]}"
+    add_global(g)
+    return [:global, g.to_sym]
+  end
 end

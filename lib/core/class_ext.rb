@@ -5,14 +5,17 @@
 #
 
 class Class
-  @method_to_voff = {}
-
   # FIXME
   def self.new(super=nil)
     self
   end
-  
+
+  # Lazily initialise the method-name -> vtable-offset map. This is a class-object ivar (self is the
+  # Class object), which is stored per-class in a global; initialising it here in the reader keeps every
+  # access on that single global. (A bare `@method_to_voff = {}` in the class body instead resolves to a
+  # slot, which would not be the same storage the eigenclass reader/writer uses.)
   def self.method_to_voff
+    @method_to_voff ||= {}
     @method_to_voff
   end
 

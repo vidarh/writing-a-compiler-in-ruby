@@ -1490,23 +1490,32 @@ class Compiler
     @e.label("__init_globals")
     @e.emit(".LFBB__init_globals:")
 
-    # Check each variable in global scope - if it starts with $ and is still 0, initialize to nil
+    # Initialize to nil (if still raw 0) any global that must read as nil when never assigned:
+    #  - $-globals (storage symbol drops the $ prefix), and
+    #  - class-object ivars (__classivar__*) that back `@x` in `def self.foo`. A raw-0 read there is
+    #    dereferenced by the truthiness test in `@x ||= v` and SIGSEGVs; nil is a safe falsy value.
     @global_scope.globals.keys.each do |g|
-      if g.to_s[0] == ?$
-        name = g.to_s[1..-1]  # Strip $ prefix
-        skip_label = @e.get_local
-
-        # Check if still 0 (uninitialized)
-        @e.movl(name, :eax)
-        @e.testl(:eax, :eax)
-        @e.jnz(skip_label)  # If not zero, skip
-
-        # Initialize to nil
-        @e.movl("nil", :eax)
-        @e.movl(:eax, name)
-
-        @e.label(skip_label)
+      gs = g.to_s
+      if gs[0] == ?$
+        name = gs[1..-1]  # Strip $ prefix -> storage symbol
+      elsif gs.start_with?("__classivar__")
+        name = gs
+      else
+        next
       end
+
+      skip_label = @e.get_local
+
+      # Check if still 0 (uninitialized)
+      @e.movl(name, :eax)
+      @e.testl(:eax, :eax)
+      @e.jnz(skip_label)  # If not zero, skip
+
+      # Initialize to nil
+      @e.movl("nil", :eax)
+      @e.movl(:eax, name)
+
+      @e.label(skip_label)
     end
 
     @e.ret
@@ -1642,8 +1651,13 @@ class Compiler
     compile_main(exp)
     # after the main function, we ouput all functions and constants
     # used and defined so far.
-    output_global_init
     output_functions
+    # output_global_init must run AFTER output_functions -- class-object ivars (__classivar__*) are only
+    # registered as globals while their method bodies compile in output_functions, and the init routine
+    # has to see them to zero->nil them -- but BEFORE the vtable/constants output, which switches to the
+    # .data/.bss section (output_global_init emits .text code and relies on being left in .text here).
+    # __init_globals is a separate function called at startup, so emitting its body here is fine.
+    output_global_init
     output_vtable_thunks
     output_vtable_names
     output_constants
