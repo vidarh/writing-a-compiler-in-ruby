@@ -29,6 +29,32 @@ class IO < Object
     new(fd)
   end
 
+  # IO.read(name, length=nil, offset=0) -> String of the file's contents (or `length` bytes from
+  # `offset`). IO.binread is the same here (no encoding).
+  def self.read(name, length = nil, offset = 0)
+    io = File.new(name.to_s, "r")
+    io.seek(offset, 0) if offset && offset > 0
+    data = io.read(length)
+    io.close
+    data
+  end
+
+  def self.binread(name, length = nil, offset = 0)
+    read(name, length, offset)
+  end
+
+  # IO.write(name, string, ...) -> number of bytes written. Truncates/creates the file.
+  def self.write(name, string, *opts)
+    io = File.new(name.to_s, "w")
+    n = io.write(string)
+    io.close
+    n
+  end
+
+  def self.binwrite(name, string, *opts)
+    write(name, string, *opts)
+  end
+
   def to_i
     @fd
   end
@@ -145,6 +171,74 @@ class IO < Object
       s = s + b.chr
     end
     s
+  end
+
+  # write(str) -> number of bytes written to the fd.
+  def write(str)
+    s = str.to_s
+    len = s.bytesize
+    %s(write (callm @fd __get_raw) (callm s __get_raw) (callm len __get_raw))
+    len
+  end
+
+  def print(*args)
+    args.each { |a| write(a.to_s) }
+    nil
+  end
+
+  def <<(str)
+    write(str.to_s)
+    self
+  end
+
+  def puts(*args)
+    if args.empty?
+      write("\n")
+    else
+      args.each { |a| write(a.to_s + "\n") }
+    end
+    nil
+  end
+
+  # Positioning over lseek (whence: 0=SET, 1=CUR, 2=END). Seeking discards any ungetc pushback byte.
+  def seek(offset, whence = 0)
+    @pushback = nil
+    %s(lseek (callm @fd __get_raw) (callm offset __get_raw) (callm whence __get_raw))
+    0
+  end
+
+  def pos
+    p = 0
+    %s(assign p (__int (lseek (callm @fd __get_raw) 0 1)))
+    p = p - 1 if @pushback
+    p
+  end
+
+  def tell
+    pos
+  end
+
+  def pos=(offset)
+    seek(offset, 0)
+    offset
+  end
+
+  def rewind
+    seek(0, 0)
+    0
+  end
+
+  # Encoding is not modelled; report none and accept set_encoding as a no-op so specs don't crash.
+  def external_encoding
+    nil
+  end
+
+  def internal_encoding
+    nil
+  end
+
+  def set_encoding(*args)
+    self
   end
 
   def eof?
