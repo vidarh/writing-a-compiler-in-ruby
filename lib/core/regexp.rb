@@ -52,8 +52,10 @@ class Regexp
     return nil if string.nil?
     text = string.to_s
     if pos > 0
-      # Skip first pos characters
-      text = text[pos, text.length - pos]
+      # Skip first pos characters. Use a Range slice: the 2-arg String#[](start, length) form is not
+      # supported self-hosted (it raises "wrong number of arguments"), which broke match with a position
+      # (and hence sub/gsub, scan) for any non-zero pos.
+      text = text[pos..-1]
     end
     result = match_internal(text)
     if result

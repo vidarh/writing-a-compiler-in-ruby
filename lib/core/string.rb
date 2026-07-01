@@ -911,22 +911,110 @@ class String
     result
   end
 
-  def gsub(pattern, replacement)
-    if pattern.length > 1
-      STDERR.puts("WARNING: String#gsub with strings longer than one character not supported")
-      exit(1/1)
+  # Replace the first (sub) / every (gsub) occurrence of pattern. pattern may be a String (matched
+  # literally) or a Regexp. With a block, the matched text is yielded and the block's result substituted;
+  # otherwise `replacement` is used, expanding \0-\9 / \& backreferences for regex matches.
+  def sub(pattern, replacement = nil, &block)
+    if pattern.is_a?(String)
+      __sub_gsub_string(pattern, replacement, false, block)
+    else
+      __sub_gsub_regex(pattern, replacement, false, block)
     end
+  end
 
-    str = ""
-    pb = pattern[0].ord
-    each_byte do |b|
-      if b == pb
-        str << replacement
+  def gsub(pattern, replacement = nil, &block)
+    if pattern.is_a?(String)
+      __sub_gsub_string(pattern, replacement, true, block)
+    else
+      __sub_gsub_regex(pattern, replacement, true, block)
+    end
+  end
+
+  # Expand \0-\9 (capture groups; \0 / \& = whole match) and \\ in a regex replacement string. String#[]
+  # returns a character CODE here, so bytes are compared numerically ('\\'=92, '0'=48..'9'=57, '&'=38).
+  def __expand_replacement(rep, m)
+    out = ""
+    i = 0
+    n = rep.length
+    while i < n
+      c = rep[i]
+      if c == 92 && (i + 1) < n
+        nc = rep[i + 1]
+        if nc >= 48 && nc <= 57
+          grp = m[nc - 48]
+          out = out + grp if grp
+          i = i + 2
+        elsif nc == 38
+          out = out + m.to_s
+          i = i + 2
+        elsif nc == 92
+          out = out + "\\"
+          i = i + 2
+        else
+          out = out + c.chr
+          i = i + 1
+        end
       else
-        str << b.chr
+        out = out + c.chr
+        i = i + 1
       end
     end
-    str
+    out
+  end
+
+  def __sub_gsub_string(pat, replacement, global, block)
+    out = ""
+    pos = 0
+    len = length
+    plen = pat.length
+    going = true
+    while going
+      idx = index(pat, pos)
+      if idx.nil?
+        out = out + self[pos..-1] if pos < len
+        going = false
+      else
+        out = out + self[pos...idx] if idx > pos
+        out = out + (block ? block.call(pat).to_s : replacement)
+        pos = idx + plen
+        if plen == 0
+          out = out + self[pos].chr if pos < len
+          pos = pos + 1
+        end
+        if !global
+          out = out + self[pos..-1] if pos < len
+          going = false
+        end
+      end
+    end
+    out
+  end
+
+  def __sub_gsub_regex(pattern, replacement, global, block)
+    out = ""
+    pos = 0
+    len = length
+    going = true
+    while going && pos <= len
+      m = pattern.match(self, pos)
+      if m.nil?
+        going = false
+      else
+        b = m.begin(0)
+        e = m.end(0)
+        out = out + self[pos...b] if b > pos
+        out = out + (block ? block.call(m.to_s).to_s : __expand_replacement(replacement, m))
+        if e > b
+          pos = e
+        else
+          out = out + self[e].chr if e < len
+          pos = e + 1
+        end
+        going = false if !global
+      end
+    end
+    out = out + self[pos..-1] if pos < len
+    out
   end
 
   # Initial, partial implementation.
