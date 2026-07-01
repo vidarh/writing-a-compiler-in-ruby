@@ -26,6 +26,56 @@ class Parser < ParserBase
 
     # FIXME: This is a hack.
     @include_paths << "./lib"
+
+    # Names that have been seen as assignment targets or def/block parameters. Used ONLY to disambiguate
+    # `name [x]` (space before '['): a known local indexes (`name[x]`), an unknown bareword is a method
+    # call (`name([x])`). Accumulated globally (never pruned) on purpose -- that can only ever make the
+    # parser treat MORE barewords as locals (i.e. keep the pre-existing indexing behaviour), so it never
+    # introduces a regression; it just can't help in the rare case a method shares a name with some local.
+    @lvars = {}
+  end
+
+  def local_var?(name)
+    @lvars[name] == true
+  end
+
+  def note_lvar(name)
+    @lvars[name] = true if name.is_a?(Symbol)
+  end
+
+  # Register the parameter names from a def/block arglist (entries are either a bare Symbol or a
+  # [name, kind, ...] tuple) as locals.
+  def note_lvars_from_args(args)
+    return if !args.is_a?(Array)
+    args.each do |a|
+      if a.is_a?(Symbol)
+        note_lvar(a)
+      elsif a.is_a?(Array) && a[0].is_a?(Symbol)
+        note_lvar(a[0])
+      end
+    end
+  end
+
+  def __note_assign_target(t)
+    if t.is_a?(Symbol)
+      note_lvar(t)
+    elsif t.is_a?(Array)
+      t.each { |x| __note_assign_target(x) }
+    end
+  end
+
+  # Walk a just-parsed statement and register the targets of any assignment (and for-loop / block
+  # parameter names) as locals, so a later `name [i]` on that name indexes instead of calling.
+  def collect_lvars(exp)
+    return if !exp.is_a?(Array)
+    if exp[0] == :assign
+      __note_assign_target(exp[1])
+    elsif exp[0] == :for
+      __note_assign_target(exp[1])
+    elsif exp[0] == :proc && exp[1].is_a?(Array)
+      note_lvars_from_args(exp[1])
+    end
+    exp.each { |e| collect_lvars(e) if e.is_a?(Array) }
   end
 
   # name ::= atom
@@ -829,6 +879,7 @@ class Parser < ParserBase
     #  ret = E[pos, sym.to_sym, cond, ret]
     #end
     ws; literal(";"); ws
+    collect_lvars(ret)   # register any assignment targets so a later `name [i]` indexes, not calls
     return ret
   end
 
@@ -856,6 +907,7 @@ class Parser < ParserBase
       ws
       literal(PIPE)
     end
+    note_lvars_from_args(args)   # block params are locals before the body is parsed
     # Use shared rescue/else/ensure parsing
     exps, rescue_, ensure_body = parse_rescue_else_ensure([])
 
@@ -917,6 +969,7 @@ class Parser < ParserBase
     ws
     name = parse_defname
     args = parse_args || []
+    note_lvars_from_args(args)   # params are locals before the body is parsed
     literal(";")
 
     # Check for endless method definition: def name(args) = expr

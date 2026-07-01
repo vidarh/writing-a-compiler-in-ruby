@@ -324,8 +324,15 @@ module OpPrec
         if op.sym == :array && @had_ws_before_this_token && possible_func
           last_val = @out.vstack.last
           is_method_call = last_val.is_a?(Array) && (last_val[0] == :callm || last_val[0] == :safe_callm)
-          # If it's "obj.method []" with space, treat [] as argument, not indexing
+          # "obj.method [x]" (space) -> the array is an argument, not indexing.
+          # "bareword [x]" (space) where bareword is a plain identifier -> also a method call with an
+          # array argument (`foo [1,2]` == `foo([1,2])`), UNLESS the identifier is a known local (then it
+          # is `local[i]`). The parser tracks assigned locals (@parser.local_var?) so `local [i]` still
+          # indexes; a bare method name -- the common `p [x]` / `File.join dir, [name]` shape -- calls.
           if is_method_call
+            treat_as_argument = true
+            should_index = false
+          elsif last_val.is_a?(Symbol) && !@parser.local_var?(last_val)
             treat_as_argument = true
             should_index = false
           else
