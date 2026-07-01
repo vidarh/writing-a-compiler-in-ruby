@@ -16,6 +16,12 @@ class Enumerator
     end
     self
   end
+
+  # An Enumerator responds to #each, so it can be the source of a lazy pipeline. Defined here so every
+  # Enumerator subclass (ArrayEnumerator, GenericEnumerator, ...) gets #lazy.
+  def lazy
+    Enumerator::Lazy.new(self)
+  end
 end
 
 class ArrayEnumerator < Enumerator
