@@ -159,9 +159,10 @@ class Object
     self
   end
 
-  # The methods callable on this object (its class's instance methods).
-  def methods
-    self.class.instance_methods
+  # The methods callable on this object (its class's instance methods). `all` (default true) mirrors
+  # Ruby's methods(all=true); singleton methods are not tracked yet, so the false case is approximate.
+  def methods(all = true)
+    self.class.instance_methods(all)
   end
 
   # Kernel#tap: yield self to the block, then return self (for method chaining).
