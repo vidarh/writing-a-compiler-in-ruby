@@ -299,17 +299,33 @@ class Regexp
 
       # Handle '(' - group
       elsif pc == 40  # '('
-        # A plain '(...)' is a simple capturing group; '(?:...)' is a simple non-capturing group. Anything
-        # else after '(?' (lookahead/behind '=' '!' '<', named '<name>') is left to match_atom.
+        # Simple groups go through the continuation path: plain '(...)' and named '(?<name>...)' / "(?'name'
+        # ...)" are capturing; '(?:...)' is non-capturing. Lookaround ('(?=' '(?!' '(?<=' '(?<!') is left to
+        # match_atom (zero-width). __count_cap counts plain and named groups, so positional capture indices
+        # stay consistent.
         simple_group = true
         simple_group_capturing = true
         gstart = pi + 1
         if gstart < plen && pattern[gstart] == 63  # '?'
-          if gstart + 1 < plen && pattern[gstart + 1] == 58  # '(?:'
+          c1 = gstart + 1 < plen ? pattern[gstart + 1] : 0
+          c2 = gstart + 2 < plen ? pattern[gstart + 2] : 0
+          if c1 == 58                                   # '(?:'
             simple_group_capturing = false
             gstart = gstart + 2
+          elsif c1 == 60 && c2 != 61 && c2 != 33        # '(?<name>' (not '(?<=' / '(?<!')
+            gstart = gstart + 2
+            while gstart < plen && pattern[gstart] != 62  # '>'
+              gstart = gstart + 1
+            end
+            gstart = gstart + 1 if gstart < plen        # skip '>'
+          elsif c1 == 39                                # "(?'name'"
+            gstart = gstart + 2
+            while gstart < plen && pattern[gstart] != 39  # closing "'"
+              gstart = gstart + 1
+            end
+            gstart = gstart + 1 if gstart < plen
           else
-            simple_group = false  # lookaround / named -> atomic path
+            simple_group = false                        # lookaround -> atomic path
           end
         end
         pi += 1
@@ -870,8 +886,54 @@ class Regexp
     []
   end
 
+  # Map each named group in the source to the positional index/indices of the capturing group(s) with that
+  # name: { "name" => [group_index, ...] }. Group indices count plain '(' and named '(?<n>' / "(?'n'"
+  # left-to-right (non-capturing (?: and lookaround are skipped).
   def named_captures
-    {}
+    result = {}
+    src = @source
+    n = src.length
+    i = 0
+    group_idx = 0
+    while i < n
+      c = src[i]
+      if c == 92          # backslash escape
+        i = i + 2
+      elsif c == 91       # '[' character class
+        i = i + 1
+        while i < n && src[i] != 93
+          i = i + 2 if src[i] == 92
+          i = i + 1
+        end
+        i = i + 1
+      elsif c == 40       # '('
+        if i + 1 < n && src[i + 1] == 63   # '(?'
+          c2 = i + 2 < n ? src[i + 2] : 0
+          if (c2 == 60 && !(i + 3 < n && (src[i + 3] == 61 || src[i + 3] == 33))) || c2 == 39
+            # named group (?<name> or (?'name'
+            group_idx = group_idx + 1
+            close = c2 == 60 ? 62 : 39   # '>' or "'"
+            j = i + 3
+            name = ""
+            while j < n && src[j] != close
+              name << src[j].chr
+              j = j + 1
+            end
+            result[name] = [] if !result.has_key?(name)
+            result[name] << group_idx
+            i = j + 1
+          else
+            i = i + 1   # non-capturing / lookaround
+          end
+        else
+          group_idx = group_idx + 1   # plain capturing group
+          i = i + 1
+        end
+      else
+        i = i + 1
+      end
+    end
+    result
   end
 
   # Class methods
