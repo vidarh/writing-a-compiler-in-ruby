@@ -85,16 +85,34 @@ class IO < Object
     getc
   end
 
-  # gets(sep="\n"): read one line up to and including the separator byte (default newline), or nil at EOF.
+  def lineno
+    @lineno || 0
+  end
+
+  def lineno=(n)
+    @lineno = n
+    n
+  end
+
+  # gets(sep="\n"): read up to and including the separator byte (default newline), or nil at EOF. A nil
+  # separator slurps the rest of the stream. Each successful read bumps #lineno (and $.). Only the last
+  # byte of a multi-char separator is honoured (single-byte read granularity).
   def gets(sep = "\n")
+    stop = nil
+    if !sep.nil?
+      s = sep.to_s
+      stop = s.length > 0 ? s[-1] : 10
+    end
     line = ""
     got = false
     while (b = getc)
       got = true
       line = line + b.chr
-      break if b == 10
+      break if stop && b == stop
     end
     return nil if !got
+    @lineno = lineno + 1
+    $. = @lineno
     line
   end
 
