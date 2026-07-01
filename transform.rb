@@ -2009,8 +2009,11 @@ class Compiler
         end
       end
 
-      # Replace args with regular args + __kwargs
-      new_args = regular_args + [:__kwargs]
+      # Replace args with regular args + __kwargs. __kwargs is OPTIONAL with a default of {} -- a caller
+      # may omit all keyword args (def foo(a, **kw); foo(1) must work). rewrite_default_args (which runs
+      # after this) turns the [:default, {}] into a `if numargs < n; __kwargs = {}` prologue and drops it
+      # from the required arity.
+      new_args = regular_args + [[:__kwargs, :default, [:hash]]]
 
       # Prepend keyword argument extractions to body
       body = e[3]
