@@ -62,6 +62,49 @@ module Enumerable
   end
 
 
+  # Split into runs of consecutive elements: start a new chunk between adjacent elements a, b whenever the
+  # block returns false for (a, b). Returns an Array of Arrays (MRI returns an Enumerator, but an Array
+  # answers #to_a/#each the same way for the common `.chunk_while{...}.to_a` usage).
+  def chunk_while
+    items = to_a
+    return [] if items.empty?
+    result = []
+    chunk = [items[0]]
+    i = 1
+    while i < items.length
+      if yield(items[i - 1], items[i])
+        chunk << items[i]
+      else
+        result << chunk
+        chunk = [items[i]]
+      end
+      i = i + 1
+    end
+    result << chunk
+    result
+  end
+
+  # The complement of chunk_while: start a new slice between adjacent elements a, b whenever the block
+  # returns true for (a, b).
+  def slice_when
+    items = to_a
+    return [] if items.empty?
+    result = []
+    chunk = [items[0]]
+    i = 1
+    while i < items.length
+      if yield(items[i - 1], items[i])
+        result << chunk
+        chunk = [items[i]]
+      else
+        chunk << items[i]
+      end
+      i = i + 1
+    end
+    result << chunk
+    result
+  end
+
   # Iterates the given block for each slice of <n> elements.
   #
   # e.g.
