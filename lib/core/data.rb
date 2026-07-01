@@ -21,8 +21,20 @@ class Data
     klass
   end
 
+  # Look up a class's members, walking the superclass chain so a subclass of a Data class (or an anonymous
+  # Class.new(SomeData)) inherits its members.
+  def self.__members_for(klass)
+    k = klass
+    while k
+      m = Data.__data_registry[k.object_id]
+      return m if m
+      k = k.superclass
+    end
+    []
+  end
+
   def self.members
-    Data.__data_registry[self.object_id] || []
+    Data.__members_for(self)
   end
 
   def self.[](*args, **kwargs)
@@ -30,7 +42,7 @@ class Data
   end
 
   def initialize(*args, **kwargs)
-    members = Data.__data_registry[self.class.object_id] || []
+    members = Data.__members_for(self.class)
     h = {}
     if kwargs.length > 0
       i = 0
@@ -49,7 +61,7 @@ class Data
   end
 
   def members
-    Data.__data_registry[self.class.object_id] || []
+    Data.__members_for(self.class)
   end
 
   def method_missing(name, *args)

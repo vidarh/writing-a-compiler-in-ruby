@@ -418,9 +418,13 @@ class Compiler
       class_alloc_size = cscope.klass_size
     end
 
+    # Metaclass (slot 0). Share the superclass's metaclass so class methods are inherited: a known
+    # non-Object superclass by name, or a runtime-only superclass via its slot 0. Plain Class otherwise.
     classob = :Class
     if superc && superc.name != "Object"
       classob = [:index, superc.name.to_sym , 0]
+    elsif runtime_super
+      classob = [:index, superclass, 0]
     end
 
     # When using explicit namespace (class Foo::Bar from outside Foo),
