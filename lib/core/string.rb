@@ -292,14 +292,80 @@ class String
     self[0]
   end
 
-  def each_byte
+  def each_byte(&block)
+    return to_enum(:each_byte) if !block
     i = 0
     len = length
     while i <  len
-      yield(self[i])
+      block.call(self[i])
       i = i + 1
     end
     self
+  end
+
+  # Digit value of a char code (0-9a-z / A-Z), or -1 if not a digit/letter.
+  def __digit_val(c)
+    if c >= 48 && c <= 57
+      c - 48
+    elsif c >= 97 && c <= 122
+      c - 87
+    elsif c >= 65 && c <= 90
+      c - 55
+    else
+      -1
+    end
+  end
+
+  # Parse a leading numeric literal in the given base (with optional sign and an underscore-between-digits
+  # rule). radix_prefix, when true, honours a 0x/0b/0o/0d prefix (used by #oct). Stops at the first
+  # non-matching character (returning 0 for no digits), as MRI's #hex/#oct do -- they never raise.
+  def __parse_radix(base, allow_prefix)
+    s = strip
+    n = s.length
+    i = 0
+    neg = false
+    if i < n && (s[i] == 43 || s[i] == 45)
+      neg = s[i] == 45
+      i = i + 1
+    end
+    b = base
+    if allow_prefix && i + 1 < n && s[i] == 48
+      c = s[i + 1]
+      if c == 120 || c == 88
+        b = 16; i = i + 2
+      elsif c == 98 || c == 66
+        b = 2; i = i + 2
+      elsif c == 111 || c == 79
+        b = 8; i = i + 2
+      elsif c == 100 || c == 68
+        b = 10; i = i + 2
+      end
+    elsif !allow_prefix && i + 1 < n && s[i] == 48 && (s[i + 1] == 120 || s[i + 1] == 88) && base == 16
+      i = i + 2   # #hex accepts a leading 0x
+    end
+    val = 0
+    while i < n
+      c = s[i]
+      if c == 95
+        i = i + 1
+      else
+        d = __digit_val(c)
+        break if d < 0 || d >= b
+        val = val * b + d
+        i = i + 1
+      end
+    end
+    neg ? -val : val
+  end
+
+  # Interpret leading characters as a hexadecimal integer (0 if none).
+  def hex
+    __parse_radix(16, false)
+  end
+
+  # Interpret leading characters as an octal integer, honouring 0x/0b/0o/0d prefixes (0 if none).
+  def oct
+    __parse_radix(8, true)
   end
 
   def bytes

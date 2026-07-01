@@ -318,6 +318,27 @@ class Hash
   # each_pair is an alias of each (yields [key, value] for each pair).
   alias each_pair each
 
+  # store(key, value) is an alias of []=.
+  def store(key, value)
+    self[key] = value
+  end
+
+  # A new hash of the pairs for which the block is FALSE (reject) / TRUE (select/filter).
+  def reject(&block)
+    return to_enum(:reject) if !block
+    h = {}
+    each { |k, v| h[k] = v if !block.call(k, v) }
+    h
+  end
+
+  def select(&block)
+    return to_enum(:select) if !block
+    h = {}
+    each { |k, v| h[k] = v if block.call(k, v) }
+    h
+  end
+  alias filter select
+
   # A new hash with only the given keys that are present.
   def slice(*keys)
     h = {}
