@@ -29,6 +29,25 @@ class IO < Object
     new(fd)
   end
 
+  # IO.pipe -> [read_io, write_io] over a pipe(2) pair. With a block, yields the pair, closes both, and
+  # returns the block's value. (No fork -- unlike popen.)
+  def self.pipe(*args)
+    rfd = -1
+    wfd = -1
+    %s(assign pbuf (__array 4))
+    %s(if (eq (pipe pbuf) 0) (do
+        (assign rfd (__int (index pbuf 0)))
+        (assign wfd (__int (index pbuf 1)))))
+    raise "pipe failed" if rfd < 0
+    r = new(rfd)
+    w = new(wfd)
+    return [r, w] if !block_given?
+    result = yield(r, w)
+    r.close
+    w.close
+    result
+  end
+
   # IO.read(name, length=nil, offset=0) -> String of the file's contents (or `length` bytes from
   # `offset`). IO.binread is the same here (no encoding).
   def self.read(name, length = nil, offset = 0)
