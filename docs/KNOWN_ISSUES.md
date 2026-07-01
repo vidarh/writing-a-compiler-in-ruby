@@ -223,14 +223,7 @@ Fixing it should recover a large share of the ~64 core/kernel crashes (they all 
    (which would map it to `__closure__`) is never set. Supporting this needs a calling-convention change
    (a dedicated call-block slot distinct from `@closure`/`@env`) -- deferred as too invasive. This crashes
    core/proc call_spec, yield_spec and case_compare_spec, which all load `shared/call_arguments`.
-6. **Regex: no backtracking INTO a capture/group** - A group is matched atomically (regexp.rb
-   `match_atom` does `match_from(group_content, ...)` and keeps only the greedy result), so a greedy
-   quantifier inside a group cannot give characters back to a following atom. `/(\d+)(\d)/.match("123")`
-   returns nil (should capture "12","3"); `/\d+\d/` (no group) works because the quantifier's own
-   backtracking is handled by `match_quantified`. A proper fix needs continuation-passing through the
-   matcher (match the group content joined with the outer rest so the inner quantifier can backtrack
-   across the group boundary), i.e. a matcher rewrite -- deferred. Affects matchdata specs (begin/end/
-   offset/captures) and any grouped pattern followed by more pattern.
+6. **Regex: backtracking into groups** (FIXED) - A group is now matched with a continuation (regexp.rb match_from `conts` stack) so a greedy quantifier inside `(...)` can give characters back to a following atom: `/(\d+)(\d)/.match("123")` captures "12","3". Capture indices are position-derived (`__count_cap` + `cap_base`) so backtracking does not shift them. (Remaining: a QUANTIFIED group `(ab)+` still reports one capture per iteration -- separate pre-existing issue.)
 
 ---
 

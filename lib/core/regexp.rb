@@ -118,6 +118,35 @@ class Regexp
     match_from(@source, 0, text, pos, tlen)
   end
 
+  # Number of CAPTURING groups whose '(' occurs before `upto` in `pattern`. Used to give each simple group
+  # a stable 0-based capture index derived from its position, so backtracking (which re-enters a group's
+  # continuation) does not shift indices the way a mutating counter would. Non-capturing (?:, lookaround
+  # (?= (?! (?<= (?<! are skipped; named (?<name> counts.
+  def __count_cap(pattern, upto)
+    n = 0
+    i = 0
+    plen = pattern.length
+    while i < upto && i < plen
+      c = pattern[i]
+      if c == 92
+        i = i + 2
+      elsif c == 40  # '('
+        if i + 1 < plen && pattern[i + 1] == 63  # '(?'
+          if i + 2 < plen && pattern[i + 2] == 60 &&
+             !(i + 3 < plen && (pattern[i + 3] == 61 || pattern[i + 3] == 33))
+            n = n + 1   # (?<name> is capturing
+          end
+        else
+          n = n + 1     # plain (
+        end
+        i = i + 1
+      else
+        i = i + 1
+      end
+    end
+    n
+  end
+
   # A "word" character for \b/\w purposes: [A-Za-z0-9_]. text[i] yields a character CODE here.
   def __word_char?(c)
     (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95
@@ -133,7 +162,11 @@ class Regexp
 
   # Core matching engine with backtracking support
   # Returns end text position if match succeeds, nil otherwise
-  def match_from(pattern, pi, text, ti, tlen)
+  # `conts` is a stack of pending group continuations for backtracking INTO groups: each entry is
+  # [outer_pattern, outer_pi, capture_index_or_nil, capture_start_ti]. When the current (sub)pattern is
+  # exhausted, the nearest continuation is closed (recording its capture) and matching resumes in the outer
+  # pattern -- so a greedy quantifier inside a group can still give characters back to a following atom.
+  def match_from(pattern, pi, text, ti, tlen, conts = [], cap_base = 0)
     plen = pattern.length
 
     # Handle alternation first (lowest precedence)
@@ -179,8 +212,9 @@ class Regexp
             alt << pattern[j]
             j = j + 1
           end
-          # Try this alternative
-          result = match_from(alt, 0, text, ti, tlen)
+          # Try this alternative (alternatives share the surrounding cap_base -- `a(b)|c(d)` gives both
+          # groups index 1)
+          result = match_from(alt, 0, text, ti, tlen, conts, cap_base)
           return result if result
           start = alt_end + 1
           i = i + 1
@@ -197,14 +231,23 @@ class Regexp
     while pi < plen
       pc = pattern[pi]  # pattern character code
 
-      # Check for end anchor
+      # Check for end anchor ('$'): zero-width, so it composes with continuations (it may not be the last
+      # atom once groups resume the outer pattern).
       if pc == 36  # '$'
-        return ti == tlen ? ti : nil
+        return nil if ti != tlen
+        pi += 1
+        next
       end
 
       # Parse the current atom and check for quantifier
       atom_start = pi
       atom_end = nil
+      # For a "simple" group -- plain (...) or non-capturing (?:...) -- we match its content with a
+      # continuation so backtracking crosses the group boundary. Named/lookaround groups keep the atomic
+      # match_atom path.
+      simple_group = false
+      simple_group_capturing = false
+      simple_group_content = nil
 
       # Handle escape sequences
       if pc == 92  # '\'
@@ -252,8 +295,21 @@ class Regexp
 
       # Handle '(' - group
       elsif pc == 40  # '('
+        # A plain '(...)' is a simple capturing group; '(?:...)' is a simple non-capturing group. Anything
+        # else after '(?' (lookahead/behind '=' '!' '<', named '<name>') is left to match_atom.
+        simple_group = true
+        simple_group_capturing = true
+        gstart = pi + 1
+        if gstart < plen && pattern[gstart] == 63  # '?'
+          if gstart + 1 < plen && pattern[gstart + 1] == 58  # '(?:'
+            simple_group_capturing = false
+            gstart = gstart + 2
+          else
+            simple_group = false  # lookaround / named -> atomic path
+          end
+        end
         pi += 1
-        # Skip special group markers like (?:, (?=, etc.
+        # Skip special group markers like (?:, (?=, etc. (for the atomic-path atom_end)
         if pi < plen && pattern[pi] == 63  # '?'
           pi += 1
           # Skip the type character (: = ! < etc)
@@ -273,6 +329,16 @@ class Regexp
           pi += 1
         end
         atom_end = pi
+        if simple_group
+          # Extract the content between the (adjusted) start and the closing ')'
+          gc = ""
+          gi = gstart
+          while gi < atom_end - 1
+            gc << pattern[gi]
+            gi = gi + 1
+          end
+          simple_group_content = gc
+        end
 
       # Handle '.' or literal
       else
@@ -376,8 +442,21 @@ class Regexp
         # Handle quantified atom with backtracking
         # match_quantified recursively matches the rest of the pattern,
         # so we return its result directly
-        ti = match_quantified(pattern, atom_start, atom_end, quant_min, quant_max, quant_lazy, pi, text, ti, tlen)
+        ti = match_quantified(pattern, atom_start, atom_end, quant_min, quant_max, quant_lazy, pi, text, ti, tlen, conts, cap_base)
         return ti  # Either nil (no match) or the final position (match)
+      elsif simple_group
+        # Non-quantified simple group: match its content with a continuation that resumes the outer
+        # pattern (at `pi`, just after the group) and records the capture on the way out. This is what lets
+        # a greedy quantifier inside the group backtrack across the group boundary. The capture index is
+        # derived from the group's position (cap_base + capturing groups before it here), so re-entering the
+        # group during backtracking does not shift it; the content sees a cap_base one past this group.
+        inner_base = cap_base + __count_cap(pattern, atom_start)
+        cap_idx = nil
+        if simple_group_capturing && @match_captures
+          cap_idx = inner_base
+        end
+        return match_from(simple_group_content, 0, text, ti, tlen,
+                          conts + [[pattern, pi, cap_idx, ti, cap_base]], inner_base + 1)
       else
         # Match single atom
         ti = match_atom(pattern, atom_start, text, ti, tlen)
@@ -385,8 +464,22 @@ class Regexp
       end
     end
 
-    # Pattern exhausted - success, return end position
-    ti
+    # (Sub)pattern exhausted. Close the nearest pending group continuation (recording its capture) and
+    # resume the outer pattern; if there are none, this branch matched.
+    if conts.empty?
+      return ti
+    end
+    cont = conts[-1]
+    if cont[2]
+      captured = ""
+      cs = cont[3]
+      while cs < ti
+        captured << text[cs]
+        cs = cs + 1
+      end
+      @match_captures[cont[2]] = captured
+    end
+    match_from(cont[0], cont[1], text, ti, tlen, conts[0...-1], cont[4])
   end
 
   # Match a quantified atom (*, +, ?, {n,m})
@@ -394,7 +487,7 @@ class Regexp
   # quant_min: minimum repetitions required
   # quant_max: maximum repetitions allowed (-1 = unlimited)
   # lazy: if true, try shortest matches first (non-greedy)
-  def match_quantified(pattern, atom_start, atom_end, quant_min, quant_max, lazy, rest_pi, text, ti, tlen)
+  def match_quantified(pattern, atom_start, atom_end, quant_min, quant_max, lazy, rest_pi, text, ti, tlen, conts = [], cap_base = 0)
     # Collect all possible match positions
     positions = []
     match_count = 0
@@ -436,7 +529,7 @@ class Regexp
       i = 0
       while i < positions.length
         pos = positions[i]
-        result = match_from(pattern, rest_pi, text, pos, tlen)
+        result = match_from(pattern, rest_pi, text, pos, tlen, conts, cap_base)
         return result if result
         i = i + 1
       end
@@ -445,7 +538,7 @@ class Regexp
       i = positions.length - 1
       while i >= 0
         pos = positions[i]
-        result = match_from(pattern, rest_pi, text, pos, tlen)
+        result = match_from(pattern, rest_pi, text, pos, tlen, conts, cap_base)
         return result if result
         i = i - 1
       end
