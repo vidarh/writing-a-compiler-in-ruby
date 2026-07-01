@@ -609,6 +609,32 @@ class String
     result
   end
 
+  # Upcase the first character and downcase the rest (ASCII).
+  def capitalize
+    return dup if length == 0
+    result = ""
+    i = 0
+    l = length
+    while i < l
+      c = self[i].ord
+      if i == 0
+        c = c - 32 if c >= 97 && c <= 122
+      else
+        c = c + 32 if c >= 65 && c <= 90
+      end
+      result << c.chr
+      i += 1
+    end
+    result
+  end
+
+  def capitalize!
+    r = capitalize
+    return nil if r == self
+    replace(r)
+    self
+  end
+
   # Swap the case of every ASCII letter.
   def swapcase
     result = ""

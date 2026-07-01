@@ -323,6 +323,29 @@ class Hash
     self[key] = value
   end
 
+  # Predicates over the pairs. Without a block, any?/none? test emptiness; with a block, the block is
+  # called with (key, value). (Hash does not include Enumerable in this runtime, so these are defined here.)
+  def any?(&block)
+    each { |k, v| return true if block ? block.call(k, v) : true }
+    false
+  end
+
+  def all?(&block)
+    each { |k, v| return false if block ? !block.call(k, v) : false }
+    true
+  end
+
+  def none?(&block)
+    each { |k, v| return false if block ? block.call(k, v) : true }
+    true
+  end
+
+  def one?(&block)
+    n = 0
+    each { |k, v| n = n + 1 if block ? block.call(k, v) : true }
+    n == 1
+  end
+
   # A new hash of the pairs for which the block is FALSE (reject) / TRUE (select/filter).
   def reject(&block)
     return to_enum(:reject) if !block

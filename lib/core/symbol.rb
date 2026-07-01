@@ -117,6 +117,45 @@ class Symbol
     to_s[i]
   end
 
+  # Case/length operations mirror the String ones (returning a Symbol for the case methods).
+  def upcase
+    to_s.upcase.to_sym
+  end
+
+  def downcase
+    to_s.downcase.to_sym
+  end
+
+  def capitalize
+    to_s.capitalize.to_sym
+  end
+
+  def swapcase
+    to_s.swapcase.to_sym
+  end
+
+  def length
+    to_s.length
+  end
+  alias size length
+
+  def empty?
+    to_s.length == 0
+  end
+
+  def succ
+    to_s.succ.to_sym
+  end
+  alias next succ
+
+  def start_with?(*prefixes)
+    to_s.start_with?(*prefixes)
+  end
+
+  def end_with?(*suffixes)
+    to_s.end_with?(*suffixes)
+  end
+
   # Returns a Proc that calls the method named by self on its first argument
   # Used for: array.map(&:to_s) which becomes array.map(&:to_s.to_proc)
   def to_proc

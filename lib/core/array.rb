@@ -801,6 +801,17 @@ class Array
     self
   end
 
+  # First n elements / all but the first n elements.
+  def take(n)
+    raise ArgumentError.new("attempt to take negative size") if n < 0
+    self[0, n] || []
+  end
+
+  def drop(n)
+    raise ArgumentError.new("attempt to drop negative size") if n < 0
+    n >= length ? [] : self[n, length - n]
+  end
+
   # Elements from the front while the block is true.
   def take_while
     result = []
@@ -1610,6 +1621,13 @@ class Array
     right = part[1].sort_by(&block)
 
     left + [pivot_el] + right
+  end
+
+  # In-place sort_by (returns self).
+  def sort_by!(&block)
+    return to_enum(:sort_by!) if !block
+    replace(sort_by(&block))
+    self
   end
 
   # FIXME: Inefficient, and doesn't support providing a block
