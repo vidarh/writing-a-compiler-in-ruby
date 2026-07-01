@@ -229,13 +229,20 @@ class Compiler
         # args is array of module names, but we only support single module for now
         mod_name = args.is_a?(Array) ? args[0] : args
 
-        # Handle compile-time constant names, including a nested constant (include Foo::Bar, which
-        # arrives as [:deref, :Foo, :Bar] -- compile_include resolves that form). A dynamic expression
-        # falls through to a runtime method call.
-        if mod_name.is_a?(Symbol) || (mod_name.is_a?(Array) && mod_name[0] == :deref)
+        # Handle compile-time constant names. A plain Symbol goes to compile_include. A simple nested
+        # constant (include Foo::Bar -> [:deref, :Foo, :Bar]) is routed only when it actually resolves
+        # statically -- compile_include raises "Module not found" otherwise, and a deeper form like
+        # Foo::Bar::Baz ([:deref, [:deref, ...], :Baz]) it can't resolve at all. Anything unresolvable
+        # (or dynamic) falls through to a runtime method call, as before.
+        if mod_name.is_a?(Symbol)
           return compile_include(scope, mod_name, pos)
+        elsif mod_name.is_a?(Array) && mod_name[0] == :deref && mod_name.length == 3 && mod_name[1].is_a?(Symbol)
+          parent = scope.find_constant(mod_name[1])
+          if parent && parent.is_a?(ModuleScope) && parent.find_constant(mod_name[2])
+            return compile_include(scope, mod_name, pos)
+          end
         end
-        # Fall through to regular method call for dynamic module names
+        # Fall through to regular method call for dynamic/unresolvable module names
       else
         # Not in class/module/global scope - fall through to regular method call
         # This allows include to work as a method in other contexts (e.g., RSpec matchers)
