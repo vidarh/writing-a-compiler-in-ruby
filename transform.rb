@@ -525,37 +525,40 @@ class Compiler
       next :skip if e[0] == :sexp
       if e.is_a?(Array) && e[0] == :"defined?"
         arg = e[1]
-        result = nil
+        result = nil   # nil means "undefined" (Ruby's defined? returns nil, NOT false, for undefined)
 
-        # Analyze the argument to determine its type
+        # Analyze the argument to classify it. Cases we cannot decide at compile time (constants, methods,
+        # arbitrary calls) return nil -- imperfect but Ruby-correct for the undefined case and, crucially,
+        # never crashes. (Constant/method liveness would need a runtime check.)
         if arg.is_a?(Array)
           case arg[0]
-          # Assignment operators - all map to "assignment"
           when :assign, :massign, :iasgn, :op_asgn, :or_asgn, :and_asgn,
                :mul_assign, :div_assign, :mod_assign, :pow_assign,
                :and_bitwise_assign, :or_bitwise_assign, :xor_assign,
                :shl_assign, :shr_assign
             result = "assignment"
-          # For other cases, return false
-          else
-            STDERR.puts "Warning: defined? for #{arg[0].inspect} not implemented, returning false"
-            result = false
+          when :array, :hash, :str, :int, :float, :sexp, :and, :or, :not
+            result = "expression"
           end
-        elsif arg.is_a?(Symbol)
-          # For variables, return false for now
-          STDERR.puts "Warning: defined? for variable #{arg.inspect} not implemented, returning false"
-          result = false
-        else
-          STDERR.puts "Warning: defined? for #{arg.inspect} not implemented, returning false"
-          result = false
+        elsif arg == :nil || arg == :true || arg == :false || arg == :self
+          result = "expression"
         end
 
-        # Replace the defined? node with the result
-        # rewrite_strconst will handle string constant conversion
-        if result == false
-          e.replace(E[:false])
+        # Replace with a value node. nil is the bare symbol :nil (the old E[:false] built [:false], which
+        # compiled as a CALL to method `false`). For a type string, build the string-constant getter here
+        # directly: rewrite_strconst runs after us but skips :sexp, so it would not process a wrapped string.
+        if result.nil?
+          # Ruby's defined? returns nil (falsy) for undefined. A bare :nil is only falsy when compiled in
+          # normal value context; :do/:sexp wrappers make it truthy. [:and, :nil, :nil] evaluates :nil
+          # normally and short-circuits to a genuine (falsy) nil.
+          e.replace(E[:and, :nil, :nil])
         else
-          e.replace(E[result])
+          lab = @string_constants[result]
+          if !lab
+            lab = @e.get_local
+            @string_constants[result] = lab
+          end
+          e.replace(E[:sexp, E[:call, :__get_string, lab.to_sym]])
         end
       end
     end
