@@ -230,6 +230,22 @@ class Class
     result
   end
 
+  # True if instances of this class/module respond to `name` (a real method in this class's vtable,
+  # outside the shared thunk range). Visibility is not tracked, so public_method_defined? is the same.
+  def method_defined?(name)
+    name = name.to_sym if name.is_a?(String)
+    voff = Class.method_to_voff[name]
+    return false if voff.nil?
+    real = false
+    %s(assign raw (callm voff __get_raw))
+    %s(assign ptr (index self raw))
+    %s(if (lt ptr __vtable_thunks_start) (assign real true))
+    %s(if (gt ptr __vtable_thunks_end) (assign real true))
+    real
+  end
+
+  alias public_method_defined? method_defined?
+
   # FIXME
   # &block will be a "bare" %s(lambda) (that needs to be implemented),
   # define_method needs to attach that to the vtable (for now) and/or
