@@ -45,6 +45,30 @@ class File < IO
     return true
   end
 
+  # File.chmod(mode, *paths) -> number of paths changed. mode is an integer (e.g. 0644).
+  def self.chmod(mode, *paths)
+    n = 0
+    paths.each do |p|
+      p = p.to_str if !p.is_a?(String)
+      %s(assign r (chmod (callm p __get_raw) (callm mode __get_raw)))
+      n = n + 1
+    end
+    n
+  end
+
+  # File.size(path) -> byte size via stat (st_size at word [11] of the stat buffer).
+  def self.size(path)
+    path = path.to_str if !path.is_a?(String)
+    result = -1
+    %s(let (rpath buf r)
+      (assign rpath (callm path __get_raw))
+      (assign buf (__array 40))
+      (assign r (stat rpath buf))
+      (if (eq r 0) (assign result (__int (index buf 11)))))
+    raise "No such file or directory - #{path}" if result < 0
+    result
+  end
+
   def self.readlines(path)
     lines = []
     current_line = ""
@@ -197,4 +221,32 @@ module FileTest
       (if (eq r 0) (if (eq (bitand (index buf 4) 61440) 40960) (assign result true))))  # S_IFLNK 0xA000
     result
   end
+
+  # st_size is word [11] of the stat buffer. Returns the byte size, or -1 if stat fails.
+  def self.__size(path)
+    path = path.to_str if !path.is_a?(String)
+    result = -1
+    %s(let (rpath buf r)
+      (assign rpath (callm path __get_raw))
+      (assign buf (__array 40))
+      (assign r (stat rpath buf))
+      (if (eq r 0) (assign result (__int (index buf 11)))))
+    result
+  end
+
+  def self.size(path)
+    s = __size(path)
+    raise "No such file or directory - #{path}" if s < 0
+    s
+  end
+
+  # size? returns nil when the file is missing OR empty (Ruby semantics), else the size.
+  def self.size?(path)
+    s = __size(path)
+    return nil if s <= 0
+    s
+  end
+
+  def self.zero?(path);  __size(path) == 0; end
+  def self.empty?(path); __size(path) == 0; end
 end

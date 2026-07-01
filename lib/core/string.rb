@@ -836,6 +836,67 @@ class String
   # FIXME: Currently only supports a string pattern
   # of a single character, with a simple string replace
   #
+  # Expand a tr-style set into an array of single-char strings: "a-c" -> ["a","b","c"].
+  # A backslash escapes the following character (so "\\-" is a literal hyphen).
+  def __tr_expand(set)
+    out = []
+    cs = set.chars
+    i = 0
+    n = cs.length
+    while i < n
+      if cs[i] == "\\" && i + 1 < n
+        out << cs[i + 1]
+        i = i + 2
+      elsif i + 2 < n && cs[i + 1] == "-"
+        lo = cs[i].ord
+        hi = cs[i + 2].ord
+        c = lo
+        while c <= hi
+          out << c.chr
+          c = c + 1
+        end
+        i = i + 3
+      else
+        out << cs[i]
+        i = i + 1
+      end
+    end
+    out
+  end
+
+  # tr(from, to): translate characters. Supports ranges ("a-z"), a leading "^" in `from` to
+  # negate the set, and a shorter `to` (its last char repeats). An empty `to` deletes the matches.
+  def tr(from_str, to_str)
+    from = from_str.to_str
+    negate = false
+    if from.length > 0 && from[0] == "^"
+      negate = true
+      from = from.slice(1, from.length - 1)
+    end
+    from_chars = __tr_expand(from)
+    to_chars = to_str.nil? ? [] : __tr_expand(to_str.to_str)
+    tlen = to_chars.length
+    result = ""
+    each_char do |ch|
+      idx = from_chars.index(ch)
+      matched = negate ? idx.nil? : !idx.nil?
+      if matched
+        if tlen == 0
+          # deletion: emit nothing
+        elsif negate
+          result = result + to_chars[tlen - 1]
+        else
+          ti = idx
+          ti = tlen - 1 if ti >= tlen
+          result = result + to_chars[ti]
+        end
+      else
+        result = result + ch
+      end
+    end
+    result
+  end
+
   def gsub(pattern, replacement)
     if pattern.length > 1
       STDERR.puts("WARNING: String#gsub with strings longer than one character not supported")

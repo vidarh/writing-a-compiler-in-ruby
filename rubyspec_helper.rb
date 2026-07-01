@@ -765,15 +765,87 @@ def tmp(name, uniquify = true)
   SPEC_TEMP_PREFIX + name.to_s
 end
 
-# mspec helper: touch(file) creates (and truncates) the file so later File.open(read) finds it. Real mspec
-# yields a writable IO for the block form; File here has no write mode, so we create an EMPTY file and do
-# not run the block (writes are dropped -> content specs FAIL rather than crash). Flags: O_WRONLY|O_CREAT|
-# O_TRUNC = 577, mode 0644 = 420.
+# Minimal writable IO wrapper over a raw fd, used by touch's block form so specs that write real content
+# (e.g. touch(f){|io| io.write 'rubinius'}) produce a file with that content instead of an empty one.
+class SpecFileWriter
+  def initialize(fd)
+    @fd = fd   # tagged Integer fd
+  end
+
+  def write(str)
+    s = str.to_s
+    len = s.bytesize
+    %s(write (callm @fd __get_raw) (callm s __get_raw) (callm len __get_raw))
+    len
+  end
+
+  def print(*args)
+    args.each { |a| write(a.to_s) }
+    nil
+  end
+
+  def <<(str)
+    write(str.to_s)
+    self
+  end
+
+  def puts(*args)
+    if args.empty?
+      write("\n")
+    else
+      args.each { |a| write(a.to_s + "\n") }
+    end
+    nil
+  end
+end
+
+# mspec helper: touch(file) creates/truncates the file. The block form yields a writable IO (backed by
+# SpecFileWriter) so content written in the block actually lands on disk. Flags: O_WRONLY|O_CREAT|O_TRUNC
+# = 577, mode 0644 = 420.
 def touch(file, mode = "w")
+  fdt = nil
   %s(assign rpath (callm file __get_raw))
   %s(assign fd (open rpath 577 420))
-  %s(if (ge fd 0) (close fd))
+  %s(if (ge fd 0) (assign fdt (__int fd)))
+  return nil if fdt.nil?
+  if block_given?
+    yield SpecFileWriter.new(fdt)
+  end
+  %s(close (callm fdt __get_raw))
   nil
+end
+
+# mspec file helpers. mkdir_p makes a directory path (parents included), ignoring already-exists errors.
+# rm_r / rm_rf remove files and (empty) directories best-effort -- they are cleanup, so failures are
+# ignored rather than raised. These lived only in real mspec (FileUtils), so specs using them to set up
+# or tear down temp files crashed at "undefined method 'mkdir_p'/'rm_r'".
+def mkdir_p(*dirs)
+  dirs.each do |dir|
+    d = dir.to_s
+    parts = d.split("/")
+    path = d.start_with?("/") ? "" : "."
+    parts.each do |part|
+      next if part.empty?
+      path = path + "/" + part
+      %s(mkdir (callm path __get_raw) 511)
+    end
+  end
+  nil
+end
+
+def rm_r(*paths)
+  paths.each do |path|
+    p = path.to_s
+    # Try to remove as a file first, then as a directory. Best-effort: ignore failures.
+    %s(assign rp (callm p __get_raw))
+    %s(unlink rp)
+    %s(rmdir rp)
+  end
+  nil
+end
+
+def rm_rf(*paths)
+  rm_r(*paths)
 end
 
 # mspec helper: mock_to_path(path) returns an object whose #to_path returns the given path (used to test
