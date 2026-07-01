@@ -109,6 +109,9 @@ class GlobalScope < Scope
     s = @aliases[a]
     if s
       @globals[s.to_sym] = true  # Register the ALIAS in globals, not the original
+      # Special globals ($/, $!, $, ...) are user globals too: nil-init them so an unread one reads nil
+      # rather than raw 0 (which SIGSEGVs the moment it is used, e.g. `p $/`).
+      @user_globals[s.to_sym] = true
       return [:global, s]
     end
 
