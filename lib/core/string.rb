@@ -1042,25 +1042,105 @@ class String
     out
   end
 
-  # Initial, partial implementation.
-  # This explicitly ignores a whole load of the
-  # full behaviour of #split
-  def split(pat = ' ')
-    ary = []
+  # Split into fields. pattern: nil or a single space " " -> awk-style split on runs of whitespace
+  # (leading whitespace ignored, no empty fields); "" -> split into characters; any other String ->
+  # literal separator; Regexp -> split at each match. limit > 0 caps the number of fields (last field
+  # keeps the remainder); limit == 0 (default) drops trailing empty fields; limit < 0 keeps them.
+  def split(pattern = nil, limit = 0)
+    if pattern.nil? || pattern == " "
+      return __split_ws(limit)
+    end
+    if pattern.is_a?(String)
+      return __split_chars(limit) if pattern.empty?
+      return __split_string(pattern, limit)
+    end
+    __split_regex(pattern, limit)
+  end
+
+  def __split_ws(limit)
+    result = []
     cur = ""
-    self.each_byte do |c|
-      if c.chr == pat
-        ary << cur
-        cur = ""
-      elsif pat == ' ' && (c == 10 || c == 13 || c == 9)
-        ary << cur
+    i = 0
+    n = length
+    while i < n
+      c = self[i]
+      if (c == 32 || c == 9 || c == 10 || c == 13 || c == 12) &&
+         !(limit > 0 && result.length >= limit - 1)
+        result << cur if cur.length > 0
         cur = ""
       else
         cur << c.chr
       end
+      i = i + 1
     end
-    ary << cur if cur != ""
-    ary
+    result << cur if cur.length > 0
+    result
+  end
+
+  def __split_chars(limit)
+    result = []
+    i = 0
+    n = length
+    while i < n
+      if limit > 0 && result.length >= limit - 1
+        result << self[i..-1]
+        return result
+      end
+      result << self[i].chr
+      i = i + 1
+    end
+    result
+  end
+
+  def __split_string(pat, limit)
+    result = []
+    pos = 0
+    n = length
+    plen = pat.length
+    while limit <= 0 || result.length < limit - 1
+      idx = index(pat, pos)
+      break if idx.nil?
+      result << self[pos...idx]
+      pos = idx + plen
+    end
+    result << (pos <= n ? self[pos..-1] : "")
+    __trim_trailing_empty(result) if limit == 0
+    result
+  end
+
+  def __split_regex(pattern, limit)
+    result = []
+    pos = 0
+    n = length
+    while limit <= 0 || result.length < limit - 1
+      m = pattern.match(self, pos)
+      break if m.nil?
+      b = m.begin(0)
+      e = m.end(0)
+      if e == b
+        # Zero-width match: split between characters. Avoid an infinite loop at end-of-string.
+        break if b >= n
+        if b > pos
+          result << self[pos...b]
+        else
+          result << self[b].chr
+        end
+        pos = b > pos ? b : b + 1
+      else
+        result << self[pos...b]
+        pos = e
+      end
+    end
+    result << (pos <= n ? self[pos..-1] : "")
+    __trim_trailing_empty(result) if limit == 0
+    result
+  end
+
+  def __trim_trailing_empty(result)
+    while result.length > 0 && result[result.length - 1] == ""
+      result.pop
+    end
+    result
   end
 
   # Helper for %I{} with interpolation - splits string and converts to symbols
