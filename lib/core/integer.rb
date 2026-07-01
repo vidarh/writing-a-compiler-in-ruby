@@ -4417,9 +4417,99 @@ class Integer < Numeric
 end
 
 # Global Integer() conversion method
-def Integer(value)
+# Kernel#Integer(value, base = 10, exception: true). Unlike #to_i this is STRICT: a String must be a valid
+# integer literal (optionally with a 0x/0b/0o/0d prefix or an explicit base) or it raises ArgumentError.
+# base and the exception: keyword are accepted positionally/as a trailing Hash to avoid kwargs fragility.
+def Integer(*args)
+  value = args[0]
+  base = nil
+  exception = true
+  i = 1
+  while i < args.length
+    a = args[i]
+    if a.is_a?(Hash)
+      exception = a[:exception] != false
+    else
+      base = a
+    end
+    i = i + 1
+  end
+
   return value if value.is_a?(Integer)
   return value.to_i if value.is_a?(Float)
-  # FIXME: Should call to_int if available, then to_i, then raise TypeError
-  value.to_i
+  if value.is_a?(String)
+    return __Integer_from_string(value, base, exception)
+  end
+  if value.nil?
+    return nil if !exception
+    raise TypeError.new("can't convert nil into Integer")
+  end
+  return value.to_int if value.respond_to?(:to_int)
+  return value.to_i if value.respond_to?(:to_i)
+  return nil if !exception
+  raise TypeError.new("can't convert to Integer")
+end
+
+def __Integer_digit_value(c)
+  if c >= 48 && c <= 57
+    c - 48
+  elsif c >= 97 && c <= 122
+    c - 97 + 10
+  elsif c >= 65 && c <= 90
+    c - 65 + 10
+  else
+    nil
+  end
+end
+
+def __Integer_from_string(str, base, exception)
+  s = str.strip
+  n = s.length
+  i = 0
+  neg = false
+  if n > 0 && (s[0] == 43 || s[0] == 45)   # '+' / '-'
+    neg = s[0] == 45
+    i = 1
+  end
+  b = base
+  # Optional radix prefix (0x/0b/0o/0d). Honoured when no conflicting explicit base was given.
+  if i + 1 < n && s[i] == 48                # leading '0'
+    c = s[i + 1]
+    if (c == 120 || c == 88) && (b.nil? || b == 16)      # x/X
+      b = 16; i = i + 2
+    elsif (c == 98 || c == 66) && (b.nil? || b == 2)     # b/B
+      b = 2; i = i + 2
+    elsif (c == 111 || c == 79) && (b.nil? || b == 8)    # o/O
+      b = 8; i = i + 2
+    elsif (c == 100 || c == 68) && (b.nil? || b == 10)   # d/D
+      b = 10; i = i + 2
+    end
+  end
+  b = 10 if b.nil?
+
+  result = 0
+  seen = false
+  last_us = false
+  while i < n
+    c = s[i]
+    if c == 95                            # '_' allowed once between digits
+      return __Integer_fail(str, exception) if !seen || last_us
+      last_us = true
+      i = i + 1
+    else
+      d = __Integer_digit_value(c)
+      return __Integer_fail(str, exception) if d.nil? || d >= b
+      result = result * b + d
+      seen = true
+      last_us = false
+      i = i + 1
+    end
+  end
+  return __Integer_fail(str, exception) if !seen || last_us
+  neg ? -result : result
+end
+
+def __Integer_fail(str, exception)
+  return nil if !exception
+  raise ArgumentError.new("invalid value for Integer(): #{str.inspect}")
 end
