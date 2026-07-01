@@ -856,6 +856,14 @@ def mock_to_path(path)
   m
 end
 
+# mspec helper: new_io(name, mode) opens a file-backed IO. In real mspec this is a top-level helper, so
+# it is reachable both bare and as IOSpecs.new_io (a module is an object). File < IO here, so File.new
+# gives an IO; the mode may carry an :encoding suffix ("w:utf-8") which File.__mode_to_flags ignores.
+def new_io(name, mode = "r")
+  mode = "r" if !mode.is_a?(String)
+  File.new(name, mode)
+end
+
 # mspec helper: mock_numeric(name) returns a mock that stands in for a Numeric (specs then add expectations
 # like should_receive(:coerce)/:to_r). The harness lacked it, so numeric coercion specs crashed at load with
 # "undefined method 'mock_numeric'". Back it with the existing mock framework.

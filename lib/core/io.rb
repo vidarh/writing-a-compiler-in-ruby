@@ -32,6 +32,72 @@ class IO < Object
   def file?
     false
   end
+
+  # Close the underlying fd (idempotent). @fd is a tagged Integer; __get_raw untags to the raw fd.
+  def close
+    return nil if @closed
+    %s(close (callm @fd __get_raw))
+    @closed = true
+    nil
+  end
+
+  def closed?
+    @closed == true
+  end
+
+  def fileno
+    @fd
+  end
+
+  def to_io
+    self
+  end
+
+  # Buffering / sync flags: tracked but not acted on (writes here are unbuffered already).
+  def sync
+    @sync == true
+  end
+
+  def sync=(v)
+    @sync = v
+    v
+  end
+
+  # autoclose defaults to true; only becomes false when explicitly set.
+  def autoclose?
+    @autoclose != false
+  end
+
+  def autoclose=(v)
+    @autoclose = v
+    v
+  end
+
+  def binmode
+    @binmode = true
+    self
+  end
+
+  def binmode?
+    @binmode == true
+  end
+
+  # advise(advice, offset=0, len=0): posix_fadvise hint -- advisory only, so a no-op is a valid impl.
+  def advise(advice, offset = 0, len = 0)
+    nil
+  end
+
+  def flush
+    self
+  end
+
+  def fsync
+    0
+  end
+
+  def fdatasync
+    0
+  end
 end
 
 class IOError

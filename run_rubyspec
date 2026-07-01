@@ -50,6 +50,7 @@ run_single_spec() {
     # Process fixtures first - scan spec file and shared files for fixture requires
     # and inline all fixtures at TOP LEVEL (before def run_specs)
     SPEC_DIR=$(dirname "$SPEC_FILE")
+    echo "\$__mspec_spec_dir = '$SPEC_DIR'" >> "$TEMP_SPEC"
 
     # First pass: find and inline all fixture files
     while IFS= read -r line; do
@@ -342,6 +343,7 @@ elif [ -f "$TARGET" ]; then
     # Process fixtures first - scan spec file and shared files for fixture requires
     # and inline all fixtures at TOP LEVEL (before def run_specs)
     SPEC_DIR=$(dirname "$SPEC_FILE")
+    echo "\$__mspec_spec_dir = '$SPEC_DIR'" >> "$TEMP_SPEC"
 
     # First pass: find and inline all fixture files
     while IFS= read -r line; do

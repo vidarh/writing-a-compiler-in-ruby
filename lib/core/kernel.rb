@@ -176,9 +176,13 @@ class Kernel
 
   # fixture - mspec test helper: path to a fixture file beside the spec, under a "fixtures/" dir.
   # Called as fixture(__FILE__, name...) -- variadic, NOT arity 1 (the old arity-1 stub crashed every
-  # spec that used the standard 2-arg form with "wrong number of arguments").
+  # spec that used the standard 2-arg form with "wrong number of arguments"). Under our harness the whole
+  # spec is inlined into one temp file, so __FILE__ (dir) points at tmp/, not the real fixtures. run_rubyspec
+  # injects $__mspec_spec_dir with the ORIGINAL spec directory; prefer it so data-fixture files resolve.
   def fixture(dir, *args)
-    File.join(File.dirname(dir), "fixtures", *args)
+    base = $__mspec_spec_dir
+    base = File.dirname(dir) if base.nil?
+    File.join(base, "fixtures", *args)
   end
 
   # proc - Create a Proc from a block
