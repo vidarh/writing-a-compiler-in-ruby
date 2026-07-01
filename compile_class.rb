@@ -397,8 +397,26 @@ class Compiler
       sscope = @classes["#{scope.name}__#{superclass}".to_sym]
     end
 
-    ssize = sscope ? sscope.klass_size : nil
-    ssize = 0 if ssize.nil?
+    # ssize = number of vtable slots __new_class_object copies from the superclass; class_alloc_size = the
+    # size of the new class object itself. For a compile-time-known superclass, use its klass_size. For a
+    # superclass known only at RUNTIME (`class Sub < A` where `A = Class.new`), sscope is nil: copying 0
+    # slots left Sub's whole vtable as method_missing thunks, so `Sub.new` -> missing `initialize` ->
+    # method_missing thunk -> method_missing forever (hang). Copy the superclass's FULL runtime vtable and
+    # size the object to match (both must be the runtime __vtable_size, not the smaller compile-time
+    # klass_size, or the copy loop overruns the object). This applies only to a genuine user-constant
+    # runtime superclass -- :Object/:Class/:Kernel with a nil sscope are the bootstrap case and keep ssize 0.
+    runtime_super = !sscope && superclass.is_a?(Symbol) &&
+      ![:Object, :Class, :Kernel].include?(superclass) && fq_name != superclass
+    if sscope
+      ssize = sscope.klass_size
+      class_alloc_size = cscope.klass_size
+    elsif runtime_super
+      ssize = :__vtable_size
+      class_alloc_size = :__vtable_size
+    else
+      ssize = 0
+      class_alloc_size = cscope.klass_size
+    end
 
     classob = :Class
     if superc && superc.name != "Object"
@@ -432,13 +450,13 @@ class Compiler
                                    [:if,
                                     [:eq, fq_name, 0],
                                     [:assign, fq_name,
-                                     [:call, :__new_class_object, [cscope.klass_size, :__superclass__, ssize, classob]]
+                                     [:call, :__new_class_object, [class_alloc_size, :__superclass__, ssize, classob]]
                                     ]]])
         else
           compile_eval_arg(let_scope, [:if,
                                    [:sexp,[:eq, assign_name, 0]],
                                    [:assign, assign_name,
-                                    mk_new_class_object(cscope.klass_size, :__superclass__, ssize, classob)
+                                    mk_new_class_object(class_alloc_size, :__superclass__, ssize, classob)
                                    ]])
         end
       end
@@ -449,13 +467,13 @@ class Compiler
                                  [:if,
                                   [:eq, fq_name, 0],
                                   [:assign, fq_name,
-                                   [:call, :__new_class_object, [cscope.klass_size, superclass, ssize, classob]]
+                                   [:call, :__new_class_object, [class_alloc_size, superclass, ssize, classob]]
                                   ]]])
       else
         compile_eval_arg(scope, [:if,
                                  [:sexp,[:eq, assign_name, 0]],
                                  [:assign, assign_name,
-                                  mk_new_class_object(cscope.klass_size, superclass, ssize, classob)
+                                  mk_new_class_object(class_alloc_size, superclass, ssize, classob)
                                  ]])
       end
     end
