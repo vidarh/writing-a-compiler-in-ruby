@@ -474,6 +474,12 @@ class Compiler
     # Without this, calls like `private :method_name` fail because %esi isn't set
     reload_self(cscope)
 
+    # Local variables assigned at the top level of the body must persist across the body's statements
+    # (e.g. `m = Module.new{..}; C = m.instance_method(:foo)`). Each statement is otherwise its own
+    # compile unit, so without a shared LocalVarScope a later bare `m` compiles as `self.m` (a method
+    # call on the class) -> NoMethodError. Declare them in the `let` that wraps the body.
+    body_locals = class_body_locals(exps)
+
     if class_body_creates_closure?(exps)
       # A closure created directly in the class body needs an __env__ to reference (class bodies are
       # their own compile unit, so an outer/top-level __env__ is out of scope -> it resolves to the class
@@ -481,7 +487,7 @@ class Compiler
       # as compile_eigenclass uses, manages self/scope properly). __alloc_env and __new_proc are low-level
       # calls that clobber %esi, so reload self before EACH statement (a class body's self lives in %esi,
       # set once -- unlike a method's reloadable stack-arg self).
-      let(cscope, :__env__, :__closure__, :__tmp_proc) do |lscope|
+      let(cscope, :__env__, :__closure__, :__tmp_proc, *body_locals) do |lscope|
         compile_eval_arg(lscope, [:sexp, [:assign, :__closure__, 0]])
         compile_eval_arg(lscope, [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]])
         exps.each do |e|
@@ -490,6 +496,13 @@ class Compiler
             reload_self(lscope)
             compile_do(lscope, stmt)
           end
+        end
+      end
+    elsif !body_locals.empty?
+      let(cscope, *body_locals) do |lscope|
+        reload_self(lscope)
+        exps.each do |e|
+          addr = compile_do(lscope, *e)
         end
       end
     else
@@ -517,6 +530,31 @@ class Compiler
     end
     exps.each { |e| walk.call(e) }
     found
+  end
+
+  # Collect the local variables ASSIGNED at the top level of a class/module body (so they can be
+  # declared in a shared LocalVarScope wrapping the body). Descends into control flow (if/while/case/
+  # do) but stops at nested scope boundaries (defm/defun/class/module and any block/proc/lambda), whose
+  # assignments are their own locals. Skips ivars (@x), globals ($x), constants (uppercase) and the
+  # compiler's own __internal names.
+  def class_body_locals(exps)
+    locals = []
+    collect = lambda do |n|
+      return if !n.is_a?(Array)
+      return if [:defm, :defun, :class, :module, :proc, :lambda, :block].include?(n[0])
+      if n[0] == :assign && n[1].is_a?(Symbol)
+        nm = n[1].to_s
+        c0 = nm[0]
+        # Skip ivars (@x), globals ($x), constants (uppercase first letter) and __internal names.
+        # Uses char-code comparisons rather than a regex (the self-hosted regexp engine is limited,
+        # and this runs during every class/module compile).
+        ok = c0 != ?@ && c0 != ?$ && !(c0 >= ?A && c0 <= ?Z) && !nm.start_with?("__")
+        locals << n[1] if ok
+      end
+      n.each { |c| collect.call(c) }
+    end
+    exps.each { |e| collect.call(e) }
+    locals.uniq
   end
 
 end
