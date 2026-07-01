@@ -46,6 +46,37 @@
 
 ## Active Issues
 
+### 0. Chained `arr[i].method` operands corrupt each other in a `+` chain (DETERMINISTIC codegen bug)
+
+**Status**: Open, reproducible, high-value. Deterministic — a likely source of the "wild write" heap
+corruption described in issue #5 below.
+
+**Symptom**: When two or more *indexed* method calls (`arr[i].meth`) appear as operands of the same
+binary-operator chain, the result of the second (and later) operand is silently corrupted. Minimal repro:
+
+```ruby
+v = ["Ford", "Ranger"]
+p v[0].inspect + "=" + v[1].inspect   # => "\"Ford\"=Ranger"   (want "\"Ford\"=\"Ranger\"")
+p v[0].inspect + v[1].inspect         # => "\"Ford\"Ranger"      (2nd inspect loses its quotes)
+```
+
+**Scope (narrowed)**:
+- Trigger is specifically the `[]` (index) call syntax on a receiver, *then* a method: `v[i].inspect`.
+- `foo.inspect + "=" + bar.inspect` (plain method calls) works.
+- `geta(0).inspect + "=" + geta(1).inspect` (index hidden inside a helper method) works.
+- `v[0].inspect + "=" + v[1]` (only ONE indexed-method operand) works.
+- `v[0] + "=" + v[1]` (indices without a trailing method) works.
+- Breaks with local arrays and ivar arrays alike; independent of `defined?`/String changes.
+
+**Hypothesis**: The `[]` method call in operand position does not preserve the register/temporary
+holding the partially-accumulated left-hand string, so evaluating the second `arr[j].meth` clobbers it.
+Regular `call`/`callm` operands preserve it; the `[]` path does not. Look at how `compile_callm` for the
+`[]` operator spills/reloads around binary-operator operand evaluation.
+
+**Workaround in library code**: pull each `arr[i].method` into a local before combining (see
+`lib/core/struct.rb#inspect`). Fixing the codegen properly would remove the need for such workarounds and
+may resolve a class of "wild write" corruption.
+
 ### 1. Break from Blocks - Wrong Return Target (Partial)
 
 **Status**: No longer crashes, but semantics are not Ruby-compliant

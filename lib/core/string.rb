@@ -155,21 +155,29 @@ class String
         end
       end
 
-      if e < 0
-        e = l + e + 1
-        if e < 0
-          e = 0
-        end
-      end
+      return nil if b > l
 
-      if e > l
-        e = l
+      # Normalise the range end into an EXCLUSIVE stop position (one past the last included index),
+      # honouring exclude_end?. Previously the end was always treated as inclusive (e = e - b + 1), so an
+      # exclusive range like "abcdef"[0...5] wrongly kept 6 characters instead of 5.
+      if e < 0
+        e = l + e
       end
-      e = e - b + 1
+      stop = index.exclude_end? ? e : e + 1
+      if stop > l
+        stop = l
+      end
+      if stop < 0
+        stop = 0
+      end
+      len = stop - b
+      if len < 0
+        len = 0
+      end
 
       a = String.new
       %s(assign src (add @buffer (callm b __get_raw)))
-      a.__copy_raw(src, e)
+      a.__copy_raw(src, len)
       return a
     end
 
