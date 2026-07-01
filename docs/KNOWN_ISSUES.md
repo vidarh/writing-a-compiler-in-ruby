@@ -214,6 +214,15 @@ Fixing it should recover a large share of the ~64 core/kernel crashes (they all 
 2. **Float** - Not implemented (~17 test failures)
 3. **Command execution** - Backticks/`%x{}` not implemented (~8 failures)
 4. **Rational/Complex** - Not implemented
+5. **A block/proc's own block parameter (`proc { |&b| ... }`)** - A proc that declares a block
+   parameter and then calls a block passed to *its* invocation (`Proc.new { |&b| b.call }.call { ... }`)
+   does not work: `b` resolves to garbage (the `Module` constant). Root cause is the proc calling
+   convention: `Proc#call` invokes the body as `@addr(self, @closure, @env, *args)`, where `@closure` is
+   the *enclosing* block (for nested `yield`) and there is no slot for a block passed to `.call`. The
+   block param `&b` is also normalised to an ordinary positional param before `Function.new`, so `@blockarg`
+   (which would map it to `__closure__`) is never set. Supporting this needs a calling-convention change
+   (a dedicated call-block slot distinct from `@closure`/`@env`) -- deferred as too invasive. This crashes
+   core/proc call_spec, yield_spec and case_compare_spec, which all load `shared/call_arguments`.
 
 ---
 
