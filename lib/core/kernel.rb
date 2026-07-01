@@ -78,6 +78,13 @@ class Kernel
     end
   end
 
+  # Kernel#caller(start=1, length=nil) / caller(range) -> the execution stack as an Array of frame
+  # strings. Backtraces are not captured (no stack unwinding), so return an empty Array of the correct
+  # type; the bare `caller` form is handled by the compiler (also an empty Array).
+  def caller(*args)
+    []
+  end
+
   # Exit the program with given code
   def exit(code)
     %s(exit (callm code __get_raw))

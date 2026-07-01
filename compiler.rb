@@ -163,10 +163,7 @@ class Compiler
                           :true, :false])
     end
 
-    if a == :"caller"
-      return compile_exp(scope,
-                         [:sexp, [:__get_string, "FIXME: caller not implemented yet"]])
-    end
+    # (bare `caller` is handled by Kernel#caller now, not special-cased here -- see lib/core/kernel.rb)
     arg = nil
     if (a.is_a?(Symbol))
       name = a.to_s
