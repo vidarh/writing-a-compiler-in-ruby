@@ -74,6 +74,19 @@ class IO < Object
     write(name, string, *opts)
   end
 
+  # IO.copy_stream(src, dst, length=nil, offset=nil): copy bytes from src to dst (each a filename or an
+  # IO) and return the number copied.
+  def self.copy_stream(src, dst, length = nil, offset = nil)
+    src_io = src.is_a?(String) ? File.new(src, "r") : src
+    dst_io = dst.is_a?(String) ? File.new(dst, "w") : dst
+    src_io.seek(offset, 0) if offset
+    data = src_io.read(length)
+    n = data ? dst_io.write(data) : 0
+    src_io.close if src.is_a?(String)
+    dst_io.close if dst.is_a?(String)
+    n
+  end
+
   def to_i
     @fd
   end
@@ -102,6 +115,11 @@ class IO < Object
   # getbyte: like getc here (getc returns the next byte as an Integer, or nil at EOF).
   def getbyte
     getc
+  end
+
+  # pid: the child process id for a popen'd IO, else nil (regular files have none).
+  def pid
+    @pid
   end
 
   def lineno

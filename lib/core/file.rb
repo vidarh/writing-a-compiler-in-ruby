@@ -84,8 +84,15 @@ class File < IO
     super(fd)
   end
 
+  # File.open(path, mode="r") -> a File, or with a block yields the File, closes it, and returns the
+  # block's value (the ubiquitous `File.open(name) { |f| ... }` idiom). No ensure: a raising block leaves
+  # the file open, acceptable for the current runtime.
   def self.open(path, mode = "r")
     f = File.new(path, mode)
+    return f if !block_given?
+    result = yield(f)
+    f.close
+    result
   end
 
   def self.exist?(path)
