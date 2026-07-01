@@ -1494,19 +1494,20 @@ class Compiler
     @e.emit(".LFBB__init_globals:")
 
     # Initialize to nil (if still raw 0) any global that must read as nil when never assigned:
-    #  - $-globals (storage symbol drops the $ prefix), and
-    #  - class-object ivars (__classivar__*) that back `@x` in `def self.foo`. A raw-0 read there is
-    #    dereferenced by the truthiness test in `@x ||= v` and SIGSEGVs; nil is a safe falsy value.
+    #  - user Ruby globals ($foo and top-level @ivars). Their storage symbol has the $/@ already stripped
+    #    (globalscope get_arg), so they are tracked in a dedicated user_globals set -- the old check for a
+    #    leading '$' here never matched and these were left as raw 0, so `$x.foo`/`@x.foo` on an unset
+    #    global SIGSEGV'd (method dispatch dereferences the null "object"). Only user globals are touched;
+    #    internal __ globals used as raw values are left alone (nil-initing all of .bss was tried and
+    #    reverted for breaking raw-0-as-falsy on internal data).
+    #  - class-object ivars (__classivar__*) that back `@x` in `def self.foo` (same raw-0 hazard).
+    names = @global_scope.user_globals.keys.collect { |g| g.to_s }
     @global_scope.globals.keys.each do |g|
       gs = g.to_s
-      if gs[0] == ?$
-        name = gs[1..-1]  # Strip $ prefix -> storage symbol
-      elsif gs.start_with?("__classivar__")
-        name = gs
-      else
-        next
-      end
+      names << gs if gs.start_with?("__classivar__")
+    end
 
+    names.uniq.each do |name|
       skip_label = @e.get_local
 
       # Check if still 0 (uninitialized)

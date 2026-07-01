@@ -6,11 +6,18 @@
 # not. For now, we'll treat all of them as global variables.
 class GlobalScope < Scope
   attr_reader :class_scope, :globals, :constants
+  attr_reader :user_globals
   attr_accessor :aliases
 
   def initialize(offsets)
     @vtableoffsets = offsets
     @globals = {}
+    # Storage symbols (the $/@ prefix already stripped) of user-level Ruby globals -- $foo and top-level
+    # @ivars. These must be initialised to nil when never assigned, so reading one yields a real object
+    # instead of raw 0 (a null pointer, which SIGSEGVs the moment a method is called on it). Tracked
+    # separately from @globals because the $ prefix is stripped at registration, so output_global_init
+    # can no longer tell a user global apart from an internal __ global by name.
+    @user_globals = {}
     @constants = {}  # Track defined constants (classes, modules, etc.)
     @modules = []    # Track included modules at global scope
     @class_scope = ClassScope.new(self,"Object",@vtableoffsets,nil)
@@ -113,6 +120,7 @@ class GlobalScope < Scope
     if a && a.to_s[0] == ?$
       clean_name = a.to_s[1..-1]
       @globals[clean_name.to_sym] = true
+      @user_globals[clean_name.to_sym] = true
       return [:global, clean_name]
     end
 
@@ -122,6 +130,7 @@ class GlobalScope < Scope
     if a && a.to_s[0] == ?@
       clean_name = a.to_s[1..-1]
       @globals[clean_name.to_sym] = true
+      @user_globals[clean_name.to_sym] = true
       return [:global, clean_name]
     end
 
