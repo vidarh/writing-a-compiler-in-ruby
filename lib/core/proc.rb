@@ -48,6 +48,14 @@ class Proc
     # code after the %s(call ...) above will not get executed.
   end
 
+  # Like #call, but invokes the block with `self` bound to `newself` instead of the captured @s. This is
+  # the primitive behind class_eval/module_eval/instance_eval and Class.new/Module.new blocks: the block's
+  # `def`s (which emit __set_vtable(self, ...)) and self-relative calls (attr_reader, include, ...) then act
+  # on `newself`.
+  def __call_with_self newself, *__copysplat
+    %s(call @addr (newself @closure @env (splat __copysplat)))
+  end
+
   def [] *__copysplat
     %s(call @addr (@s @closure @env (splat __copysplat)))
   end

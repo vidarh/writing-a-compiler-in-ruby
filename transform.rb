@@ -1262,11 +1262,21 @@ class Compiler
         # inherits the superclass's CLASS methods (e.g. Proc's custom `def self.new` that captures the block;
         # with a bare Class metaclass, `sub.new {..}` dispatched to plain Class#new, dropping the block and
         # leaving @addr nil -> the resulting proc segfaulted on call).
-        e.replace(E[:sexp, E[:let, [:__tmpcls],
-          E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, E[:index, sup, 0]]],
-          E[:assign, E[:index, :__tmpcls, 1], E[:index, sup, 1]],
-          E[:assign, E[:index, :__tmpcls, 2], E[:index, sup, 2]],
-          :__tmpcls]])
+        # A block (e[4]) carries method/attr/include definitions for the anonymous class. Evaluate it with
+        # self bound to the new class via class_eval, so its `def`s (which emit __set_vtable(self,...)),
+        # define_method calls, and self-relative calls register on the new class. Each low-level slot op is
+        # individually :sexp-wrapped (they are raw primitives), but the :let and the class_eval callm are
+        # ordinary nodes so rewrite_lambda still converts the block into a proc.
+        block = e[4]
+        inner = E[:let, [:__tmpcls],
+          E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, E[:index, sup, 0]]]],
+          E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, sup, 1]]],
+          E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, sup, 2]]]]
+        if block
+          inner << E[:callm, :__tmpcls, :class_eval, [], block]
+        end
+        inner << :__tmpcls
+        e.replace(inner)
       end
       :next
     end

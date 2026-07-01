@@ -309,11 +309,30 @@ class Class
     include mod
   end
 
-  # class_eval - evaluate block in class context
-  # Stub: Just yield the block
+  # class_eval / module_eval - evaluate the block with `self` bound to this class/module, so `def`s inside
+  # register on it and self-relative calls (attr_reader, include, ...) act on it.
   def class_eval &block
     if block
-      block.call
+      block.__call_with_self(self)
+    end
+  end
+
+  def module_eval &block
+    if block
+      block.__call_with_self(self)
+    end
+  end
+
+  # class_exec / module_exec: like *_eval but forward arguments to the block.
+  def class_exec *args, &block
+    if block
+      block.__call_with_self(self, *args)
+    end
+  end
+
+  def module_exec *args, &block
+    if block
+      block.__call_with_self(self, *args)
     end
   end
 
