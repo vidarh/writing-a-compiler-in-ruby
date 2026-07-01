@@ -190,6 +190,22 @@ class Class
     %s(if (index self 3) (index self 3) Object)
   end
 
+  # The ancestry chain of self. Walks the superclass links; included modules are not tracked here
+  # (Class#include copies the vtable without recording the module), so this returns the class chain
+  # only -- enough that Module#ancestors is not a missing method (which raised at describe-level in
+  # specs and, being unrescued, exited -> tgc_sweep abort).
+  def ancestors
+    result = []
+    k = self
+    while k
+      result << k
+      nxt = k.superclass
+      break if nxt == k
+      k = nxt
+    end
+    result
+  end
+
   # FIXME
   # &block will be a "bare" %s(lambda) (that needs to be implemented),
   # define_method needs to attach that to the vtable (for now) and/or
@@ -296,7 +312,6 @@ class Class
   # Include a module into this class
   # Calls __include_module to copy vtable entries
   def include(mod)
-    %s(printf "Class#include: self=%p, mod=%p\n" self mod)
     %s(__include_module self mod)
   end
 
