@@ -86,6 +86,49 @@ class Range
     end
   end
 
+  # Yield every nth value from the start (n defaults to 1). Returns an Enumerator when block-less.
+  def step(n = 1, &block)
+    return to_enum(:step, n) if !block
+    cur = @min
+    if @exclude_end
+      while cur < @max
+        block.call(cur)
+        cur = cur + n
+      end
+    else
+      while cur <= @max
+        block.call(cur)
+        cur = cur + n
+      end
+    end
+    self
+  end
+
+  # Binary search over an integer range. find-minimum mode: block returns true/false. find-any mode: block
+  # returns a number (0 = found, narrowing on the sign). Returns nil if nothing matches.
+  def bsearch(&block)
+    lo = @min
+    hi = @exclude_end ? @max : @max + 1
+    found = nil
+    while lo < hi
+      mid = (lo + hi) / 2
+      r = block.call(mid)
+      if r == true
+        found = mid
+        hi = mid
+      elsif r == false || r.nil?
+        lo = mid + 1
+      elsif r == 0
+        return mid
+      elsif r > 0
+        lo = mid + 1
+      else
+        hi = mid
+      end
+    end
+    found
+  end
+
   def to_a
     a = []
     each do |v|

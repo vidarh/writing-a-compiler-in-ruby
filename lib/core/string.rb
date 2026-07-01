@@ -543,6 +543,31 @@ class String
     result
   end
 
+  # Swap the case of every ASCII letter.
+  def swapcase
+    result = ""
+    i = 0
+    l = length
+    while i < l
+      c = self[i].ord
+      if c >= 97 && c <= 122
+        c = c - 32
+      elsif c >= 65 && c <= 90
+        c = c + 32
+      end
+      result << c.chr
+      i += 1
+    end
+    result
+  end
+
+  def swapcase!
+    r = swapcase
+    return nil if r == self
+    replace(r)
+    self
+  end
+
   def start_with?(prefix)
     prefix_len = prefix.length
     return false if prefix_len > length
