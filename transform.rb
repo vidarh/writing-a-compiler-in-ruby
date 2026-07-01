@@ -1235,8 +1235,10 @@ class Compiler
       if e[0] == :range
         e.replace(E[:callm, :Range, :new, e[1..-1]])
       elsif e[0] == :exclusive_range
-        # For exclusive range (...), pass true as third argument
-        e.replace(E[:callm, :Range, :new, e[1], e[2], true])
+        # For exclusive range (...), pass true as the third argument. The args must be ONE list (the
+        # callm's 4th element) -- passing e[1], e[2], true as separate callm elements made Range.new
+        # receive only `min` ("wrong number of arguments (given 1, expected 2+)"), breaking every `...`.
+        e.replace(E[:callm, :Range, :new, [e[1], e[2], true]])
       end
       :next
     end

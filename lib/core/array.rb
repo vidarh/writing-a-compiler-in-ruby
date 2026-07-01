@@ -329,6 +329,11 @@ class Array
        xend = length - 1
      end
 
+     # For an exclusive range (1...3) stop one before the end index.
+     if idx.exclude_end?
+       xend = xend - 1
+     end
+
      # Single item gets passed back to #[]
      #return self.[](start) if start == xend
 
