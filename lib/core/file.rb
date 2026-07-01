@@ -4,6 +4,54 @@ class File < IO
   SEPARATOR = "/"
   ALT_SEPARATOR = nil
 
+  # POSIX open(2) flags and related constants (Linux x86 values). Referenced directly as File::CREAT,
+  # File::WRONLY, etc.; File::Constants re-exposes them for the constants specs.
+  RDONLY   = 0
+  WRONLY   = 1
+  RDWR     = 2
+  CREAT    = 64        # 0100
+  EXCL     = 128       # 0200
+  NOCTTY   = 256       # 0400
+  TRUNC    = 512       # 01000
+  APPEND   = 1024      # 02000
+  NONBLOCK = 2048      # 04000
+  SYNC     = 1052672   # 04010000 (O_SYNC)
+  LOCK_SH  = 1
+  LOCK_EX  = 2
+  LOCK_NB  = 4
+  LOCK_UN  = 8
+  FNM_NOESCAPE = 1
+  FNM_PATHNAME = 2
+  FNM_DOTMATCH = 4
+  FNM_CASEFOLD = 8
+  FNM_EXTGLOB  = 16
+  FNM_SYSCASE  = 0
+  SHARE_DELETE = 0
+
+  # Map a mode argument to open(2) flags. An Integer is used as-is (already flags); a String uses the
+  # usual r/w/a (+ optional "+", ignoring "b"/"t") conventions. Anything else defaults to read-only.
+  def self.__mode_to_flags(mode)
+    return mode if mode.is_a?(Integer)
+    return RDONLY if !mode.is_a?(String)
+    plus = false
+    base = ""
+    mode.each_char do |ch|
+      if ch == "+"
+        plus = true
+      elsif ch != "b" && ch != "t"
+        base = base + ch if base.length == 0
+      end
+    end
+    if base == "w"
+      return plus ? (RDWR | CREAT | TRUNC) : (WRONLY | CREAT | TRUNC)
+    elsif base == "a"
+      return plus ? (RDWR | CREAT | APPEND) : (WRONLY | CREAT | APPEND)
+    elsif base == "r"
+      return plus ? RDWR : RDONLY
+    end
+    RDONLY
+  end
+
   def self.file?(io)
     # @FIXME; really should stat or something
     # but this is just for bootstrapping.
@@ -20,16 +68,19 @@ class File < IO
   
   def initialize(path, mode = "r")
     @path = path
+    flags = File.__mode_to_flags(mode)
+    ok = true
     %s(assign rpath (callm path __get_raw))
-    %s(assign fd (open rpath 0))
-
-   # FIXME: Error checking
-    %s(if (le fd 0) (do
-         (printf "Failed to open '%s' got %ld\n" rpath fd)
-        (div 0 0)
-    ))
+    # 420 = 0644, the create mode used when O_CREAT is part of the flags.
+    %s(assign fd (open rpath (callm flags __get_raw) 420))
+    %s(if (lt fd 0) (assign ok false))
+    # A missing/inaccessible file used to div-by-zero here; raise the proper Errno instead so specs can
+    # rescue it (a create-with-EXCL that finds the file, or opening a nonexistent one for read).
+    if !ok
+      raise Errno::EEXIST.new("File exists - #{path}") if (flags & File::EXCL) != 0
+      raise Errno::ENOENT.new("No such file or directory - #{path}")
+    end
     %s(assign fd (__int fd))
-
     super(fd)
   end
 
