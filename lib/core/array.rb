@@ -802,6 +802,92 @@ class Array
 
   # Returns a new array that is a one-dimensional flattening of this array (recursively).
   # That is, for every element that is an array, extract its elements into the new array.
+  # All n-element combinations (order within the array preserved, no repeats). With a block, yields each
+  # and returns self; without a block returns the array of combinations (answers .to_a/.each like MRI's
+  # Enumerator for the common use).
+  def combination(n, &block)
+    result = []
+    if n >= 0 && n <= length
+      __combination_into(n, 0, [], result)
+    end
+    if block
+      result.each { |c| block.call(c) }
+      self
+    else
+      result
+    end
+  end
+
+  def __combination_into(n, start, current, result)
+    if current.length == n
+      result << current.dup
+      return
+    end
+    i = start
+    while i < length
+      current << self[i]
+      __combination_into(n, i + 1, current, result)
+      current.pop
+      i = i + 1
+    end
+  end
+
+  # Cartesian product of self with the given arrays: every [a, b, ...] with a from self, b from others[0]...
+  def product(*others)
+    result = [[]]
+    arrays = [self]
+    others.each { |o| arrays << o }
+    arrays.each do |arr|
+      nxt = []
+      result.each do |combo|
+        arr.each do |elem|
+          nxt << (combo + [elem])
+        end
+      end
+      result = nxt
+    end
+    result
+  end
+
+  # Random element(s). sample -> one element (nil if empty); sample(n) -> up to n distinct elements. A
+  # `random:` option (an object responding to #rand) supplies the RNG, else Random.rand is used.
+  def sample(*args)
+    n = nil
+    rng = nil
+    args.each do |a|
+      if a.is_a?(Hash)
+        rng = a[:random]
+      else
+        n = a
+      end
+    end
+    if n.nil?
+      return nil if length == 0
+      return self[__sample_index(length, rng)]
+    end
+    count = n
+    count = length if count > length
+    pool = []
+    i = 0
+    while i < length
+      pool << self[i]
+      i = i + 1
+    end
+    result = []
+    k = 0
+    while k < count
+      j = __sample_index(pool.length, rng)
+      result << pool[j]
+      pool.delete_at(j)
+      k = k + 1
+    end
+    result
+  end
+
+  def __sample_index(m, rng)
+    rng.nil? ? Random.rand(m) : rng.rand(m)
+  end
+
   def flatten level=nil
     #STDERR.puts "FLATTEN: #{self.inspect}"
     # Cycle guard: a self-referential array would recurse forever through e.flatten -> segfault.
