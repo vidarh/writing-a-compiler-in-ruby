@@ -1347,10 +1347,15 @@ class Compiler
         # ivar to its slot and registers fine when the block runs via class_eval. Only bare-symbol args are
         # handled (their to_s starts with ':'); string/expr args are left to the runtime stub.
         expand_attr_defs(block) if block.is_a?(Array)
-        inner = E[:let, [:__tmpcls],
-          E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, E[:index, sup, 0]]]],
-          E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, sup, 1]]],
-          E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, sup, 2]]]]
+        # Evaluate the superclass into a plain local FIRST (a normal :assign, not inside a :sexp). The
+        # superclass can be a scoped constant `Foo::Bar` ([:deref,...]) or any expression; a :deref inside
+        # a raw :sexp is emitted as a call to a nonexistent `deref` symbol (link error). Using the local
+        # __sup in the low-level slot ops keeps them simple values.
+        inner = E[:let, [:__tmpcls, :__sup],
+          E[:assign, :__sup, sup],
+          E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, :__sup, :__vtable_size, E[:index, :__sup, 0]]]],
+          E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, :__sup, 1]]],
+          E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, :__sup, 2]]]]
         if block
           inner << E[:callm, :__tmpcls, :class_eval, [], block]
         end
