@@ -52,11 +52,35 @@ class File < IO
     RDONLY
   end
 
-  def self.file?(io)
-    # @FIXME; really should stat or something
-    # but this is just for bootstrapping.
-    io.is_a?(File)
+  # File class predicates mirror the FileTest module (Ruby exposes both). Delegate to FileTest, which
+  # implements them over stat/lstat/access. (FileTest is defined below in this file; a forward reference
+  # from a method body is fine since it resolves at call time.)
+  # File.file?(path): stat-based for a path (String / #to_path / #to_str). The compiler's own scanner and
+  # selftest also call File.file?(io) with a non-path IO/mock object, relying on the historical stub that
+  # answered "is this a File instance"; keep that behaviour for non-path arguments.
+  def self.file?(path)
+    if path.is_a?(String) || path.respond_to?(:to_path) || path.respond_to?(:to_str)
+      FileTest.file?(path)
+    else
+      path.is_a?(File)
+    end
   end
+  def self.directory?(path);       FileTest.directory?(path);       end
+  def self.chardev?(path);         FileTest.chardev?(path);         end
+  def self.blockdev?(path);        FileTest.blockdev?(path);        end
+  def self.pipe?(path);            FileTest.pipe?(path);            end
+  def self.socket?(path);          FileTest.socket?(path);          end
+  def self.symlink?(path);         FileTest.symlink?(path);         end
+  def self.readable?(path);        FileTest.readable?(path);        end
+  def self.readable_real?(path);   FileTest.readable_real?(path);   end
+  def self.writable?(path);        FileTest.writable?(path);        end
+  def self.writable_real?(path);   FileTest.writable_real?(path);   end
+  def self.executable?(path);      FileTest.executable?(path);      end
+  def self.executable_real?(path); FileTest.executable_real?(path); end
+  def self.zero?(path);            FileTest.zero?(path);            end
+  def self.empty?(path);           FileTest.empty?(path);           end
+  def self.size?(path);            FileTest.size?(path);            end
+  def self.identical?(a, b);       FileTest.identical?(a, b);       end
 
   def self.absolute_path?(path)
     false
