@@ -47,12 +47,17 @@ class Struct
   end
 
   # Members for a class, walking the superclass chain so subclasses (and Class.new(SomeStruct)) inherit.
+  # A `class X < Struct` subclass (created without Struct.new) has no registry entry, so the walk can run
+  # all the way to Object -- whose #superclass returns Object itself in this runtime (bootstrap). Stop when
+  # the superclass no longer changes so that walk terminates.
   def self.__members_for(klass)
     k = klass
     while k
       m = Struct.__struct_registry[k.object_id]
       return m if m
-      k = k.superclass
+      sup = k.superclass
+      break if sup.equal?(k)
+      k = sup
     end
     []
   end
@@ -62,7 +67,9 @@ class Struct
     while k
       r = Struct.__struct_registry[k.object_id]
       return Struct.__struct_kwinit[k.object_id] if r
-      k = k.superclass
+      sup = k.superclass
+      break if sup.equal?(k)
+      k = sup
     end
     false
   end
@@ -268,8 +275,17 @@ class Struct
   end
 
   def ==(other)
+    return true if other.equal?(self)
     return false if other.class != self.class
-    other.to_a == @__struct_values
+    # Recursion guard for self-referential structs (x[:a] = x): while we are already comparing this
+    # object, treat a re-entry as equal so a genuine difference elsewhere still makes the whole compare
+    # false, but an infinite structure does not overflow the stack. Single-threaded, so a plain flag is
+    # sufficient. Mirrors MRI's recursion handling.
+    return true if @__comparing
+    @__comparing = true
+    result = (other.to_a == @__struct_values)
+    @__comparing = false
+    result
   end
 
   def eql?(other)
@@ -277,7 +293,13 @@ class Struct
   end
 
   def hash
-    @__struct_values.hash
+    # Recursion guard, as for ==: a self-referential struct (x[:a] = x) would otherwise recurse forever
+    # through Array#hash. Returning a constant on re-entry keeps the hash finite and consistent.
+    return 0 if @__hashing
+    @__hashing = true
+    h = @__struct_values.hash
+    @__hashing = false
+    h
   end
 
   def inspect
