@@ -103,6 +103,47 @@ class Module
   def self.nesting
     []
   end
+
+  # Module is a separate class from Class here (Class is NOT a subclass of Module -- see the FIXME
+  # above), so a Module instance (e.g. Module.new) does not inherit the reflection methods defined on
+  # Class. Provide the common ones so they work on modules too. self is the module; the same vtable/
+  # name-offset reflection Class uses applies (a module with methods has a vtable).
+  def instance_method(name)
+    name = name.to_sym if name.is_a?(String)
+    UnboundMethod.new(self, name)
+  end
+
+  def method_defined?(name, inherit = true)
+    name = name.to_sym if name.is_a?(String)
+    voff = Class.method_to_voff[name]
+    return false if voff.nil?
+    real = false
+    %s(assign raw (callm voff __get_raw))
+    %s(assign ptr (index self raw))
+    %s(if (lt ptr __vtable_thunks_start) (assign real true))
+    %s(if (gt ptr __vtable_thunks_end) (assign real true))
+    real
+  end
+
+  def instance_methods(include_super = true)
+    result = []
+    m = Class.method_to_voff
+    names = m.keys
+    i = 0
+    n = names.length
+    while i < n
+      name = names[i]
+      voff = m[name]
+      real = false
+      %s(assign raw (callm voff __get_raw))
+      %s(assign ptr (index self raw))
+      %s(if (lt ptr __vtable_thunks_start) (assign real true))
+      %s(if (gt ptr __vtable_thunks_end) (assign real true))
+      result << name if real
+      i = i + 1
+    end
+    result
+  end
 end
 
 # Stub for Fiber class (not implemented)
