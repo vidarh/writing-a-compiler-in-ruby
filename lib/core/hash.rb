@@ -318,6 +318,33 @@ class Hash
   # each_pair is an alias of each (yields [key, value] for each pair).
   alias each_pair each
 
+  # A new hash with only the given keys that are present.
+  def slice(*keys)
+    h = {}
+    keys.each { |k| h[k] = self[k] if has_key?(k) }
+    h
+  end
+
+  # A new hash with the given keys removed.
+  def except(*keys)
+    h = {}
+    each { |k, v| h[k] = v if !keys.include?(k) }
+    h
+  end
+
+  # Values for the given keys, raising KeyError (or yielding the block) for any missing key.
+  def fetch_values(*keys, &block)
+    keys.map do |k|
+      if has_key?(k)
+        self[k]
+      elsif block
+        block.call(k)
+      else
+        raise KeyError.new("key not found: #{k.inspect}")
+      end
+    end
+  end
+
   # Nested element access: dig(a, b, ...) == self[a].dig(b, ...), stopping at the first nil.
   def dig(key, *rest)
     v = self[key]

@@ -692,8 +692,72 @@ class Array
   end
 
 
-  def fill(obj)
-    %s(puts "Array#fill not implemented")
+  # fill(obj) / fill(obj, start) / fill(obj, start, len) / fill(obj, range) and the block forms
+  # fill { |i| } / fill(start) { } / fill(start, len) { } / fill(range) { }. Fills in place, returns self.
+  def fill(*args, &block)
+    n = length
+    if block
+      spec0 = args[0]
+      spec1 = args[1]
+    else
+      obj = args[0]
+      spec0 = args[1]
+      spec1 = args[2]
+    end
+    if spec0.is_a?(Range)
+      s = spec0.begin
+      s = n + s if s < 0
+      e = spec0.exclude_end? ? spec0.end : spec0.end + 1
+    else
+      s = spec0.nil? ? 0 : spec0
+      s = n + s if s < 0
+      e = spec1.nil? ? n : s + spec1
+    end
+    i = s
+    while i < e
+      self[i] = block ? block.call(i) : obj
+      i = i + 1
+    end
+    self
+  end
+
+  # Elements from the front while the block is true.
+  def take_while
+    result = []
+    each do |x|
+      break if !yield(x)
+      result << x
+    end
+    result
+  end
+
+  # Elements after the leading run for which the block is true.
+  def drop_while
+    result = []
+    dropping = true
+    each do |x|
+      dropping = false if dropping && !yield(x)
+      result << x if !dropping
+    end
+    result
+  end
+
+  # Yield each element n times (forever if n is nil). No-op on an empty array.
+  def cycle(n = nil, &block)
+    return to_enum(:cycle, n) if !block
+    return nil if length == 0
+    if n.nil?
+      while true
+        each { |x| block.call(x) }
+      end
+    else
+      c = 0
+      while c < n
+        each { |x| block.call(x) }
+        c = c + 1
+      end
+    end
+    nil
   end
 
 

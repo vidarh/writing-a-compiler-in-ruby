@@ -345,6 +345,44 @@ class String
     length
   end
 
+  # Byte at index i as an unsigned 0..255 value (nil if out of range). self[i] yields a possibly-signed
+  # char code, so fold negatives back into 0..255.
+  def getbyte(i)
+    i = length + i if i < 0
+    return nil if i < 0 || i >= length
+    b = self[i]
+    b < 0 ? b + 256 : b
+  end
+
+  def setbyte(i, b)
+    i = length + i if i < 0
+    self[i] = b & 255
+    b
+  end
+
+  # Substring by byte offset. Byte- and char-indexing coincide in this runtime, so this defers to the
+  # range/slice forms of #[]. byteslice(i) is a single-byte string; byteslice(i, len) / byteslice(range)
+  # are substrings.
+  def byteslice(start, len = nil)
+    return self[start] if start.is_a?(Range)
+    if len.nil?
+      s = start < 0 ? length + start : start
+      return nil if s < 0 || s >= length
+      return self[s..s]
+    end
+    return nil if len < 0
+    s = start < 0 ? length + start : start
+    return nil if s < 0 || s > length
+    self[s...(s + len)]
+  end
+
+  # Prepend the given strings to self in place, returning self.
+  def prepend(*others)
+    pre = ""
+    others.each { |o| pre = pre + o.to_s }
+    replace(pre + self)
+  end
+
   def map!
     i = 0
     len = length
