@@ -1249,6 +1249,32 @@ class Compiler
   # object via __new_class_object (the helper the compiler uses for `class X < Y`). For an empty subclass the
   # new class shares the superclass's vtable (size == ssize == __vtable_size); also copy the superclass's
   # @instance_size (slot 1) and @name (slot 2). Only matches a literal `Class` receiver; dynamic forms left alone.
+  # Expand attr_reader/attr_accessor/attr_writer calls within `node` (a Class.new/Module.new block) into
+  # getter/setter :defm nodes, mirroring build_class_scopes for real class bodies. Only bare-symbol args
+  # (to_s begins with ':') are expanded; other arg forms fall through to the runtime attr_* stub.
+  def expand_attr_defs(node)
+    node.depth_first do |be|
+      if be.is_a?(Array) && be[0] == :call &&
+         (be[1] == :attr_reader || be[1] == :attr_accessor || be[1] == :attr_writer)
+        type = be[1]
+        syms = be[2].is_a?(Array) ? be[2] : [be[2]]
+        be.replace(E[:do])
+        syms.each do |sym|
+          s = sym.to_s
+          next if s[0] != ?:
+          mn = s[1..-1].to_sym
+          if type == :attr_reader || type == :attr_accessor
+            be << E[:defm, mn, [], ["@#{mn}".to_sym]]
+          end
+          if type == :attr_writer || type == :attr_accessor
+            be << E[:defm, "#{mn}=".to_sym, [:value], [[:assign, "@#{mn}".to_sym, :value]]]
+          end
+        end
+      end
+      :next
+    end
+  end
+
   def rewrite_class_new(exp)
     exp.depth_first do |e|
       if e.is_a?(Array) && e[0] == :callm && (e[1] == :Class || e[1] == :Module) && e[2] == :new
@@ -1270,6 +1296,12 @@ class Compiler
         # individually :sexp-wrapped (they are raw primitives), but the :let and the class_eval callm are
         # ordinary nodes so rewrite_lambda still converts the block into a proc.
         block = e[4]
+        # Expand attr_reader/accessor/writer inside the block into getter/setter defms at COMPILE time
+        # (mirrors build_class_scopes for class bodies). The runtime attr_* methods cannot build a getter --
+        # there is no ivar-by-name access -- but a `def name; @name; end` defm inside the block compiles the
+        # ivar to its slot and registers fine when the block runs via class_eval. Only bare-symbol args are
+        # handled (their to_s starts with ':'); string/expr args are left to the runtime stub.
+        expand_attr_defs(block) if block.is_a?(Array)
         inner = E[:let, [:__tmpcls],
           E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, sup, :__vtable_size, E[:index, sup, 0]]]],
           E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, sup, 1]]],
