@@ -406,7 +406,12 @@ class Compiler
           full_params[rest_idx] = [:__splat, :rest]
           ac = rest_idx - 2
           prologue = E[:sexp, [:assign, rest_target, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]]
-          newbody = E[:do, prologue]
+          # Declare the splat local (rest_target) with a :let so body reads resolve to it. The :defm rest
+          # handling in process_scope_env does the equivalent via `vars << rest_sym`; the lambda path has
+          # no such vars list, so without an explicit let an in-method `{|*a| a}` assigns `a` but never
+          # declares it -> reads compile as a method call ("undefined method 'a'"). At top level a later
+          # pass happened to add the let; in-method lambdas never got one.
+          newbody = E[:let, [rest_target], prologue]
           bi = 1
           while bi < body.length
             newbody << body[bi]
