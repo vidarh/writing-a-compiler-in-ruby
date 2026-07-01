@@ -13,6 +13,35 @@ class Numeric
   def i
     Complex.new(0,self)
   end
+
+  # Complex-view methods: a real number is its own real part with a zero imaginary part.
+  def real
+    self
+  end
+
+  def imaginary
+    0
+  end
+
+  def imag
+    0
+  end
+
+  def real?
+    true
+  end
+
+  def to_c
+    Complex.new(self, 0)
+  end
+
+  def rectangular
+    [self, 0]
+  end
+
+  def rect
+    [self, 0]
+  end
 end
 
 # FIXME: Stub - Rational class needs full implementation

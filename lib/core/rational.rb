@@ -53,6 +53,6 @@ class Rational
   end
 end
 
-def Rational(numerator, denominator)
+def Rational(numerator, denominator = 1)
   Rational.new(numerator, denominator)
 end

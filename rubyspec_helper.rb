@@ -1042,10 +1042,12 @@ def infinity_value
 end
 
 def nan_value
-  # Return Float::NAN
-  # WORKAROUND: Float not fully implemented, return nil as placeholder
-  # Tests using NAN will fail but won't crash with method_missing
-  nil
+  # Ideally Float::NAN. Float is only partially implemented (literals collapse to 0.0), so a true NaN is
+  # not representable, but returning `nil` here was actively harmful: helpers build arrays like
+  # `[..., nan_value].map { |n| [n, -n] }` and `-nil` raises "nil can't be coerced into Integer", aborting
+  # the whole spec file. Return a Float so those constructions don't crash (NaN-specific assertions fail
+  # rather than take the file down).
+  0.0
 end
 
 def fixnum_max
