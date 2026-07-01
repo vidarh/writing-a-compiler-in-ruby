@@ -1312,8 +1312,23 @@ class String
   end
 
   # FIXME: Stub.
+  # Byte-oriented runtime: we do not transcode, so force_encoding just returns self (MRI returns self too;
+  # the previous code returned the ENCODING argument, so `str.force_encoding('X').foo` called foo on the
+  # encoding object and crashed). encode returns a fresh copy of the bytes.
   def force_encoding(encoding)
-    encoding
+    self
+  end
+
+  def encode(*args)
+    dup
+  end
+
+  def encode!(*args)
+    self
+  end
+
+  def b
+    dup
   end
 
   # Match string against pattern
