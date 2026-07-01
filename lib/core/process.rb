@@ -65,24 +65,56 @@ module Process
     %s(exit 1)
   end
 
+  # Process.spawn(cmd...) -> the child's pid (does NOT wait). Runs cmd via /bin/sh -c. The command
+  # strings are held in Ruby locals so the GC keeps their buffers alive for execve.
   def self.spawn(*args)
-    raise NotImplementedError.new("Process.spawn is not supported")
+    cmdstr = args.join(" ")
+    sh = "/bin/sh"
+    dashc = "-c"
+    pid = -1
+    %s(do
+      (assign kidpid (fork))
+      (if (eq kidpid 0)
+        (do
+          (assign argv (__array 4))
+          (assign (index argv 0) (callm sh __get_raw))
+          (assign (index argv 1) (callm dashc __get_raw))
+          (assign (index argv 2) (callm cmdstr __get_raw))
+          (assign (index argv 3) 0)
+          (assign envp (__array 1))
+          (assign (index envp 0) 0)
+          (execve (callm sh __get_raw) argv envp)
+          (exit 127))
+        (assign pid (__int kidpid))))
+    pid
   end
 
-  def self.fork(*args)
-    raise NotImplementedError.new("Process.fork is not supported")
+  # Process.waitpid(pid, flags=0) -> the reaped pid (or -1). Process.wait is the same here.
+  def self.waitpid(pid, flags = 0)
+    result = -1
+    %s(do
+      (assign stbuf (__array 4))
+      (assign r (waitpid (callm pid __get_raw) stbuf (callm flags __get_raw)))
+      (assign result (__int r)))
+    result
   end
 
+  def self.wait(pid = -1, flags = 0)
+    waitpid(pid, flags)
+  end
+
+  def self.wait2(pid = -1, flags = 0)
+    [waitpid(pid, flags), nil]
+  end
+
+  # exec replaces the current process; fork is not exposed as a Ruby-level block fork (needs closures
+  # across the fork boundary), so it stays unsupported.
   def self.exec(*args)
     raise NotImplementedError.new("Process.exec is not supported")
   end
 
-  def self.wait(*args)
-    raise NotImplementedError.new("Process.wait is not supported")
-  end
-
-  def self.waitpid(*args)
-    raise NotImplementedError.new("Process.waitpid is not supported")
+  def self.fork(*args)
+    raise NotImplementedError.new("Process.fork is not supported")
   end
 
   def self.kill(*args)

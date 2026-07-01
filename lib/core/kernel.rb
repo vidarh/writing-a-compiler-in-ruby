@@ -125,9 +125,42 @@ class Kernel
     %s(exit (callm code __get_raw))
   end
 
-  # Execute a shell command (stub - not implemented)
-  def system(cmd)
-    raise "system() not implemented - backtick/command execution not supported"
+  # Run a shell command (via /bin/sh -c), wait for it, and return true if it exited 0, false otherwise.
+  # Multiple args are space-joined into one shell command. The command STRINGS are held in Ruby locals so
+  # the GC does not free the buffers whose raw pointers are passed to execve.
+  def system(*args)
+    cmdstr = args.join(" ")
+    sh = "/bin/sh"
+    dashc = "-c"
+    status = -1
+    %s(do
+      (assign kidpid (fork))
+      (if (eq kidpid 0)
+        (do
+          (assign argv (__array 4))
+          (assign (index argv 0) (callm sh __get_raw))
+          (assign (index argv 1) (callm dashc __get_raw))
+          (assign (index argv 2) (callm cmdstr __get_raw))
+          (assign (index argv 3) 0)
+          (assign envp (__array 1))
+          (assign (index envp 0) 0)
+          (execve (callm sh __get_raw) argv envp)
+          (exit 127))
+        (do
+          (assign stbuf (__array 4))
+          (waitpid kidpid stbuf 0)
+          (assign status (__int (index stbuf 0))))))
+    # waitpid's status word: exit code is bits 8..15.
+    ((status >> 8) & 255) == 0
+  end
+
+  # Kernel backticks: run the command and return its stdout as a String (the parser rewrites `cmd` to a
+  # call to this).
+  def __backtick(cmd)
+    io = IO.popen(cmd.to_s, "r")
+    out = io.read
+    io.close
+    out
   end
 
   # Convert argument to Array

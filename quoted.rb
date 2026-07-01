@@ -548,8 +548,9 @@ module Tokens
 
       r = dquoted ? expect_dquoted(s,q,&block) : expect_squoted(s,q)
       r = [:array].concat(r.split(" ")) if words
-      # Convert backtick strings to system() calls
-      r = [:call, :system, r] if backtick
+      # Backticks capture the command's stdout as a String (Kernel#__backtick), NOT system() which
+      # returns a boolean.
+      r = [:call, :__backtick, [r]] if backtick
       r
     end
   end
