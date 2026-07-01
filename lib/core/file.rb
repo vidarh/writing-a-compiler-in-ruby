@@ -197,8 +197,10 @@ class File < IO
   end
 
   # File.join(a, b, ...) -- join path components with SEPARATOR, collapsing a doubled separator at each
-  # boundary (so join("a/", "/b") == "a/b", matching MRI closely enough for path building).
+  # boundary (so join("a/", "/b") == "a/b", matching MRI closely enough for path building). Array
+  # arguments are flattened, as in MRI (File.join("a", ["b", "c"]) == "a/b/c").
   def self.join(*args)
+    args = args.flatten
     result = ""
     first = true
     args.each do |arg|
