@@ -154,6 +154,26 @@ Root-caused but intentionally not yet fixed (need larger features / deeper seman
 
 ---
 
+### 5. Heap corruption gating the core/kernel cluster (2026-07-01)
+
+Most core/kernel specs abort with `free(): invalid next size (fast)` / `malloc(): invalid size` —
+heap corruption surfaced by tgc's sweep at program exit (`tgc_sweep`, tgc.c:309). Some object is
+allocated too small and a later write runs past it, clobbering the adjacent chunk's size header.
+
+Narrowed repro (needs ALL of it — none of the parts corrupt alone):
+- `require 'rubyspec_helper'` + the FULL `core/kernel/fixtures/classes.rb` (558 lines) loaded, then
+  `KernelSpecs::A.new` **inside a block** (`[1].each { KernelSpecs::A.new }`). At top level or inside a
+  plain method it does NOT corrupt; a plain class, or class A in isolation (even with its full
+  undef_method/define_method/visibility body + subclass + reopen), does NOT corrupt. So it is a
+  global-state interaction across the whole fixture + the block/env allocation path, not any single class.
+
+Next step needs memory tooling (ASAN/valgrind-equivalent for the 32-bit target) to catch the write at
+its source; blind bisection is impractical because it only reproduces with the full fixture loaded.
+
+Fixing it should recover a large share of the ~64 core/kernel crashes (they all load this fixture).
+
+---
+
 ## Known Limitations (Cannot Fix)
 
 1. **eval() with dynamic strings** - AOT compilation cannot evaluate runtime strings
