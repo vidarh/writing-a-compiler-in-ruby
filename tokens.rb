@@ -122,8 +122,15 @@ module Tokens
           while (c = s.peek) && ((c == ?_) || c == ?0 || c == ?1)
             tmp << s.get
           end
+        elsif c == ?o || c == ?O
+          # Octal with explicit prefix (0o17 / 0O17)
+          radix = 8
+          tmp << s.get
+          while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
+            tmp << s.get
+          end
         else
-          # Octal number starting with 0
+          # Octal number starting with 0 (implicit, e.g. 017)
           radix = 8
           while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
             tmp << s.get
@@ -152,6 +159,8 @@ module Tokens
         i += 2
       elsif radix == 2 && i < len && tmp[i] == ?0 && (tmp[i+1] == ?b || tmp[i+1] == ?B)
         i += 2
+      elsif radix == 8 && i < len && tmp[i] == ?0 && (tmp[i+1] == ?o || tmp[i+1] == ?O)
+        i += 2  # explicit 0o/0O prefix (implicit-octal 017 has no letter to skip)
       end
 
       while i < len
