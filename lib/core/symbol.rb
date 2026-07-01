@@ -56,6 +56,14 @@ class Symbol
     self
   end
 
+  # Length of the symbol's name. Matches MRI (Symbol#size / #length); the compiler itself relies on this
+  # (compile_exp guards with `exp.size == 0`, which reaches a bare symbol for a `**kw`-forwarded hash).
+  def size
+    @name.size
+  end
+
+  alias length size
+
   def frozen?
     true
   end

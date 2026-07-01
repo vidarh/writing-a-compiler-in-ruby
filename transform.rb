@@ -2130,16 +2130,32 @@ class Compiler
         end
       end
 
-      # Replace args with regular args + __kwargs. __kwargs is OPTIONAL with a default of {} -- a caller
-      # may omit all keyword args (def foo(a, **kw); foo(1) must work). rewrite_default_args (which runs
-      # after this) turns the [:default, {}] into a `if numargs < n; __kwargs = {}` prologue and drops it
-      # from the required arity.
-      new_args = regular_args + [[:__kwargs, :default, [:hash]]]
-
-      # Prepend keyword argument extractions to body
       body = e[3]
       body = [] unless body.is_a?(Array)
-      new_body = kwarg_extractions + body
+
+      # If the method also has a splat (`*args`), __kwargs CANNOT be a trailing positional param: a
+      # trailing param after a splat behaves like `*args, x` and steals the last positional (so
+      # `m(*a, **kw); m(1,2)` gave a=[1], kw=2). Instead keep the splat greedy and pop a trailing Hash off
+      # it into __kwargs at runtime (nil/non-Hash tail -> {}). Otherwise (no splat) __kwargs is an OPTIONAL
+      # trailing positional defaulting to {} so the caller may omit all keyword args.
+      rest_name = nil
+      regular_args.each do |a|
+        rest_name = a[0] if a.is_a?(Array) && a[1] == :rest
+      end
+
+      if rest_name
+        new_args = regular_args
+        pop_kwargs = [:assign, :__kwargs,
+          [:if, [:callm, [:callm, rest_name, :last], :is_a?, [:Hash]],
+            [:callm, rest_name, :pop],
+            [:hash]]]
+        # Declare __kwargs in a let (it is no longer a parameter in the splat case, so a bare assign would
+        # not register it as a local and the extractions would read it as a method call).
+        new_body = [[:let, [:__kwargs], pop_kwargs] + kwarg_extractions + body]
+      else
+        new_args = regular_args + [[:__kwargs, :default, [:hash]]]
+        new_body = kwarg_extractions + body
+      end
 
       # Update method definition
       e[2] = new_args

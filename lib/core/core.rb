@@ -86,6 +86,7 @@ require 'core/class_ext'
 require 'core/hash_ext'
 require 'core/float'
 require 'core/struct'
+require 'core/data'
 require 'core/exception'
 require 'core/process'     # After exception (uses NotImplementedError); only real syscall primitives
 require 'core/pp'
