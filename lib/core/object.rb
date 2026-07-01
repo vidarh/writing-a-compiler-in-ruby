@@ -526,6 +526,16 @@ class Object
   def __def_target
     singleton_class
   end
+
+  # Evaluate the block with self bound to this object (its `def`s become singleton methods on it, via
+  # __def_target -> singleton_class). instance_exec additionally forwards arguments to the block.
+  def instance_eval &block
+    block.__call_with_self(self) if block
+  end
+
+  def instance_exec *args, &block
+    block.__call_with_self(self, *args) if block
+  end
 end
 
 # BasicObject defined after Object to avoid circular dependency
