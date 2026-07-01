@@ -58,13 +58,24 @@ class MatchData
   end
 
   # Beginning position of match (or capture group)
+  # Resolve a group reference (Integer index, or a Symbol/String name) to a positional index.
+  def __group_index(n)
+    return n if n.is_a?(Integer)
+    nm = @regexp.named_captures
+    (nm && nm[n.to_s]) ? nm[n.to_s][0] : nil
+  end
+
   def begin(n = 0)
+    n = __group_index(n)
+    return nil if n.nil?
     return @match_start if n == 0
     @begins[n - 1]
   end
 
   # End position of match (or capture group)
   def end(n = 0)
+    n = __group_index(n)
+    return nil if n.nil?
     return @match_end if n == 0
     @ends[n - 1]
   end
