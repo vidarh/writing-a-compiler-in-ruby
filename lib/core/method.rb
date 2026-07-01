@@ -35,6 +35,38 @@ class Method
     m = self
     proc {|*args| m.call(*args) }
   end
+
+  # Detach this method from its receiver, yielding an UnboundMethod.
+  def unbind
+    UnboundMethod.new(@target.class, @method)
+  end
+end
+
+# A method detached from any receiver (Module#instance_method / Method#unbind). It carries the owner
+# module/class and the method name; #bind re-attaches it to a compatible object to get a callable Method.
+class UnboundMethod
+  def initialize(owner, name)
+    @owner = owner
+    @name = name
+  end
+
+  def name
+    @name
+  end
+
+  def owner
+    @owner
+  end
+
+  # Bind to a receiver, returning a callable Method.
+  def bind(obj)
+    Method.new(obj, @name)
+  end
+
+  # Bind and immediately call (Ruby 2.7+ UnboundMethod#bind_call).
+  def bind_call(obj, *args)
+    obj.send(@name, *args)
+  end
 end
 
 class Object

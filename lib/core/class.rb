@@ -246,6 +246,12 @@ class Class
 
   alias public_method_defined? method_defined?
 
+  # The named instance method of this class/module as an UnboundMethod (bind it to a receiver to call).
+  def instance_method(name)
+    name = name.to_sym if name.is_a?(String)
+    UnboundMethod.new(self, name)
+  end
+
   # FIXME
   # &block will be a "bare" %s(lambda) (that needs to be implemented),
   # define_method needs to attach that to the vtable (for now) and/or
