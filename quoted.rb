@@ -15,6 +15,21 @@ module Tokens
 
     CR  = 13.chr
 
+    # Hex digit value of a 1-char string, or -1 if it is not a hex digit.
+    def self.__hexval(c)
+      return -1 if c.nil?
+      o = c.ord
+      if o >= 48 && o <= 57
+        o - 48
+      elsif o >= 97 && o <= 102
+        o - 87
+      elsif o >= 65 && o <= 70
+        o - 55
+      else
+        -1
+      end
+    end
+
     def self.escaped(s,q = DQ, &term)
       if term
         return nil if term.call(s)
@@ -70,6 +85,24 @@ module Tokens
         when '#'
           # Escaped # - return special marker to prevent interpolation
           return :escaped_hash
+        when 'x'
+          # \xHH -- one or two hex digits -> a single byte
+          val = 0
+          n = 0
+          while n < 2 && s.peek && Quoted.__hexval(s.peek) >= 0
+            val = val * 16 + Quoted.__hexval(s.get)
+            n = n + 1
+          end
+          return val.chr
+        when '0', '1', '2', '3', '4', '5', '6', '7'
+          # \NNN -- up to three octal digits (the first is already in e) -> a single byte
+          val = e.ord - 48
+          n = 1
+          while n < 3 && s.peek && s.peek.ord >= 48 && s.peek.ord <= 55
+            val = val * 8 + (s.get.ord - 48)
+            n = n + 1
+          end
+          return val.chr
         else
           return e
         end
