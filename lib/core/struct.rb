@@ -47,7 +47,9 @@ class Struct
       end
       klass = Class.new(Struct)
       Struct.__struct_registry[klass.object_id] = syms
-      Struct.__struct_kwinit[klass.object_id] = kwargs[:keyword_init] ? true : false
+      # Store the raw keyword_init: value (or nil when unspecified) so keyword_init? can distinguish
+      # true / false / nil, while initialize still just tests it for truthiness.
+      Struct.__struct_kwinit[klass.object_id] = kwargs.has_key?(:keyword_init) ? kwargs[:keyword_init] : nil
       klass.class_eval(&block) if block
       klass
     else
@@ -88,6 +90,14 @@ class Struct
 
   def self.members
     Struct.__members_for(self)
+  end
+
+  # true if the struct was created with a truthy keyword_init:, false if created with keyword_init: false,
+  # and nil if keyword_init: was not given (or given as nil) -- matching MRI's tri-state result.
+  def self.keyword_init?
+    v = Struct.__kwinit_for(self)
+    return nil if v.nil?
+    v ? true : false
   end
 
   def self.[](*args, **kwargs)
@@ -220,7 +230,27 @@ class Struct
     end
     h
   end
-  alias deconstruct_keys to_h
+
+  # deconstruct_keys(keys) -- for pattern matching. nil returns the full hash; otherwise a hash of just the
+  # requested keys that exist, preserving the caller's key objects. If more keys are requested than there
+  # are members, or a requested key is absent, MRI returns what it has matched so far (and {} for the
+  # too-many-keys case, since a full match is then impossible). The argument is REQUIRED (0 args raises).
+  def deconstruct_keys(keys)
+    return to_h if keys.nil?
+    m = members
+    r = {}
+    return r if keys.length > m.length
+    i = 0
+    while i < keys.length
+      k = keys[i]
+      sym = k.is_a?(String) ? k.to_sym : k
+      idx = __member_index(sym)
+      break if idx < 0
+      r[k] = @__struct_values[idx]
+      i = i + 1
+    end
+    r
+  end
 
   def each(&block)
     return to_enum(:each) unless block
