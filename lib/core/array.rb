@@ -9,9 +9,20 @@ class Array
   # #initialize. Without this, `class MyArray < Array; def initialize(a,b); self << a << b; end` (no
   # super) uses uninitialised @len/@ptr and segfaults. Uses `allocate` (inherited Class#allocate) and
   # instance methods only -- no eigenclass `super`, which recurses on Array's metaclass.
+  # Array.allocate must return a VALID empty array (MRI does), so that `Array.allocate` used directly
+  # -- and any subclass instance -- has initialised internals. Replicate Class#allocate's body inline
+  # (allocate @instance_size slots, set the class pointer) rather than calling `super`, which recurses
+  # on Array's metaclass, then run #__initialize.
+  def self.allocate
+    ob = nil
+    %s(assign ob (__array (index self 1)))
+    %s(assign (index ob 0) self)
+    ob.__initialize
+    ob
+  end
+
   def self.new *__copysplat
     ob = allocate
-    ob.__initialize
     ob.initialize(*__copysplat)
     ob
   end
