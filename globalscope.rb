@@ -122,6 +122,14 @@ class GlobalScope < Scope
     # Strip $ prefix to make assembly-safe
     if a && a.to_s[0] == ?$
       clean_name = a.to_s[1..-1]
+      # $1..$9 (regex capture globals) and any $<digit...> strip to a numeric name like "1", which would
+      # be emitted as the assembly label `1` -- `movl 1, %eax` then dereferences address 1 and SIGSEGVs
+      # during global nil-init. Map a name whose first char is a digit to a safe identifier. (char-code
+      # comparison: this runs in the self-hosted compiler, where regex is unavailable.)
+      fc = clean_name.empty? ? 0 : clean_name[0]
+      if fc >= ?0 && fc <= ?9
+        clean_name = "__dollar_#{clean_name}"
+      end
       @globals[clean_name.to_sym] = true
       @user_globals[clean_name.to_sym] = true
       return [:global, clean_name]
