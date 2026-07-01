@@ -139,11 +139,6 @@ result = obj.method1 + obj.method2  # May crash
 
 Root-caused but intentionally not yet fixed (need larger features / deeper semantics work):
 
-- **`Class.new do ... end` drops the block.** `rewrite_class_new` (transform.rb) intercepts
-  `Class.new(sup)` at compile time to build a real class object, but discards `e[4]` (the block),
-  so an anonymous class defined with a method block has NO methods (`Class.new { def foo; end }.new.foo`
-  → "undefined method 'foo'"). Needs real `class_eval` + runtime method injection into the new class's
-  vtable. `class_eval` is currently a stub that just `block.call`s in the block's own context.
 - **`for` loop variable does not leak.** In Ruby a `for i in ...` variable stays visible after the loop;
   here it is block-scoped, so `for i in 1..3; end; p i` raises "undefined method 'i'".
 - **`|&block|` (block param of a block/lambda) is unbound.** `rewrite_lambda` leaves it as an
@@ -167,8 +162,24 @@ Narrowed repro (needs ALL of it — none of the parts corrupt alone):
   undef_method/define_method/visibility body + subclass + reopen), does NOT corrupt. So it is a
   global-state interaction across the whole fixture + the block/env allocation path, not any single class.
 
-Next step needs memory tooling (ASAN/valgrind-equivalent for the 32-bit target) to catch the write at
-its source; blind bisection is impractical because it only reproduces with the full fixture loaded.
+Deeper findings (2026-07-01, instrumented tgc_sweep with an fprintf of every freed ptr/size/klass):
+- It is a GENUINE heap overflow/bad-chunk, NOT a double-free. Over a run tgc_sweep fires ~25 times
+  (GC cycles as the ~21k lib-init objects churn — a trivial `p 1` also allocates/frees ~21k and does
+  NOT crash). Freed *addresses* repeat across sweeps only because malloc validly reuses an address for
+  a new object after the old one is collected; per-sweep the free list is unique. So earlier
+  "5809 unique / 21447 frees" is normal address reuse, not the bug.
+- Over-allocating EVERY object by 256 bytes in `__alloc` (base.rb) did NOT prevent the crash — so it is
+  not a small contiguous overflow into the next chunk; likely a wild write to a computed/out-of-bounds
+  offset, or corruption of tgc's own `gc.items` table.
+- Build note for instrumenting tgc: `./compile`'s LOCAL toolchain can't compile tgc.c (no 32-bit stdio
+  headers under toolchain/32root), but the docker buildenv can:
+  `docker run --rm -v "$PWD":/app -w /app ruby-compiler-buildenv gcc -Wall -c -m32 -o out/tgc.o tgc.c`.
+  Pre-build out/tgc.o that way, then `./compile` (local) reuses it (it only rebuilds tgc.o when missing).
+  This is also the path to try `-fsanitize=address` on tgc.c + libasan.so.5 (present in the 32root).
+
+Next step: ASAN on the whole binary (the generated asm is not instrumented, so ASAN mainly helps via
+its allocator redzones + allocation-site report at the faulting free) — or a canary/redzone check added
+directly in tgc around each tracked object during mark, printing the object whose guard is clobbered.
 
 Fixing it should recover a large share of the ~64 core/kernel crashes (they all load this fixture).
 
