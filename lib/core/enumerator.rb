@@ -6,21 +6,239 @@
 
 
 class Enumerator
+  # Enumerator.new { |yielder| ... } stores the generator block; #each runs it with a Yielder that
+  # forwards emitted values (y << v / y.yield v) to the each block. (Subclasses like ArrayEnumerator
+  # override initialize/each and never call this.)
+  def initialize(*args, &block)
+    @gen_block = block
+  end
+
   def size
     nil
   end
 
-  def each
-    if !block_given?
-      return self
+  def each(&outer)
+    return self if !outer
+    if @gen_block
+      @gen_block.call(Enumerator::Yielder.new(outer))
     end
     self
+  end
+
+  def to_a
+    r = []
+    each { |x| r << x }
+    r
+  end
+
+  # Enumerable-style methods over #each. Enumerator does not `include Enumerable` here (including it
+  # segfaults -- see the Array note), so the common ones are defined directly, each driven by #each.
+  def map
+    r = []
+    each { |x| r << yield(x) }
+    r
+  end
+  def collect(&b); map(&b); end
+
+  def flat_map
+    r = []
+    each do |x|
+      v = yield(x)
+      if v.is_a?(Array)
+        v.each { |e| r << e }
+      else
+        r << v
+      end
+    end
+    r
+  end
+  def collect_concat(&b); flat_map(&b); end
+
+  def select
+    r = []
+    each { |x| r << x if yield(x) }
+    r
+  end
+  def filter(&b); select(&b); end
+  def find_all(&b); select(&b); end
+
+  def reject
+    r = []
+    each { |x| r << x if !yield(x) }
+    r
+  end
+
+  def find
+    result = nil
+    each { |x| if yield(x); result = x; break; end }
+    result
+  end
+  def detect(&b); find(&b); end
+
+  def each_with_index
+    return to_enum(:each_with_index) if !block_given?
+    i = 0
+    each do |x|
+      yield(x, i)
+      i += 1
+    end
+    self
+  end
+
+  def with_index(offset = 0)
+    return to_enum(:with_index, offset) if !block_given?
+    i = offset
+    each do |x|
+      yield(x, i)
+      i += 1
+    end
+    self
+  end
+
+  def each_with_object(memo)
+    each { |x| yield(x, memo) }
+    memo
+  end
+  def with_object(memo, &b); each_with_object(memo, &b); end
+
+  def include?(obj)
+    found = false
+    each { |x| if x == obj; found = true; break; end }
+    found
+  end
+  def member?(obj); include?(obj); end
+
+  def count
+    n = 0
+    each { |x| n += 1 }
+    n
+  end
+
+  def first(n = nil)
+    if n.nil?
+      result = nil
+      each { |x| result = x; break }
+      return result
+    end
+    r = []
+    each { |x| break if r.length >= n; r << x }
+    r
+  end
+
+  def uniq
+    seen = []
+    each { |x| seen << x if !seen.include?(x) }
+    seen
+  end
+
+  def reduce(init = nil)
+    acc = init
+    started = !init.nil?
+    each do |x|
+      if !started
+        acc = x
+        started = true
+      else
+        acc = yield(acc, x)
+      end
+    end
+    acc
+  end
+  def inject(init = nil, &b); reduce(init, &b); end
+
+  def min
+    m = nil
+    started = false
+    each do |x|
+      if !started || x < m
+        m = x
+        started = true
+      end
+    end
+    m
+  end
+
+  def max
+    m = nil
+    started = false
+    each do |x|
+      if !started || x > m
+        m = x
+        started = true
+      end
+    end
+    m
+  end
+
+  def sort
+    to_a.sort
+  end
+
+  def all?
+    each { |x| return false if !yield(x) }
+    true
+  end
+
+  def any?
+    each { |x| return true if yield(x) }
+    false
+  end
+
+  def none?
+    each { |x| return false if yield(x) }
+    true
+  end
+
+  def take(n)
+    r = []
+    each { |x| break if r.length >= n; r << x }
+    r
+  end
+
+  def drop(n)
+    r = []
+    i = 0
+    each do |x|
+      r << x if i >= n
+      i += 1
+    end
+    r
   end
 
   # An Enumerator responds to #each, so it can be the source of a lazy pipeline. Defined here so every
   # Enumerator subclass (ArrayEnumerator, GenericEnumerator, ...) gets #lazy.
   def lazy
     Enumerator::Lazy.new(self)
+  end
+
+  # Yielder: the object passed to a generator block; << and #yield emit a value to the consumer.
+  class Yielder
+    def initialize(consumer)
+      @consumer = consumer
+    end
+
+    def yield(*args)
+      @consumer.call(*args)
+    end
+
+    def <<(*args)
+      @consumer.call(*args)
+      self
+    end
+  end
+
+  # Enumerator::Generator wraps a generator block; #each runs it with a Yielder. Enumerator.new already
+  # covers the common case, but specs reference the class directly.
+  class Generator
+    def initialize(&block)
+      @gen_block = block
+    end
+
+    def each(&outer)
+      return self if !outer
+      @gen_block.call(Enumerator::Yielder.new(outer)) if @gen_block
+      self
+    end
   end
 end
 
