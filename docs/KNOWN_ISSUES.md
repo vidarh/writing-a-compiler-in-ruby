@@ -291,6 +291,16 @@ ROOT CAUSE FOUND (2026-07-02, hardware watchpoint):
 - FIX DIRECTION: block/proc-argument compilation must use a fresh temp for the lambda address, never the
   `__env__` slot. Look at how the block arg's lambda pointer is emitted+stored around compile_callm /
   the proc-literal path and the local/temp allocator (get_local) so it cannot collide with __env__.
+- Fix attempts that did NOT work (2026-07-02): (a) inlining the `[:defun]` directly into the __new_proc
+  args instead of via :__tmp_proc -- generates invalid asm ("invalid character '?'"), so the lambda
+  address MUST go through a named local. (b) Broadening `class_body_creates_closure?` to also detect
+  pre-rewrite :proc/:lambda/:block nodes (so the module body always gets its own __env__/__tmp_proc let)
+  -- still crashes. So the collision is a nested-scope OFFSET computation issue: the temp/`__tmp_proc`
+  for a proc built inside a module/class body (compile_class's `let(cscope, :__env__, :__closure__,
+  :__tmp_proc, ...)`, line ~565) resolves to the SAME %ebp offset as an outer scope's `__env__`. The
+  real fix is in the LocalVarScope offset math (`lvaroffset`/`get_arg` in localvarscope.rb) or how the
+  module-body let's offsets stack onto the enclosing (top-level) let -- confirm by dumping the resolved
+  offsets of `__tmp_proc` vs `__env__` at the proc-construction site.
 
 ---
 
