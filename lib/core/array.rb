@@ -918,6 +918,11 @@ class Array
     min_val
   end
 
+  # [min, max].
+  def minmax
+    [min, max]
+  end
+
   # Returns true if any element matches the given block (or is truthy if no block given)
   def any?
     i = 0

@@ -62,6 +62,38 @@ module Enumerable
   end
 
 
+  # Yield each element n times (forever if n is nil); no-op / nil for an empty enumerable.
+  def cycle(n = nil, &block)
+    return to_enum(:cycle, n) if !block
+    arr = to_a
+    return nil if arr.length == 0
+    if n.nil?
+      while true
+        arr.each { |x| block.call(x) }
+      end
+    else
+      c = 0
+      while c < n
+        arr.each { |x| block.call(x) }
+        c = c + 1
+      end
+    end
+    nil
+  end
+
+  # map then drop falsy results.
+  def filter_map(&block)
+    return to_enum(:filter_map) if !block
+    result = []
+    each { |x| r = block.call(x); result << r if r }
+    result
+  end
+
+  # [min, max].
+  def minmax(&block)
+    [min(&block), max(&block)]
+  end
+
   # The element for which the block returns the smallest / largest value.
   def min_by
     return to_enum(:min_by) if !block_given?

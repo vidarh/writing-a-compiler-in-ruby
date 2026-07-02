@@ -323,6 +323,28 @@ class Hash
     self[key] = value
   end
 
+  # A new hash with keys and values swapped (later pairs win on duplicate values).
+  def invert
+    h = {}
+    each { |k, v| h[v] = k }
+    h
+  end
+
+  # Flatten to an array [k1, v1, k2, v2, ...]; level > 1 flattens nested array values further.
+  def flatten(level = 1)
+    result = []
+    each { |k, v| result << k; result << v }
+    level > 1 ? result.flatten(level - 1) : result
+  end
+
+  # map each pair through the block, dropping falsy results.
+  def filter_map(&block)
+    return to_enum(:filter_map) if !block
+    result = []
+    each { |k, v| r = block.call(k, v); result << r if r }
+    result
+  end
+
   # Predicates over the pairs. Without a block, any?/none? test emptiness; with a block, the block is
   # called with (key, value). (Hash does not include Enumerable in this runtime, so these are defined here.)
   def any?(&block)

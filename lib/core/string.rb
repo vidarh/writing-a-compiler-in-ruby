@@ -376,6 +376,34 @@ class String
     result
   end
 
+  # Codepoints (byte-oriented: one per character). grapheme clusters == characters here.
+  def codepoints
+    result = []
+    each_char { |c| result << c.ord }
+    result
+  end
+
+  def each_codepoint(&block)
+    return to_enum(:each_codepoint) if !block
+    each_char { |c| block.call(c.ord) }
+    self
+  end
+
+  def grapheme_clusters
+    chars
+  end
+
+  def each_grapheme_cluster(&block)
+    return to_enum(:each_grapheme_cluster) if !block
+    each_char(&block)
+    self
+  end
+
+  # First element of #unpack(format).
+  def unpack1(format)
+    unpack(format)[0]
+  end
+
   # Yield each character (as a 1-char String -- note self[i] returns a byte value, so use slice) to
   # the block, returning self; with no block, return an Enumerator.
   def each_char

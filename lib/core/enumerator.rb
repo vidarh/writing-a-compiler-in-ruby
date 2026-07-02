@@ -146,6 +146,41 @@ class Enumerator
   end
   def inject(init = nil, &b); reduce(init, &b); end
 
+  def sum(init = 0, &block)
+    s = init
+    each { |x| s = s + (block ? block.call(x) : x) }
+    s
+  end
+
+  def filter_map(&block)
+    return self if !block
+    result = []
+    each { |x| r = block.call(x); result << r if r }
+    result
+  end
+
+  def cycle(n = nil, &block)
+    return self if !block
+    arr = to_a
+    return nil if arr.length == 0
+    if n.nil?
+      while true
+        arr.each { |x| block.call(x) }
+      end
+    else
+      c = 0
+      while c < n
+        arr.each { |x| block.call(x) }
+        c = c + 1
+      end
+    end
+    nil
+  end
+
+  def minmax(&block)
+    [min(&block), max(&block)]
+  end
+
   def min
     m = nil
     started = false
