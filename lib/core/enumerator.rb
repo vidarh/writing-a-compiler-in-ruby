@@ -394,6 +394,30 @@ class GenericEnumerator < Enumerator
     each { |*x| r << (x.length == 1 ? x[0] : x) }
     r
   end
+
+  # External iteration (next/peek/rewind). We have no fibers, so materialise the underlying sequence
+  # once (via to_a) and index through it. @__buf stays nil until first use; rewind only resets @__pos so
+  # a re-iteration reuses the snapshot.
+  def next
+    @__buf = to_a if @__buf.nil?
+    @__pos = 0 if @__pos.nil?
+    raise StopIteration.new("iteration reached an end") if @__pos >= @__buf.length
+    v = @__buf[@__pos]
+    @__pos = @__pos + 1
+    v
+  end
+
+  def peek
+    @__buf = to_a if @__buf.nil?
+    @__pos = 0 if @__pos.nil?
+    raise StopIteration.new("iteration reached an end") if @__pos >= @__buf.length
+    @__buf[@__pos]
+  end
+
+  def rewind
+    @__pos = 0
+    self
+  end
 end
 
 # Lazy enumerator: chains transformations and evaluates only when forced (to_a / force / first). Early

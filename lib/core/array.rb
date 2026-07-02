@@ -1854,23 +1854,26 @@ class Array
   # than enumObj.size, nil values are supplied. If a block given, it is invoked for each
   # output array, otherwise an array of arrays is returned.
   def zip(*args)
-    # For now we fudge this, as it's only needed to handle a simple case of
-    # an_array.zip(a_range) in the compiler itself. Though incidentally this is
-    # one of the most painful things to handle, as since the argument is not an
-    # Array, MRI converts all arguments to Enumerators.
-    #
-    # For now we handle both Array's and Range's the same, but can't enumerate over
-    # anything else
-
-    enums = args.collect{|a| a.to_enum}
-
-    collect do |a|
-      ary = [a]
-      enums.each do |e|
-        ary << e.next
+    # Materialise each argument to an Array (Range and other enumerables via to_a), then index in
+    # lockstep with self, padding with nil when an argument is shorter. Previously this used e.next on
+    # per-arg enumerators, which crashed (GenericEnumerator had no #next) and did not pad shorter args.
+    others = args.collect { |a| a.is_a?(Array) ? a : a.to_a }
+    result = block_given? ? nil : []
+    i = 0
+    n = length
+    while i < n
+      row = [self[i]]
+      others.each do |o|
+        row << (i < o.length ? o[i] : nil)
       end
-      ary
+      if block_given?
+        yield row
+      else
+        result << row
+      end
+      i += 1
     end
+    result
   end
 
 
