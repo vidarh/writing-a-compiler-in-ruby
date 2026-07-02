@@ -1913,14 +1913,18 @@ class Compiler
             # Use range form: __destruct[start_idx..-after_splat-1]
             # This handles splat in the middle or start with tail elements
             end_idx = -(after_splat + 1)
+            # Range endpoints must be Integer OBJECTS (like the single-element `[i]` accesses above), not
+            # raw `[:sexp, N]` ints: Array#[](range) -> __range_get calls `.first`/`.last`/`.__get_raw` on
+            # the endpoints, which dereferences a raw int as an object pointer and SIGSEGVs.
             ex[2] << [:assign, splat_var,
               [:callm, :__destruct, :[],
-                [[:range, [:sexp, start_idx], [:sexp, end_idx]]]]]
+                [[:range, start_idx, end_idx]]]]
           else
-            # No elements after splat, use range to end: __destruct[start_idx..-1]
+            # No elements after splat, use range to end: __destruct[start_idx..-1]. Endpoints are Integer
+            # objects, not raw `[:sexp, N]` ints (see note above -- __range_get dereferences them as objects).
             ex[2] << [:assign, splat_var,
               [:callm, :__destruct, :[],
-                [[:range, [:sexp, start_idx], [:sexp, -1]]]]]
+                [[:range, start_idx, -1]]]]
           end
         else
           # No splat: simple destructuring
