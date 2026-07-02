@@ -454,6 +454,31 @@ Note also: the harness Mock's `should_receive` does not actually register an exp
 @call_counts but not @expectations), so mocked calls print "Mock: No expectation set" — a separate
 harness-fidelity gap.
 
+### 9. `singleton_class` on immediates — FIXED (2026-07-02)
+
+`Kernel#singleton_class` (Object#singleton_class) does `(index self 0)` to read the receiver's class
+slot; on an immediate (tagged fixnum, nil/true/false, symbol) that dereferences the tagged value as a
+pointer and segfaults. core/kernel/singleton_class_spec crashed on `123.singleton_class`. Fixed (commit
+ca5fb48) with per-immediate overrides: NilClass/TrueClass/FalseClass return their class;
+Integer/Symbol raise `TypeError "can't define singleton"`. Spec now runs (6 passed / 5 failed; the
+remainder are feature gaps below, not crashes).
+
+Remaining non-crash gaps in that spec: (a) `class << x; self; end` and `x.singleton_class` create
+DISTINCT metaclasses (compile-time compile_eigenclass vs runtime Object#singleton_class both allocate a
+fresh one and overwrite slot 0) — Ruby returns the same object; unifying them is the real fix. (b) Float
+unimplemented. (c) frozen-state not tracked so a frozen object's singleton isn't frozen.
+
+### 10. core/basicobject/singleton_method_added_spec — segfault (OPEN, resists minimal repro)
+
+Segfaults with a jump to a garbage code address from `Proc#call` (`0x…: ?? ()` <- __method_Proc_call),
+i.e. a block/proc with a corrupted `@addr` is invoked. Only the full harness run triggers it: every
+extracted construct SURVIVES in isolation — `def obj.x` on BasicObject and Object, defining
+`def obj.singleton_method_added(name)`, `Module.new do def self.x; end; def inst; end end`,
+`alias_method` inside `class << obj`, and `metaclass.new`. Like the #8 cluster it needs the mspec
+harness to reproduce; needs the ASLR-off (`setarch -R`) + gdb/valgrind approach on the real temp binary.
+Note the compiler also does NOT implement the `singleton_method_added` HOOK (defining a singleton method
+never calls it), so those spec assertions fail regardless — but that is a feature gap, not the crash.
+
 ---
 
 ## Known Limitations (Cannot Fix)
