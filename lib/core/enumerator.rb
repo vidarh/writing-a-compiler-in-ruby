@@ -283,13 +283,40 @@ class ArrayEnumerator < Enumerator
     @pos = 0
   end
 
-  def next
-    if @pos < @ary.length
-      @pos += 1
-      return @ary[@pos]
-    else
-      return nil
+  # Iterate the backing array. The base Enumerator#each drives a @gen_block that this subclass never sets,
+  # so without this override #each (and everything built on it: to_a/map/sum/...) yielded nothing.
+  def each(&block)
+    return self if !block
+    i = 0
+    n = @ary.length
+    while i < n
+      block.call(@ary[i])
+      i = i + 1
     end
+    @ary
+  end
+
+  def size
+    @ary.length
+  end
+
+  # External iteration: return successive elements, raising StopIteration past the end. (The previous
+  # version incremented before reading, skipping index 0 and running one past the end.)
+  def next
+    raise StopIteration.new("iteration reached an end") if @pos >= @ary.length
+    v = @ary[@pos]
+    @pos = @pos + 1
+    v
+  end
+
+  def peek
+    raise StopIteration.new("iteration reached an end") if @pos >= @ary.length
+    @ary[@pos]
+  end
+
+  def rewind
+    @pos = 0
+    self
   end
 end
 
