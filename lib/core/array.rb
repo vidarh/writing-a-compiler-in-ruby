@@ -961,6 +961,97 @@ class Array
     result
   end
 
+  # reduce / inject: combine elements. Forms: reduce(sym), reduce(init, sym), reduce(init){blk},
+  # reduce{blk}. Enumerable methods missing on Array; index-based loop with a top-level block.call /
+  # send (no yield inside an each{} block), so safe here.
+  def reduce(*args, &block)
+    if block
+      if args.length > 0
+        memo = args[0]
+        i = 0
+      else
+        return nil if length == 0
+        memo = self[0]
+        i = 1
+      end
+      while i < length
+        memo = block.call(memo, self[i])
+        i += 1
+      end
+      memo
+    else
+      # Symbol form: reduce(:+) or reduce(init, :+)
+      if args.length >= 2
+        memo = args[0]
+        sym = args[1]
+        i = 0
+      else
+        return nil if length == 0
+        memo = self[0]
+        sym = args[0]
+        i = 1
+      end
+      while i < length
+        memo = memo.send(sym, self[i])
+        i += 1
+      end
+      memo
+    end
+  end
+  alias inject reduce
+
+  # Yield each element with the memo object, returning memo (Array#each_with_object).
+  def each_with_object(memo)
+    return to_enum(:each_with_object, memo) if !block_given?
+    i = 0
+    while i < length
+      yield self[i], memo
+      i += 1
+    end
+    memo
+  end
+
+  # Group elements by the block's return value into a Hash of value => [elements].
+  def group_by
+    return to_enum(:group_by) if !block_given?
+    h = {}
+    i = 0
+    while i < length
+      x = self[i]
+      k = yield(x)
+      # NB: explicit nil-check rather than `h[k] ||= []` -- op-assign on a hash index with a boolean
+      # literal key (h[true] ||= ...) currently miscompiles ("undefined method 'true'").
+      arr = h[k]
+      if arr.nil?
+        arr = []
+        h[k] = arr
+      end
+      arr << x
+      i += 1
+    end
+    h
+  end
+
+  # Split into runs, breaking between adjacent elements where the block(prev, cur) is false.
+  def chunk_while(&block)
+    return to_enum(:chunk_while) if !block_given?
+    result = []
+    return result if length == 0
+    run = [self[0]]
+    i = 1
+    while i < length
+      if block.call(self[i - 1], self[i])
+        run << self[i]
+      else
+        result << run
+        run = [self[i]]
+      end
+      i += 1
+    end
+    result << run
+    result
+  end
+
   # Yield each element n times (forever if n is nil). No-op on an empty array.
   def cycle(n = nil, &block)
     return to_enum(:cycle, n) if !block
