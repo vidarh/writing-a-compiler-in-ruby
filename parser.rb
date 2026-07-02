@@ -899,17 +899,35 @@ class Parser < ParserBase
     close = (start.to_s == "{") ? "}" : :end
     ws
     args = []
+    block_locals = nil
     if literal(PIPE)
       ws
       # Use parse_arglist to support default values, splats, and block parameters
       # Pass [PIPE] as extra stop token so default values stop at the closing |
       args = parse_arglist([PIPE]) || []
       ws
+      # Block-local variables: `{ |params; a, b| ... }`. The names after the semicolon are locals private
+      # to the block, initialised to nil. parse_arglist above stops at the `;`; consume it and parse the
+      # local names (it also stops at the closing PIPE). Without this the `;` ended the parameter list and
+      # the remaining `name|` was mis-parsed as the body (`name.|(...)`), so the "local" compiled to an
+      # undefined method call.
+      if literal(";")
+        ws
+        block_locals = parse_arglist([PIPE]) || []
+        ws
+      end
       literal(PIPE)
     end
     note_lvars_from_args(args)   # block params are locals before the body is parsed
+    note_lvars_from_args(block_locals) if block_locals
     # Use shared rescue/else/ensure parsing
     exps, rescue_, ensure_body = parse_rescue_else_ensure([])
+    # Declare each block-local by nil-initialising it at the top of the body (an assignment registers it as
+    # a local for the compiler's variable analysis and gives Ruby's nil default).
+    if block_locals && !block_locals.empty?
+      inits = block_locals.map { |bl| E[pos, :assign, (bl.is_a?(Array) ? bl[0] : bl), :nil] }
+      exps = inits + exps
+    end
 
     ws
     literal(close) or expected("'#{close.to_s}' for '#{start.to_s}'-block")
