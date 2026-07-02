@@ -739,6 +739,14 @@ class Compiler
           else
             vars1, env1 = find_vars(target, scopes + [Set.new],env, freq, in_lambda, true, current_params)
           end
+          # Register the assignment target(s) in the CURRENT scope BEFORE analysing the RHS. Ruby declares
+          # a local as soon as its assignment is parsed -- including for uses on the RHS -- so a self-
+          # referential assignment such as `l = -> { l.call }` must see `l` as an already-declared local
+          # while the RHS lambda is scanned, otherwise the capture is missed: `l` is not promoted into
+          # __env__, the RHS lambda reads it from an uninitialised local slot, and the recursive call
+          # jumps through a garbage @addr and segfaults. (Doing `l = nil` before the assignment was a
+          # manual workaround for exactly this.) push_var is idempotent, so a plain `x = 5` is unaffected.
+          vars1.each {|v| push_var(scopes, env, v) if !is_special_name?(v) }
           vars2, env2 = find_vars(n[2..-1], scopes + [Set.new],env, freq, in_lambda, false, current_params)
           env = env1 + env2
           vars = vars1+vars2
