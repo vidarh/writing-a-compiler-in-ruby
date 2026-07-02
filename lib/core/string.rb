@@ -34,6 +34,12 @@ class String
       (assign @buffer "")
       (callm self __copy_initialize ((splat __copysplat)))
     )
+    # Return self, NOT the value of the `%s(if ...)` above: in the no-arg branch that value is the RAW
+    # C string literal `""` (a char*, not a Ruby String), so `str.send(:initialize)` would hand back a
+    # bare pointer whose "class slot" is string bytes -> any method call on it dereferences garbage and
+    # segfaults (core/string/initialize_spec). MRI's #initialize returns the receiver; String.new ignores
+    # this (it uses its own allocation), so returning self is safe.
+    self
   end
 
   def __copy_initialize *str
