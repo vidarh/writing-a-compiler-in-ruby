@@ -1268,12 +1268,21 @@ class Array
   def hash
     # Use s-expressions to avoid overflow detection during hash computation
     # Hash values are allowed to overflow and wrap around in 32-bit space
-    # Pattern copied from String#hash
+    # Pattern copied from String#hash.
+    #
+    # Recursion guard: a self-referential array (rec = []; rec << rec) would
+    # otherwise recurse forever through the `c.hash` call below and segfault.
+    # When we re-enter #hash on an array already being hashed, contribute a
+    # fixed constant for the cyclic back-edge instead (mirrors the @__comparing
+    # guard in #<=>), so the result terminates and is stable for equal cycles.
+    return 8675309 if @__hashing
+    @__hashing = true
     %s(assign h 5381)
     %s(assign h (add (mul h 33) (callm self length)))
     each do |c|
       %s(assign h (add (mul h 33) (callm c hash)))
     end
+    @__hashing = nil
     %s(__int h)
   end
 
