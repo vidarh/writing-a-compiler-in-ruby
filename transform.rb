@@ -857,6 +857,17 @@ class Compiler
               end
             end
             if n[3]
+              # Register each rescue clause's exception variable (`rescue => e`) as a local of the ENCLOSING
+              # scope. Ruby's rescue variable is an ordinary local of the surrounding method, visible after
+              # the begin/rescue; without registering it here compile_begin_rescue declared it in a throwaway
+              # block-let, so `e = nil; begin ..; rescue => e; end` left the OUTER e nil (and `e.foo` after
+              # the block then crashed). Handles a single [:rescue,cls,var,body] and [:rescues, r1, r2, ...].
+              rescue_nodes = (n[3][0] == :rescues) ? n[3][1..-1] : [n[3]]
+              rescue_nodes.each do |rn|
+                next if !(rn.is_a?(Array) && rn[0] == :rescue)
+                rv = rn[2]
+                push_var(scopes, env, rv) if rv.is_a?(Symbol) && !is_special_name?(rv)
+              end
               v3, env = find_vars([n[3]], scopes, env, freq, in_lambda, false, current_params)
               vars += v3
             end

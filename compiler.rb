@@ -1097,9 +1097,16 @@ class Compiler
     rescue_class_arg = rescue_class.nil? ? :nil : rescue_class
 
     # Build variable list for let() - include rescue_var only if it's a simple symbol
-    # Complex lvalues like self.foo or @ivar will be assigned via compile_assign later
+    # Complex lvalues like self.foo or @ivar will be assigned via compile_assign later.
+    # Do NOT re-declare it here when it is already a local of an enclosing scope (find_vars registers every
+    # rescue variable there): a fresh let-local would SHADOW the outer one, so `rescue => e` would bind a
+    # throwaway that vanishes at the end of the block, leaving the outer `e` unchanged (Ruby keeps the
+    # assignment visible after the begin/rescue).
     let_vars = [:__handler, :__exc]
-    let_vars << rescue_var if rescue_var && rescue_var.is_a?(Symbol)
+    if rescue_var && rescue_var.is_a?(Symbol)
+      existing = scope.get_arg(rescue_var)
+      let_vars << rescue_var if !(existing && (existing[0] == :lvar || existing[0] == :arg))
+    end
 
     # Use let() to create local variables for handler, exception, and optional rescue var
     let(scope, *let_vars) do |lscope|
