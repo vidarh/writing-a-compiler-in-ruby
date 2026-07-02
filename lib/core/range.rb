@@ -71,6 +71,7 @@ class Range
   end
 
   def each
+    return to_enum(:each) if !block_given?
     # Use #succ (not `+= 1`) so non-integer ranges work too. For a String/char range like ('0'..'5'),
     # `i += 1` invoked String#+(Integer) which read past the buffer and SEGFAULTED; Integer#succ is self+1
     # so integer ranges are unchanged.
@@ -139,9 +140,14 @@ class Range
     a
   end
 
-  def to_enum
-    RangeEnumerator.new(self)
+  # to_enum(meth=:each, *args): the default :each case keeps the specialised RangeEnumerator (external
+  # iteration via next/peek); any other method delegates to a GenericEnumerator that calls it with a
+  # block when forced. Without the meth/*args params, an Enumerable method's `to_enum(:each_slice, n)`
+  # (the block-less path) hit this 0-arg version and raised "wrong number of arguments".
+  def to_enum(meth = :each, *args)
+    GenericEnumerator.new(self, meth, *args)
   end
+  alias enum_for to_enum
 
   def lazy
     Enumerator::Lazy.new(self)
