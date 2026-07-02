@@ -249,6 +249,24 @@ Further findings (2026-07-02):
   kernel fixture + `[1].each { Object.new }`. valgrind is NOT installed here; ASAN via the docker
   buildenv (libasan.so.5 in 32root) is the most promising next tool.
 
+Even further findings (2026-07-02, second pass):
+- Padding EVERY `__alloc` by 4096 bytes (calloc size+4096, tgc_add records size) does NOT prevent the
+  crash. This definitively rules out a contiguous overrun of any `__alloc`'d object (objects, arrays,
+  closure envs -- __alloc_env routes through __alloc). The corruption is a wild write to a computed/far
+  address, or of memory tgc allocates for itself (gc.items / gc.frees, via its own malloc/realloc), or a
+  stack-frame corruption.
+- Re-applying BOTH `class_alloc_size = __vtable_size` (compile_class) AND `eksize = __vtable_size`
+  (compile_eigenclass) TOGETHER still does NOT fix the deterministic repro. So the overflow target is not
+  an undersized class object / eigenclass reached via __set_vtable subclass propagation (a tempting
+  hypothesis: __set_vtable writes p[off] into every subclass, and eigenclasses link as subclasses -- but
+  sizing them all to __vtable_size did not help). Reverted.
+- gdb on the deterministic repro: it SIGSEGVs (not the glibc free-abort seen in specs -- same root,
+  different manifestation) at `mov %eax,(%edx)` where `edx` is loaded from a stack local (-0x14(%ebp))
+  holding 0x566674a5 -- an ODD address, i.e. a tagged Fixnum being used as an object pointer (type
+  confusion). So by the time the tail of the program runs, a stack local / value has been clobbered with
+  a Fixnum-tagged word. Whether the primary corruption is heap (tgc metadata) or stack is still open.
+  Next: a hardware watchpoint on the specific clobbered slot, or ASAN, to catch the first bad write.
+
 ---
 
 ### 6. `Array#initialize` unimplemented for size/fill/copy; bootstrap-sensitive (2026-07-02)
