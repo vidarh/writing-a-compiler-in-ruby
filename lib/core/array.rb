@@ -188,6 +188,78 @@ class Array
     nil
   end
 
+  # min_by / max_by / flat_map are Enumerable methods missing on Array (no `include Enumerable`). Like
+  # each_cons/each_slice they use index-based while loops with a top-level yield (NOT yield inside an
+  # each{} block, which segfaults on Array), so they are safe here.
+  def min_by
+    return to_enum(:min_by) if !block_given?
+    return nil if length == 0
+    best = self[0]
+    best_v = yield(best)
+    i = 1
+    while i < length
+      x = self[i]
+      v = yield(x)
+      if v < best_v
+        best = x
+        best_v = v
+      end
+      i += 1
+    end
+    best
+  end
+
+  def max_by
+    return to_enum(:max_by) if !block_given?
+    return nil if length == 0
+    best = self[0]
+    best_v = yield(best)
+    i = 1
+    while i < length
+      x = self[i]
+      v = yield(x)
+      if v > best_v
+        best = x
+        best_v = v
+      end
+      i += 1
+    end
+    best
+  end
+
+  def flat_map
+    return to_enum(:flat_map) if !block_given?
+    result = []
+    i = 0
+    while i < length
+      v = yield(self[i])
+      if v.is_a?(Array)
+        j = 0
+        while j < v.length
+          result << v[j]
+          j += 1
+        end
+      else
+        result << v
+      end
+      i += 1
+    end
+    result
+  end
+  alias collect_concat flat_map
+
+  # Count occurrences of each distinct element (Array#tally). No block, no yield -- always safe.
+  def tally
+    counts = {}
+    i = 0
+    while i < length
+      k = self[i]
+      counts[k] = (counts[k] || 0) + 1
+      i += 1
+    end
+    counts
+  end
+
 
   # Set Intersection.
   # Returns a new array containing elements common to the two arrays, with no duplicates.
