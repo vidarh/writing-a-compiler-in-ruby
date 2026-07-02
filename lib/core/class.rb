@@ -300,7 +300,6 @@ class Class
   end
   
   def attr_reader sym
-    %s(printf "attr_reader %s\n" (callm (callm sym to_s) __get_raw))
     define_method sym do
 #       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
       nil
@@ -308,7 +307,6 @@ class Class
   end
 
   def attr_writer sym
-    %s(printf "attr_writer %s\n" (callm (callm sym to_s) __get_raw))
     # FIXME: Ouch: Requires both String, string interpolation and String#to_sym to
     # be implemented on top of define_method and "ivar"
     define_method "#{sym.to_s}=".to_sym do |val|

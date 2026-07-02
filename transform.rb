@@ -1300,8 +1300,11 @@ class Compiler
         be.replace(E[:do])
         syms.each do |sym|
           s = sym.to_s
-          next if s[0] != ?:
-          mn = s[1..-1].to_sym
+          # attr names may be given as symbols (`:a`, whose to_s is ":a") OR strings (`"b"`, whose to_s
+          # is "b" -- MRI accepts both). Strip a leading ':' for the symbol form; use a string arg as-is.
+          # (Previously non-':' args were skipped, silently dropping string names.)
+          mn = (s[0] == ?: ? s[1..-1] : s).to_sym
+          next if mn.to_s.empty?
           if type == :attr_reader || type == :attr_accessor
             be << E[:defm, mn, [], ["@#{mn}".to_sym]]
           end
@@ -1491,12 +1494,20 @@ class Compiler
           # entry.`
           #
           arr = e[2].is_a?(Array) ? e[2] : [e[2]]
+          # attr names may be symbols (`:a`, to_s ":a") or strings (`"b"`, to_s "b"). Strip a leading ':'
+          # for the symbol form; use a string as-is. `entry.to_s[1..-1]` unconditionally dropped the first
+          # char, so a string name like "b" became "" -> an empty getter/setter (undefined `b`/`b=`).
+          # (Inlined rather than a shared lambda: a captured closure called inside these .each blocks
+          # breaks the self-hosted compiler.)
           # Only add vtable entries if we're in a class/module scope
           # At global scope, attr_accessor applies to Object
           target_scope = scope.is_a?(ModuleScope) ? scope : scope.class_scope
           arr.each {|entry|
-            target_scope.add_vtable_entry(entry.to_s[1..-1].to_sym)
-            target_scope.add_ivar("@#{entry.to_s[1..-1]}".to_sym)
+            es = entry.to_s
+            nm = (es[0] == ?: ? es[1..-1] : es)
+            next if nm.empty?
+            target_scope.add_vtable_entry(nm.to_sym)
+            target_scope.add_ivar("@#{nm}".to_sym)
           }
 
           # Then let's do the quick hack:
@@ -1507,7 +1518,10 @@ class Compiler
 
           e.replace(E[:do])
           syms.each do |mname|
-            mname = mname.to_s[1..-1].to_sym
+            ms = mname.to_s
+            nm = (ms[0] == ?: ? ms[1..-1] : ms)
+            next if nm.empty?
+            mname = nm.to_sym
             if (type == :attr_reader || type == :attr_accessor)
               e << E[:defm, mname, [], ["@#{mname}".to_sym]]
             end
