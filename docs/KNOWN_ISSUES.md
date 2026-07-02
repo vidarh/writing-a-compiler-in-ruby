@@ -198,7 +198,17 @@ Root-caused but intentionally not yet fixed (need larger features / deeper seman
 
 ---
 
-### 5. Heap corruption gating the core/kernel cluster (2026-07-01)
+### 5. Heap corruption gating the core/kernel cluster (2026-07-01) — FIXED 2026-07-02
+
+FIXED in commit "Fix #5: ModuleScope#lvaroffset must delegate to the enclosing local scope". It was
+NOT heap corruption at all: `ModuleScope`/`ClassScope` inherited `Scope#lvaroffset == 0`, so a
+class/module body compiled inline in an enclosing frame allocated its locals overlapping the enclosing
+`let`'s slots -- the body's `__tmp_proc` landed on the enclosing `__env__` slot, so building a
+block/proc inside the body stored the lambda's code address into `__env__`, and later `__env__` uses
+dereferenced a `.text` address (surfacing as the malloc/free "invalid next size" aborts and SIGSEGVs).
+The ~68 crashing core/kernel specs now run instead of crashing. The one-line fix: delegate
+`ModuleScope#lvaroffset` to `@local_scope` (mirroring `EigenclassScope`). The full historical
+investigation is kept below for reference.
 
 Most core/kernel specs abort with `free(): invalid next size (fast)` / `malloc(): invalid size` —
 heap corruption surfaced by tgc's sweep at program exit (`tgc_sweep`, tgc.c:309). Some object is
