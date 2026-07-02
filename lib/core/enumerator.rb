@@ -96,10 +96,16 @@ class Enumerator
   end
 
   def each_with_object(memo)
+    return to_enum(:each_with_object, memo) if !block_given?
     each { |x| yield(x, memo) }
     memo
   end
-  def with_object(memo, &b); each_with_object(memo, &b); end
+  def with_object(memo, &b)
+    # Guard the no-block case here too: forwarding a nil &b into each_with_object would let its
+    # `yield` fire against a nil block ("undefined method 'call' for nil"). Return an enumerator instead.
+    return to_enum(:each_with_object, memo) if !block_given?
+    each_with_object(memo, &b)
+  end
 
   def include?(obj)
     found = false
