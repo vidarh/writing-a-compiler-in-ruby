@@ -404,7 +404,25 @@ class Compiler
         end
         if rest_idx
           full_params[rest_idx] = [:__splat, :rest]
-          ac = rest_idx - 2
+          # Required params that FOLLOW the splat (`{ |*a, b, c| }` / `{ |a, *b, c| }`). Count them so the
+          # splat collects only the MIDDLE args, and rebind each from the tail of the argument vector.
+          # Without this the splat swallowed the trailing args too and the trailing params read from-the-
+          # front slots (`{|*a, b|}.call(1,2,3)` gave a=[1,2,3], b=2 instead of a=[1,2], b=3). Mirrors the
+          # :defm handling in process_scope_env.
+          trailing = []
+          ti = rest_idx + 1
+          while ti < full_params.length
+            tp = full_params[ti]
+            # Plain required param (bare symbol) OR a required post-splat param that an earlier pass turned
+            # into a nil-default ([name, :default, ...]). Skip &block ([name, :block]) and the rest itself.
+            if tp.is_a?(Symbol)
+              trailing << tp
+            elsif tp.is_a?(Array) && tp[1] == :default
+              trailing << tp[0]
+            end
+            ti += 1
+          end
+          ac = rest_idx - 2 + trailing.length
           prologue = E[:sexp, [:assign, rest_target, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]]
           # Declare the splat local (rest_target) with a :let so body reads resolve to it. The :defm rest
           # handling in process_scope_env does the equivalent via `vars << rest_sym`; the lambda path has
@@ -412,6 +430,15 @@ class Compiler
           # declares it -> reads compile as a method call ("undefined method 'a'"). At top level a later
           # pass happened to add the let; in-method lambdas never got one.
           newbody = E[:let, [rest_target], prologue]
+          # Rebind trailing params from the argument tail: the j-th trailing param sits at
+          # __splat[numargs-ac-2 + j] (right after the middle args). A proc invoked with too few args gives
+          # a negative offset -- there is no such argument, so bind nil (MRI nil-fills for a proc).
+          trailing.each_with_index do |tp, j|
+            off = [:add, [:sub, [:sub, :numargs, ac], 2], j]
+            off2 = [:add, [:sub, [:sub, :numargs, ac], 2], j]
+            newbody << E[:assign, tp,
+              E[:if, E[:ge, off, 0], E[:sexp, [:index, :__splat, off2]], :nil]]
+          end
           bi = 1
           while bi < body.length
             newbody << body[bi]
