@@ -461,6 +461,21 @@ class Object
     self
   end
 
+  # Method-visibility declarations. At the top level `self` is the main Object, where `public :foo` /
+  # `private :foo` / `protected :foo` are legal (they set visibility of Object's instance methods). We
+  # do not model method visibility, so these are no-ops here -- but without them top-level visibility
+  # calls (common in spec fixtures) raise "undefined method 'public' for #<Object>". Class/Module have
+  # their own equivalents; this only covers plain objects such as main.
+  def public(*args)
+    nil
+  end
+  def private(*args)
+    nil
+  end
+  def protected(*args)
+    nil
+  end
+
   # FIXME: Stub - should check if constant is actually defined
   # This minimal stub returns true to prevent segfaults
   def const_defined?(name)
