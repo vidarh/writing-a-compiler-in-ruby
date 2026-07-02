@@ -219,24 +219,58 @@ class String
   # (splices in all of it, growing self). Implemented as a splice + #replace: replace rebuilds @buffer in
   # fresh heap memory, which also sidesteps the read-only-literal-buffer problem that made an in-place
   # byte store segfault on string literals.
-  def []= pos, str
+  # String#[]= in all its forms. The final argument is the replacement; the earlier one(s) select the
+  # span of self to replace:
+  #   s[index] = str            (single character)
+  #   s[index, length] = str
+  #   s[range] = str
+  #   s[regexp] = str           (the whole match)
+  #   s[substring] = str        (first occurrence)
+  # Implemented as a splice through #replace (rebuilds @buffer in fresh heap memory, so it also works on
+  # read-only string literals). Returns the replacement value, as assignment expressions do.
+  def []=(*args)
+    repl = args[args.length - 1]
+    repl = repl.is_a?(Integer) ? repl.chr : repl.to_s
     l = length
-    if pos < 0
-      pos = l + pos
-    end
 
-    if pos < 0 || pos >= l
-      raise IndexError.new("index #{pos} out of string")
-    end
-
-    if str.is_a?(Integer)
-      repl = str.chr
+    if args.length == 3
+      start = args[0]
+      len = args[1]
+      start = l + start if start < 0
+      raise IndexError.new("index #{args[0]} out of string") if start < 0 || start > l
+      len = 0 if len < 0
+      len = l - start if start + len > l
     else
-      repl = str.to_s
+      idx = args[0]
+      if idx.is_a?(Range)
+        start = idx.first
+        start = l + start if start < 0
+        raise RangeError.new("#{idx} out of range") if start < 0 || start > l
+        e = idx.last
+        e = l + e if e < 0
+        stop = idx.exclude_end? ? e : e + 1
+        stop = l if stop > l
+        len = stop - start
+        len = 0 if len < 0
+      elsif idx.is_a?(Regexp)
+        m = match(idx)
+        raise IndexError.new("regexp not matched") if m.nil?
+        start = m.begin(0)
+        len = m[0].length
+      elsif idx.is_a?(String)
+        start = index(idx)
+        raise IndexError.new("string not matched") if start.nil?
+        len = idx.length
+      else
+        start = idx
+        start = l + start if start < 0
+        raise IndexError.new("index #{idx} out of string") if start < 0 || start >= l
+        len = 1
+      end
     end
 
-    replace(self[0...pos] + repl + self[(pos + 1)..-1])
-    str
+    replace(self[0...start] + repl + self[(start + len)..-1])
+    args[args.length - 1]
   end
 
   # String#succ: successor string for String ranges (e.g. ('0'..'5').to_a) via Range#each. Increments the
