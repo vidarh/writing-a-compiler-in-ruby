@@ -8,6 +8,13 @@ class NilClass
     false
   end
 
+  # nil is an immediate (no heap object), so the inherited Object#singleton_class -- which does
+  # `(index self 0)` -- would dereference the immediate value as a pointer and segfault
+  # (core/kernel/singleton_class_spec). Ruby returns NilClass here.
+  def singleton_class
+    NilClass
+  end
+
   def == other
     return other.nil?
   end

@@ -8,6 +8,12 @@ class FalseClass
     false
   end
 
+  # false is an immediate; Object#singleton_class would deref the immediate as a pointer and segfault.
+  # Ruby returns FalseClass (see core/kernel/singleton_class_spec).
+  def singleton_class
+    FalseClass
+  end
+
   def to_s
     "false"
   end

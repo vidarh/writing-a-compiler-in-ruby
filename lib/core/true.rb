@@ -5,6 +5,12 @@ class TrueClass
     false
   end
 
+  # true is an immediate; Object#singleton_class would deref the immediate as a pointer and segfault.
+  # Ruby returns TrueClass (see core/kernel/singleton_class_spec).
+  def singleton_class
+    TrueClass
+  end
+
   def to_s
     "true"
   end

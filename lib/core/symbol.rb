@@ -26,6 +26,11 @@ class Symbol
     @hash = name.hash
   end
 
+  # Symbols cannot have a singleton class in Ruby -- raise TypeError (core/kernel/singleton_class_spec).
+  def singleton_class
+    raise TypeError.new("can't define singleton")
+  end
+
   def intern
     self
   end

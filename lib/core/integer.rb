@@ -12,6 +12,13 @@ end
 class Integer < Numeric
   include Comparable
 
+  # Integers are immediates (tagged fixnum or heap bignum) and cannot have a per-object singleton class.
+  # Ruby raises TypeError; the inherited Object#singleton_class does `(index self 0)`, which dereferences
+  # a tagged fixnum as a pointer and segfaults (core/kernel/singleton_class_spec).
+  def singleton_class
+    raise TypeError.new("can't define singleton")
+  end
+
   # Integer supports two representations:
   # 1. Tagged fixnum: value stored as (n << 1) | 1, low bit = 1
   #    Range: -1,073,741,824 to 1,073,741,823 (31-bit signed: 1 tag + 30 value + sign)
