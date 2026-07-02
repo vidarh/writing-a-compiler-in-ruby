@@ -34,8 +34,14 @@ class Scope
     self
   end
 
+  # Cumulative stack-slot offset contributed by enclosing local scopes. This MUST mirror get_arg's
+  # delegation: since the default get_arg delegates to @next, so must lvaroffset -- otherwise a scope
+  # that adds no locals of its own (e.g. ControlScope for a loop) but sits between a nested LocalVarScope
+  # and the enclosing frame's locals would wrongly report 0, and the nested locals would overlap the
+  # enclosing frame's slots (the class-body __tmp_proc/__env__ collision, KNOWN_ISSUES #5). GlobalScope,
+  # the base of the chain, overrides this back to 0.
   def lvaroffset
-    0
+    @next ? @next.lvaroffset : 0
   end
 
   def set_vtable_entry(name,realname,f)
