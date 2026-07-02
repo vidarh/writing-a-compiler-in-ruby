@@ -187,45 +187,57 @@ class Compiler
     # Outer let: evaluate expr and save to __eigenclass_obj
     unique_id = @e.get_local[2..-1]
     @e.comment("Eigenclass #{unique_id}")
+
+    # The metaclass (the eigenclass's def-time `self`) is stored in a UNIQUE GLOBAL, not a local.
+    # A local named :self is forced into %esi (the self-register) by the register allocator; %esi is
+    # caller-saved and reloaded from the GLOBAL self by reload_self after every call, so the metaclass
+    # parked there is destroyed by the __set_vtable calls that install this eigenclass's methods, and
+    # the stale %esi then gets spilled back into the slot -> heap smash (KNOWN_ISSUES #8). A plain
+    # stack local is also unsafe (its slot can collide with those calls' outgoing-argument area). A
+    # global is immune to both. Per-eigenclass (unique_id) so nested eigenclasses don't clash.
+    # A $-prefixed global auto-registers and is assigned/read through the normal machinery (unlike a
+    # bare [:global, name], which is not a valid assignment lvalue). ec_self is used as an ordinary
+    # variable reference everywhere below. NB: build the symbol with string interpolation + .to_sym,
+    # NOT a `:"...#{unique_id}..."` symbol literal -- the self-hosted compiler does not interpolate
+    # inside symbol literals (it emits the literal text "{unique_id}"), which breaks selftest-c.
+    ec_self = "$__ec_self__#{unique_id}".to_sym
+
     let(scope, :__eigenclass_obj) do |outer_scope|
 
       compile_eval_arg(outer_scope, [:assign, :__eigenclass_obj, expr])
 
-      let(outer_scope, :self) do |lscope|
+      compile_eval_arg(outer_scope, [:assign, ec_self,
+        mk_new_class_object(
+          eksize,                                # size = Class's klass_size
+          [:index, :__eigenclass_obj, 0],        # superclass = obj.class
+          eksize,                                # ssize = Class's klass_size
+          0                                      # classob = 0 (defaults to Class)
+        )
+      ])
 
-        compile_eval_arg(lscope, [:assign, :self,
-          mk_new_class_object(
-            eksize,                                # size = Class's klass_size
-            [:index, :__eigenclass_obj, 0],        # superclass = obj.class
-            eksize,                                # ssize = Class's klass_size
-            0                                      # classob = 0 (defaults to Class)
-          )
-        ])
+      compile_eval_arg(outer_scope, [:assign, [:index, :__eigenclass_obj, 0], ec_self])
 
-        compile_eval_arg(lscope, [:assign, [:index, :__eigenclass_obj, 0], :self])
+      # Inherit @instance_size (slot 1) from the base class. __new_class_object only copies vtable
+      # slots >= 6 from the superclass, so the eigenclass's @instance_size stays 0 otherwise --
+      # and instances allocated/cloned through the singleton class (self.class == eigenclass) then
+      # get a zero-slot object whose ivar writes overflow the heap. slot 3 holds the superclass
+      # (obj's original class), set by __new_class_object.
+      compile_eval_arg(outer_scope, [:assign, [:index, ec_self, 1], [:index, [:index, ec_self, 3], 1]])
 
-        # Inherit @instance_size (slot 1) from the base class. __new_class_object only copies vtable
-        # slots >= 6 from the superclass, so the eigenclass's @instance_size stays 0 otherwise --
-        # and instances allocated/cloned through the singleton class (self.class == eigenclass) then
-        # get a zero-slot object whose ivar writes overflow the heap. slot 3 holds the superclass
-        # (obj's original class), set by __new_class_object.
-        compile_eval_arg(lscope, [:assign, [:index, :self, 1], [:index, [:index, :self, 3], 1]])
+      # Set eigenclass name
+      compile_eval_arg(outer_scope, [:assign, [:index, ec_self, 2], "Eigenclass_#{unique_id}"])
 
-        # Set eigenclass name
-        compile_eval_arg(lscope, [:assign, [:index, :self, 2], "Eigenclass_#{unique_id}"])
+      escope = EigenclassScope.new(outer_scope, "Eigenclass_#{unique_id}", @vtableoffsets, class_scope)
+      escope.self_global = ec_self
 
-        escope = EigenclassScope.new(lscope, "Eigenclass_#{unique_id}", @vtableoffsets, class_scope)
-
-        # Compile eigenclass body with LocalVarScope
-        # When compile_defm is called, it will find escope via lscope.class_scope
-        # Methods will register in escope's vtable, :self resolves from lscope
-        exps.each do |e|
-          compile_do(escope, e)
-        end
-
-        # Return the eigenclass
-        compile_eval_arg(lscope, :self)
+      # Compile eigenclass body. Method defs resolve def-time `self` to the metaclass global via
+      # EigenclassScope#get_arg, so their __set_vtable installs land on the metaclass.
+      exps.each do |e|
+        compile_do(escope, e)
       end
+
+      # Return the eigenclass (the metaclass)
+      compile_eval_arg(outer_scope, ec_self)
     end
 
     @e.comment("=== Eigenclass end")

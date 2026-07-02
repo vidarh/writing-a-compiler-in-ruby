@@ -5,6 +5,11 @@
 # fall through to @next.
 
 class EigenclassScope < ClassScope
+  # The unique global that holds this eigenclass's metaclass (its def-time `self`). Set by
+  # compile_eigenclass. A local named :self would be forced into the call-clobbered %esi
+  # self-register; a global is stable across the __set_vtable install calls. See compile_eigenclass.
+  attr_accessor :self_global
+
   # Override lvaroffset to delegate to @next
   # This is needed so LocalVarScope offset calculations work correctly
   # when EigenclassScope is in the middle of the scope chain
@@ -21,6 +26,10 @@ class EigenclassScope < ClassScope
 
   def get_arg(var, save = false)
     if var == :self
+      # Def-time `self` is the metaclass, held in a unique $-global (@self_global) rather than a :self
+      # local, which would be forced into the call-clobbered %esi self-register (KNOWN_ISSUES #8).
+      # Delegate to @next so the $-global resolves through the normal machinery (-> [:global, name]).
+      return @next.get_arg(@self_global, save) if @self_global
       return @next.get_arg(var, save)
     end
     super(var, save)
