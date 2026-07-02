@@ -12,6 +12,20 @@ class NilClass
     return other.nil?
   end
 
+  # Boolean operators: nil behaves like false. `&` is always false; `|` and `^` are true iff the
+  # other operand is truthy (nil ^ x == nil | x because nil is falsy). Mirrors FalseClass.
+  def & other
+    false
+  end
+
+  def | other
+    other.__true?
+  end
+
+  def ^ other
+    other.__true?
+  end
+
   def nil?
     true
   end
