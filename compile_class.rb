@@ -48,6 +48,17 @@ class Compiler
       compile_eval_arg(scope, [:sexp, [:call, :__set_vtable, [:self, v.offset, fname.to_sym]]])
     end
 
+    # A `def` is an expression: in Ruby it evaluates to the defined method's name as a Symbol, e.g.
+    # `x = def foo; end` sets x = :foo. The install above otherwise leaves __set_vtable's return -- the
+    # raw method address -- which crashed when a def used in value position was then sent a message
+    # (`(def some_method; end).should == :some_method`). Emit the name symbol as the result, but ONLY
+    # when it is already interned (the program mentions `:name` as a literal, registered by
+    # rewrite_symbol_constant) so no new symbol is registered here -- registering every method name
+    # ballooned the startup symbol init. A def whose value is actually inspected is virtually always
+    # compared against its own `:name` literal, so the interned check covers the real cases.
+    if @symbols.member?(name.to_s)
+      compile_eval_arg(scope, [:sexp, symbol_name(name.to_s)])
+    end
 
     # This is taken from compile_defun - it does not necessarily make sense for defm
     return Value.new([:subexpr]) #addr, clean_method_name(fname)])
