@@ -169,17 +169,19 @@ Root-caused but intentionally not yet fixed (need larger features / deeper seman
   reflect a block passed to the block, so `{ |&b| b }` reads garbage. Binding it to
   `block_given? ? __closure__ : nil` (mirroring methods) does not help until block-to-block `block_given?`
   semantics are correct — reverted pending that.
-- **Raising again from inside a rescue body segfaults (re-raise / unwind bug).** Any second call into
-  the exception runtime while a rescue handler is running crashes: `begin raise E rescue => e; raise e
-  end` and bare `raise` both segfault, even when the re-raised exception is unhandled (should just print
-  "Unhandled exception" and exit). Confirmed across method boundaries too (`def m; raise E; rescue; raise;
-  end`). The first `%s(unwind handler)` restores esp/ebp to the begin's frame and jumps to the rescue
-  label; a subsequent `ExceptionRuntime#raise` from that unwound context corrupts the stack. NOTE:
-  catch/throw's own `raise e`-on-tag-mismatch path works for typical nested `catch` (verified), so the
-  trigger is structural, not universal. Kernel#raise was also fixed so a bare `raise` re-raises the
-  current exception (`$!`) instead of fabricating a RuntimeError, but that only becomes observable once
-  this unwind bug is fixed. Likely a high-value fix -- re-raise is common in specs. Needs work in the
-  `:unwind` primitive / ExceptionHandler stack-state capture.
+- **Defining `class E` (and any name that collides with a leaked runtime constant) segfaults.** The
+  compiler aliases its AST-node builder as `E = Expr` (ast.rb) and uses `E[...]` pervasively; the
+  self-hosted build depends on `E = 2` in lib/core/stubs.rb to define that global slot. Because that
+  `E = 2` lives in the runtime library, it also leaks into every compiled *user* program's namespace, so
+  a program (or spec fixture) that does `class E ... end` collides with the existing Integer constant and
+  segfaults during the class definition. Removing `E = 2` fixes user `class E` but breaks selftest-c
+  ("uninitialized constant E"), so it cannot simply be deleted -- the real fix is to stop the compiler's
+  internal `E`/`Expr` alias from leaking into the runtime constant namespace (an architectural change).
+  CORRECTION (2026-07-02): an earlier revision of this file claimed a "re-raise / unwind bug" (that
+  raising again from inside a rescue body segfaults). That was WRONG -- it was an artifact of the test
+  programs using `class E`. Re-raise works correctly: `begin raise MyErr rescue => e; raise e end` and
+  bare `raise` (which Kernel#raise now re-raises as `$!`) both propagate correctly to an enclosing
+  rescue, across method boundaries, verified with a non-colliding class name.
 - **`core/string/scan_spec.rb` hangs the *compiler* (infinite loop at compile time).** Compiling the
   preprocessed spec loops forever (confirmed: `./compile` on the temp file never returns; killed at
   50min during a sweep). The whole file hangs but no single construct extracted from it reproduces in
