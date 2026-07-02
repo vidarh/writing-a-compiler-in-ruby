@@ -428,6 +428,7 @@ class Enumerator
     def drop_while(&b);     __step([:drop_while, b]); end
     def take(n);            __step([:take, n]);       end
     def drop(n);            __step([:drop, n]);       end
+    def uniq(&b);           __step([:uniq, b]);       end
     def lazy;               self;                      end
 
     # Evaluate the pipeline. The op blocks and `outer` are called INLINE inside the source's each block
@@ -502,6 +503,18 @@ class Enumerator
                 if st[oi] < op[1]
                   st[oi] += 1
                 else
+                  nextvals << x
+                end
+              elsif t == :uniq
+                # st[oi] holds the "seen" list (starts as 0 like every op's state; lazily made an array).
+                seen = st[oi]
+                if seen == 0
+                  seen = []
+                  st[oi] = seen
+                end
+                key = op[1] ? op[1].call(x) : x
+                if !seen.include?(key)
+                  seen << key
                   nextvals << x
                 end
               end
