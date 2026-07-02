@@ -368,6 +368,71 @@ class Hash
     n == 1
   end
 
+  # More Enumerable methods, defined directly (Hash does not include Enumerable here). The block is
+  # called with (key, value); without a block the pair [k, v] is used where an element value is needed.
+  def sum(init = 0, &block)
+    s = init
+    each { |k, v| s = s + (block ? block.call(k, v) : [k, v]) }
+    s
+  end
+
+  def flat_map(&block)
+    return to_enum(:flat_map) if !block
+    result = []
+    each do |k, v|
+      r = block.call(k, v)
+      if r.is_a?(Array)
+        r.each { |e| result << e }
+      else
+        result << r
+      end
+    end
+    result
+  end
+  alias collect_concat flat_map
+
+  def min_by(&block)
+    return to_enum(:min_by) if !block
+    best = nil
+    best_v = nil
+    found = false
+    each do |k, v|
+      val = block.call(k, v)
+      if !found || val < best_v
+        best = [k, v]
+        best_v = val
+        found = true
+      end
+    end
+    best
+  end
+
+  def max_by(&block)
+    return to_enum(:max_by) if !block
+    best = nil
+    best_v = nil
+    found = false
+    each do |k, v|
+      val = block.call(k, v)
+      if !found || val > best_v
+        best = [k, v]
+        best_v = val
+        found = true
+      end
+    end
+    best
+  end
+
+  def each_with_index(&block)
+    return to_enum(:each_with_index) if !block
+    i = 0
+    each do |k, v|
+      block.call([k, v], i)
+      i = i + 1
+    end
+    self
+  end
+
   # A new hash of the pairs for which the block is FALSE (reject) / TRUE (select/filter).
   def reject(&block)
     return to_enum(:reject) if !block
