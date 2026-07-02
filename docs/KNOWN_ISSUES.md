@@ -169,6 +169,14 @@ Root-caused but intentionally not yet fixed (need larger features / deeper seman
   reflect a block passed to the block, so `{ |&b| b }` reads garbage. Binding it to
   `block_given? ? __closure__ : nil` (mirroring methods) does not help until block-to-block `block_given?`
   semantics are correct — reverted pending that.
+- **`core/string/scan_spec.rb` hangs the *compiler* (infinite loop at compile time).** Compiling the
+  preprocessed spec loops forever (confirmed: `./compile` on the temp file never returns; killed at
+  50min during a sweep). The whole file hangs but no single construct extracted from it reproduces in
+  isolation (tested empty regex `//`, `[[""]]*n`, multibyte string literals, `\G` anchors, `(...)`
+  capture groups, and `|*w|`/multi-arg block params — all compile fine alone), so it is a combination /
+  parser-state interaction, not one token. Now masked by the compile timeout added to run_rubyspec
+  (COMPILE_TIMEOUT, default 120s -> COMPILE_FAIL) so it no longer stalls sweeps. Root-causing the parser
+  loop needs a proper bisection of the preprocessed file.
 
 ---
 
