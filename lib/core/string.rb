@@ -203,6 +203,11 @@ class String
     %s(__int c)
   end
 
+  # String#[]= with an Integer index: replace the single character at `pos` with `str`. `str` may be an
+  # Integer (a byte value -> its char), the empty string (deletes the char), or a multi-char string
+  # (splices in all of it, growing self). Implemented as a splice + #replace: replace rebuilds @buffer in
+  # fresh heap memory, which also sidesteps the read-only-literal-buffer problem that made an in-place
+  # byte store segfault on string literals.
   def []= pos, str
     l = length
     if pos < 0
@@ -210,20 +215,16 @@ class String
     end
 
     if pos < 0 || pos >= l
-      return nil
+      raise IndexError.new("index #{pos} out of string")
     end
 
-    # Get the byte value to store
     if str.is_a?(Integer)
-      byte = str
+      repl = str.chr
     else
-      byte = str.to_s.ord
+      repl = str.to_s
     end
 
-    # Store byte at position using bindex for byte-level access
-    %s(assign pos_raw (callm pos __get_raw))
-    %s(assign b (callm byte __get_raw))
-    %s(assign (bindex @buffer pos_raw) b)
+    replace(self[0...pos] + repl + self[(pos + 1)..-1])
     str
   end
 
