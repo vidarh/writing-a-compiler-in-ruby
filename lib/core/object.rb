@@ -53,6 +53,14 @@ class Object
     object_id == other.object_id
   end
 
+  # Truthiness predicate used by FalseClass#|/#^ and TrueClass#&/#^ (e.g. `false | other` is
+  # `other.__true?`). Every object except nil and false is truthy, so the default is true here;
+  # NilClass and FalseClass override it to be falsy. Without this, `false | true` (and any
+  # `false | <object>`) raised "undefined method '__true?'".
+  def __true?
+    true
+  end
+
   def inspect
     %s(assign buf (__alloc_leaf 20))
     %s(snprintf buf 20 "%p" self)

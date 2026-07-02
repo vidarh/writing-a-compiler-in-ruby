@@ -1,8 +1,11 @@
 
 class FalseClass
 
+  # Truthiness predicate (see Object#__true?). Must return the Ruby `false` object, not a raw 0:
+  # the result flows out through FalseClass#|/#^ and TrueClass#&/#^ as an ordinary value, and a
+  # raw 0 there is not a valid object pointer (calling any method on it segfaults).
   def __true?
-    %s(sexp 0)
+    false
   end
 
   def to_s
