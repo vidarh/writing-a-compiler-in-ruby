@@ -2107,6 +2107,13 @@ class Compiler
   # Ruby left-to-right order. The operand is coerced ONCE into a temp via __splat_to_a (a bare defun), so the
   # splat stack-manipulation never re-runs a method call mid-setup. :__copysplat (block/arg forwarding) and an
   # already-coerced :__splat_a are left alone.
+  # A `[:splat, op]` arg whose operand still needs coercing to an Array (not a forwarding marker, and not
+  # already wrapped in `op.__splat_to_a`).
+  def coercible_splat?(a)
+    a.is_a?(Array) && a[0] == :splat && a[1] != :__copysplat && a[1] != :__splat_a &&
+      !(a[1].is_a?(Array) && a[1][0] == :callm && a[1][2] == :__splat_to_a)
+  end
+
   def rewrite_splat_to_array(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
@@ -2128,6 +2135,15 @@ class Compiler
                 E[:assign, :__splat_a, E[:callm, op, :__splat_to_a]],
                 E[:call, e[1], [E[:splat, :__splat_a]]]])
             end
+          end
+        elsif args.is_a?(Array) && args.length > 1 && args.any? { |a| coercible_splat?(a) }
+          # Splat mixed with other args (`m(*x, 1, 2)`): the sole-splat path above does not apply, and the
+          # raw splat push reads the operand's @len directly -- garbage / a wild `subl %esp` SIGSEGV for a
+          # non-Array operand (e.g. a mock). Coerce each splat operand to an Array in place via __splat_to_a
+          # (Array -> itself, otherwise [x]). Coercion stays at the operand's original position, so the
+          # left-to-right evaluation order of the surrounding fixed args is preserved.
+          args.each do |a|
+            a[1] = E[:callm, a[1], :__splat_to_a] if coercible_splat?(a)
           end
         end
       end
