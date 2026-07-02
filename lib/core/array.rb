@@ -1004,6 +1004,7 @@ class Array
   # element for which it is true. find-any mode: block returns a number, returns an element for which it
   # is 0 (narrowing on the sign). Returns nil if nothing matches. The array must be sorted for the mode.
   def bsearch(&block)
+    return to_enum(:bsearch) if !block
     lo = 0
     hi = length
     found = nil
@@ -1016,12 +1017,17 @@ class Array
         hi = mid
       elsif r == false || r.nil?
         lo = mid + 1
-      elsif r == 0
-        return v
-      elsif r > 0
-        lo = mid + 1
+      elsif r.is_a?(Integer)
+        # find-any mode: 0 means match, <0 search left, >0 search right.
+        if r == 0
+          return v
+        elsif r > 0
+          lo = mid + 1
+        else
+          hi = mid
+        end
       else
-        hi = mid
+        raise TypeError.new("wrong argument type #{r.class} (must be numeric, true, false or nil)")
       end
     end
     found
