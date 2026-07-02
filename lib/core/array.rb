@@ -1766,8 +1766,60 @@ class Array
   end
 
 
-  def pack
-    %s(puts "Array#pack not implemented")
+  # Array#pack -- partial: handles the common C/c (8-bit int -> byte, with count or *) and a/A/Z (take a
+  # String element, truncate/pad to count; A pads with spaces, a/Z with NUL) directives. Other directives
+  # are skipped rather than crashing. `fmt[k]` returns a byte CODE here (String is byte-oriented).
+  def pack(fmt)
+    fmt = fmt.to_s
+    result = ""
+    i = 0            # index into self (the elements)
+    fi = 0           # index into fmt
+    flen = fmt.length
+    while fi < flen
+      d = fmt[fi]    # directive byte code
+      fi += 1
+      # Parse an optional count: a decimal number, or '*' (42) for "all remaining".
+      count = 1
+      star = false
+      if fi < flen && fmt[fi] == 42
+        star = true
+        fi += 1
+      elsif fi < flen && fmt[fi] >= 48 && fmt[fi] <= 57
+        count = 0
+        while fi < flen && fmt[fi] >= 48 && fmt[fi] <= 57
+          count = count * 10 + (fmt[fi] - 48)
+          fi += 1
+        end
+      end
+
+      if d == 67 || d == 99    # 'C' / 'c'
+        cnt = star ? (length - i) : count
+        j = 0
+        while j < cnt && i < length
+          result << (self[i].to_int & 255).chr
+          i += 1
+          j += 1
+        end
+      elsif d == 97 || d == 65 || d == 90   # 'a' / 'A' / 'Z'
+        s = self[i].to_s
+        i += 1
+        cnt = star ? s.length : count
+        pad = (d == 65) ? 32 : 0    # 'A' pads with space, 'a'/'Z' with NUL
+        k = 0
+        while k < cnt
+          if k < s.length
+            result << s[k].chr
+          else
+            result << pad.chr
+          end
+          k += 1
+        end
+      else
+        # Unsupported directive: skip its element(s) conservatively so we do not loop forever.
+        i += star ? (length - i) : count
+      end
+    end
+    result
   end
 
 
