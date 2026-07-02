@@ -61,11 +61,23 @@ class Array
           (callm self __fill_n ((index __copysplat 0) (index __copysplat 1)) __closure__)
           (callm self __fill_n ((index __copysplat 0) nil) __closure__))
         (callm self __copy_init ((index __copysplat 0)))))
+    # Return self, not the raw result of the `if` above (which is a raw 0 when no args -> calling any
+    # method on it, e.g. `ary.send(:initialize).should ...`, dereferences null and segfaults). MRI's
+    # #initialize returns the receiver; `Array.new` ignores this (it uses `ob`), so it is safe.
+    self
   end
 
   # Array.new(size) -> [nil]*size ; Array.new(size, val) -> [val]*size. `n` arrives as the tagged fixnum
   # size (an ordinary Ruby Integer here), so a plain Ruby fill loop works.
   def __fill_n n, val
+    # MRI raises ArgumentError for an out-of-range size rather than trying to allocate it. Without this a
+    # negative size silently produced []; a huge size (e.g. Array.new(fixnum_max+1)) looped __grow until
+    # calloc failed and the write to a NULL buffer segfaulted (core/array/initialize_spec, new_spec). The
+    # raise happens BEFORE any fill, so no allocation is attempted for an over-cap size. The cap (2^28) is
+    # well above any realistic array yet below this compiler's larger fixnum range (so fixnum_max+1 =
+    # 536870912, still a fixnum here, is rejected) and below where the fill would exhaust memory.
+    raise ArgumentError.new("negative array size") if n < 0
+    raise ArgumentError.new("array size too big") if n > 268435456
     i = 0
     if block_given?
       while i < n
