@@ -18,6 +18,14 @@ class Method
 
   alias [] call
 
+  # Invoked when a Method is passed as the block to instance_exec/instance_eval/class_eval etc.
+  # (`obj.instance_exec(&some_method)`). Unlike a Proc, a bound Method keeps its own receiver, so the
+  # rebinding `newself` is ignored -- we just call the method on @target. Mirrors MRI, where
+  # `3.instance_exec(4, &5.method(:+))` == `5 + 4` == 9 (the 3 is not used).
+  def __call_with_self(newself, *args, &block)
+    call(*args, &block)
+  end
+
   # Method#=== invokes the method (so a Method can be used as a case/when condition).
   def ===(arg)
     @target.send(@method, arg)
