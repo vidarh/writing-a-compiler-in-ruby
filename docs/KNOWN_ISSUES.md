@@ -272,6 +272,26 @@ Even further findings (2026-07-02, second pass):
   a Fixnum-tagged word. Whether the primary corruption is heap (tgc metadata) or stack is still open.
   Next: a hardware watchpoint on the specific clobbered slot, or ASAN, to catch the first bad write.
 
+ROOT CAUSE FOUND (2026-07-02, hardware watchpoint):
+- A conditional hardware watchpoint on the clobbered stack slot caught the corrupting write. In the
+  deterministic repro the slot is `-0x14(%ebp)` in `main`, which is the top-level `__env__` (set at
+  `main+101` from `__alloc_env`). The write happens while compiling repro.rb:517
+  (`CustomRangeInteger = Struct.new(:value) do ... end`): the emitted code is
+  `mov $__lambda_L545, %eax ; mov %eax, -0x14(%ebp)` -- i.e. it stores the block's compiled lambda
+  ADDRESS straight into the `__env__` slot, destroying the env pointer. (`info symbol 0x566686ad` ->
+  `__lambda_L545`; the address is odd only because functions aren't alignment-padded.)
+- After that, every one of main's ~1284 `__env__` references uses a .text code address as the env
+  pointer -> wild reads/writes into read-only code and the heap -> the assorted downstream symptoms
+  (SIGSEGV writing through it here; free()/malloc "invalid next size" in the specs). This is NOT a heap
+  overflow at all -- it is a compiler stack-slot ALIASING bug: the temporary that holds a block
+  argument's lambda address is allocated to the same frame slot as `__env__` when the enclosing scope
+  has a closure env. That is why the trigger needs (a) a block-taking call like `Struct.new do..end`
+  AND (b) an enclosing `__env__` (present because of the top-level `[1].each {}` block / the fixture's
+  closures), and why it correlates loosely with code size (slot assignment shifts with surrounding code).
+- FIX DIRECTION: block/proc-argument compilation must use a fresh temp for the lambda address, never the
+  `__env__` slot. Look at how the block arg's lambda pointer is emitted+stored around compile_callm /
+  the proc-literal path and the local/temp allocator (get_local) so it cannot collide with __env__.
+
 ---
 
 ### 6. `Array#initialize` unimplemented for size/fill/copy; bootstrap-sensitive (2026-07-02)
