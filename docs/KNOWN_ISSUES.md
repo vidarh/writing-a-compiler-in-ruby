@@ -368,9 +368,19 @@ consult — a compiler change, not a lib addition.
 
 ---
 
-### 8. Exit-time heap corruption in harness-heavy specs (2026-07-02) — distinct from #5
+### 8. Exit-time heap corruption in harness-heavy specs (2026-07-02) — FIXED (distinct from #5)
 
-**Primary mechanism FIXED (2026-07-02, commit d1fe008): eigenclass `@instance_size == 0`.**
+**FULLY FIXED. Two independent mechanisms, both in the eigenclass path:**
+1. eigenclass `@instance_size == 0` (commit d1fe008) — details below.
+2. eigenclass metaclass parked in the `%esi` self-register and clobbered by the method-install calls
+   (commit 70b3267) — details below.
+
+Both `make selftest` and `make selftest-c` are green (Fails: 0). core/array/clone_spec,
+core/kernel/public_send_spec, and the whole core/basicobject/method_missing_spec cluster now run to
+completion instead of aborting. (An unrelated, PRE-EXISTING segfault remains in
+core/kernel/singleton_class_spec — it crashes identically on the parent commits and is not part of #8.)
+
+**Mechanism 1 FIXED (commit d1fe008): eigenclass `@instance_size == 0`.**
 A cluster of specs that lean on the mspec harness's mock/matcher machinery (core/array/clone_spec,
 core/kernel/public_send_spec, core/enumerator/*, core/basicobject/method_missing_spec) aborted with
 `free(): invalid next size (fast)` in `tgc_sweep` during `exit()` — a stray heap write during the run,
@@ -388,10 +398,10 @@ minimal reproduction because it only fires when a singleton-class-bearing object
 deep in the harness. Fix: `compile_eigenclass` now copies the base class's `@instance_size` (slot 1) from
 the superclass (slot 3). Recovered clone_spec and public_send_spec (both ran to completion afterwards).
 
-**Remaining: `:self` clobbered in a `class << self` body (ROOT-CAUSED 2026-07-02, fix pending).**
-core/basicobject/method_missing_spec still aborts (`free(): invalid next size`). Root-caused via valgrind
-(memcheck in the docker buildenv) on the clean binary + gdb with ASLR off (`setarch -R`, which makes the
-crash 100% deterministic — the nondeterminism was pure ASLR heap-layout luck).
+**Mechanism 2 FIXED (commit 70b3267): eigenclass metaclass clobbered in the `%esi` self-register.**
+Root-caused via valgrind (memcheck in the docker buildenv) on the clean binary + gdb with ASLR off
+(`setarch -R`, which makes the crash 100% deterministic — the nondeterminism was pure ASLR heap-layout
+luck).
 
 Minimal 5-line deterministic repro (docs/bugs/eigenclass_self_in_class_body.rb):
 
@@ -425,15 +435,20 @@ which is now a bare-Object/garbage pointer. `__set_vtable` writes a method point
 `push %ecx` inside `__set_vtable` writing there; the ≥2-method requirement is because the first install
 runs before `%esi` is first clobbered.
 
-FIX CONSTRAINT (attempted 2026-07-02, reverted): the metaclass must NOT live in a `:self`-named local
-(→ %esi) NOR in a plain stack slot (its offset can still collide with the outgoing-argument area of the
-same `__set_vtable` calls, depending on the enclosing frame). Storing it in a unique per-eigenclass GLOBAL
-(with `EigenclassScope#get_arg(:self)` returning `[:global, ...]`) DOES fix `class << self` (repro + the
-whole method_missing cluster stop crashing, both gates green). BUT it regressed `def obj.x` on a local
-receiver into a deterministic "undefined method" — that singleton path shares the eigenclass machinery and
-needs unifying with the global approach before this can land. The `class << self` half is solved; the
-local-receiver `def obj.x` half must be handled in the same change. Both selftest gates were green with the
-global fix; the blocker is purely the `def obj.x` logic regression.
+THE FIX (commit 70b3267): the metaclass must NOT live in a `:self`-named local (→ %esi) NOR in a plain
+stack slot (its offset can still collide with the outgoing-argument area of the same `__set_vtable`
+calls, depending on the enclosing frame). It is now stored in a unique per-eigenclass **$-global**
+(`$__ec_self__<id>`), immune to both; `EigenclassScope#get_arg(:self)` resolves def-time self to that
+global so installs land on the metaclass. This covers BOTH `class << self`/`def self.x` and `def obj.x`
+on a local receiver (they share compile_eigenclass).
+
+Two self-hosting gotchas learned here (both would break selftest-c):
+- Build the global symbol with `"$__ec_self__#{id}".to_sym`, NOT a `:"...#{id}"` symbol literal — the
+  self-hosted compiler does not interpolate `#{}` inside a *symbol literal* (it emits the literal text
+  `{unique_id}` into the asm). Plain string interpolation + `.to_sym` is fine.
+- `[:assign, [:global, name], value]` is NOT a valid assignment lvalue (get_arg/save reject it, giving
+  "Expected an argument on left hand side of assignment"). A `$`-prefixed symbol auto-registers as a
+  global and assigns/reads through the normal machinery, so use that as the variable reference.
 
 Note also: the harness Mock's `should_receive` does not actually register an expectation (it sets
 @call_counts but not @expectations), so mocked calls print "Mock: No expectation set" — a separate
