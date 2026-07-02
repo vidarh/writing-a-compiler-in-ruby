@@ -159,6 +159,23 @@ class Class
     ob
   end
 
+  # Class#dup: a class object embeds its full method vtable, whose slot count is __vtable_size --
+  # much larger than @instance_size (which sizes INSTANCES of the class, not the class object).
+  # The generic Object#dup copies only self.class's @instance_size slots, truncating the vtable, so
+  # method dispatch on the duplicated class segfaults. Copy the whole class object (all __vtable_size
+  # slots, including slot 0 = the metaclass/vtable pointer) instead.
+  def dup
+    copy = nil
+    %s(let (i)
+        (assign copy (__array __vtable_size))
+        (assign i 0)
+        (while (lt i __vtable_size) (do
+          (assign (index copy i) (index self i))
+          (assign i (add i 1)))))
+    copy.initialize_copy(self)
+    copy
+  end
+
   # Clients that want to be able to create and initialize a basic version of
   # an object without normal initializtion should call <tt>__new</tt>. See
   # <tt>__splat_to_array</tt>
