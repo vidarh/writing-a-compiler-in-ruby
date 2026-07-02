@@ -150,6 +150,44 @@ class Array
     end
   end
 
+  # each_cons / each_slice are defined directly on Array (which cannot `include Enumerable` here). Both
+  # use index-based while loops with a top-level `yield` -- NOT a `yield` nested inside an `each {}` block,
+  # which would hit the captured-yield-through-Array#each segfault (see the note near #sum). Block-less
+  # calls return an Enumerator.
+  def each_cons(n)
+    return to_enum(:each_cons, n) if !block_given?
+    i = 0
+    len = length
+    while i + n <= len
+      window = []
+      j = 0
+      while j < n
+        window << self[i + j]
+        j += 1
+      end
+      yield window
+      i += 1
+    end
+    nil
+  end
+
+  def each_slice(n)
+    return to_enum(:each_slice, n) if !block_given?
+    i = 0
+    len = length
+    while i < len
+      slice = []
+      j = 0
+      while j < n && i + j < len
+        slice << self[i + j]
+        j += 1
+      end
+      yield slice
+      i += n
+    end
+    nil
+  end
+
 
   # Set Intersection.
   # Returns a new array containing elements common to the two arrays, with no duplicates.
