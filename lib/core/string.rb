@@ -26,12 +26,17 @@ class String
     # be an FixNum instance instead of the actual
     # value 0.
 
-    %s(assign @buffer 0)
     @flags  = 0
     @length = 0
-    %s(assign @capacity 0)
+    # NB: do NOT null @buffer before the copy branch. For a self-replace (`str.send(:initialize, str)`)
+    # the source IS self, so nulling @buffer would make __copy_initialize read a NULL buffer
+    # (strlen/memmove on NULL -> segfault, core/string/initialize_spec self-replacing example).
+    # __copy_raw allocates a fresh @buffer/@capacity from the source, so the copy path needs no reset;
+    # only the no-arg branch initialises @buffer/@capacity.
     %s(if (lt numargs 3)
-      (assign @buffer "")
+      (do
+        (assign @buffer "")
+        (assign @capacity 0))
       (callm self __copy_initialize ((splat __copysplat)))
     )
     # Return self, NOT the value of the `%s(if ...)` above: in the no-arg branch that value is the RAW
@@ -43,11 +48,19 @@ class String
   end
 
   def __copy_initialize *str
-    %s(do
-        (assign first (callm str [] ((__int 0))))
-        (assign len (callm first length))
-        (callm self __copy_raw ((callm first __get_raw) len))
-      )
+    first = str[0]
+    # The argument need not be a String: MRI coerces via #to_str (StringValue), raising TypeError if it
+    # is absent. Without this, a non-String (e.g. an Integer, an Array, or a mock) reached #length /
+    # #__get_raw below -- which assume a String buffer -- and segfaulted (core/string/initialize_spec's
+    # "tries to convert other to string using to_str" / "raises a TypeError" examples).
+    unless first.is_a?(String)
+      if first.respond_to?(:to_str)
+        first = first.to_str
+      else
+        raise TypeError.new("no implicit conversion into String")
+      end
+    end
+    __copy_raw(first.__get_raw, first.length)
   end
 
   def inspect
