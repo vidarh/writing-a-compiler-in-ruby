@@ -212,18 +212,22 @@ class Kernel
     raise LoadError.new("Dynamic require_relative not supported in AOT compiler: #{path}")
   end
 
-  # catch - Catch thrown values
-  # Stub: Just yields the block without actual catching
-  # Full implementation would require non-local return mechanism
-  def catch(tag)
-    yield
+  # catch/throw: non-local exit implemented on top of exceptions. throw raises an UncaughtThrowError
+  # carrying the tag and value; catch rescues it and, if the tag matches its own (by identity, so the
+  # same Symbol or the anonymous Object below), returns the thrown value. A non-matching tag is re-raised
+  # so an enclosing catch can handle it. `catch` with no argument uses a fresh object as an opaque tag.
+  def catch(tag = nil)
+    tag = Object.new if tag.nil?
+    begin
+      yield(tag)
+    rescue UncaughtThrowError => e
+      return e.value if e.tag.equal?(tag)
+      raise e
+    end
   end
 
-  # throw - Throw to catch
-  # Stub: No-op (does not actually throw)
-  # Full implementation would require non-local return mechanism
-  def throw(tag, value=nil)
-    nil
+  def throw(tag, value = nil)
+    raise UncaughtThrowError.new(tag, value)
   end
 
   # redo - Restart loop iteration

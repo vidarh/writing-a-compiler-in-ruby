@@ -254,6 +254,21 @@ class NoMatchingPatternError < StandardError
 end
 
 class UncaughtThrowError < StandardError
+  # Raised by Kernel#throw and rescued by the matching Kernel#catch. Carries the thrown tag (matched by
+  # identity against the catch tag) and the thrown value (the result of the catch block).
+  def initialize(tag, value)
+    @tag = tag
+    @value = value
+    super("uncaught throw")
+  end
+
+  def tag
+    @tag
+  end
+
+  def value
+    @value
+  end
 end
 
 class LoadError < StandardError
