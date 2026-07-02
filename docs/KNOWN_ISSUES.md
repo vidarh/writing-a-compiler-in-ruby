@@ -388,15 +388,38 @@ minimal reproduction because it only fires when a singleton-class-bearing object
 deep in the harness. Fix: `compile_eigenclass` now copies the base class's `@instance_size` (slot 1) from
 the superclass (slot 3). Recovered clone_spec and public_send_spec (both ran to completion afterwards).
 
-**Remaining: a SEPARATE wild-write in method_missing_spec (still open).**
-core/basicobject/method_missing_spec still aborts (`malloc(): invalid next size (unsorted)`) after the
-eigenclass fix. This one is NOT a contiguous tgc-object overflow: filling the entire 60-byte slack of
-every tracked chunk with canary words and checking on every allocation AND every sweep produces ZERO
-clobbered canaries, yet padding every `__alloc` by ≥128 bytes makes it survive. That signature (padding
-shifts heap layout enough to dodge the crash, but no tracked chunk's redzone is ever touched) points to a
-**wild write** — a store through a corrupted index/pointer landing at a computed address — or an overflow
-of a raw (non-tgc) buffer. Canaries can't localize it; needs a hardware watchpoint on the clobbered
-malloc header, or ASAN (docker buildenv, libasan.so.5 in 32root). Deferred to a dedicated session.
+**Remaining: `:self` clobbered in a `class << self` body (ROOT-CAUSED 2026-07-02, fix pending).**
+core/basicobject/method_missing_spec still aborts (`free(): invalid next size`). Root-caused via valgrind
+(memcheck in the docker buildenv) on the clean binary + gdb with ASLR off (`setarch -R`, which makes the
+crash 100% deterministic — the nondeterminism was pure ASLR heap-layout luck).
+
+Minimal 5-line deterministic repro (docs/bugs/eigenclass_self_in_class_body.rb):
+
+    class M
+      class << self
+        def zqzq1() 1 end
+        def zqzq2() 2 end
+        def zqzq3() 3 end
+      end
+    end
+    puts M.zqzq1
+
+Valgrind pinpoints an invalid write in `__set_vtable`, called directly from the `class << self` line, with
+`vtable` = a 16-byte (4-byte-payload, i.e. bare `Object`) chunk and `off` ≈ 783 (a high method-vtable
+slot). So a `class << self` body installs its singleton methods via `__set_vtable(:self, off, fn)`, but
+`:self` inside the eigenclass body resolves to a WRONG STACK SLOT holding a bare Object instead of the
+metaclass (confirmed 3524-byte metaclass in perturbed builds, 4-byte Object in the clean build — the slot
+is being clobbered). `__set_vtable` then writes a method pointer at slot ~783, far past the 4-byte object,
+smashing an adjacent malloc header.
+
+Localization: `def obj.x` on a top-level LOCAL (c2 repro) works — no enclosing ClassScope — so the bug is
+specific to `compile_eigenclass`'s `let(:self)` when the eigenclass is nested in a class/module body. The
+store to `:self` (compile_class.rb:196) and the def's read both go through the same lscope offset, yet the
+value differs at read time, and it takes ≥2–3 methods to reliably crash (1 method often survives). That
+signature points to the eigenclass `:self` stack slot NOT being reserved against the machine stack pointer,
+so the argument `push`es during each `__set_vtable` call clobber `:self` — the 2nd/3rd install then reads a
+garbage (bare-Object) self. Fix is an emitter stack-reservation / offset correction in compile_eigenclass
+(the #5 family of scope-offset bugs) — delicate; deferred to a focused session with the repro above.
 
 Note also: the harness Mock's `should_receive` does not actually register an expectation (it sets
 @call_counts but not @expectations), so mocked calls print "Mock: No expectation set" — a separate
