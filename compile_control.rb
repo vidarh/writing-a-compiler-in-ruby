@@ -336,6 +336,36 @@ class Compiler
         @e.movl("nil", :ecx)  # Default break value is nil
       end
 
+      # Pre-scan (non-destructive): before tearing down the stack, verify the target frame is actually
+      # reachable by walking the saved-%ebp chain from the current frame. A block captured and called
+      # after its defining method has returned (`b = capture { break }; ...; b.call`) carries a target
+      # frame that is no longer on the stack; the unwind loop below would then never match and would
+      # `leave` off the end of the stack and segfault. If the chain is exhausted (a saved %ebp of 0, or
+      # one that is not strictly increasing) before the target is reached, raise LocalJumpError instead
+      # -- matching MRI's "break from proc-closure". The walk only READS the saved-%ebp slots of live
+      # frames (each strictly greater than the last), so it cannot fault. %eax (target frame) and %ecx
+      # (break value) are left untouched; %edx/%ebx are scratch here and are reloaded by the unwind.
+      l_scan    = @e.get_local + "_scan"
+      l_found   = @e.get_local + "_found"
+      l_nobreak = @e.get_local + "_nobreak"
+      # Start at the FIRST enclosing frame (saved %ebp), not the current one: the unwind loop below
+      # always does one `leave` before its first compare, so it only ever matches an ENCLOSING frame.
+      # A block's break target (its definer's frame) is always strictly outside the block's own frame,
+      # so if the recorded target happens to equal the current %ebp it is stale/invalid and must raise,
+      # not match -- matching here would make the unwind `leave` straight past it and off the stack.
+      @e.movl("(%ebp)", :edx)      # walker starts at the current frame's caller
+      @e.local(l_scan)
+      @e.cmpl(:eax, :edx)          # walker == target frame?
+      @e.je(l_found)
+      @e.movl("(%edx)", :ebx)      # next = saved %ebp (caller's frame)
+      @e.cmpl(:edx, :ebx)          # next <= walker  => chain exhausted (0 or not increasing)
+      @e.jbe(l_nobreak)
+      @e.movl(:ebx, :edx)          # advance to caller frame
+      @e.jmp(l_scan)
+      @e.local(l_nobreak)
+      compile_eval_arg(scope, [:call, :__raise_break_error, []])  # raises; never returns
+      @e.local(l_found)
+
       # Restore %ebx for the resume site. The instruction after the block-taking method's `call`
       # (where break returns to) pops that call's args via `addl %ebx,%esp`, so %ebx must equal the
       # argument count the caller passed to that method. Every frame saves the caller's %ebx at

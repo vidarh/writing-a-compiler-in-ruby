@@ -43,6 +43,14 @@ class Kernel
     raise LocalJumpError.new("no block given (yield)")
   end
 
+  # Called by the compiler (compile_break) when a `break` in a block/proc cannot find its home frame
+  # on the stack -- i.e. the method that defined the block has already returned (the block escaped via
+  # capture and was called later). MRI raises LocalJumpError here; without this the raw stack unwind
+  # walked off the end of the stack and segfaulted. Message kept literal for the same reason as above.
+  def __raise_break_error
+    raise LocalJumpError.new("break from proc-closure")
+  end
+
   def raise(exc_or_msg = nil, msg = nil)
     if exc_or_msg.nil?
       # Bare `raise` re-raises the exception currently being handled ($!). During a rescue body the
