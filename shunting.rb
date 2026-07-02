@@ -231,6 +231,20 @@ module OpPrec
       end
 
       if op && (op.sym == :hash_or_block || op.sym == :block)
+        # `do...end` binds to the enclosing COMMAND, so first complete any pending operator-expression
+        # argument: reduce pending infix VALUE operators (range, arithmetic, comparison, ...) so
+        # `foo a..b do end` parses as `foo(a..b) do end`, not `foo(a..(b do end))`. The latter wrapped the
+        # operator's right operand in a call -- for `ruby_version_is ""..."3.4" do ... end` that "called"
+        # the String literal "3.4" through a garbage @addr and SIGSEGV'd. Do NOT reduce the method-call
+        # operators `.`/`&.` (whose call the block legitimately attaches to, `x.map do end`) or the
+        # low-priority arg-list/statement operators (comma, and/or, modifiers, `=>`, all right_pri <= 5).
+        # Only for `do`; `{ }` binds tightly to the nearest call and is intentionally left as-is.
+        if op.sym == :block
+          while @ostack.last && @ostack.last.type == :infix && @ostack.last.right_pri > 5 &&
+                @ostack.last.sym != :callm && @ostack.last.sym != :safe_callm
+            @out.oper(@ostack.pop)
+          end
+        end
         # Don't treat { as block argument if there was a newline before current token
         # This fixes: -> { x }.a \n lambda { y } where lambda should NOT be block arg to .a
         # Also don't treat { as block argument if it's in the inhibit list (e.g., stabby lambda params)
