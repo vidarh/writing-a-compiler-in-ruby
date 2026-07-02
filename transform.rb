@@ -1090,24 +1090,29 @@ class Compiler
 
       scopes = [args.dup] # We don't want "args" above to get updated
 
-      ri = -1
-      r = e2[ri]
-      # FIXME: compiler bug; rest does not correctly get initialized to
-      # nil in the control flows where it's not assigned.
+      # Locate the rest (`*x`) parameter at ANY position and record the plain required parameters that
+      # FOLLOW it (`def m(a, *b, c, d)`). The old code only inspected the last two positions, so a rest
+      # with two or more trailing params (`def m(a, b, *c, d, e)`) was never found: the splat prologue was
+      # skipped, `*c` stayed a normal positional param, and calling it read an unbound/garbage slot ->
+      # crash. Trailing required params also need REBINDING from the end of the argument list (see below),
+      # because their fixed param-index slots hold the wrong (from-the-front) arguments.
       rest = nil
-      if r
-        if r[-1] != :rest
-          ri -= 1
-          r = e2[ri]
+      rest_pos = nil
+      trailing_params = []
+      e2.each_with_index do |p, idx|
+        if p.is_a?(Array) && p[-1] == :rest
+          rest = p[0]
+          rest_pos = idx
         end
-        if r && r[-1] == :rest
-          rest = r[0]
+      end
+      if rest_pos
+        ((rest_pos + 1)...e2.length).each do |idx|
+          tp = e2[idx]
+          trailing_params << tp if tp.is_a?(Symbol)   # plain required param; skip &block / defaults
         end
-        if rest
-          # FIXME: This is a hacky workaround
-          if rest != :__copysplat
-            r[0] = :__splat
-          end
+        # FIXME: This is a hacky workaround
+        if rest != :__copysplat
+          e2[rest_pos][0] = :__splat
         end
       end
 
@@ -1181,6 +1186,16 @@ class Compiler
            # Corrected to take into account statically provided arguments.
            [:assign, rest_target, [:__splat_to_Array, :__splat, [:sub, :numargs, ac]]]
           ]]
+        # Rebind each required param that FOLLOWS the splat to its correct argument, taken from the END of
+        # the argument list. __splat points at the first collected (middle) argument, and __splat_to_Array
+        # gathers `numargs - ac - 2` of them, so the j-th trailing param sits at __splat[numargs-ac-2 + j].
+        # Their normal param-index slots hold from-the-front args (e.g. `def m(a,*c,d); m(1,2,3,4)` bound
+        # d to 3 instead of 4), so overwrite those slots here before the body runs.
+        trailing_params.each_with_index do |tp, j|
+          vars << tp if tp.is_a?(Symbol) && !vars.include?(tp)
+          rest_func << E[:assign, tp,
+            E[:sexp, [:index, :__splat, [:add, [:sub, [:sub, :numargs, ac], 2], j]]]]
+        end
       else
         rest_func = nil
       end
