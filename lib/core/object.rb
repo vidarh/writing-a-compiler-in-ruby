@@ -179,10 +179,14 @@ class Object
     self
   end
 
-  # NOTE: Kernel#yield_self / #then intentionally omitted -- they must return an Enumerator when
-  # called with no block, and the no-block path currently raises LocalJumpError which segfaults
-  # (unhandled-raise limitation), regressing yield_self_spec from FAIL to CRASH. Re-add once the
-  # Enumerator-without-block path works. See [[no-block-null-deref-crashes]].
+  # Kernel#then / #yield_self: yield self to the block and return the block's result; with no block,
+  # return a size-1 Enumerator yielding self (via to_enum, which now works -- the previous LocalJumpError
+  # segfault this method was omitted for is avoided by the to_enum guard).
+  def then
+    return to_enum(:then) if !block_given?
+    yield self
+  end
+  alias yield_self then
 
   def display
     print self

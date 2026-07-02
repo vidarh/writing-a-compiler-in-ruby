@@ -4375,7 +4375,7 @@ class Integer < Numeric
   # don't iterate, which keeps the spec runner from hanging).
   def step(limit, step = 1)
     if !block_given?
-      return Enumerator.new
+      return to_enum(:step, limit, step)
     end
     i = self
     if step > 0
