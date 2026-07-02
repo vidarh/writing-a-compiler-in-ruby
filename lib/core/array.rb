@@ -93,6 +93,7 @@ class Array
 
   # Inverse of reject - keeps items where block returns true
   def select
+    return to_enum(:select) if !block_given?
     a = self.class.new
     each do |item|
       if yield(item)
@@ -103,18 +104,16 @@ class Array
   end
 
   alias find_all select
+  alias filter select
 
   # FIXME: Cut and paste from Enumerable
   def collect
-    if block_given?
-      items = Array.new
-      each do |item|
-        items << yield(item)
-      end
-      return items
-    else
-      return self
+    return to_enum(:collect) if !block_given?
+    items = Array.new
+    each do |item|
+      items << yield(item)
     end
+    items
   end
 
   alias map collect
