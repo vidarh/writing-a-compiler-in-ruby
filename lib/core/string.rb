@@ -181,6 +181,17 @@ class String
       return a
     end
 
+    # Coerce a non-Integer index the way MRI does: use #to_int when available, otherwise raise TypeError.
+    # Without this, a nil / Hash / Array / mock index fell through to __to_fixnum_if_possible (defined only
+    # on Integer) and crashed with "undefined method" instead of raising.
+    if !index.is_a?(Integer)
+      if index.respond_to?(:to_int)
+        index = index.to_int
+      else
+        raise TypeError.new("no implicit conversion of #{index.class} into Integer")
+      end
+    end
+
     # Convert heap integer index to fixnum if within range
     index_fixnum = index.__to_fixnum_if_possible
     if index_fixnum.nil?
