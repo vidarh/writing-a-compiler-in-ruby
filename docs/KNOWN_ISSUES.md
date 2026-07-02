@@ -407,19 +407,33 @@ Minimal 5-line deterministic repro (docs/bugs/eigenclass_self_in_class_body.rb):
 Valgrind pinpoints an invalid write in `__set_vtable`, called directly from the `class << self` line, with
 `vtable` = a 16-byte (4-byte-payload, i.e. bare `Object`) chunk and `off` ≈ 783 (a high method-vtable
 slot). So a `class << self` body installs its singleton methods via `__set_vtable(:self, off, fn)`, but
-`:self` inside the eigenclass body resolves to a WRONG STACK SLOT holding a bare Object instead of the
-metaclass (confirmed 3524-byte metaclass in perturbed builds, 4-byte Object in the clean build — the slot
-is being clobbered). `__set_vtable` then writes a method pointer at slot ~783, far past the 4-byte object,
-smashing an adjacent malloc header.
+`:self` (the metaclass) is clobbered to a bare Object by the time each install reads it (confirmed
+3524-byte metaclass for the first install, 4-byte Object for later ones). `__set_vtable` then writes a
+method pointer at slot ~783, far past the 4-byte object, smashing an adjacent malloc header. See the EXACT
+ROOT CAUSE below for why.
 
-Localization: `def obj.x` on a top-level LOCAL (c2 repro) works — no enclosing ClassScope — so the bug is
-specific to `compile_eigenclass`'s `let(:self)` when the eigenclass is nested in a class/module body. The
-store to `:self` (compile_class.rb:196) and the def's read both go through the same lscope offset, yet the
-value differs at read time, and it takes ≥2–3 methods to reliably crash (1 method often survives). That
-signature points to the eigenclass `:self` stack slot NOT being reserved against the machine stack pointer,
-so the argument `push`es during each `__set_vtable` call clobber `:self` — the 2nd/3rd install then reads a
-garbage (bare-Object) self. Fix is an emitter stack-reservation / offset correction in compile_eigenclass
-(the #5 family of scope-offset bugs) — delicate; deferred to a focused session with the repro above.
+EXACT ROOT CAUSE (2026-07-02, hardware watchpoint + raw disassembly): the eigenclass binds its metaclass
+to a local literally named `:self` (`let(outer_scope, :self)` in compile_eigenclass). The register
+allocator FORCES any variable named `:self` into `%esi`, the dedicated self-register (`regalloc.rb`:
+`if var == :self; free = @selfreg` where `@selfreg = :esi`). But `%esi` is caller-saved: every method call
+clobbers it, and functions reload it from the GLOBAL `self` via `reload_self` at their end (`__set_vtable`
+itself ends with `movl self, %esi`). So while the eigenclass installs its methods, each `__set_vtable`
+call destroys the metaclass in `%esi`; the compiler then spills the stale/garbage `%esi` back into the
+`:self` stack slot (`movl %esi, -24(%ebp)` right after the call) and reloads it for the next install —
+which is now a bare-Object/garbage pointer. `__set_vtable` writes a method pointer at slot ~783 into that
+4-byte object, smashing an adjacent malloc header. A gdb watchpoint on the slot caught the `push %edi`/
+`push %ecx` inside `__set_vtable` writing there; the ≥2-method requirement is because the first install
+runs before `%esi` is first clobbered.
+
+FIX CONSTRAINT (attempted 2026-07-02, reverted): the metaclass must NOT live in a `:self`-named local
+(→ %esi) NOR in a plain stack slot (its offset can still collide with the outgoing-argument area of the
+same `__set_vtable` calls, depending on the enclosing frame). Storing it in a unique per-eigenclass GLOBAL
+(with `EigenclassScope#get_arg(:self)` returning `[:global, ...]`) DOES fix `class << self` (repro + the
+whole method_missing cluster stop crashing, both gates green). BUT it regressed `def obj.x` on a local
+receiver into a deterministic "undefined method" — that singleton path shares the eigenclass machinery and
+needs unifying with the global approach before this can land. The `class << self` half is solved; the
+local-receiver `def obj.x` half must be handled in the same change. Both selftest gates were green with the
+global fix; the blocker is purely the `def obj.x` logic regression.
 
 Note also: the harness Mock's `should_receive` does not actually register an expectation (it sets
 @call_counts but not @expectations), so mocked calls print "Mock: No expectation set" — a separate
