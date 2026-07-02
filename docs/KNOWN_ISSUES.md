@@ -479,6 +479,17 @@ harness to reproduce; needs the ASLR-off (`setarch -R`) + gdb/valgrind approach 
 Note the compiler also does NOT implement the `singleton_method_added` HOOK (defining a singleton method
 never calls it), so those spec assertions fail regardless — but that is a feature gap, not the crash.
 
+Diagnostics so far (2026-07-02, ASLR-off gdb): the crash is `call *%eax` in `Proc#call`
+(`mov 0x4(%esi),%eax; call *%eax` — it calls the proc's slot 1, `@addr`) where `@addr` points at the
+read-only string constant **"Object"** (gdb `x/s $eip` → "Object"; the bytes disassemble as garbage).
+So a Proc/Method object was constructed with `@addr` = a string pointer instead of a code address. It is
+the FIRST `it` block ("is a private method", `BasicObject.should have_private_instance_method(:singleton_
+method_added)`); the matcher is a pure stub (returns false, builds a failure string). `BasicObject.to_s` /
+`"#{BasicObject}"` work in isolation, so the corrupted-@addr proc is created somewhere in the
+should/matcher/it plumbing, not the interpolation. Valgrind masks the crash (its allocator changes
+layout, like #8) and only shows the expected conservative-GC stack-scan warnings. Confirmed PRE-EXISTING
+(segfaults identically on 67fa11e, before the #8 %esi fix) — not a regression.
+
 ---
 
 ## Known Limitations (Cannot Fix)
