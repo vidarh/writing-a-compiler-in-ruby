@@ -1357,8 +1357,10 @@ class Compiler
         # base an anonymous module on Object so it has a valid layout, and rely on the block for its methods.
         if e[1] == :Class && args.is_a?(Array) && args.length > 0
           sup = args[0]
+          validate_sup = true
         else
           sup = :Object
+          validate_sup = false
         end
         # classob (slot 0, the metaclass) = the superclass's metaclass, NOT a bare `Class`, so the new class
         # inherits the superclass's CLASS methods (e.g. Proc's custom `def self.new` that captures the block;
@@ -1380,11 +1382,20 @@ class Compiler
         # superclass can be a scoped constant `Foo::Bar` ([:deref,...]) or any expression; a :deref inside
         # a raw :sexp is emitted as a call to a nonexistent `deref` symbol (link error). Using the local
         # __sup in the low-level slot ops keeps them simple values.
+        # `Class.new(sup)` with a non-Class superclass must raise TypeError, not crash. The low-level
+        # build below does `(index __sup 0)` and copies vtable slots from __sup; if __sup is a tagged
+        # immediate (e.g. `Class.new(1)`) that dereferences the tag as a pointer and segfaults. Guard with
+        # a runtime is_a?(Class) check (safe on every value -- immediates return false without crashing).
+        # Only when an explicit superclass was given (no-arg / Module.new use :Object, always valid).
         inner = E[:let, [:__tmpcls, :__sup],
-          E[:assign, :__sup, sup],
-          E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, :__sup, :__vtable_size, E[:index, :__sup, 0]]]],
-          E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, :__sup, 1]]],
-          E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, :__sup, 2]]]]
+          E[:assign, :__sup, sup]]
+        if validate_sup
+          inner << E[:if, E[:callm, :__sup, :is_a?, [:Class]], [:do],
+            E[:raise, E[:callm, :TypeError, :new, ["superclass must be a Class"]]]]
+        end
+        inner << E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, :__sup, :__vtable_size, E[:index, :__sup, 0]]]]
+        inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, :__sup, 1]]]
+        inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, :__sup, 2]]]
         if block
           inner << E[:callm, :__tmpcls, :class_eval, [], block]
         end
