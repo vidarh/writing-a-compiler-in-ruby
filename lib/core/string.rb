@@ -622,6 +622,14 @@ class String
     result
   end
 
+  # In-place #upcase. Returns self if any character changed, nil otherwise (mirrors MRI's bang methods).
+  def upcase!
+    r = upcase
+    return nil if r == self
+    replace(r)
+    self
+  end
+
   def downcase
     result = ""
     i = 0
@@ -636,6 +644,14 @@ class String
       i += 1
     end
     result
+  end
+
+  # In-place #downcase. Returns self if any character changed, nil otherwise.
+  def downcase!
+    r = downcase
+    return nil if r == self
+    replace(r)
+    self
   end
 
   # Upcase the first character and downcase the rest (ASCII).
@@ -1274,6 +1290,21 @@ class String
     else
       __sub_gsub_regex(pattern, replacement, true, block)
     end
+  end
+
+  # In-place #sub / #gsub. Return self if a substitution was made, nil otherwise (mirrors MRI).
+  def sub!(pattern, replacement = nil, &block)
+    r = sub(pattern, replacement, &block)
+    return nil if r == self
+    replace(r)
+    self
+  end
+
+  def gsub!(pattern, replacement = nil, &block)
+    r = gsub(pattern, replacement, &block)
+    return nil if r == self
+    replace(r)
+    self
   end
 
   # Expand \0-\9 (capture groups; \0 / \& = whole match) and \\ in a regex replacement string. String#[]
