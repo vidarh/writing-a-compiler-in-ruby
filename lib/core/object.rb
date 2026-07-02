@@ -194,6 +194,13 @@ class Object
     __send__(sym, *args, &block)
   end
 
+  # public_send is like send but only invokes public methods. We do not track method visibility, so it
+  # behaves as send here (private/protected methods are still callable). Enough to stop the "undefined
+  # method 'public_send'" crash and pass the specs that just exercise dispatch.
+  def public_send sym, *args, &block
+    __send__(sym, *args, &block)
+  end
+
   # Forward a block so `obj.send(:each, &blk)` / to_enum work (the block becomes the callee's __closure__
   # via the 4th element of the callm s-expr in __send_for_obj__).
   def __send__ sym, *args, &block
