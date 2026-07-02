@@ -154,9 +154,16 @@ run_single_spec() {
         echo -n "Compiling $(basename $SPEC_FILE)... "
     fi
 
-    ./compile "$TEMP_SPEC" -I. -I lib/core < /dev/null > /dev/null 2>&1
+    # Bound the compile with a timeout (see the single-spec path below): a pathological spec
+    # can send the compiler into an infinite loop, which would otherwise stall a batch run.
+    timeout ${COMPILE_TIMEOUT:-120} ./compile "$TEMP_SPEC" -I. -I lib/core < /dev/null > /dev/null 2>&1
+    COMPILE_RC=$?
 
-    if [ $? -eq 0 ]; then
+    if [ $COMPILE_RC -eq 124 ] || [ $COMPILE_RC -eq 137 ]; then
+        COMPILE_RC=1  # fall through to the compile-failure branch below
+    fi
+
+    if [ $COMPILE_RC -eq 0 ]; then
         # The binary name is based on the temp file name
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
         # Run spec and capture output using script to force line buffering via PTY
@@ -452,9 +459,19 @@ elif [ -f "$TARGET" ]; then
     fi
 
     echo "Compiling $SPEC_FILE..."
-    COMPILE_OUTPUT=$(./compile "$TEMP_SPEC" -I. -I lib/core 2>&1)
+    # Bound the compile with a timeout: a pathological spec can drive the compiler into an
+    # infinite loop, which (unlike a hanging run, guarded below) would otherwise block a whole
+    # parallel sweep forever. Treat a timed-out compile as a compilation failure.
+    COMPILE_OUTPUT=$(timeout ${COMPILE_TIMEOUT:-120} ./compile "$TEMP_SPEC" -I. -I lib/core 2>&1)
+    COMPILE_RC=$?
 
-    if [ $? -eq 0 ]; then
+    if [ $COMPILE_RC -eq 124 ] || [ $COMPILE_RC -eq 137 ]; then
+        echo "✗ Compilation timed out (>${COMPILE_TIMEOUT:-120}s)!"
+        echo "================================"
+        exit 3
+    fi
+
+    if [ $COMPILE_RC -eq 0 ]; then
         echo "✓ Compilation successful"
         echo
         echo "Running spec..."
