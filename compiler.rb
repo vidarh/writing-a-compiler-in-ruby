@@ -539,11 +539,16 @@ class Compiler
       return compile_callm(scope, :Hash, :[], pairs)
     end
 
-    # Build a nested s-expression for merging splats and pairs
-    # Start with the first splat
-    result_expr = splats.shift
+    # Build a nested s-expression for merging splats and pairs.
+    # Start from a fresh empty Hash and merge every splat into it. Ruby's `{**h}` / `foo(**h)` build a NEW
+    # hash (they copy h, they do not alias it), so seeding with `Hash[]` is both correct and side-steps a
+    # bug: a lone `**h` with no other entries used to leave result_expr as the bare splat operand (e.g. the
+    # Symbol `:h`), which compile_exp then mis-compiled -- compile_exp reads exp[0] as a node tag, and for a
+    # bare Symbol `:h[0]` is the character "h", so `{**h}` produced garbage. Routing through `Hash[].merge`
+    # keeps the operand in callm-receiver position, where it resolves as a normal variable.
+    result_expr = [:callm, :Hash, :[], []]
 
-    # Merge remaining splats
+    # Merge each splat
     splats.each do |splat_expr|
       result_expr = [:callm, result_expr, :merge, [splat_expr]]
     end
