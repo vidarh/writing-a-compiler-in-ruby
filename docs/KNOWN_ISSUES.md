@@ -208,6 +208,30 @@ Fixing it should recover a large share of the ~64 core/kernel crashes (they all 
 
 ---
 
+### 6. `Array#initialize` unimplemented for size/fill/copy; bootstrap-sensitive (2026-07-02)
+
+`Array.new` only works for the no-argument and (indirectly) some internal cases. Concretely:
+- `Array.new(3)` → `[]` (should be `[nil, nil, nil]`)
+- `Array.new(3, :x)` → `[]` (should be `[:x, :x, :x]`)
+- `Array.new(3) { |i| i * 2 }` → `[]` (block ignored; should be `[0, 2, 4]`)
+- `Array.new([1, 2, 3])` → raises `undefined method '__get_raw' for [1,2,3]` (the copy path is broken too)
+- `[].send(:initialize, 3)` (one arg, no block, via `send`) → **segfault** (the `numargs`-based copy
+  branch trips under `send`'s splat dispatch and reads an Integer as a raw array pointer).
+
+The current stub (`def initialize *__copysplat; __initialize; %s(if (gt numargs 2) (callm self
+__copy_init ((index __copysplat 0))))`) uses raw `%s` ops on `__copysplat` on purpose: `initialize` is
+called for EVERY array creation including during early bootstrap, where `__copysplat` is NOT a usable
+Ruby Array. A Ruby-level rewrite was attempted (use `__copysplat.length`/`[0]`, `&block`, fill via `<<`,
+copy via `concat`) and it **segfaults even `Array.new` with no args** — adding a `&block` param and/or
+calling `.length` on `__copysplat` breaks the `self.new`→`initialize` calling convention at bootstrap.
+
+So a proper fix must inspect the arguments with raw `%s` primitives (arg count + per-arg raw reads)
+rather than Ruby method calls, and only enter the fill/copy loops once the runtime is up. This is a
+dedicated task; it is NOT a quick Ruby-level edit. Affects core/array/initialize_spec (crashes) plus any
+spec relying on `Array.new(n)`/`Array.new(n, obj)` fill semantics.
+
+---
+
 ## Known Limitations (Cannot Fix)
 
 1. **eval() with dynamic strings** - AOT compilation cannot evaluate runtime strings
