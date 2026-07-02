@@ -23,7 +23,8 @@ class Array
 
   def self.new *__copysplat
     ob = allocate
-    ob.initialize(*__copysplat)
+    # Forward the block (in __closure__) to initialize so `Array.new(n){|i| ...}` can fill via the block.
+    %s(callm ob initialize ((splat __copysplat)) __closure__)
     ob
   end
 
@@ -44,7 +45,40 @@ class Array
     # We'd still be limited in what to do here, but not as strictly.
     #
     __initialize
-    %s(if (gt numargs 2) (callm self __copy_init ((index __copysplat 0))))
+    # Argument handling uses RAW %s primitives (numargs + tag/shift on the raw slot), NOT Ruby method
+    # calls on __copysplat: initialize runs for EVERY array creation including early bootstrap, where
+    # __copysplat is not yet a usable Ruby Array and .length/&block break the self.new->initialize
+    # calling convention (KNOWN_ISSUES #6). numargs==2 => no args (empty). numargs>=3 => first arg
+    # present at (index __copysplat 0): a tagged Integer (low bit set) is a SIZE -> fill; a heap object
+    # is a copy source -> __copy_init (existing behaviour). Fill/copy only run for explicit args, so the
+    # bootstrap no-arg path is untouched.
+    # The first raw slot IS the tagged fixnum size (a usable Ruby Integer), so pass it and the fill value
+    # (2nd arg if numargs>3, else nil) straight to #__fill_n -- no raw shifts needed. The nil/index reads
+    # here run only when a fixnum size was given, i.e. an explicit user Array.new(n) call, never bootstrap.
+    %s(if (gt numargs 2)
+      (if (ne (bitand (index __copysplat 0) 1) 0)
+        (if (gt numargs 3)
+          (callm self __fill_n ((index __copysplat 0) (index __copysplat 1)) __closure__)
+          (callm self __fill_n ((index __copysplat 0) nil) __closure__))
+        (callm self __copy_init ((index __copysplat 0)))))
+  end
+
+  # Array.new(size) -> [nil]*size ; Array.new(size, val) -> [val]*size. `n` arrives as the tagged fixnum
+  # size (an ordinary Ruby Integer here), so a plain Ruby fill loop works.
+  def __fill_n n, val
+    i = 0
+    if block_given?
+      while i < n
+        self << yield(i)
+        i = i + 1
+      end
+    else
+      while i < n
+        self << val
+        i = i + 1
+      end
+    end
+    self
   end
 
   def __copy_init other
