@@ -2239,8 +2239,14 @@ class Compiler
   #
   # This must run BEFORE rewrite_default_args and rewrite_let_env
   def rewrite_keyword_args(exp)
-    exp.depth_first(:defm) do |e|
-      args = e[2]
+    # Applies to methods (:defm, params at e[2]/body e[3]) AND blocks/lambdas (:proc, params e[1]/body e[2]).
+    # Blocks were previously skipped, so a block keyword-rest param like `{ |a, **k| }` never had its kwargs
+    # extracted: `k` was bound to a raw positional slot (a garbage count) instead of a Hash, and using it as
+    # a Hash later (`k.is_a?(Hash)` / iterating it) dereferenced a bogus pointer -> SIGSEGV (block_spec).
+    exp.depth_first(:defm, :proc) do |e|
+      argi = e[0] == :defm ? 2 : 1
+      bodyi = argi + 1
+      args = e[argi]
       next unless args.is_a?(Array)
 
       # Skip methods with forwarding parameters (rewrite_forward_args handles these)
@@ -2295,7 +2301,7 @@ class Compiler
         end
       end
 
-      body = e[3]
+      body = e[bodyi]
       body = [] unless body.is_a?(Array)
 
       # If the method also has a splat (`*args`), __kwargs CANNOT be a trailing positional param: a
@@ -2322,9 +2328,9 @@ class Compiler
         new_body = kwarg_extractions + body
       end
 
-      # Update method definition
-      e[2] = new_args
-      e[3] = new_body
+      # Update the definition
+      e[argi] = new_args
+      e[bodyi] = new_body
     end
   end
 
