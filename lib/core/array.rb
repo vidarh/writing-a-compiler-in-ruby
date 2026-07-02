@@ -1052,6 +1052,78 @@ class Array
     result
   end
 
+  # slice_when: inverse split of chunk_while -- start a new run whenever block(prev, cur) is true.
+  def slice_when(&block)
+    return to_enum(:slice_when) if !block_given?
+    result = []
+    return result if length == 0
+    run = [self[0]]
+    i = 1
+    while i < length
+      if block.call(self[i - 1], self[i])
+        result << run
+        run = [self[i]]
+      else
+        run << self[i]
+      end
+      i += 1
+    end
+    result << run
+    result
+  end
+
+  # chunk: group consecutive elements with the same block value into [key, [elements...]] pairs.
+  def chunk
+    return to_enum(:chunk) if !block_given?
+    result = []
+    return result if length == 0
+    key = yield(self[0])
+    run = [self[0]]
+    i = 1
+    while i < length
+      k = yield(self[i])
+      if k == key
+        run << self[i]
+      else
+        result << [key, run]
+        key = k
+        run = [self[i]]
+      end
+      i += 1
+    end
+    result << [key, run]
+    result
+  end
+
+  # filter_map: map, keeping only truthy results (map + compact-of-falsy).
+  def filter_map
+    return to_enum(:filter_map) if !block_given?
+    result = []
+    i = 0
+    while i < length
+      v = yield(self[i])
+      result << v if v
+      i += 1
+    end
+    result
+  end
+
+  # one?: true iff exactly one element is truthy (or matches the block).
+  def one?
+    n = 0
+    i = 0
+    while i < length
+      x = self[i]
+      match = block_given? ? yield(x) : x
+      if match
+        n += 1
+        return false if n > 1
+      end
+      i += 1
+    end
+    n == 1
+  end
+
   # Yield each element n times (forever if n is nil). No-op on an empty array.
   def cycle(n = nil, &block)
     return to_enum(:cycle, n) if !block
