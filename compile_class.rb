@@ -204,6 +204,13 @@ class Compiler
 
         compile_eval_arg(lscope, [:assign, [:index, :__eigenclass_obj, 0], :self])
 
+        # Inherit @instance_size (slot 1) from the base class. __new_class_object only copies vtable
+        # slots >= 6 from the superclass, so the eigenclass's @instance_size stays 0 otherwise --
+        # and instances allocated/cloned through the singleton class (self.class == eigenclass) then
+        # get a zero-slot object whose ivar writes overflow the heap. slot 3 holds the superclass
+        # (obj's original class), set by __new_class_object.
+        compile_eval_arg(lscope, [:assign, [:index, :self, 1], [:index, [:index, :self, 3], 1]])
+
         # Set eigenclass name
         compile_eval_arg(lscope, [:assign, [:index, :self, 2], "Eigenclass_#{unique_id}"])
 
