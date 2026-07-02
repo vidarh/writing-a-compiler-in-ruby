@@ -20,41 +20,49 @@ class MatchData
     @ends = ends.nil? ? [] : ends
   end
 
-  # The entire matched string or capture group by index/name
-  def [](index)
-    if index == 0
-      # Build substring manually since String#[start, length] not supported
-      result = ""
-      i = @match_start
-      while i < @match_end
-        result << @string[i]
-        i = i + 1
-      end
-      result
-    elsif index.is_a?(Integer) && index > 0
-      # Return capture group by index
-      if index <= @captures.length
-        @captures[index - 1]
-      else
-        nil
-      end
-    elsif index.is_a?(Symbol) || index.is_a?(String)
-      # Named capture access
-      name = index.to_s
-      named_map = @regexp.named_captures
-      if named_map && named_map[name]
-        group_idx = named_map[name][0]  # Get first group with this name
-        if group_idx && group_idx <= @captures.length
-          @captures[group_idx - 1]
-        else
-          nil
-        end
+  # The whole matched substring (group 0). Kept separate so to_s/to_a/[0] don't recurse through #[].
+  def __whole_match
+    result = ""
+    i = @match_start
+    while i < @match_end
+      result << @string[i]
+      i = i + 1
+    end
+    result
+  end
+
+  # Value of group `index` (0 = whole match; negative counts from the end of to_a); nil if out of range.
+  def __group_value(index)
+    return __whole_match if index == 0
+    if index > 0
+      return index <= @captures.length ? @captures[index - 1] : nil
+    end
+    a = to_a
+    a[a.length + index]
+  end
+
+  # m[i] / m[name] -> a single group; m[start, length] / m[range] -> an Array of groups (like Array#[]).
+  def [](*args)
+    if args.length == 1
+      idx = args[0]
+      if idx.is_a?(Integer)
+        __group_value(idx)
+      elsif idx.is_a?(Symbol) || idx.is_a?(String)
+        gi = __group_index(idx)
+        gi.nil? ? nil : __group_value(gi)
+      elsif idx.is_a?(Range)
+        to_a[idx]
       else
         nil
       end
     else
-      nil
+      to_a[args[0], args[1]]
     end
+  end
+
+  # Values of the given group references (integers or names).
+  def values_at(*indices)
+    indices.map { |i| self[i] }
   end
 
   # Beginning position of match (or capture group)
