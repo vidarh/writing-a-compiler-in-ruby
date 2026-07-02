@@ -477,9 +477,21 @@ elif [ -f "$TARGET" ]; then
         echo "Running spec..."
         echo "================================"
         TEMP_SPEC_NAME=$(basename "$TEMP_SPEC" .rb)
-        # Use timeout to prevent hanging specs (30s timeout)
-        timeout ${SPEC_TIMEOUT:-30} ./out/${TEMP_SPEC_NAME}
+        # Run the spec in its OWN process group (setsid) and, on timeout, kill the WHOLE group with
+        # `kill -KILL -PGID`. A plain `timeout ./bin` only signals the direct child, so a spec that spawns
+        # a subprocess (the now-working process/fork/exec/spawn kernel specs) could leave an orphan that
+        # outlives the kill and holds this script's stdout pipe open -- deadlocking the parallel runner's
+        # worker thread (it never sees EOF). Killing the group guarantees no lingering child.
+        setsid ./out/${TEMP_SPEC_NAME} < /dev/null &
+        SPEC_PID=$!
+        ( sleep ${SPEC_TIMEOUT:-30}; kill -KILL -"$SPEC_PID" 2>/dev/null ) &
+        SPEC_KILLER=$!
+        wait "$SPEC_PID"
         EXIT_CODE=$?
+        kill "$SPEC_KILLER" 2>/dev/null
+        wait "$SPEC_KILLER" 2>/dev/null
+        # SIGKILL from our group-killer (137) means it timed out -> normalise to timeout's 124.
+        if [ $EXIT_CODE -eq 137 ]; then EXIT_CODE=124; fi
         # rm -f "$TEMP_SPEC"
 
         if [ $EXIT_CODE -eq 136 ] || [ $EXIT_CODE -eq 139 ]; then
