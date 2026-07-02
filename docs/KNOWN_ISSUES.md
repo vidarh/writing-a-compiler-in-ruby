@@ -294,13 +294,27 @@ ROOT CAUSE FOUND (2026-07-02, hardware watchpoint):
 - Fix attempts that did NOT work (2026-07-02): (a) inlining the `[:defun]` directly into the __new_proc
   args instead of via :__tmp_proc -- generates invalid asm ("invalid character '?'"), so the lambda
   address MUST go through a named local. (b) Broadening `class_body_creates_closure?` to also detect
-  pre-rewrite :proc/:lambda/:block nodes (so the module body always gets its own __env__/__tmp_proc let)
-  -- still crashes. So the collision is a nested-scope OFFSET computation issue: the temp/`__tmp_proc`
-  for a proc built inside a module/class body (compile_class's `let(cscope, :__env__, :__closure__,
-  :__tmp_proc, ...)`, line ~565) resolves to the SAME %ebp offset as an outer scope's `__env__`. The
-  real fix is in the LocalVarScope offset math (`lvaroffset`/`get_arg` in localvarscope.rb) or how the
-  module-body let's offsets stack onto the enclosing (top-level) let -- confirm by dumping the resolved
-  offsets of `__tmp_proc` vs `__env__` at the proc-construction site.
+  pre-rewrite :proc/:lambda/:block nodes -- still crashes. (c) Reordering the top-level let to
+  `[:__tmp_proc, :__closure__, :__env__]` (separate env/tmp_proc) -- still crashes (the collision is not
+  in the top-level main let). So the collision is a nested-scope OFFSET computation issue.
+
+- Minimal deterministic repro checked in: `docs/bugs/env_tmpproc_collision_repro.rb` (~15 lines: a module
+  with a few methods + a `Struct.new(:value) do..end` + `[1].each { Object.new }`). Crashes 3/3.
+
+- Offset analysis via a debug print in `LocalVarScope#get_arg` (compiling the minimal repro): for a scope
+  with `locals=[:__env__, :__tmp_proc]`, `__env__` resolves to `[:lvar, 1]` when the enclosing FuncScope's
+  `lvaroffset` (== `Function#@defaultvars`) is 0, but `[:lvar, 2]` when it is 1; `__tmp_proc` resolves to
+  `[:lvar, 2]` (defaultvars 0) / `[:lvar, 3]` (defaultvars 1). So `__env__` and `__tmp_proc` overlap at
+  lvar 2 across the two cases. The offset is `@locals[a] + (rest? ? 1 : 0) + @next.lvaroffset`, and the
+  `@next.lvaroffset` (a Function's optional-arg count) is being applied INCONSISTENTLY between where
+  `__env__` is set up (via `__alloc_env`) and where it is later read at the proc-construction site --
+  i.e. the same env storage is written at one %ebp slot and read at another, and the read lands on
+  `__tmp_proc`. Note: `compile_class`'s class-body let already keeps env/tmp_proc non-adjacent (idx1 vs
+  idx3) yet still collides, so the drift is >= 2 slots, not a simple off-by-one. THE FIX must make the
+  `@defaultvars`/`lvaroffset` contribution consistent for a given frame's `__env__` between allocation
+  and every access (localvarscope.rb `get_arg`/`lvaroffset` + funcscope/function `lvaroffset`), WITHOUT
+  shifting the offsets of the code that currently works (both gates pass today). Verify with the checked-in
+  repro + `make selftest selftest-c`.
 
 ---
 
