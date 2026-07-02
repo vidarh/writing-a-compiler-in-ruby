@@ -328,27 +328,29 @@ ROOT CAUSE FOUND (2026-07-02, hardware watchpoint):
 
 ---
 
-### 6. `Array#initialize` unimplemented for size/fill/copy; bootstrap-sensitive (2026-07-02)
+### 6. `Array#initialize` — direct forms IMPLEMENTED (2026-07-02, commit d7bcf70); `send` edge cases remain
 
-`Array.new` only works for the no-argument and (indirectly) some internal cases. Concretely:
-- `Array.new(3)` → `[]` (should be `[nil, nil, nil]`)
-- `Array.new(3, :x)` → `[]` (should be `[:x, :x, :x]`)
-- `Array.new(3) { |i| i * 2 }` → `[]` (block ignored; should be `[0, 2, 4]`)
-- `Array.new([1, 2, 3])` → raises `undefined method '__get_raw' for [1,2,3]` (the copy path is broken too)
-- `[].send(:initialize, 3)` (one arg, no block, via `send`) → **segfault** (the `numargs`-based copy
-  branch trips under `send`'s splat dispatch and reads an Integer as a raw array pointer).
+The common direct forms now work:
+- `Array.new(3)` → `[nil, nil, nil]`
+- `Array.new(3, :x)` → `[:x, :x, :x]`
+- `Array.new(3) { |i| i * i }` → `[0, 1, 4, 9]` (block forwarded from `self.new` via `__closure__`)
 
-The current stub (`def initialize *__copysplat; __initialize; %s(if (gt numargs 2) (callm self
-__copy_init ((index __copysplat 0))))`) uses raw `%s` ops on `__copysplat` on purpose: `initialize` is
-called for EVERY array creation including during early bootstrap, where `__copysplat` is NOT a usable
-Ruby Array. A Ruby-level rewrite was attempted (use `__copysplat.length`/`[0]`, `&block`, fill via `<<`,
-copy via `concat`) and it **segfaults even `Array.new` with no args** — adding a `&block` param and/or
-calling `.length` on `__copysplat` breaks the `self.new`→`initialize` calling convention at bootstrap.
+Implemented as issue #6 prescribed — RAW `%s` primitives for the argument inspection so the bootstrap
+no-arg path (numargs==2) is skipped entirely and `__copysplat` is never touched during early bootstrap.
+Inside the `numargs>2` gate, the low tag bit of the first raw slot distinguishes a fixnum SIZE (fill via
+`#__fill_n`, which yields the block or fills the default/nil) from a heap copy source (`#__copy_init`).
+The tagged size slot is itself a usable Ruby Integer, so the fill runs as an ordinary Ruby loop.
+Recovered core/array/comparison_spec and core/array/multiply_spec (were CRASH). Both gates green.
 
-So a proper fix must inspect the arguments with raw `%s` primitives (arg count + per-arg raw reads)
-rather than Ruby method calls, and only enter the fill/copy loops once the runtime is up. This is a
-dedicated task; it is NOT a quick Ruby-level edit. Affects core/array/initialize_spec (crashes) plus any
-spec relying on `Array.new(n)`/`Array.new(n, obj)` fill semantics.
+STILL BROKEN (core/array/initialize_spec): the `x.send(:initialize, ...)` forms. `send`'s splat dispatch
+MISCOUNTS `numargs` (a no-arg `ary.send(:initialize)` still reports numargs>2), so the size/copy branch
+runs with an EMPTY `__copysplat` and reads slot 0 as garbage → segfault. The reliable fix is to re-derive
+the count from `__copysplat.length` inside the gate, BUT a Ruby-level rewrite using `.length`/`is_a?` there
+segfaults even the DIRECT forms (confirmed again 2026-07-02) — the `.length`/`is_a?` calls in that path
+are themselves unsafe, exactly as this issue warned. So the `send` path needs the arg count via a RAW read
+of `__copysplat`'s length slot (not a method call), or a fix to `send`/`__send_for_obj__` so numargs is
+correct under splat dispatch. Also unchanged: `Array.new([1,2,3])` raises `undefined method '__get_raw'`
+(should be TypeError; the copy path is non-standard — MRI has no Array copy-constructor form).
 
 ---
 
