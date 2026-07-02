@@ -1288,6 +1288,38 @@ class Compiler
   # object via __new_class_object (the helper the compiler uses for `class X < Y`). For an empty subclass the
   # new class shares the superclass's vtable (size == ssize == __vtable_size); also copy the superclass's
   # @instance_size (slot 1) and @name (slot 2). Only matches a literal `Class` receiver; dynamic forms left alone.
+  # Objects created via `Class.new { ... }` / `Module.new { ... }` get their block's attr ivars resolved
+  # against the Object (global) scope at compile time -- the block is a proc with no class scope of its own,
+  # so `@foo` falls back to the global namespace (see EigenclassScope/ClassScope ivar resolution). Those
+  # ivars are only discovered when the proc body compiles (in output_functions), which is AFTER Object's
+  # @instance_size slot is emitted (compile_class), so Object's runtime instance_size -- and any anon class
+  # that copies it -- stays too small and the setter's ivar write overflows the object's heap slot (exit-time
+  # heap corruption). Pre-register each block's attr ivars into the Object scope here, during preprocess and
+  # BEFORE the instance_size is emitted, so the compile-time count already includes them. Registration only
+  # (add_ivar); the getter/setter methods themselves are still expanded by expand_attr_defs/class_eval.
+  def register_dynamic_block_ivars(exp)
+    return if !@global_scope
+    obj = @global_scope.class_scope
+    return if !obj
+    exp.depth_first do |e|
+      if e.is_a?(Array) && e[0] == :callm && (e[1] == :Class || e[1] == :Module) &&
+         e[2] == :new && e[4].is_a?(Array) && e[4][0] == :proc && e[4][2].is_a?(Array)
+        e[4][2].each do |st|
+          next if !st.is_a?(Array)
+          next if !(st[0] == :call && (st[1] == :attr_reader || st[1] == :attr_writer || st[1] == :attr_accessor))
+          arr = st[2].is_a?(Array) ? st[2] : [st[2]]
+          arr.each do |entry|
+            es = entry.to_s
+            nm = (es[0] == ?: ? es[1..-1] : es)
+            next if nm.empty?
+            obj.add_ivar("@#{nm}".to_sym)
+          end
+        end
+      end
+      :next
+    end
+  end
+
   # Expand attr_reader/attr_accessor/attr_writer calls within `node` (a Class.new/Module.new block) into
   # getter/setter :defm nodes, mirroring build_class_scopes for real class bodies. Only bare-symbol args
   # (to_s begins with ':') are expanded; other arg forms fall through to the runtime attr_* stub.
@@ -1391,6 +1423,24 @@ class Compiler
         # ivar to its slot and registers fine when the block runs via class_eval. Only bare-symbol args are
         # handled (their to_s starts with ':'); string/expr args are left to the runtime stub.
         expand_attr_defs(block) if block.is_a?(Array)
+        # The block's ivars (`@foo` in its defms/attr setters) resolve against the Object (global) scope at
+        # compile time -- a proc has no class scope of its own. register_dynamic_block_ivars has already
+        # assigned each block-attr ivar a stable Object-scope offset, so an instance must have at least
+        # (max_offset + 1) slots or the setter's slot write overflows the object (exit-time heap corruption
+        # -- the anon class only copies its superclass's @instance_size, which does not account for these
+        # ivars). Compute the largest offset used by this block and, below, raise the new class's slot-1
+        # @instance_size to cover it. Offsets only ever grow (append), so a value looked up now stays valid.
+        needed_slots = 0
+        if block.is_a?(Array) && @global_scope && @global_scope.class_scope
+          obj = @global_scope.class_scope
+          block.depth_first do |bx|
+            bx.each do |n|
+              next if !(n.is_a?(Symbol) && n.to_s[0] == ?@ && n.to_s[1] != ?@)
+              off = obj.find_ivar_offset(n.to_sym)
+              needed_slots = off + 1 if off && off + 1 > needed_slots
+            end
+          end
+        end
         # Evaluate the superclass into a plain local FIRST (a normal :assign, not inside a :sexp). The
         # superclass can be a scoped constant `Foo::Bar` ([:deref,...]) or any expression; a :deref inside
         # a raw :sexp is emitted as a call to a nonexistent `deref` symbol (link error). Using the local
@@ -1409,6 +1459,12 @@ class Compiler
         inner << E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, :__sup, :__vtable_size, E[:index, :__sup, 0]]]]
         inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, :__sup, 1]]]
         inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, :__sup, 2]]]
+        # Raise @instance_size (slot 1) to cover the block's ivars if the superclass's size is smaller, so
+        # `new` allocates enough slots for the block-defined setters/ivars (see needed_slots above).
+        if needed_slots > 0
+          inner << E[:sexp, E[:if, E[:lt, E[:index, :__tmpcls, 1], needed_slots],
+                             E[:assign, E[:index, :__tmpcls, 1], needed_slots]]]
+        end
         if block
           inner << E[:callm, :__tmpcls, :class_eval, [], block]
         end
@@ -2005,6 +2061,7 @@ class Compiler
     rewrite_concat(exp)
     rewrite_range(exp)
     rewrite_class_ivars(exp)  # direct class/module-body @ivars -> __classivar__ globals (before class_new)
+    register_dynamic_block_ivars(exp)  # grow Object scope for Class.new{} block attr ivars before class_new expands them
     rewrite_class_new(exp)
     rewrite_defined(exp)  # Must run before rewrite_strconst
     rewrite_strconst(exp)
