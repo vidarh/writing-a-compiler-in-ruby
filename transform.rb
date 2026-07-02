@@ -924,8 +924,18 @@ class Compiler
         # Note: using reject with negation because .select doesn't exist in lib/core/array.rb
         captured_params = params.reject { |p| !env.include?(p) }
 
+        # A nested method definition (:defm/:defun) begins a NEW scope. Unlike a block/lambda, a Ruby
+        # `def` does NOT close over the enclosing method's locals or its __closure__/__env__ -- its body
+        # has its own. So we must NOT rewrite a nested def body with the ENCLOSING env: doing so rewrote
+        # the def's own `__closure__` (produced by a `yield` in the body) into the enclosing method's
+        # captured `(index __env__ 1)`, so `yield` inside a singleton method defined in a method invoked
+        # the WRONG block -> segfault (core/enumerable/sum_spec, uniq_spec). Only lambda/proc bodies
+        # genuinely capture. (The receiver e[1] above IS evaluated in the enclosing scope and is still
+        # redirected into __env__ by the code above.)
+        is_nested_def = (e[0] == :defm || e[0] == :defun)
+
         # First, process the body to rewrite variable references
-        if e[body_index]
+        if e[body_index] && !is_nested_def
           # FIXME: seen |= ... failed to compile
           if rewrite_env_vars(e[body_index], env)
             seen = true
@@ -934,7 +944,7 @@ class Compiler
 
         # Then insert initialization for captured parameters (after rewriting)
         # This way the RHS (parameter) won't be rewritten
-        if !captured_params.empty? && e[body_index]
+        if !captured_params.empty? && e[body_index] && !is_nested_def
           # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
           param_inits = captured_params.collect do |p|
             idx = env.index(p)
