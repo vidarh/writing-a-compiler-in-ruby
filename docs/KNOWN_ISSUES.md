@@ -370,26 +370,37 @@ consult — a compiler change, not a lib addition.
 
 ### 8. Exit-time heap corruption in harness-heavy specs (2026-07-02) — distinct from #5
 
-A cluster of specs that lean on the mspec harness's mock/matcher machinery (e.g. core/array/clone_spec,
-core/kernel/public_send_spec, core/enumerator/{to_enum,each,next_values}_spec, core/basicobject/
-method_missing_spec) abort with `free(): invalid next size (fast)` — but the abort is in `tgc_sweep`
-during `exit()` (AFTER the spec has run all its examples and printed results), i.e. a stray heap write
-during the run, only surfaced by the final GC. gdb backtrace: `main -> print_spec_results -> Kernel#exit
--> tgc_stop -> tgc_sweep -> free -> abort`.
+**Primary mechanism FIXED (2026-07-02, commit d1fe008): eigenclass `@instance_size == 0`.**
+A cluster of specs that lean on the mspec harness's mock/matcher machinery (core/array/clone_spec,
+core/kernel/public_send_spec, core/enumerator/*, core/basicobject/method_missing_spec) aborted with
+`free(): invalid next size (fast)` in `tgc_sweep` during `exit()` — a stray heap write during the run,
+surfaced by the final GC.
 
-This is NOT the #5 `__tmp_proc`/`__env__` offset collision (that is fixed): instrumenting
-`LocalVarScope#get_arg` while compiling clone_spec shows every `__tmp_proc`/`__env__` resolution has
-`nextcls=FuncScope` with the two at distinct in-frame indices — no overlap. So it is a genuinely
-different heap overflow.
+Root cause (found with a tgc canary — over-allocate every `__alloc` by 16 bytes, stamp a magic word in
+the slack, verify it each sweep): the sole clobbered object was a **size-0 allocation** whose class was
+an `Eigenclass_*` with `@instance_size == 0`. Eigenclasses (`class << obj` / `def obj.foo`) are built by
+`compile_eigenclass -> __new_class_object`, whose superclass-copy loop starts at slot 6 and therefore
+never copies slot 1 (`@instance_size`). Normal classes set `@instance_size` explicitly during
+compilation; the eigenclass path did not, leaving it 0. Allocating or cloning an object THROUGH its
+singleton class (`self.class == eigenclass`) then computed `__array(0)` — a zero-slot object — and
+writing the class pointer (word 0) plus ivars overflowed 9–16 bytes past the calloc'd chunk. It resisted
+minimal reproduction because it only fires when a singleton-class-bearing object is later allocated/cloned
+deep in the harness. Fix: `compile_eigenclass` now copies the base class's `@instance_size` (slot 1) from
+the superclass (slot 3). Recovered clone_spec and public_send_spec (both ran to completion afterwards).
 
-It RESISTS minimal reproduction: the individual constructs all survive (singleton `def o.m(a,*args);
-yield a,*args; end` + `to_enum(:m, :a, :b, :c)` + `Enumerator.new { |y| y.yield ... }`; a lone
-`mock('x').should_receive(:each)`; even 20 iterations of eigenclass-def + enumerator + a minimal
-`describe/it` mock spec run through run_rubyspec). Only the full harness run of the real specs triggers
-it. Locating the offending write needs ASAN (docker buildenv, libasan.so.5 in 32root) or a tgc canary/
-redzone check around each tracked chunk during mark — a dedicated session. Note also: the harness Mock's
-`should_receive` does not actually register an expectation (it sets @call_counts but not @expectations),
-so mocked calls print "Mock: No expectation set" — a separate harness-fidelity gap.
+**Remaining: a SEPARATE wild-write in method_missing_spec (still open).**
+core/basicobject/method_missing_spec still aborts (`malloc(): invalid next size (unsorted)`) after the
+eigenclass fix. This one is NOT a contiguous tgc-object overflow: filling the entire 60-byte slack of
+every tracked chunk with canary words and checking on every allocation AND every sweep produces ZERO
+clobbered canaries, yet padding every `__alloc` by ≥128 bytes makes it survive. That signature (padding
+shifts heap layout enough to dodge the crash, but no tracked chunk's redzone is ever touched) points to a
+**wild write** — a store through a corrupted index/pointer landing at a computed address — or an overflow
+of a raw (non-tgc) buffer. Canaries can't localize it; needs a hardware watchpoint on the clobbered
+malloc header, or ASAN (docker buildenv, libasan.so.5 in 32root). Deferred to a dedicated session.
+
+Note also: the harness Mock's `should_receive` does not actually register an expectation (it sets
+@call_counts but not @expectations), so mocked calls print "Mock: No expectation set" — a separate
+harness-fidelity gap.
 
 ---
 
