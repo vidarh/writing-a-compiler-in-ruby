@@ -47,6 +47,19 @@ class ModuleScope < Scope
     @modules = []
   end
 
+  # A class/module body compiled inline in an enclosing frame (e.g. `module M ... end` inside the
+  # top-level `let` that declares __closure__/__tmp_proc/__env__) shares that frame's stack. Its body
+  # LocalVarScope computes variable offsets as `index + @next.lvaroffset`, so if this scope returned 0
+  # (the Scope default) the body's locals would OVERLAP the enclosing let's slots -- notably the body's
+  # __tmp_proc landing on the enclosing __env__ slot, clobbering it (KNOWN_ISSUES #5). Delegate to @next
+  # so the body's locals stack ABOVE the enclosing frame's, mirroring EigenclassScope#lvaroffset.
+  def lvaroffset
+    # Enclosing local variables are resolved via @local_scope (see get_arg), so the enclosing frame's
+    # accumulated local-slot offset must come from there too.
+    return @local_scope.lvaroffset if @local_scope
+    @next ? @next.lvaroffset : 0
+  end
+
   def include_module(m)
     @modules << m
   end
