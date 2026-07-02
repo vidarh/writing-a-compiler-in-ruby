@@ -265,6 +265,14 @@ class Compiler
     return compile_super(scope, args,block) if func == :super
     return compile_callm(scope,:self, func, args,block) if fargs and fargs[0] == :possible_callm || fargs[0] == :global
 
+    # `name(...)` with explicit call syntax is ALWAYS a method call in Ruby, even when a parameter (or
+    # rest parameter) of the same name is in scope -- a bare local/param can only be invoked via
+    # `name.call` / `name.()` / `name[]`. Without this, `-> a=a() { a }` compiled the default value's
+    # `a()` as an indirect call THROUGH the (still unset) parameter slot and jumped to a tagged-integer
+    # "address", segfaulting. Route such calls to normal method dispatch on self instead. (Only :arg/
+    # :argaddr -- parameters -- are redirected; :lvar/ivar/global resolutions are left as-is.)
+    return compile_callm(scope,:self, func, args,block) if func.is_a?(Symbol) && fargs && (fargs[0] == :arg || fargs[0] == :argaddr)
+
     # Wrap single argument in array if needed
     # When there's a block, parser passes args unwrapped: [:call, func, arg, block]
     # When there's no block, parser wraps args: [:call, func, [args...]]
