@@ -158,19 +158,33 @@ class Array
 #  end
 
   # Repetition.
-  # With a String argument, equivalent to self.join(str).
-  # Otherwise, returns a new array built by concatenating the int copies of self.
-#  def *(amount)
-#    if amount.is_a?(String)
-#      return self.join(amount)
-#    elsif amount.is_a?(Fixnum)
-#      mul_array = Array.new(self)
-#      amount.times do
-#        mul_array += self
-#      end
-#      return mul_array
-#    end
-#  end
+  # With a String argument (or something with #to_str), equivalent to self.join(str).
+  # Otherwise the argument is coerced to an Integer and a new array is returned built
+  # by concatenating that many copies of self.
+  def *(amount)
+    if amount.is_a?(String)
+      return self.join(amount)
+    end
+    # String coercion takes priority over Integer coercion (MRI checks #to_str first).
+    if !amount.is_a?(Integer) && amount.respond_to?(:to_str)
+      return self.join(amount.to_str)
+    end
+    n = amount
+    if !n.is_a?(Integer)
+      if !n.respond_to?(:to_int)
+        raise TypeError.new("no implicit conversion of #{amount.class} into Integer")
+      end
+      n = n.to_int
+    end
+    raise ArgumentError.new("negative argument") if n < 0
+    result = []
+    i = 0
+    while i < n
+      result.concat(self)
+      i += 1
+    end
+    result
+  end
 
 
   # Concatenation.
@@ -289,6 +303,11 @@ class Array
 
 
   def self.[](*elements)
+    # NOTE: every array literal [...] compiles to Array.[] (see Compiler#compile_array),
+    # so this is on the hottest bootstrap path -- it must stay on the well-exercised
+    # self.new path. Attempts to allocate directly (to avoid invoking a subclass's
+    # #initialize, per MRI) segfault the self-hosted compiler even when guarded to the
+    # subclass branch, so subclass-with-incompatible-#initialize via [] is unsupported.
     a = self.new
     a.concat(elements)
     a
@@ -1364,15 +1383,32 @@ class Array
 
   # Returns a string created by converting each element of the array to a string,
   # separated by sep.
-  def join(sep) # = nil)
-    join_str = ""
-    size = self.size
+  def join(sep = nil)
     sep = sep.to_s
+    __join(sep, [])
+  end
+
+  # Recursive worker for #join: nested arrays are joined with the same separator
+  # and spliced in (so [1,[2,3]].join(":") == "1:2:3"). A leading empty string
+  # element must still be followed by a separator, so track "first" explicitly
+  # rather than testing whether the accumulator is empty. `seen` holds the arrays
+  # on the current path (by identity) so a self-referential array raises rather
+  # than recursing forever, matching MRI.
+  def __join(sep, seen)
+    seen.each do |s|
+      raise ArgumentError.new("recursive array join") if s.equal?(self)
+    end
+    inner = seen + [self]
+    join_str = ""
+    first = true
     self.each do |item|
-      if !join_str.empty?
-        join_str << sep
+      join_str << sep if !first
+      first = false
+      if item.is_a?(Array)
+        join_str << item.__join(sep, inner)
+      else
+        join_str << item.to_s
       end
-      join_str << item.to_s
     end
     join_str
   end
