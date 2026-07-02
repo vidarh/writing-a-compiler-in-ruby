@@ -336,12 +336,16 @@ class Compiler
         @e.movl("nil", :ecx)  # Default break value is nil
       end
 
-      # Restore %ebx from current frame BEFORE unwinding
-      # After unwinding, %ebp will point to a different frame, so we must
-      # restore %ebx now while we still have access to our saved copy.
-      # We'll keep the restored value in %edx during unwinding.
-      @e.movl("-4(%ebp)", :edx)
-
+      # Restore %ebx for the resume site. The instruction after the block-taking method's `call`
+      # (where break returns to) pops that call's args via `addl %ebx,%esp`, so %ebx must equal the
+      # argument count the caller passed to that method. Every frame saves the caller's %ebx at
+      # -4(%ebp) (prologue `pushl %ebx`); the value the resume site needs lives in the frame of the
+      # block-taking method itself -- the LAST frame we leave before reaching the target -- NOT the
+      # current (block) frame. Capturing -4(%ebp) of the current frame (the old behaviour) restored
+      # the block's arg count instead, so `addl %ebx,%esp` popped the wrong amount and misaligned the
+      # stack; a break inside an enclosing expression (`x << foo { break }`) then read its pending
+      # operand from a bogus %esp and crashed. Capture -4(%ebp) at the top of every unwind iteration
+      # so, on exit, %edx holds the saved %ebx of the frame directly below the target.
       # Jump to test first to avoid doing leave twice
       l_test = @e.get_local + "_test"
       l_done = @e.get_local + "_done"
@@ -351,8 +355,9 @@ class Compiler
       l_loop = @e.local
       @e.addl(4,:esp)
 
-      # Test: unwind one frame and check if we're at target
+      # Test: capture this frame's saved %ebx, unwind one frame, and check if we're at target
       @e.local(l_test)
+      @e.movl("-4(%ebp)", :edx)
       @e.leave
       @e.cmpl(:eax, :ebp)
       @e.jnz l_loop
