@@ -3,6 +3,8 @@
 # Initial implementation
 # This implementation assumes simple ordering
 class Range
+  # NOTE: `include Enumerable` for Range is done at the END of lib/core/enumerable.rb, because Range is
+  # loaded (core.rb) BEFORE Enumerable -- including it here would copy an as-yet-undefined module.
   def initialize _min, _max, exclude_end = false
     @min = _min
     @max = _max

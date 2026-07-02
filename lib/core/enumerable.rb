@@ -212,8 +212,22 @@ module Enumerable
   #   [4, 5, 6]
   #   [7, 8, 9]
   #   [10]
-  def each_slice
-    # needs to be implemented
+  def each_slice(n)
+    return to_enum(:each_slice, n) if !block_given?
+    items = to_a
+    i = 0
+    len = items.length
+    while i < len
+      slice = []
+      j = 0
+      while j < n && i + j < len
+        slice << items[i + j]
+        j += 1
+      end
+      yield slice
+      i += n
+    end
+    nil
   end
 
 
@@ -267,17 +281,47 @@ module Enumerable
   end
 
 
-  def inject(initial = nil, &block)
-#    unless initial
-#      return self[1..-1].inject(self.first, &block)
-#    end
-
-    acc = initial
-    self.each do |item|
-      acc = yield(acc, item)
+  # inject / reduce, all four forms: inject(sym), inject(init, sym), inject(init){blk}, inject{blk}.
+  def inject(*args, &block)
+    if block
+      if args.length > 0
+        acc = args[0]
+        started = true
+      else
+        acc = nil
+        started = false
+      end
+      each do |item|
+        if !started
+          acc = item
+          started = true
+        else
+          acc = block.call(acc, item)
+        end
+      end
+      acc
+    else
+      if args.length >= 2
+        acc = args[0]
+        sym = args[1]
+        started = true
+      else
+        acc = nil
+        sym = args[0]
+        started = false
+      end
+      each do |item|
+        if !started
+          acc = item
+          started = true
+        else
+          acc = acc.send(sym, item)
+        end
+      end
+      acc
     end
-    return acc
   end
+  alias reduce inject
 
 
   alias map collect
@@ -434,4 +478,12 @@ module Enumerable
     end
     result
   end
+end
+
+# Range loads before this file (see core.rb), so it cannot `include Enumerable` at its own definition.
+# Reopen it here, now that Enumerable is fully defined, to give Range the full Enumerable surface
+# (map/select/reject/reduce/min/max/min_by/partition/flat_map/each_slice/...). Range#each is a plain
+# top-level-yield while-loop, so the captured-yield segfault that blocks this for Array does not apply.
+class Range
+  include Enumerable
 end
