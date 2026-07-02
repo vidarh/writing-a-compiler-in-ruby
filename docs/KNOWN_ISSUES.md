@@ -232,6 +232,22 @@ spec relying on `Array.new(n)`/`Array.new(n, obj)` fill semantics.
 
 ---
 
+### 7. `instance_variable_get`/`_set`/`_defined?`/`instance_variables` unimplemented (2026-07-02)
+
+None of the instance-variable reflection methods exist, so specs that assert on ivars via
+`o.instance_variable_get(:@foo)` (a very common mspec idiom, e.g. all the attr_writer/attr_accessor
+specs) hit "undefined method 'instance_variable_get'" and abort.
+
+They cannot be added as a pure-library method: instance variables are assigned FIXED slot offsets at
+compile time (`ClassScope#find_ivar_offset`, computed from the per-class `@instance_vars` list), and no
+name→offset map is emitted into the class object at runtime (unlike methods, which have the
+`method_to_voff` vtable map). So at runtime there is no way to resolve `:@foo` to a slot.
+
+A proper fix emits a per-class ivar-name→offset table (mirroring the vtable) that these methods can
+consult — a compiler change, not a lib addition.
+
+---
+
 ## Known Limitations (Cannot Fix)
 
 1. **eval() with dynamic strings** - AOT compilation cannot evaluate runtime strings
