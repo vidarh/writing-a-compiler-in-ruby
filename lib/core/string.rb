@@ -592,6 +592,16 @@ class String
   end
 
   def slice(a, len = nil)
+    # Regexp form: slice(re) returns the whole match; slice(re, n) returns capture group n. nil if no match.
+    if a.is_a?(Regexp)
+      m = match(a)
+      return nil if m.nil?
+      return len.nil? ? m[0] : m[len]
+    end
+    # String form: slice(str) returns a copy of str if it occurs in self, else nil.
+    if a.is_a?(String)
+      return include?(a) ? String.new(a) : nil
+    end
     return self[a] if len.nil?
     l = length
     start = a < 0 ? l + a : a
