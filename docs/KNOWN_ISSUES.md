@@ -164,6 +164,11 @@ Root-caused but intentionally not yet fixed (need larger features / deeper seman
 
 - **`for` loop variable does not leak.** In Ruby a `for i in ...` variable stays visible after the loop;
   here it is block-scoped, so `for i in 1..3; end; p i` raises "undefined method 'i'".
+- **Op-assign on a hash index with a boolean-literal key miscompiles.** `h[true] ||= []` (and
+  presumably `h[false] ||= ...` / other op-assigns) fails at runtime with "undefined method 'true'" --
+  the `true`/`false` literal in the index position of an op-assign is treated as a method call. Plain
+  `h[true] = x` / `h[true]` and `h[:sym] ||= x` all work, so it is specific to a boolean literal as the
+  index of an op-assign. Workaround: expand to an explicit nil-check (see Array#group_by).
 - **`|&block|` (block param of a block/lambda) is unbound.** `rewrite_lambda` leaves it as an
   uninitialised positional defun param, and `block_given?`/`__closure__` inside a yielded-to block do not
   reflect a block passed to the block, so `{ |&b| b }` reads garbage. Binding it to
