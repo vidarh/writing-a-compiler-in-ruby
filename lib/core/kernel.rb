@@ -45,8 +45,15 @@ class Kernel
 
   def raise(exc_or_msg = nil, msg = nil)
     if exc_or_msg.nil?
-      # raise with nil - should re-raise $! but that's handled by compiler
-      exc = RuntimeError.new
+      # Bare `raise` re-raises the exception currently being handled ($!). During a rescue body the
+      # runtime still holds it (it is cleared only after the body runs), so read it back. Outside any
+      # rescue there is none, and Ruby raises a RuntimeError.
+      cur = $__exception_runtime.current_exception
+      if cur.nil?
+        exc = RuntimeError.new("unhandled exception")
+      else
+        exc = cur
+      end
     elsif exc_or_msg.is_a?(Class)
       # raise ExceptionClass or raise ExceptionClass, message
       if msg

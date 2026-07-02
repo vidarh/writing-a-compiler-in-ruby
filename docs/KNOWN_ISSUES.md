@@ -169,6 +169,17 @@ Root-caused but intentionally not yet fixed (need larger features / deeper seman
   reflect a block passed to the block, so `{ |&b| b }` reads garbage. Binding it to
   `block_given? ? __closure__ : nil` (mirroring methods) does not help until block-to-block `block_given?`
   semantics are correct — reverted pending that.
+- **Raising again from inside a rescue body segfaults (re-raise / unwind bug).** Any second call into
+  the exception runtime while a rescue handler is running crashes: `begin raise E rescue => e; raise e
+  end` and bare `raise` both segfault, even when the re-raised exception is unhandled (should just print
+  "Unhandled exception" and exit). Confirmed across method boundaries too (`def m; raise E; rescue; raise;
+  end`). The first `%s(unwind handler)` restores esp/ebp to the begin's frame and jumps to the rescue
+  label; a subsequent `ExceptionRuntime#raise` from that unwound context corrupts the stack. NOTE:
+  catch/throw's own `raise e`-on-tag-mismatch path works for typical nested `catch` (verified), so the
+  trigger is structural, not universal. Kernel#raise was also fixed so a bare `raise` re-raises the
+  current exception (`$!`) instead of fabricating a RuntimeError, but that only becomes observable once
+  this unwind bug is fixed. Likely a high-value fix -- re-raise is common in specs. Needs work in the
+  `:unwind` primitive / ExceptionHandler stack-state capture.
 - **`core/string/scan_spec.rb` hangs the *compiler* (infinite loop at compile time).** Compiling the
   preprocessed spec loops forever (confirmed: `./compile` on the temp file never returns; killed at
   50min during a sweep). The whole file hangs but no single construct extracted from it reproduces in
