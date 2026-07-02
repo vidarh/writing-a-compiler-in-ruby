@@ -4351,10 +4351,7 @@ class Integer < Numeric
   end
 
   def downto(limit)
-    if !block_given?
-      # WORKAROUND: Full Enumerator not implemented, return stub
-      return Enumerator.new
-    end
+    return to_enum(:downto, limit) if !block_given?
     i = self
     while i >= limit
       yield i
@@ -4364,10 +4361,7 @@ class Integer < Numeric
   end
 
   def upto(limit)
-    if !block_given?
-      # WORKAROUND: Full Enumerator not implemented, return stub
-      return Enumerator.new
-    end
+    return to_enum(:upto, limit) if !block_given?
     i = self
     while i <= limit
       yield i
