@@ -368,6 +368,31 @@ consult — a compiler change, not a lib addition.
 
 ---
 
+### 8. Exit-time heap corruption in harness-heavy specs (2026-07-02) — distinct from #5
+
+A cluster of specs that lean on the mspec harness's mock/matcher machinery (e.g. core/array/clone_spec,
+core/kernel/public_send_spec, core/enumerator/{to_enum,each,next_values}_spec, core/basicobject/
+method_missing_spec) abort with `free(): invalid next size (fast)` — but the abort is in `tgc_sweep`
+during `exit()` (AFTER the spec has run all its examples and printed results), i.e. a stray heap write
+during the run, only surfaced by the final GC. gdb backtrace: `main -> print_spec_results -> Kernel#exit
+-> tgc_stop -> tgc_sweep -> free -> abort`.
+
+This is NOT the #5 `__tmp_proc`/`__env__` offset collision (that is fixed): instrumenting
+`LocalVarScope#get_arg` while compiling clone_spec shows every `__tmp_proc`/`__env__` resolution has
+`nextcls=FuncScope` with the two at distinct in-frame indices — no overlap. So it is a genuinely
+different heap overflow.
+
+It RESISTS minimal reproduction: the individual constructs all survive (singleton `def o.m(a,*args);
+yield a,*args; end` + `to_enum(:m, :a, :b, :c)` + `Enumerator.new { |y| y.yield ... }`; a lone
+`mock('x').should_receive(:each)`; even 20 iterations of eigenclass-def + enumerator + a minimal
+`describe/it` mock spec run through run_rubyspec). Only the full harness run of the real specs triggers
+it. Locating the offending write needs ASAN (docker buildenv, libasan.so.5 in 32root) or a tgc canary/
+redzone check around each tracked chunk during mark — a dedicated session. Note also: the harness Mock's
+`should_receive` does not actually register an expectation (it sets @call_counts but not @expectations),
+so mocked calls print "Mock: No expectation set" — a separate harness-fidelity gap.
+
+---
+
 ## Known Limitations (Cannot Fix)
 
 1. **eval() with dynamic strings** - AOT compilation cannot evaluate runtime strings
