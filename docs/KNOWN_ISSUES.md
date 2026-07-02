@@ -227,6 +227,28 @@ directly in tgc around each tracked object during mark, printing the object whos
 
 Fixing it should recover a large share of the ~64 core/kernel crashes (they all load this fixture).
 
+Further findings (2026-07-02):
+- The trigger is broader than KernelSpecs::A: with the full fixture loaded, `[1].each { Object.new }`
+  (ANY object allocation inside a block) corrupts. `KernelSpecs::A.new` at TOP LEVEL does NOT. So the
+  ingredients are: (fixture loaded) + (an allocation performed inside a block/closure).
+- Bisecting the fixture: the corruption needs "enough" method definitions. Concretely, cutting the
+  fixture at line 493 (before `WarnInNestedCall`) + a following `Struct.new(:v){ def to_int; v; end }`
+  survives; adding ~8 more trivial methods (`def g1;1;end`...) before the Struct makes it crash. So the
+  trigger correlates with the TOTAL number of distinct method names (= vtable size), not any one class.
+  The `Struct.new`/`Class.new` (runtime class creation) also matters -- removing it made the same prefix
+  survive.
+- It is DETERMINISTIC per binary (the full-fixture repro crashes 6/6) but LAYOUT-sensitive: trivially
+  different sources flip crash/no-crash, which is why the aggregate CRASH count in spec_status swings ~±30.
+- Ruled OUT this round (none fixed the deterministic repro): sizing every compile-time class object to the
+  final `__vtable_size` (compile_class.rb class_alloc_size); sizing eigenclasses to `__vtable_size`
+  (compile_eigenclass eksize). Combined with the earlier "+256 bytes per __alloc didn't help", the
+  overflow is NOT a small contiguous overrun of a class object, an eigenclass, or a generic __alloc
+  object (__alloc_env routes through __alloc too). Most likely a WILD write to a computed offset (e.g. a
+  vtable-offset used against a too-small object on some path not yet found) or corruption of tgc's own
+  gc.items table. Minimal deterministic repro for future work: `require 'rubyspec_helper'` + the full
+  kernel fixture + `[1].each { Object.new }`. valgrind is NOT installed here; ASAN via the docker
+  buildenv (libasan.so.5 in 32root) is the most promising next tool.
+
 ---
 
 ### 6. `Array#initialize` unimplemented for size/fill/copy; bootstrap-sensitive (2026-07-02)
