@@ -92,6 +92,14 @@ class Range
   # Yield every nth value from the start (n defaults to 1). Returns an Enumerator when block-less.
   def step(n = 1, &block)
     return to_enum(:step, n) if !block
+    # A numeric step of 0 never advances `cur` (infinite loop), and a negative numeric step drives a
+    # forward range off toward -infinity (also infinite, since the guard below only walks upward). MRI
+    # raises ArgumentError for both. Non-numeric ranges (e.g. Time endpoints) are left alone: their
+    # iteration is bounded by #succ/the block, not by the sign of n.
+    if (n.is_a?(Integer) || n.is_a?(Float)) && n <= 0
+      raise ArgumentError, "step can't be negative" if n < 0
+      raise ArgumentError, "step can't be 0"
+    end
     cur = @min
     if @exclude_end
       while cur < @max
