@@ -218,6 +218,8 @@ class Array
   end
 
   def each_slice(n)
+    # A slice size of 0 never advances `i` -> infinite loop (negative runs it backwards); MRI raises.
+    raise ArgumentError, "invalid slice size" if n <= 0
     return to_enum(:each_slice, n) if !block_given?
     i = 0
     len = length

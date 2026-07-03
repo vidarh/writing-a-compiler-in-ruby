@@ -213,6 +213,9 @@ module Enumerable
   #   [7, 8, 9]
   #   [10]
   def each_slice(n)
+    # A slice size of 0 never advances `i` (i += n) -> infinite loop; a negative size runs it backwards.
+    # MRI raises ArgumentError for both.
+    raise ArgumentError, "invalid slice size" if n <= 0
     return to_enum(:each_slice, n) if !block_given?
     items = to_a
     i = 0
