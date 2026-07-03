@@ -446,13 +446,17 @@ class Compiler
       # Only wrap if it's an AST node (not a symbol/constant name)
       if !args.is_a?(Array)
         args = [args]
-      elsif block && args.is_a?(Array) && args[0].is_a?(Symbol) &&
+      elsif block && args.is_a?(Array) && args.length > 1 && args[0].is_a?(Symbol) &&
             (@@keywords.include?(args[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(args[0]))
         # With a block, a SINGLE AST-node argument arrives unwrapped (e.g. `obj.m(-> {}) do..end`, where
         # the lambda is a [:do,...] node by now, or `obj.m(recv.x) do..end` -> [:callm,...]). args[0] is
         # then the node tag; treating args as an arg LIST would iterate the tag as a bogus method. Any
         # node tag qualifies (@@keywords + the call forms, which are excluded from @@keywords). A real
         # multi-arg list has a value/[:node]-array/non-keyword-symbol first element, so it is left alone.
+        # The `args.length > 1` guard is essential: a genuine unwrapped node ([:do,...]/[:callm,...]) always
+        # carries children, whereas a one-element arg LIST holding a single variable whose name happens to
+        # be a keyword (e.g. `obj.m(pattern) do..end`, args == [:pattern]) must NOT be treated as a node --
+        # doing so sent it to compile_exp, which dispatched the `:pattern` keyword to a missing method.
         args = [args]
       end
 
