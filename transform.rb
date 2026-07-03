@@ -880,7 +880,13 @@ class Compiler
             vars, env = find_vars(body, scopes, env, freq, in_lambda, false, current_params)
           end
         else
-          if    n[0] == :callm
+          if    n[0] == :callm || n[0] == :safe_callm
+            # :safe_callm (`recv&.m`) has the same node shape as :callm and MUST take this branch: the
+            # generic fallback below iterates the node as a list, registering the :safe_callm tag and
+            # the METHOD-NAME symbol as variables -- inside a lambda the method name then got captured
+            # into __env__ (`obj&.m += 3` in a block rewrote the assignment target's method to
+            # `(index __env__ k)` -> garbage dispatch -> SIGSEGV; a literal `safe_callm` local also
+            # appeared in the let).
             # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
             receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
             vars, env = find_vars(receiver, scopes, env, freq, in_lambda, false, current_params)
