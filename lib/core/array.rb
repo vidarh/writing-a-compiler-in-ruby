@@ -2242,10 +2242,11 @@ class Array
   # than enumObj.size, nil values are supplied. If a block given, it is invoked for each
   # output array, otherwise an array of arrays is returned.
   def zip(*args)
-    # Materialise each argument to an Array (Range and other enumerables via to_a), then index in
-    # lockstep with self, padding with nil when an argument is shorter. Previously this used e.next on
-    # per-arg enumerators, which crashed (GenericEnumerator had no #next) and did not pad shorter args.
-    others = args.collect { |a| a.is_a?(Array) ? a : a.to_a }
+    # zip only ever needs the first `length` elements of each argument, so take exactly that many rather
+    # than materialising the whole thing: `[1,2].zip(10.upto(Float::INFINITY))` must not try to realise an
+    # infinite (or huge) enumerable via to_a -> hang. Array args index directly; others take first(length)
+    # (lazy for a proper enumerator). Shorter arguments are padded with nil in the lockstep loop below.
+    others = args.collect { |a| a.is_a?(Array) ? a : a.first(length) }
     result = block_given? ? nil : []
     i = 0
     n = length
