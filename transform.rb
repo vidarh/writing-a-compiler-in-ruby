@@ -639,6 +639,9 @@ class Compiler
   def rewrite_strconst(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
+      # Keep the require name readable: a :require_missing marker's string is only used
+      # for the "Unable to open" build error / runtime LoadError message.
+      next :skip if e[0] == :require_missing
       is_call = e[0] == :call || e[0] == :callm
       e.each_with_index do |s,i|
         if s.is_a?(String)
