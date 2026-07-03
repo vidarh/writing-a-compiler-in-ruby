@@ -147,12 +147,21 @@ class String
     Encoding::US_ASCII
   end
 
-  def [] index
+  def [] index, len = nil
+    # Two-argument form: str[start, length] -- same selection as #slice.
+    if !len.nil?
+      return slice(index, len)
+    end
     l = length
 
     if index.is_a?(Range)
       b = index.first
       e = index.last
+
+      # Beginless (..e) / endless (b..) ranges: nil endpoints mean "from 0" / "to the end".
+      b = 0 if b.nil?
+      endless = e.nil?
+      e = -1 if endless
 
       # Convert heap integers to fixnums if within range
       b_fixnum = b.__to_fixnum_if_possible
@@ -182,7 +191,7 @@ class String
       if e < 0
         e = l + e
       end
-      stop = index.exclude_end? ? e : e + 1
+      stop = (!endless && index.exclude_end?) ? e : e + 1
       if stop > l
         stop = l
       end
@@ -626,8 +635,27 @@ class String
     return num
   end
 
-  def slice!(b,e)
+  def slice!(b, e = nil)
     l = length
+    # Range form: slice!(2..), slice!(1..-2), ... -- normalize to (start, length)
+    if b.is_a?(Range)
+      s = b.begin
+      s = 0 if s.nil?
+      s = l + s if s < 0
+      re = b.end
+      if re.nil?
+        e = l - s
+      else
+        re = l + re if re < 0
+        re = re + 1 if !b.exclude_end?
+        e = re - s
+      end
+      e = 0 if e < 0
+      b = s
+    elsif e.nil?
+      # Single index: remove one character
+      e = 1
+    end
     if b < 0
       b = l + b
     end

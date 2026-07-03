@@ -30,6 +30,20 @@ module Tokens
       end
     end
 
+    # UTF-8 encode a codepoint as a binary string (self-hosted runtime is
+    # byte-oriented, so building the bytes explicitly works in both).
+    def self.__utf8(v)
+      if v < 0x80
+        v.chr
+      elsif v < 0x800
+        (0xC0 | (v >> 6)).chr + (0x80 | (v & 0x3F)).chr
+      elsif v < 0x10000
+        (0xE0 | (v >> 12)).chr + (0x80 | ((v >> 6) & 0x3F)).chr + (0x80 | (v & 0x3F)).chr
+      else
+        (0xF0 | (v >> 18)).chr + (0x80 | ((v >> 12) & 0x3F)).chr + (0x80 | ((v >> 6) & 0x3F)).chr + (0x80 | (v & 0x3F)).chr
+      end
+    end
+
     def self.escaped(s,q = DQ, &term)
       if term
         return nil if term.call(s)
@@ -94,6 +108,45 @@ module Tokens
             n = n + 1
           end
           return val.chr
+        when 'u'
+          # \uXXXX (up to four hex digits) or \u{H+ H+ ...} -> UTF-8 encoded codepoint(s)
+          if s.peek == ?{
+            s.get
+            out = "".b
+            val = 0
+            have = false
+            while s.peek && s.peek != ?}
+              hv = Quoted.__hexval(s.peek)
+              if hv >= 0
+                s.get
+                val = val * 16 + hv
+                have = true
+              elsif s.peek == " "
+                s.get
+                if have
+                  out = out + Quoted.__utf8(val)
+                end
+                val = 0
+                have = false
+              else
+                break
+              end
+            end
+            s.get if s.peek == ?}
+            if have
+              out = out + Quoted.__utf8(val)
+            end
+            return out
+          end
+          val = 0
+          n = 0
+          while n < 4 && s.peek && Quoted.__hexval(s.peek) >= 0
+            val = val * 16 + Quoted.__hexval(s.get)
+            n = n + 1
+          end
+          # A bare \u with no hex digits is the literal character
+          return e if n == 0
+          return Quoted.__utf8(val)
         when '0', '1', '2', '3', '4', '5', '6', '7'
           # \NNN -- up to three octal digits (the first is already in e) -> a single byte
           val = e.ord - 48

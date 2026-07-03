@@ -823,9 +823,13 @@ class Compiler
         return compile_callm(scope, obj, setter_method, [right])
       else  # has arguments: foo[idx] = baz or foo.method(arg) = baz
         args = left[3] || []
-        # args may be a single arg or array of args
-        # If it's a single arg that's not already wrapped, wrap it
-        args = [args] if !args.is_a?(Array) || (args[0].is_a?(Symbol) && args[0] != :sexp && ![:array, :hash, :splat].include?(args[0]))
+        # args may be a single unwrapped AST node or an array of args. Wrap only when args[0]
+        # is a node TAG (same rule as compile_callm's block-arg wrap): a one-element arg LIST
+        # holding a plain variable (e.g. `@gen[y] ||= []`, args == [:y]) must NOT be wrapped --
+        # doing so compiled the lvalue index as a method call on self ("undefined method 'y'").
+        args = [args] if !args.is_a?(Array) ||
+                         (args.length > 1 && args[0].is_a?(Symbol) &&
+                          (@@keywords.include?(args[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(args[0])))
         all_args = args + [right]
         return compile_callm(scope, obj, setter_method, all_args)
       end

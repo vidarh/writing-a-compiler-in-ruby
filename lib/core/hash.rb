@@ -15,7 +15,7 @@ class Hash
 
   DELETED = Deleted.new
 
-  def initialize defval = nil
+  def initialize defval = nil, &block
     @length   = 0
     #@deleted  = 0
     @capacity = 7
@@ -23,6 +23,7 @@ class Hash
     @first = nil
     @last  = nil
     @defval = defval
+    @defproc = block
   end
 
   def default
@@ -204,14 +205,31 @@ class Hash
     raise KeyError.new("key not found: #{key.inspect}")
   end
 
+  def default_proc
+    @defproc
+  end
+
+  def default_proc= blk
+    @defproc = blk
+  end
+
+  # Value returned for a missing key: the default proc (if set) wins over the
+  # static default value.
+  def _default key
+    if @defproc
+      return @defproc.call(self, key)
+    end
+    @defval
+  end
+
   def [] key
     # Handle nil keys specially since nil is also used as empty slot marker
     if key.nil?
-      return member?(nil) ? @data[_find_slot(nil) + 1] : @defval
+      return member?(nil) ? @data[_find_slot(nil) + 1] : _default(nil)
     end
     pos = _find_slot(key)
     # Test the slot for nil (empty), NOT truthiness -- a stored `false` key is falsy but present.
-    @data[pos].nil? ? @defval : @data[pos + 1]
+    @data[pos].nil? ? _default(key) : @data[pos + 1]
   end
 
   def capacity_too_low

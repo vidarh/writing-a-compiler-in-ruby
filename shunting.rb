@@ -374,9 +374,14 @@ module OpPrec
           # including a pending lower-priority infix. e.g. `a + b[1].c` would then reduce the `+` before
           # the `.c` arrives, mis-parsing as `(a + b[1]).c` instead of `a + (b[1].c)`.
           @out.oper(@ostack.pop)
-        elsif @ostack[-1].nil? || @ostack[-1].sym != :call
+        elsif (treat_as_argument || should_index) &&
+              (@ostack[-1].nil? || @ostack[-1].sym != :call)
           reduce(@ostack, @opcall2)
         end
+        # NOTE: a plain grouping paren (neither call nor index) must NOT trigger a
+        # priority-based reduce here: reduce(@opcall2) (pri 9) pops any pending infix
+        # with right_pri > 9, so `a + (b).c` mis-parsed as `(a + (b)).c`. The grouped
+        # value is already on the value stack; pending operators bind to it normally.
       elsif op
         reduce(ostack, op)
         opstate = :prefix

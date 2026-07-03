@@ -280,7 +280,13 @@ class Parser < ParserBase
     ws
     cond = parse_condition or expected("condition for 'when'")
     nolfws
-    literal(COLON) || keyword(:then) || literal(SEMICOLON)
+    if literal(SEMICOLON)
+      # MRI accepts `when x; then body` -- consume the redundant then after ;
+      nolfws
+      keyword(:then)
+    else
+      literal(COLON) || keyword(:then)
+    end
     ws
     return E[:when, cond, parse_opt_defexp]
   end

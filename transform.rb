@@ -662,6 +662,9 @@ class Compiler
   def rewrite_strconst(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
+      # Keep the require name readable: a :require_missing marker's string is only used
+      # for the "Unable to open" build error / runtime LoadError message.
+      next :skip if e[0] == :require_missing
       is_call = e[0] == :call || e[0] == :callm
       e.each_with_index do |s,i|
         if s.is_a?(String)
@@ -971,7 +974,7 @@ class Compiler
               v3, env = find_vars([n[3]], scopes, env, freq, in_lambda, false, current_params)
               vars += v3
             end
-          elsif n[0] == :case && in_lambda
+          elsif n[0] == :case
             # [:case, cond, branches] where branches is a BARE list of [:when, test, body] clauses plus an
             # optional trailing else statement-list. The generic n[1..-1] path recurses into `branches` as
             # if it were a single tagged AST node and DROPS its first element (the first when clause), so
@@ -981,19 +984,25 @@ class Compiler
             # single pass (matching the default call's scope/env handling).
             parts = []
             parts << n[1] if n[1]
-            (n[2] || []).each do |br|
-              if br.is_a?(Array) && br[0] == :when
-                parts << br[1] if br[1]
-                body = br[2]
-                if body.is_a?(Array) && body[0].is_a?(Array)
-                  body.each { |s| parts << s }
-                elsif body
-                  parts << body
+            # n[2] is the when-clause list; a trailing else arrives as a FURTHER element
+            # (n[3], a bare statement-list) -- scan every group, not just n[2].
+            n[2..-1].each do |grp|
+              next if !grp
+              brs = (grp.is_a?(Array) && !grp.empty? && grp[0].is_a?(Array)) ? grp : [grp]
+              brs.each do |br|
+                if br.is_a?(Array) && br[0] == :when
+                  parts << br[1] if br[1]
+                  body = br[2]
+                  if body.is_a?(Array) && body[0].is_a?(Array)
+                    body.each { |s| parts << s }
+                  elsif body
+                    parts << body
+                  end
+                elsif br.is_a?(Array) && br[0].is_a?(Array)
+                  br.each { |s| parts << s }   # else statement-list
+                elsif br
+                  parts << br
                 end
-              elsif br.is_a?(Array) && br[0].is_a?(Array)
-                br.each { |s| parts << s }   # else statement-list
-              elsif br
-                parts << br
               end
             end
             vars, env = find_vars(parts, scopes, env, freq, in_lambda, false, current_params)
