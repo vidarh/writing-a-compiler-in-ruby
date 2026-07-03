@@ -208,7 +208,12 @@ module Tokens
     # block: passed through for #{} interpolation parsing
     def self.expect_dquoted(s, q='"', term=nil, &block)
       ret = nil
-      buf = ""
+      # Binary buffer: a double-quoted literal can mix multibyte source characters (`s.get` yields a
+      # UTF-8 char) with raw bytes produced by \xHH / \NNN / \M- / \C- escapes (`val.chr`, ASCII-8BIT).
+      # On MRI, `"utf8" << "\xF4"` raises Encoding::CompatibilityError; accumulating in a binary buffer
+      # and appending each piece as bytes (`.b`) keeps the byte stream intact. The self-hosted runtime is
+      # byte-oriented (String#b returns self), so this is a no-op there.
+      buf = "".b
       qchar = q ? q[0] : nil
       while (e = escaped(s, qchar, &term));
         if e == :escaped_hash
@@ -221,16 +226,16 @@ module Tokens
           else
             sresult = handle_simple_interpolation(s, ret, buf)
             if sresult.is_a?(String)
-              buf << sresult
+              buf << sresult.b
             elsif sresult
               ret = sresult
-              buf = ""
+              buf = "".b
             elsif s.peek != ?{
-              buf << e
+              buf << e.b
             end
           end
         else
-          buf << e
+          buf << e.b
         end
       end
       if !term
@@ -362,7 +367,7 @@ module Tokens
       end
 
       ret = nil
-      buf = ""
+      buf = "".b   # binary buffer: interpolated heredocs can mix UTF-8 source chars with \xHH byte escapes
       at_line_start = true
       strip_remaining = min_indent
 
@@ -420,16 +425,16 @@ module Tokens
           else
             sresult = handle_simple_interpolation(s, ret, buf)
             if sresult.is_a?(String)
-              buf << sresult
+              buf << sresult.b
             elsif sresult
               ret = sresult
-              buf = ""
+              buf = "".b
             elsif s.peek != ?{
-              buf << e
+              buf << e.b
             end
           end
         else
-          buf << e
+          buf << e.b
         end
       end
 
