@@ -349,6 +349,13 @@ class Compiler
   # so lets reload it.
   def reload_self(scope)
     t,a = get_arg(scope,:self)
+    if t == :global && a != :self
+      # In a class/module body self is the class object, addressable via its global.
+      # get_arg alone emits no reload, so a clobbered %esi (any low-level call, e.g.
+      # __get_string while building arguments) made self-dispatch go through a stale
+      # table: `self.config(...)` in a subclass body raised "undefined method".
+      @e.load(:global, a, :esi)
+    end
   end
 
   # FIXME: @bug May need to do this as a rewrite, as if block is taken in, and
