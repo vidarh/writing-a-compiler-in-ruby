@@ -1939,7 +1939,7 @@ class Compiler
   # for a bare index but NOT for a splat index (`a[*idx]`), because rewrite_splat_to_array runs first and
   # rewrites the getter-callm into a value-returning let-block, which is then an invalid assignment lhs.
   def destruct_target_assign(target, value)
-    if target.is_a?(Array) && (target[0] == :callm || target[0] == :safe_callm) && target[1] != :__destruct
+    if target.is_a?(Array) && (target[0] == :callm || target[0] == :safe_callm) && !target[1].to_s.start_with?("__destruct")
       setter = (target[2].to_s + "=").to_sym
       args = target[3] || []
       args = [args] unless args.is_a?(Array)
@@ -2004,10 +2004,16 @@ class Compiler
           end
         end
 
-        # FIXME: Are there instances where aliasing __destruct may
-        # be a problem?
+        # Each expansion gets a UNIQUE temp name: a nested grouped target (`((a, b), c) = ...`)
+        # expands to a nested let whose initializer reads the OUTER expansion's temp
+        # (`inner = Array(outer[i])`). With a single shared name the inner `let (__destruct)`
+        # shadowed the outer before the initializer read it, so the RHS read the freshly
+        # allocated (uninitialized) inner slot -> garbage receiver -> SIGSEGV (deterministic
+        # inside blocks; top level survived only by stack-slot-layout luck).
+        @destruct_seq = (@destruct_seq || 0) + 1
+        dtemp = "__destruct#{@destruct_seq}".to_sym
         e[0] = :let
-        e[1] = [:__destruct]
+        e[1] = [dtemp]
         # If RHS is a flat array (comma expression like `1, 2, 3`), wrap it in :array
         # Without this, `a, b, c = 1, 2, 3` passes 3 args to Array() instead of 1.
         # A single AST-operator node (e.g. [:callm, ...], [:array, ...], [:add, ...]) must NOT be
@@ -2032,7 +2038,7 @@ class Compiler
         # Convert right-hand side to array using Array() for proper destructuring
         # Array() tries to_ary, then to_a, then wraps in array if neither exists
         # This handles cases like `x, y = 42` where 42 doesn't respond to to_a
-        e[2] = [:do, [:assign, :__destruct, [:call, :Array, [r]]]]
+        e[2] = [:do, [:assign, dtemp, [:call, :Array, [r]]]]
         ex = e
 
         if splat_idx
@@ -2048,7 +2054,7 @@ class Compiler
             elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
               v = [:destruct, *v]
             end
-            ex[2] << destruct_target_assign(v, [:callm,:__destruct,:[],[i]])
+            ex[2] << destruct_target_assign(v, [:callm,dtemp,:[],[i]])
           end
 
           # After splat: use negative indices from the end
@@ -2066,7 +2072,7 @@ class Compiler
               end
               # Use negative index: -1 for last element, -2 for second-to-last, etc
               neg_idx = -after_splat + offset - 1
-              ex[2] << destruct_target_assign(v, [:callm,:__destruct,:[],[neg_idx]])
+              ex[2] << destruct_target_assign(v, [:callm,dtemp,:[],[neg_idx]])
             end
           end
 
@@ -2083,13 +2089,13 @@ class Compiler
             # raw `[:sexp, N]` ints: Array#[](range) -> __range_get calls `.first`/`.last`/`.__get_raw` on
             # the endpoints, which dereferences a raw int as an object pointer and SIGSEGVs.
             ex[2] << destruct_target_assign(splat_var,
-              [:callm, :__destruct, :[],
+              [:callm, dtemp, :[],
                 [[:range, start_idx, end_idx]]])
           else
             # No elements after splat, use range to end: __destruct[start_idx..-1]. Endpoints are Integer
             # objects, not raw `[:sexp, N]` ints (see note above -- __range_get dereferences them as objects).
             ex[2] << destruct_target_assign(splat_var,
-              [:callm, :__destruct, :[],
+              [:callm, dtemp, :[],
                 [[:range, start_idx, -1]]])
           end
         else
@@ -2104,7 +2110,7 @@ class Compiler
             elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
               v = [:destruct, *v]
             end
-            ex[2] << destruct_target_assign(v, [:callm,:__destruct,:[],[i]])
+            ex[2] << destruct_target_assign(v, [:callm,dtemp,:[],[i]])
           end
         end
       end
