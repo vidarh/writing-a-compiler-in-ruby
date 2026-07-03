@@ -447,6 +447,21 @@ class Compiler
           body = newbody
         end
 
+        # Bind a &block parameter of a block/lambda (`{ |&blk| ... }`). It captures the block passed to THIS
+        # proc's invocation -- __closure__ -- and reads nil when none was passed, exactly like a method's
+        # &block (process_scope_env handles that for :defm). It is NOT a positional argument, so drop it from
+        # full_params (the defun already carries __closure__) and bind a real local to the nilable closure at
+        # the top of the body. Without this `blk` read the raw __closure__ slot (0 when no block is present)
+        # and any use of it (`blk.nil?`, `blk == nil`, `blk.call`) dereferenced null and SIGSEGV'd.
+        blockp = full_params.find { |a| a.is_a?(Array) && a[1] == :block }
+        if blockp
+          bname = blockp[0]
+          full_params.delete(blockp)
+          body = E[:let, [bname],
+            E[:assign, bname, E[:if, :"block_given?", :__closure__, :nil]],
+            body]
+        end
+
         e.replace(
           E[:do,
             [:assign, [:index, :__env__,0], [:stackframe]],
