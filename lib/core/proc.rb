@@ -41,12 +41,16 @@ class Proc
     self
   end
 
-  def call *__copysplat
-    # Publish the block passed to THIS invocation (raw __closure__ of #call itself; 0 when none) for
-    # the lambda's own &param to pick up (see __proc_call_block in lib/core/base.rb). The lambda's
-    # __closure__ parameter stays @closure -- the block captured at creation -- which is what `yield`
-    # inside the block must reach.
-    %s(assign __proc_call_block __closure__)
+  def call *__copysplat, &blk
+    # Publish the block passed to THIS invocation (nil when none) for the lambda's own &param to pick
+    # up (see __proc_call_block in lib/core/base.rb). The lambda's __closure__ parameter stays
+    # @closure -- the block captured at creation -- which is what `yield` inside the block must reach.
+    # NOTE: this must go through the &blk PARAM, not a textual `__closure__` reference: naming
+    # __closure__ in the body makes rewrite_env_vars box the closure into a heap __env__ (an
+    # allocation on every call!) and the restructuring breaks the implicit numargs register contract
+    # between the splat prologue and the (splat __copysplat) call emission -> garbage argument counts.
+    # The &param's nilable binding is injected AFTER the env rewrite, so it is safe.
+    %s(assign __proc_call_block blk)
     %s(call @addr (@s @closure @env (splat __copysplat)))
 
     # WARNING: Do not do extra stuff here. If this is a 'proc'/bare block
@@ -57,13 +61,13 @@ class Proc
   # the primitive behind class_eval/module_eval/instance_eval and Class.new/Module.new blocks: the block's
   # `def`s (which emit __set_vtable(self, ...)) and self-relative calls (attr_reader, include, ...) then act
   # on `newself`.
-  def __call_with_self newself, *__copysplat
-    %s(assign __proc_call_block __closure__)
+  def __call_with_self newself, *__copysplat, &blk
+    %s(assign __proc_call_block blk)
     %s(call @addr (newself @closure @env (splat __copysplat)))
   end
 
-  def [] *__copysplat
-    %s(assign __proc_call_block __closure__)
+  def [] *__copysplat, &blk
+    %s(assign __proc_call_block blk)
     %s(call @addr (@s @closure @env (splat __copysplat)))
   end
 
