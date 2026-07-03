@@ -607,7 +607,13 @@ class Compiler
       # set once -- unlike a method's reloadable stack-arg self).
       let(cscope, :__env__, :__closure__, :__tmp_proc, *body_locals) do |lscope|
         compile_eval_arg(lscope, [:sexp, [:assign, :__closure__, 0]])
-        compile_eval_arg(lscope, [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]])
+        # The env must be sized to hold every slot the transform assigned, not a fixed 2. A class body
+        # whose closures capture several class-body locals gets `(index __env__ N)` for N up to the number
+        # of captured vars; allocating only 2 slots let those writes run off the end of the heap block and
+        # corrupt adjacent malloc metadata. Size it from the highest __env__ index actually used (matching
+        # the top-level closure path in transform.rb, which sizes its own __alloc_env the same way).
+        env_slots = [2, class_body_env_size(exps) + 1].max
+        compile_eval_arg(lscope, [:sexp, [:assign, :__env__, [:call, :__alloc_env, env_slots]]])
         exps.each do |e|
           stmts = e.is_a?(Array) ? e : [e]
           stmts.each do |stmt|
@@ -673,6 +679,25 @@ class Compiler
     end
     exps.each { |e| collect.call(e) }
     locals.uniq
+  end
+
+  # Highest `[:index, :__env__, N]` slot used against the CLASS BODY's own __env__, so the body's
+  # __alloc_env can be sized to fit. Shared closures (transform-produced :defun taking __env__ as a
+  # param) reference the same env and are counted; a nested `[:let ...]` that RE-binds :__env__ starts
+  # its own environment (it carries its own __alloc_env) and is skipped. Returns -1 if none is used.
+  def class_body_env_size(exps)
+    max = -1
+    walk = lambda do |n|
+      return if !n.is_a?(Array)
+      # A nested let that rebinds __env__ owns a separate environment; don't descend into it.
+      return if n[0] == :let && n[1].is_a?(Array) && n[1].include?(:__env__)
+      if n[0] == :index && n[1] == :__env__ && n[2].is_a?(Integer)
+        max = n[2] if n[2] > max
+      end
+      n.each { |c| walk.call(c) }
+    end
+    exps.each { |e| walk.call(e) }
+    max
   end
 
 end
