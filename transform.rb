@@ -812,7 +812,21 @@ class Compiler
         # :defm/:defun have their own scopes (processed by rewrite_let_env's depth_first(:defm)); :required
         # nodes are inlined library files. When find_vars scans a TOP-LEVEL scope it must not descend into
         # any of them, or it captures/rewrites library + method-body vars into the top-level __env__.
-        next if n[0] == :defm || n[0] == :defun || n[0] == :required
+        next if n[0] == :defun || n[0] == :required
+        if n[0] == :defm
+          # A nested def's BODY is its own scope -- never scan it from here (see the comment above).
+          # But a SINGLETON def's receiver (`def recv.name`, e[1] == [recv, name]) is evaluated in the
+          # ENCLOSING scope, so scan it as an ordinary read: a receiver captured from inside a lambda
+          # must be promoted into __env__ here, or rewrite_env_vars' receiver rewrite (which only
+          # rewrites names already IN the env) never fires and the def's receiver compiles as a bogus
+          # self-method call / garbage. Previously the capture only happened if some OTHER reference
+          # to the variable happened to promote it, so `l = -> { def obj.foo; end }` worked or
+          # crashed depending on where else obj was mentioned.
+          if n[1].is_a?(Array) && !n[1].empty?
+            _v, env = find_vars([n[1][0]], scopes, env, freq, in_lambda, false, current_params)
+          end
+          next
+        end
         if n[0] == :assign
           target = n[1]
           if target.is_a?(Array) && target[0] == :deref
