@@ -1643,9 +1643,19 @@ class Array
 
   # Returns the index of the first object in self such that is == to obj.
   # Returns nil if no match is found.
-  def index(obj)
+  def index(obj = nil, &block)
     i = 0
     l = length
+    # Block form: index of the first element for which the block is true.
+    if obj.nil? && block
+      while (i < l)
+        if yield(self[i])
+          return i
+        end
+        i+=1
+      end
+      return nil
+    end
     while (i < l)
       if self[i] == obj
         return i

@@ -147,7 +147,11 @@ class String
     Encoding::US_ASCII
   end
 
-  def [] index
+  def [] index, len = nil
+    # Two-argument form: str[start, length] -- same selection as #slice.
+    if !len.nil?
+      return slice(index, len)
+    end
     l = length
 
     if index.is_a?(Range)
