@@ -1027,6 +1027,16 @@ class String
 
   # FIXME: Terribly inefficient (should pre-alloc capacity)
   def * cnt
+    raise ArgumentError, "negative argument" if cnt < 0
+    # Guard against building an absurdly large string. Without this, `"abc" * (2**31-1)` loops ~2e9 times
+    # allocating gigabytes -> effectively a hang. MRI raises RangeError when the multiplier does not fit in
+    # a long, and ArgumentError when the RESULT length would overflow a long.
+    if cnt > 0x7fffffff
+      raise RangeError, "bignum too big to convert into `long'"
+    end
+    if length > 0 && cnt > (0x7fffffff / length)
+      raise ArgumentError, "argument too big"
+    end
     s = ""
     cnt.times do
       s.concat(self)
