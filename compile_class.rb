@@ -77,6 +77,18 @@ class Compiler
     false
   end
 
+  # True when `scope` is inside an escaped s-expression (%s(...)): compile_sexp wraps the scope in a
+  # SexpScope. Used to keep raw sexp `(call var ...)` as a genuine indirect call while Ruby-level
+  # `name(...)` always dispatches the method (see compile_call).
+  def scope_has_sexpscope?(scope)
+    s = scope
+    while s
+      return true if s.is_a?(SexpScope)
+      s = s.respond_to?(:next) ? s.next : nil
+    end
+    false
+  end
+
 
   def compile_module(scope,name, *exps)
     # FIXME: This is a cop-out that will cause horrible

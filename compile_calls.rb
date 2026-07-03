@@ -273,6 +273,16 @@ class Compiler
     # :argaddr -- parameters -- are redirected; :lvar/ivar/global resolutions are left as-is.)
     return compile_callm(scope,:self, func, args,block) if func.is_a?(Symbol) && fargs && (fargs[0] == :arg || fargs[0] == :argaddr)
 
+    # The same applies to a LOCAL of the same name: a DEFAULTED parameter lives in a local slot
+    # (:lvar), so in `def foo(bar = bar()); bar; end` the default expression's explicit `bar()`
+    # compiled as an indirect `call *%slot` through the just-nil'd local -> jump to the nil object ->
+    # SIGSEGV. Ruby-level `name()` never calls through a variable, so dispatch on self. Raw
+    # s-expressions DO use `(call var ...)` for genuine indirect calls through function-pointer
+    # variables, so anything under a SexpScope (every %s(...) body) keeps the low-level behaviour.
+    if func.is_a?(Symbol) && fargs && fargs[0] == :lvar && !scope_has_sexpscope?(scope)
+      return compile_callm(scope,:self, func, args,block)
+    end
+
     # Wrap single argument in array if needed
     # When there's a block, parser passes args unwrapped: [:call, func, arg, block]
     # When there's no block, parser wraps args: [:call, func, [args...]]
