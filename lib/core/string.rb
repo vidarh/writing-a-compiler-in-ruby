@@ -1515,8 +1515,35 @@ class String
       block.call(dup)
       return self
     end
-    start = 0
     n = length
+    if sep == ""
+      # Paragraph mode: split on runs of 2+ newlines (blank lines). Leading blank lines are skipped and
+      # each yielded paragraph keeps its trailing newline run. The generic loop below would use a
+      # separator length of 0, so `start` would never advance -> infinite loop. NB: this runtime's
+      # String#[index] returns the BYTE value (Integer), so compare against 10 (the "\n" byte), not "\n".
+      nl = 10
+      start = 0
+      while start < n
+        while start < n && self[start] == nl
+          start = start + 1
+        end
+        break if start >= n
+        para_start = start
+        while start < n
+          if self[start] == nl && start + 1 < n && self[start + 1] == nl
+            start = start + 1
+            while start < n && self[start] == nl
+              start = start + 1
+            end
+            break
+          end
+          start = start + 1
+        end
+        block.call(self[para_start...start])
+      end
+      return self
+    end
+    start = 0
     sl = sep.length
     while start < n
       idx = index(sep, start)
