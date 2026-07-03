@@ -298,7 +298,54 @@ class Class
   # (transform.rb rewrite_define_method); forms it can't statically rewrite (exotic block params, a dynamic
   # body) reach here. Accept the optional body arg (`define_method(:name, proc)`) so it doesn't raise
   # "wrong number of arguments", and do nothing rather than crash while a fixture loads.
+  # The registry is an ASSOCIATION LIST (parallel arrays scanned with equal?), NOT a Hash keyed by
+  # the class object: object-keyed Hash lookups go through Object#hash/eql? machinery that proved
+  # fragile for class objects (layout-sensitive infinite probe loops). Identity scan + symbol-keyed
+  # per-class tables use only well-exercised primitives.
   def define_method(sym, body = nil, &block)
+    pr = block ? block : body
+    return nil if pr.nil?
+    if $__dm_classes.nil?
+      $__dm_classes = []
+      $__dm_tables = []
+    end
+    h = nil
+    i = 0
+    while i < $__dm_classes.length
+      if $__dm_classes[i].equal?(self)
+        h = $__dm_tables[i]
+        break
+      end
+      i += 1
+    end
+    if h.nil?
+      h = {}
+      $__dm_classes << self
+      $__dm_tables << h
+    end
+    h[sym.to_sym] = pr
+    sym.to_sym
+  end
+
+  # Walk the ancestor chain for a define_method-registered proc; nil when none.
+  def __find_defined_method(sym)
+    return nil if $__dm_classes.nil?
+    c = self
+    while c
+      i = 0
+      while i < $__dm_classes.length
+        if $__dm_classes[i].equal?(c)
+          pr = $__dm_tables[i][sym]
+          return pr if pr
+          break
+        end
+        i += 1
+      end
+      # Object.superclass returns Object itself (bootstrap fallback), so an unguarded walk never
+      # terminates on a miss -- stop once Object has been checked.
+      return nil if c.equal?(Object)
+      c = c.superclass
+    end
     nil
   end
 

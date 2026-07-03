@@ -468,20 +468,21 @@ class Compiler
 
         # Bind a &block parameter of a block/lambda (`{ |&blk| ... }`). It must capture the block passed
         # to THIS proc's invocation -- which is NOT the lambda's __closure__ parameter: Proc#call passes
-        # the proc's CAPTURED @closure there (the creator's block, so `yield` inside the block reaches the
-        # enclosing method's block). Binding blk from __closure__ conflated the two, so a proc that both
-        # yields and takes |&blk| saw the SAME block for both. The call-time block is published in the
-        # __proc_call_block global by Proc#call/#[]/#__call_with_self; __call_block__ (Object) returns its
-        # nilable view, so blk reads nil when no block was passed (a raw 0 would SIGSEGV on `blk.nil?`).
-        # It is NOT a positional argument, so drop it from full_params (the defun already carries
-        # __closure__) and bind a real local at the top of the body, before any user code runs another
-        # Proc (which would overwrite the global).
+        # the proc's CAPTURED @closure there (the creator's block, so `yield` inside the block reaches
+        # the enclosing method's block). The call-time block is published in the __proc_call_block
+        # global by Proc#call/#[] (and by __dispatch_missing__ before __call_with_self). Bind via a RAW
+        # sexp read of that global -- NOT a method call: this binding runs before the rest-param
+        # prologue, and a method call here clobbers the raw numargs register that
+        # `__splat_to_Array(__splat, numargs-ac)` consumes, so `{ |*a, &b| }` collected a garbage
+        # count. The global always holds nil-or-proc (every publisher stores a Ruby value; the raw-0
+        # initial state is unreachable because lambdas are only ever invoked through Proc methods,
+        # which publish first). It is NOT a positional argument, so drop it from full_params.
         blockp = full_params.find { |a| a.is_a?(Array) && a[1] == :block }
         if blockp
           bname = blockp[0]
           full_params.delete(blockp)
           body = E[:let, [bname],
-            E[:assign, bname, :__call_block__],
+            E[:assign, bname, E[:sexp, :__proc_call_block]],
             body]
         end
 

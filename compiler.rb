@@ -1491,7 +1491,9 @@ class Compiler
       @e.addl(1,:ebx)
 
       load_class(@global_scope)
-      @e.jmp("*__voff__method_missing(%eax)")
+      # Land in Object#__dispatch_missing__ (runtime define_method registry, then method_missing).
+      # The stack is already arranged exactly like a normal method call.
+      @e.jmp("*__voff____dispatch_missing__(%eax)")
 
     @e.label("__vtable_thunks_start")
     @vtableoffsets.vtable.each do |name,_|

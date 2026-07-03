@@ -61,8 +61,14 @@ class Proc
   # the primitive behind class_eval/module_eval/instance_eval and Class.new/Module.new blocks: the block's
   # `def`s (which emit __set_vtable(self, ...)) and self-relative calls (attr_reader, include, ...) then act
   # on `newself`.
-  def __call_with_self newself, *__copysplat, &blk
-    %s(assign __proc_call_block blk)
+  # NOTE: no &blk param here, and none may be added: this method re-expands its splat through the
+  # RAW `(splat __copysplat)` s-exp below, whose argument marshalling assumes the signature is
+  # exactly (fixed..., *rest) -- an appended &blk made it collect one extra argument (the closure
+  # slot leaked into __copysplat). Callers that need the call-time block published for the callee's
+  # own &param (see __proc_call_block in lib/core/base.rb) must publish it themselves before calling
+  # (as Object#__dispatch_missing__ does); Proc#call publishes its own because its signature has no
+  # leading fixed param, which is the combination that breaks.
+  def __call_with_self newself, *__copysplat
     %s(call @addr (newself @closure @env (splat __copysplat)))
   end
 

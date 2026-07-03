@@ -31,8 +31,10 @@ class Class
     sym  = sym.to_sym
     voff = Class.method_to_voff[sym]
     if !voff
-      # FIXME: This needs to change once we handle "define_method"
-      return obj.method_missing(sym, *args)
+      # No compile-time vtable slot (name never statically def'd). Route through
+      # __dispatch_missing__ (runtime define_method registry, then method_missing) and
+      # forward the block (the old direct method_missing call dropped it).
+      return obj.__dispatch_missing__(sym, *args, &blk)
     else
       # We can't inline this in the call, as our updated callm
       # doesn't allow method/function calls in the method slot
