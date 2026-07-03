@@ -1034,7 +1034,11 @@ class String
     if cnt > 0x7fffffff
       raise RangeError, "bignum too big to convert into `long'"
     end
-    if length > 0 && cnt > (0x7fffffff / length)
+    # An empty string repeated any (long-sized) number of times is still "" -- return immediately instead
+    # of looping cnt times over a no-op concat (`"" * max_long` otherwise spins ~2e9 times). This is after
+    # the Bignum check so `"" * <bignum>` still raises RangeError.
+    return "" if length == 0
+    if cnt > (0x7fffffff / length)
       raise ArgumentError, "argument too big"
     end
     s = ""
