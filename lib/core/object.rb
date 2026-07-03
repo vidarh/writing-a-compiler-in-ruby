@@ -82,7 +82,12 @@ class Object
     # wraps to [self]. Previously this always wrapped to [self], which both mis-expanded such objects and
     # -- crucially for the array-literal splat path -- meant `*nil` had to be left uncoerced.
     return [] if nil?
-    return to_a if respond_to?(:to_a)
+    if respond_to?(:to_a)
+      r = to_a
+      # Only use to_a's result when it is actually an Array; otherwise the splat machinery would read
+      # @len off a non-Array and crash. (MRI raises TypeError here; wrapping to [self] is the safe fallback.)
+      return r if r.is_a?(Array)
+    end
     [self]
   end
 
