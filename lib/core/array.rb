@@ -965,6 +965,11 @@ class Array
     else
       s = spec0.nil? ? 0 : spec0
       s = n + s if s < 0
+      # A negative start index counts from the end; if it is still negative after adding the length it
+      # points before the start of the array, so clamp to 0 (MRI). Without this, `[1,2,3].fill('a',-25,3)`
+      # left s negative and the growing `self[s] = ...` below raised "index too small" instead of filling
+      # from index 0.
+      s = 0 if s < 0
       e = spec1.nil? ? n : s + spec1
     end
     i = s
