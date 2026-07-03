@@ -265,6 +265,15 @@ class Compiler
         # crashes rewrite_let_env -- leave those as a runtime call (the no-op stub) rather than break.
         e.replace([:defm, e[2].to_s[1..-1].to_sym, e[3][1], e[3][2]])
       elsif e[0] == :call && e[1] == :define_method &&
+         e[2].is_a?(Symbol) && e[2].to_s[0] == ?: &&
+         e[3].is_a?(Array) && e[3][0] == :proc && e[3].length == 1
+        # An EMPTY block `define_method(:m) do; end` parses to a bare [:proc] with no params/body list
+        # (a non-empty block gives [:proc, params, body]). The block form above requires both to be
+        # Arrays, so this fell through to the no-op define_method stub -> the method was never defined
+        # and calling it crashed (null vtable slot) instead of returning nil. Define an empty method
+        # (no params, body `nil`) so `define_method(:m){}` behaves like `def m; end`.
+        e.replace([:defm, e[2].to_s[1..-1].to_sym, [], [:nil]])
+      elsif e[0] == :call && e[1] == :define_method &&
          e[2].is_a?(Array) && e[2].length == 2 &&
          e[2][0].is_a?(Symbol) && e[2][0].to_s[0] == ?: &&
          e[2][1].is_a?(Array) && e[2][1][0] == :callm && e[2][1][1] == :Proc && e[2][1][2] == :new &&
