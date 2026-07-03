@@ -453,6 +453,16 @@ class Enumerator
     def take(n);            __step([:take, n]);       end
     def drop(n);            __step([:drop, n]);       end
     def uniq(&b);           __step([:uniq, b]);       end
+    # Lazy with_index: pair each value with a running index (offset-based). Must stay lazy -- the eager
+    # Enumerator#with_index would walk an infinite source (`(0..Float::INFINITY).lazy.with_index...`) to
+    # completion. Without a block it yields [value, index]; with a block it calls block(value, index) and
+    # passes the value through. nil offset means 0; a non-Integer offset is a TypeError (MRI).
+    def with_index(offset = 0, &b)
+      offset = 0 if offset.nil?
+      raise TypeError, "no implicit conversion into Integer" if !offset.is_a?(Integer)
+      __step([:with_index, offset, b])
+    end
+    def each_with_index(&b); with_index(0, &b);        end
     def lazy;               self;                      end
 
     # Evaluate the pipeline. The op blocks and `outer` are called INLINE inside the source's each block
@@ -540,6 +550,16 @@ class Enumerator
                 if !seen.include?(key)
                   seen << key
                   nextvals << x
+                end
+              elsif t == :with_index
+                # st[oi] is the running count (starts 0). op[1] is the offset, op[2] the optional block.
+                idx = op[1] + st[oi]
+                st[oi] += 1
+                if op[2]
+                  op[2].call(x, idx)
+                  nextvals << x
+                else
+                  nextvals << [x, idx]
                 end
               end
               vi += 1
