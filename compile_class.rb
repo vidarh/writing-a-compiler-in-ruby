@@ -405,8 +405,19 @@ class Compiler
     # We skip Object prefix because classes/modules defined in lambdas/methods land in
     # Object scope but should be global constants, not Object__Foo
     if explicit_namespace
-      # Name already contains full path (e.g., ClassSpecs__L), don't add prefix
-      fully_qualified_name = name.to_sym
+      if name.to_s.start_with?("self__") && parent_scope.is_a?(ModuleScope) && parent_scope.name != "Object"
+        # A DYNAMIC deref name (`module self::B`) flattens to "self__B" -- not a real global path, so
+        # the usual "explicit namespace means the name is already fully qualified" rule is wrong for
+        # it. The transform (build_class_scopes) registers such a nested module WITH the enclosing
+        # scope prefix ("self__A__self__B"); deriving the bare "self__B" here made compile-time use a
+        # DIFFERENT global cell than the one the registered scope's metadata writes resolve to -- the
+        # class object was created in one cell and its instance_size/name written through the other
+        # (never-assigned, null) cell -> SIGSEGV on `module self::B` nested inside `module self::A`.
+        fully_qualified_name = "#{parent_scope.name}__#{name}".to_sym
+      else
+        # Name already contains full path (e.g., ClassSpecs__L), don't add prefix
+        fully_qualified_name = name.to_sym
+      end
     elsif parent_scope.is_a?(ModuleScope) && parent_scope.name != "Object"
       fully_qualified_name = "#{parent_scope.name}__#{name}".to_sym
     else
