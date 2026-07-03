@@ -35,6 +35,16 @@ either expressed or implied, of the FreeBSD Project.
 #include <stdint.h>
 #include <string.h>
 #include <setjmp.h>
+#include <signal.h>
+
+/* Ignore SIGPIPE process-wide (as MRI does). A write() to a pipe/socket whose read
+   end is closed otherwise delivers SIGPIPE and kills the process; with SIG_IGN the
+   write instead returns -1/EPIPE, which IO#write can surface as Errno::EPIPE rather
+   than crashing the whole program. Runs before main via the constructor attribute. */
+__attribute__((constructor))
+static void __rt_ignore_sigpipe(void) {
+  signal(SIGPIPE, SIG_IGN);
+}
 
 typedef struct {
   void *ptr;
