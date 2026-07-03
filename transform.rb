@@ -2180,8 +2180,58 @@ class Compiler
     rewrite_forward_args(exp)    # Must run before rewrite_keyword_args
     rewrite_keyword_args(exp)   # Must run before rewrite_default_args
     rewrite_default_args(exp)
+    rewrite_index_opassign(exp)  # expand `recv[*idx] ||=/&&= v` before rewrite_splat_to_array mangles the lvalue
     rewrite_splat_to_array(exp)
     rewrite_let_env(exp)
+  end
+
+  # Expand `recv[*idx] ||= v` and `recv[*idx] &&= v` (and the `obj.attr` call-form equivalent) into an
+  # explicit read-modify-write over cached temps. compile_or_assign/compile_and_assign read the lvalue as
+  # a getter and then re-use it as a setter, which works for a bare index (`recv[i] ||= v`) because
+  # compile_assign turns the getter-callm into a setter. But when the index carries a SPLAT the following
+  # rewrite_splat_to_array rewrites the getter-callm into a value-returning let-block, which is no longer a
+  # valid assignment lhs ("Expected an argument on left hand side of assignment"). Expanding here -- before
+  # that pass -- caches the receiver and each index operand ONCE, then emits a getter read and, on the
+  # short-circuit branch, an explicit setter call; both survive rewrite_splat_to_array (sole-splat getter ->
+  # let-block; splat+value setter -> coerced-in-place). `+=` and friends are already expanded to `:[]=` by
+  # the parser, so only :or_assign/:and_assign need this. Fixed temp names => nested index-splat op-assigns
+  # (vanishingly rare) are unsupported.
+  def rewrite_index_opassign(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      next unless e.is_a?(Array) && (e[0] == :or_assign || e[0] == :and_assign)
+      left = e[1]
+      next unless left.is_a?(Array) && (left[0] == :callm || left[0] == :safe_callm)
+      args = left[3]
+      # Bare index / attribute op-assign already works via compile_assign; only a splat index is broken.
+      next unless args.is_a?(Array) && args.any? { |a| a.is_a?(Array) && a[0] == :splat }
+
+      recv   = left[1]
+      meth   = left[2]
+      setter = (meth.to_s + "=").to_sym
+      is_or  = (e[0] == :or_assign)
+      v      = e[2]
+
+      letvars  = [:__oa_r]
+      body     = [E[:assign, :__oa_r, recv]]
+      new_args = []
+      args.each_with_index do |a, i|
+        tmp = "__oa_a#{i}".to_sym
+        letvars << tmp
+        if a.is_a?(Array) && a[0] == :splat
+          body << E[:assign, tmp, a[1]]
+          new_args << E[:splat, tmp]
+        else
+          body << E[:assign, tmp, a]
+          new_args << tmp
+        end
+      end
+      letvars << :__oa_t
+      body << E[:assign, :__oa_t, E[:callm, :__oa_r, meth, new_args]]
+      write = E[:callm, :__oa_r, setter, new_args + [v]]
+      body << (is_or ? E[:if, :__oa_t, :__oa_t, write] : E[:if, :__oa_t, write, :__oa_t])
+      e.replace(E[:let, letvars, *body])
+    end
   end
 
   # Coerce a calling-side splat operand to an Array: `obj.m(*x)` / `f(*x)` for a non-Array x reads x's
