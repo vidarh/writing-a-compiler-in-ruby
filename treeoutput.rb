@@ -26,6 +26,21 @@ module OpPrec
       @vstack = []
     end
 
+    # Un-mangle a method-call MLHS where the comma bound into the `.`'s method slot (see the callm-assign
+    # branch). `a.x, b.y, c.z = ...` parses left-deep as `a.(x, b.(y, c.z))`, i.e.
+    # [:callm, a, [:x, [:callm, b, [:y, [:callm, c, :z]]]]]. Recursively split: the first target is
+    # `recv.<first-method>`, and each remaining element is itself either a complete target or another such
+    # mangle to expand. A real method name is always a Symbol, so an Array method slot is unambiguously
+    # this mis-parse; a plain [:callm, recv, :sym] (Symbol slot) is a normal complete target.
+    def unmangle_mlhs_targets(node)
+      return [node] unless node.is_a?(Array) && (node[0] == :callm || node[0] == :safe_callm) && node[2].is_a?(Array)
+      mlist = node[2]
+      mlist = flatten(mlist) if mlist[0] == :comma
+      first = E[node[0], node[1], mlist[0]]
+      rest = mlist[1..-1].flat_map { |t| unmangle_mlhs_targets(t) }
+      [first] + rest
+    end
+
     def flatten(r)
       return r if !r.is_a?(Array)
       return r if r[0] != :comma and r[0] != :flatten
@@ -254,6 +269,16 @@ module OpPrec
         else
           @vstack << leftv + args
         end
+      elsif la and (leftv[0] == :callm || leftv[0] == :safe_callm) and o.sym == :assign and leftv[2].is_a?(Array)
+        # Multiple-assignment to method-call (attribute) targets: `a.x, b.y = ...`. Comma (pri 99) binds
+        # tighter than `.` (pri 98), so the comma list bound into the `.`'s method slot -- leftv came out
+        # as [:callm, a, [:x, <b.y node>, ...]] instead of [:comma, a.x, b.y]. A real method name is always
+        # a Symbol, so an Array here is unambiguously this mis-parse. Reconstruct the intended MLHS targets
+        # -- the first is `a.<first-method>`, the rest are already complete target nodes -- and route through
+        # normal destructuring assignment (rewrite_destruct + destruct_target_assign build the setters).
+        targets = unmangle_mlhs_targets(leftv)
+        rhs = rightv.is_a?(Array) && rightv[0] == :comma ? flatten(rightv) : rightv
+        @vstack << E[:assign, E[:destruct] + targets, rhs]
       elsif la and (leftv[0] == :callm || leftv[0] == :safe_callm) and o.sym == :assign
         rightv = E[rightv]
         lv = leftv[3]
