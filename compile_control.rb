@@ -158,6 +158,41 @@ class Compiler
   # Compiles a while loop.
   # Takes the current scope, a condition expression as well as the body of the function.
   def compile_while(scope, cond, body)
+    # Post-test form: `begin; body; end while cond` runs the body once BEFORE testing (do-while). The
+    # parser marks it with a [:block, [], stmts] body wrapper, exactly like the until case. Without this
+    # branch compile_while ran it as a pre-test loop, dropping the guaranteed first iteration.
+    is_post_test = body.is_a?(Array) && body[0] == :block && body[1].is_a?(Array) && body[1].empty?
+    if is_post_test
+      @e.evict_all
+      break_label = @e.get_local
+      # `next` targets the condition (see compile_until): jumping to the body top would skip a loop
+      # advance that lives in the condition and spin forever.
+      continue_label = @e.get_local
+      loop_label = @e.local
+
+      body_stmts = body[2]
+      if body_stmts.is_a?(Array)
+        body_stmts.each do |stmt|
+          cs = ControlScope.new(scope, break_label, continue_label)
+          if stmt.is_a?(Array)
+            compile_exp(cs, stmt)
+          else
+            compile_eval_arg(cs, stmt)
+          end
+        end
+      end
+
+      @e.local(continue_label)
+      @e.evict_all
+      var = compile_eval_arg(scope, cond)
+      compile_jmp_on_true(scope, var, loop_label)  # while: loop again while the condition is TRUE
+
+      nilval = compile_eval_arg(scope, :nil)
+      @e.movl(nilval, :eax) if nilval != :eax
+      @e.local(break_label)
+      return Value.new([:subexpr])
+    end
+
     # We need two exit labels:
     # - normal_exit: for when condition becomes false (returns nil)
     # - break_label: for when break is executed (returns break value)
