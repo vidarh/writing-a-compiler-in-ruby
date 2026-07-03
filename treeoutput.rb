@@ -355,8 +355,11 @@ module OpPrec
             # Only wrap in :destruct if this is actually a comma-separated list of variables
             # Not if it's a single structured expression like [:deref, :Foo, :Bar]
             #
-            # Known AST operator symbols that indicate a structured expression (not a variable list):
-            ast_operators = [:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array]
+            # Known AST operator symbols that indicate a structured expression (not a variable list).
+            # :splat must be here: a lone splat LHS `*a = rhs` is the single target [:splat, :a], NOT a
+            # two-element variable list -- `[:destruct] + [:splat, :a]` would flatten to
+            # [:destruct, :splat, :a] and assign to a phantom `splat` local plus a wrong `a`.
+            ast_operators = [:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :splat]
 
             if ast_operators.include?(lv[0])
               # This is a structured expression like [:deref, :Foo, :Bar]

@@ -1844,16 +1844,19 @@ class Compiler
         var = l[1]
         r = e[2]
         # Wrap right side in array if it's not already an array literal
+        e[1] = var
         if r.is_a?(Array) && r[0] == :array
-          # Already an array literal, just assign it
-          e[1] = var
+          # Already an array literal (also how a bare comma tuple `1, 2` is represented) -- keep as is.
         elsif r.is_a?(Array)
-          # Array of values, wrap in :array
-          e[1] = var
-          e[2] = [:array, *r]
+          # A bare comma tuple of values (`b, c`) splats element-wise; a SINGLE structured node
+          # (`*x` -> [:splat, x], `foo.bar` -> [:callm, ...], `a + b` -> [:add, ...]) is ONE value and
+          # must be wrapped whole. `[:array, *r]` on `[:splat, x]` would flatten it to
+          # `[:array, :splat, x]` and mis-splat -> `*a = *x` then raised "wrong number of arguments".
+          node_head = r[0].is_a?(Symbol) &&
+            (Compiler::Keywords.include?(r[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(r[0]))
+          e[2] = node_head ? [:array, r] : [:array, *r]
         else
           # Single value, wrap in array
-          e[1] = var
           e[2] = [:array, r]
         end
       end
@@ -1899,6 +1902,14 @@ class Compiler
         # [:"$foo", 5], whose head :"$foo" is a Symbol but NOT an operator), leaving it unwrapped and
         # miscompiled as the call `$foo(5)`. Distinguish by recognising real node tags: only heads that
         # are keywords or call forms mark a single node; any other symbol head is a comma tuple.
+        # A sole splat RHS (`a, *b = *x`): node_head below treats [:splat, x] as a single node and skips
+        # the wrapping, so `Array([:splat, x])` mis-splats x's elements into Array()'s argument list
+        # ("wrong number of arguments"). Wrap it as the array literal `[*x]` so compile_array expands it
+        # to x.to_a first. A comma tuple that merely CONTAINS a splat (`a, *b = 1, *x`) already has a
+        # non-splat head and is wrapped by the branch below, so only the sole-splat case needs this.
+        if r.is_a?(Array) && r[0] == :splat
+          r = [:array, r]
+        end
         node_head = r.is_a?(Array) && !r.empty? && r[0].is_a?(Symbol) &&
           (Compiler::Keywords.include?(r[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(r[0]))
         if r.is_a?(Array) && !r.empty? && !node_head
