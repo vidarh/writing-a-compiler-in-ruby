@@ -203,9 +203,13 @@ class Compiler
 
     if is_post_test
       # Post-test loop: execute body THEN check condition
-      # Loop structure: loop: body; if !cond goto loop; exit
+      # Loop structure: loop: body; continue: if !cond goto loop; exit
       @e.evict_all
       break_label = @e.get_local
+      # `next` must jump to the CONDITION check, not the body top: in `begin body end until (i+=1)>=5`
+      # the loop's advance lives in the condition, so a `next` that jumped back to the body top skipped
+      # it and spun forever. Give next its own label placed just before the condition.
+      continue_label = @e.get_local
       loop_label = @e.local
 
       # Execute body first (extract from [:block, [], [...]] wrapper)
@@ -213,15 +217,17 @@ class Compiler
       body_stmts = body[2]
       if body_stmts.is_a?(Array)
         body_stmts.each do |stmt|
+          cs = ControlScope.new(scope, break_label, continue_label)
           if stmt.is_a?(Array)
-            compile_exp(ControlScope.new(scope, break_label, loop_label), stmt)
+            compile_exp(cs, stmt)
           else
-            compile_eval_arg(ControlScope.new(scope, break_label, loop_label), stmt)
+            compile_eval_arg(cs, stmt)
           end
         end
       end
 
       # Now check condition - jump back to loop_label if still false (until = while not)
+      @e.local(continue_label)  # `next` lands here, at the post-condition
       @e.evict_all
       var = compile_eval_arg(scope, cond)
       compile_jmp_on_false(scope, var, loop_label)  # Loop while condition is false
