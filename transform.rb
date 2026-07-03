@@ -1636,6 +1636,59 @@ class Compiler
   #
   # (we still need to be able to fall back to dynamic constant lookup)
   #
+  # Hoist `require`d file content to the program top level. `require` (see Parser#require) inlines a
+  # file's parsed AST as a `[:required, <ast>]` node AT the require's lexical position. When the require
+  # sits inside a block/proc -- e.g. rubyspec's `before :each do require "stringio" end` -- the file's
+  # `class`/`module` definitions end up nested inside a block, where the compiler mis-builds them: a class
+  # defined in a block gets a garbage @instance_size and is not properly created (`undefined method 'new'`;
+  # under-sized instance -> initializer writes ivars out of bounds -> heap corruption). In Ruby `require`
+  # loads at the top level regardless of where it runs, so moving the definitions to the top level is both
+  # the fix and the correct semantics; the require expression itself is left behind as `true` (its return
+  # value). Only real `[:required, ast]` nodes are hoisted -- a `[:required, [:require_missing, q]]` marker
+  # is left in place so a missing-file require inside a method/block still becomes a runtime LoadError
+  # (compile_required decides that from scope), not a top-level build error.
+  def hoist_requires(exp)
+    return if !exp.is_a?(Array) || exp[0] != :do
+    hoisted = []
+    hoist_from = lambda do |node|
+      return if !node.is_a?(Array)
+      node.each_index do |i|
+        c = node[i]
+        next if !c.is_a?(Array)
+        if c[0] == :required
+          # Do not descend into required content (that is the file's own top level). Hoist a real
+          # require; leave a require_missing marker where it is.
+          if !(c[1].is_a?(Array) && c[1][0] == :require_missing)
+            hoisted << c
+            node[i] = true
+          end
+        else
+          hoist_from.call(c)
+        end
+      end
+    end
+    # A require that is itself a direct top-level statement is already at the top level -- leave it.
+    # Requires nested anywhere inside a top-level statement's subtree are hoisted.
+    i = 1
+    while i < exp.length
+      c = exp[i]
+      hoist_from.call(c) if c.is_a?(Array) && c[0] != :required
+      i += 1
+    end
+    # Insert the hoisted requires AFTER the last existing top-level require (the injected core/library
+    # requires), so the hoisted file's classes -- which depend on core (String, Integer, ...) -- still
+    # load after core, but before the user code that references them.
+    if !hoisted.empty?
+      pos = 1
+      j = 1
+      while j < exp.length
+        pos = j + 1 if exp[j].is_a?(Array) && exp[j][0] == :required
+        j += 1
+      end
+      exp.insert(pos, *hoisted)
+    end
+  end
+
   def build_class_scopes(exps, scope)
     return if !exps.is_a?(Array)
 
@@ -2187,6 +2240,9 @@ class Compiler
   end
 
   def preprocess exp
+    # Move `require`d file content to the top level BEFORE any scope/ivar analysis runs.
+    hoist_requires(exp)
+
     # The global scope is needed for some rewrites
     setup_global_scope(exp)
 
