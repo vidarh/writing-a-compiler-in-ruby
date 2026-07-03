@@ -204,6 +204,17 @@ class Object
     nil
   end
 
+  # The nilable view of __proc_call_block (see lib/core/base.rb): the block passed to the CURRENT
+  # Proc invocation, or nil when none was given. A block's own &param (`proc { |&b| ... }`) binds
+  # from this in the lambda prologue (rewrite_lambda) -- the CALL-TIME block -- as opposed to the
+  # lambda's __closure__ parameter, which carries the block captured at the proc's creation (what
+  # `yield` inside the block uses).
+  def __call_block__
+    b = nil
+    %s(if (ne __proc_call_block 0) (assign b __proc_call_block))
+    b
+  end
+
   # FIXME: Private
   def send sym, *args, &block
     __send__(sym, *args, &block)

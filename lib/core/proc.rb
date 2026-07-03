@@ -42,6 +42,11 @@ class Proc
   end
 
   def call *__copysplat
+    # Publish the block passed to THIS invocation (raw __closure__ of #call itself; 0 when none) for
+    # the lambda's own &param to pick up (see __proc_call_block in lib/core/base.rb). The lambda's
+    # __closure__ parameter stays @closure -- the block captured at creation -- which is what `yield`
+    # inside the block must reach.
+    %s(assign __proc_call_block __closure__)
     %s(call @addr (@s @closure @env (splat __copysplat)))
 
     # WARNING: Do not do extra stuff here. If this is a 'proc'/bare block
@@ -53,10 +58,12 @@ class Proc
   # `def`s (which emit __set_vtable(self, ...)) and self-relative calls (attr_reader, include, ...) then act
   # on `newself`.
   def __call_with_self newself, *__copysplat
+    %s(assign __proc_call_block __closure__)
     %s(call @addr (newself @closure @env (splat __copysplat)))
   end
 
   def [] *__copysplat
+    %s(assign __proc_call_block __closure__)
     %s(call @addr (@s @closure @env (splat __copysplat)))
   end
 
