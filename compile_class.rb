@@ -154,9 +154,22 @@ class Compiler
     old_entry = class_scope.add_vtable_entry(old_name)
     new_entry = class_scope.add_vtable_entry(new_name)
 
-    # Generate runtime code to copy the function pointer from old to new offset
-    # This uses __alias_method_runtime which just does: vtable[new_off] = vtable[old_off]
-    compile_eval_arg(scope, [:sexp, [:call, :__alias_method_runtime, [:self, new_entry.offset, old_entry.offset]]])
+    # Generate runtime code to copy the function pointer from old to new offset.
+    # This uses __alias_method_runtime which just does: vtable[new_off] = vtable[old_off].
+    # As with `def` (see compile_defm), an alias inside a block targets the block's RUNTIME
+    # self: for class_eval/Class.new-do that self is the target class, but for instance_eval it
+    # is an ordinary object whose singleton class should receive the alias. Routing through
+    # `self.__def_target` (Class/Module return self; any other object returns its singleton
+    # class) makes both cases correct -- without it, instance_eval passes the object itself as
+    # the vtable and __set_vtable walks its instance-var slots as a subclass list -> crash.
+    if scope_has_funcscope?(scope)
+      compile_eval_arg(scope,
+        [:let, [:__aliastgt],
+          [:assign, :__aliastgt, [:callm, :self, :__def_target]],
+          [:sexp, [:call, :__alias_method_runtime, [:__aliastgt, new_entry.offset, old_entry.offset]]]])
+    else
+      compile_eval_arg(scope, [:sexp, [:call, :__alias_method_runtime, [:self, new_entry.offset, old_entry.offset]]])
+    end
 
     return Value.new([:subexpr])
   end

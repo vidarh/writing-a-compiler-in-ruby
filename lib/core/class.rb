@@ -84,9 +84,18 @@
 # exist (points to method_missing), the alias will also point to method_missing,
 # which will fail at runtime when called (correct Ruby behavior).
 #
+# Guard: if the source slot is 0 (never-initialized -- e.g. the old name is not
+# a real method, as happens when a dynamic/interpolated alias name resolves to a
+# nonexistent method), copying it would install a NULL vtable entry, so calling
+# the alias jumps to address 0 and segfaults. Fall back to the new name's own
+# method_missing thunk (__base_vtable[new_off]) so the call raises NoMethodError
+# instead of crashing.
+#
 %s(defun __alias_method_runtime (vtable new_off old_off)
   (let (ptr)
     (assign ptr (index vtable old_off))
+    (if (eq ptr 0)
+      (assign ptr (index __base_vtable new_off)))
     (__set_vtable vtable new_off ptr)
   )
 )
