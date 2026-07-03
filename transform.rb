@@ -542,6 +542,16 @@ class Compiler
         next unless e[args_index].is_a?(Array)
 
         args = e[args_index]
+        # A sole collection-literal argument can arrive UNWRAPPED in the args slot -- `m({...}) { block }`
+        # and `m([...]) { block }` leave the bare [:hash,...]/[:array,...] node there instead of a
+        # one-element arg list (the block path in treeoutput skips the single-arg wrapping). Iterating it
+        # as an arg list reads `:hash`/`:array` and the following elements as separate args, and the
+        # trailing :pair then gets re-wrapped into a bogus nested [:hash, [:hash, ...]] -> compile_hash
+        # errors ("Literal Hash must contain key value pairs"). It is ONE argument: wrap it and move on.
+        if args[0] == :hash || args[0] == :array
+          e[args_index] = [args]
+          next
+        end
         new_args = []
         pairs_and_splats = []
 
