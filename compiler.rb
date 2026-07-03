@@ -696,8 +696,32 @@ class Compiler
     # __stackframe__ is automatically added to __env__ in `rewrite_let_env`
 
     ret = compile_eval_arg(scope,[:index,:__env__,0])
+    @e.movl(ret,:eax) if ret != :eax
 
-    @e.movl(ret,:ebp)
+    # Pre-scan (mirrors compile_break's): before jumping, verify the target frame is actually on the
+    # current stack by walking the saved-%ebp chain from the current frame. A proc containing `return`
+    # that is captured and called AFTER its defining method returned (`def m; Proc.new { return }; end;
+    # m.call`) carries a dead frame pointer; jumping through it executed stack garbage and segfaulted.
+    # If the chain is exhausted (saved %ebp of 0, or not strictly increasing) before the target is
+    # found, raise LocalJumpError ("unexpected return") instead, matching MRI. The walk only reads the
+    # saved-%ebp slots of live frames, so it cannot fault.
+    l_scan  = @e.get_local + "_scan"
+    l_found = @e.get_local + "_found"
+    l_noret = @e.get_local + "_noret"
+    @e.movl("(%ebp)", :edx)      # walker starts at the current frame's caller
+    @e.local(l_scan)
+    @e.cmpl(:eax, :edx)          # walker == target frame?
+    @e.je(l_found)
+    @e.movl("(%edx)", :ebx)      # next = saved %ebp (caller's frame)
+    @e.cmpl(:edx, :ebx)          # next <= walker => chain exhausted
+    @e.jbe(l_noret)
+    @e.movl(:ebx, :edx)
+    @e.jmp(l_scan)
+    @e.local(l_noret)
+    compile_eval_arg(scope, [:call, :__raise_return_error, []])  # raises; never returns
+    @e.local(l_found)
+
+    @e.movl(:eax,:ebp)
     @e.movl("-4(%ebp)",:ebx) # Restoring numargs from outside scope
     @e.popl(:eax)
     @e.leave

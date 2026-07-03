@@ -51,6 +51,14 @@ class Kernel
     raise LocalJumpError.new("break from proc-closure")
   end
 
+  # Called by the compiler (compile_preturn) when a `return` inside a proc cannot find the defining
+  # method's frame on the stack -- i.e. that method has already returned (the proc escaped via capture
+  # and was called later). MRI raises LocalJumpError ("unexpected return"); without this the raw
+  # unwind jumped through a dead frame pointer and segfaulted.
+  def __raise_return_error
+    raise LocalJumpError.new("unexpected return")
+  end
+
   def raise(exc_or_msg = nil, msg = nil)
     if exc_or_msg.nil?
       # Bare `raise` re-raises the exception currently being handled ($!). During a rescue body the
