@@ -2329,6 +2329,7 @@ class Compiler
     rewrite_forward_args(exp)    # Must run before rewrite_keyword_args
     rewrite_keyword_args(exp)   # Must run before rewrite_default_args
     rewrite_default_args(exp)
+    rewrite_safe_opassign(exp)   # nil-guard `recv&.m OP= v` before other assignment rewrites see it
     rewrite_index_opassign(exp)  # expand `recv[*idx] ||=/&&= v` before rewrite_splat_to_array mangles the lvalue
     rewrite_splat_to_array(exp)
     rewrite_let_env(exp)
@@ -2345,6 +2346,37 @@ class Compiler
   # let-block; splat+value setter -> coerced-in-place). `+=` and friends are already expanded to `:[]=` by
   # the parser, so only :or_assign/:and_assign need this. Fixed temp names => nested index-splat op-assigns
   # (vanishingly rare) are unsupported.
+  # `recv&.m OP= v` must short-circuit the ENTIRE read-modify-write to nil when recv is nil (MRI
+  # semantics). The parser expands `recv&.m += v` into `assign (safe_callm recv m) ((safe_callm recv
+  # m) + v)` (and ||=/&&= into :or_assign/:and_assign with a safe_callm target) with no guard, so the
+  # getter short-circuited to nil and then `nil + v` ran unconditionally -> NoMethodError (and a crash
+  # in accumulated spec state). Wrap the whole assignment in a receiver nil-check and de-safe the
+  # inner accesses (they are inside the guard). The receiver is re-evaluated in the guard; the
+  # parser's own op-assign expansion already re-evaluates it, so this adds nothing new for the
+  # (typical, simple-variable) receivers.
+  def rewrite_safe_opassign(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      if (e[0] == :assign || e[0] == :or_assign || e[0] == :and_assign) &&
+         e[1].is_a?(Array) && e[1][0] == :safe_callm
+        recv = e[1][1]
+        meth = e[1][2]
+        target = E[:callm, recv, meth]
+        rhs = e[2]
+        if e[0] == :assign && rhs.is_a?(Array)
+          rhs.depth_first do |g|
+            if g.is_a?(Array) && g[0] == :safe_callm && g[1] == recv && g[2] == meth
+              g[0] = :callm
+            end
+          end
+        end
+        inner = E[e[0], target, rhs]
+        e.replace(E[:if, E[:callm, recv, :nil?], :nil, inner])
+      end
+    end
+    exp
+  end
+
   def rewrite_index_opassign(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
