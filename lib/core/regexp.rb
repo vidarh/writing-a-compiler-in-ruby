@@ -186,6 +186,10 @@ class Regexp
           scan_i += 1
         elsif c == 91 && !in_class  # '[' - start character class
           in_class = true
+        elsif c == 91 && in_class && scan_i + 1 < plen && pattern[scan_i + 1] == 58
+          # POSIX class [:name:] inside a class: skip to its ']' so it doesn't end the class
+          scan_i += 2
+          scan_i += 1 while scan_i < plen && pattern[scan_i] != 93
         elsif c == 93 && in_class  # ']' - end character class
           in_class = false
         elsif c == 40 && !in_class  # '(' - increase depth
@@ -290,8 +294,12 @@ class Regexp
       elsif pc == 91  # '['
         pi += 1
         pi += 1 if pi < plen && pattern[pi] == 94  # skip '^'
-        # Find closing ']'
+        # Find closing ']' -- a POSIX class [:name:] contains a ']' that must not close the class
         while pi < plen && pattern[pi] != 93
+          if pattern[pi] == 91 && pi + 1 < plen && pattern[pi + 1] == 58  # '[:'
+            pi += 2
+            pi += 1 while pi < plen && pattern[pi] != 93
+          end
           pi += 1
         end
         pi += 1 if pi < plen  # skip ']'
@@ -631,8 +639,16 @@ class Regexp
       tc = text[ti]
       while pattern[pi] != 93  # ']'
         cc = pattern[pi]
+        # POSIX class [:name:] inside the class
+        if cc == 91 && pattern[pi + 1] == 58  # '[:'
+          n0 = pattern[pi + 2]
+          n2 = pattern[pi + 4]
+          pi += 2
+          pi += 1 while pi < pattern.length && pattern[pi] != 93  # to the ']' of ':]'
+          pi += 1
+          matched = true if __posix?(n0, n2, tc)
         # Check for range a-z
-        if pattern[pi + 1] == 45 && pattern[pi + 2] != 93  # '-' not followed by ']'
+        elsif pattern[pi + 1] == 45 && pattern[pi + 2] != 93  # '-' not followed by ']'
           range_end = pattern[pi + 2]
           if tc >= cc && tc <= range_end
             matched = true
@@ -763,11 +779,15 @@ class Regexp
     c == 32 || c == 9 || c == 10 || c == 13 || c == 12  # space, tab, newline, CR, FF
   end
 
-  # Helper: POSIX class match by first char of name
-  # n0 is first char of class name: a=alnum, d=digit, s=space, u=upper, l=lower, w=word,
-  # b=blank, c=cntrl, g=graph, x=xdigit, p=punct, P=print, A=ascii
-  def __posix?(n0, c)
-    if n0 == 97 then char_word?(c) && c != 95      # alnum
+  # Helper: POSIX class match. Dispatch needs TWO chars of the name: n0 (first) alone is
+  # ambiguous (alnum/alpha/ascii all start with 'a'; print/punct with 'p'), so n2 is the
+  # name's THIRD char, which disambiguates every POSIX class.
+  def __posix?(n0, n2, c)
+    if n0 == 97                                     # a: alnum / alpha / ascii
+      if n2 == 110 then char_word?(c) && c != 95    #   alnum
+      elsif n2 == 112 then (c >= 65 && c <= 90) || (c >= 97 && c <= 122)  # alpha
+      else c >= 0 && c <= 127                       #   ascii
+      end
     elsif n0 == 100 then char_digit?(c)            # digit
     elsif n0 == 115 then char_space?(c)            # space
     elsif n0 == 117 then c >= 65 && c <= 90        # upper
@@ -777,9 +797,10 @@ class Regexp
     elsif n0 == 99 then c < 32 || c == 127         # cntrl
     elsif n0 == 103 then c >= 33 && c <= 126       # graph
     elsif n0 == 120 then char_digit?(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)  # xdigit
-    elsif n0 == 112 then (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126)  # punct
-    elsif n0 == 80 then c >= 32 && c <= 126        # print (P=80)
-    elsif n0 == 65 then c >= 0 && c <= 127         # ascii (A=65)
+    elsif n0 == 112                                 # p: print / punct
+      if n2 == 105 then c >= 32 && c <= 126         #   print
+      else (c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126)  # punct
+      end
     else false
     end
   end
@@ -902,8 +923,15 @@ class Regexp
       elsif c == 91       # '[' character class
         i = i + 1
         while i < n && src[i] != 93
-          i = i + 2 if src[i] == 92
-          i = i + 1
+          if src[i] == 92
+            i = i + 3
+          elsif src[i] == 91 && i + 1 < n && src[i + 1] == 58  # POSIX [:name:]
+            i = i + 2
+            i = i + 1 while i < n && src[i] != 93
+            i = i + 1
+          else
+            i = i + 1
+          end
         end
         i = i + 1
       elsif c == 40       # '('
