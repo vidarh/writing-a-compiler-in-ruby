@@ -300,7 +300,15 @@ class Compiler
       if e[0] == :rescue && e.size == 3
         fallback = e[1]
         body = e[2]
-        e.replace([:block, [], [body], [:rescue, nil, nil, [fallback]], nil])
+        if body.is_a?(Array) && body[0] == :assign
+          # `a = expr rescue 1` parses with the assign INSIDE the modifier node; MRI binds the
+          # modifier tighter than the assignment (`a = (expr rescue 1)`), so the FALLBACK must be
+          # assigned on a raise. Hoist the assignment out and rescue just the RHS.
+          e.replace([:assign, body[1],
+            [:block, [], [body[2]], [:rescue, nil, nil, [fallback]], nil]])
+        else
+          e.replace([:block, [], [body], [:rescue, nil, nil, [fallback]], nil])
+        end
       end
     end
     exp
@@ -2304,6 +2312,10 @@ class Compiler
     # The global scope is needed for some rewrites
     setup_global_scope(exp)
 
+    rewrite_rescue_mod(exp)   # `expr rescue fallback` -> begin/rescue block. Was never wired in: the raw
+                              # [:rescue, fallback, expr] modifier node miscompiled as a rescue clause ->
+                              # crash. Must run BEFORE rewrite_destruct so `a, b = expr rescue [..]` still
+                              # has its plain [:assign, [:comma..], rhs] shape for the assign-hoist below.
     rewrite_for(exp)
     rewrite_destruct(exp)
     rewrite_bare_super(exp)   # expand bare `super` to forward the method's args (before splat/symbol rewrites)
