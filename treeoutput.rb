@@ -241,7 +241,16 @@ module OpPrec
       end
 
       # Rewrite rules to simplify the tree
-      if ra and rightv[0] == :call and o.sym == :callm
+      if ra and rightv[0] == :lambda and o.sym == :callm
+        # `recv.lambda { body }`: `lambda { }` reduced to a [:lambda] literal (via the :call+:lambda
+        # rule further down) BEFORE the `.` bound it, leaving the lambda node sitting in the callm's
+        # METHOD slot -> a callm with no method name -> garbage dispatch and a crash (hit through
+        # super/prepend forwarding an implicit block to Kernel#lambda). `lambda` after a `.` is a
+        # METHOD NAME, not the keyword, so recover the intent: call the method named `lambda` on recv,
+        # passing the block. (`proc` is not a keyword and already parses correctly as recv.proc { }.)
+        ln = rightv  # [:lambda, args, body, rescue, ensure]
+        @vstack << E[:callm, leftv, :lambda, [], E[:proc, ln[1], ln[2], ln[3], ln[4]]]
+      elsif ra and rightv[0] == :call and o.sym == :callm
         oper_call_right(leftv, o, rightv)
       elsif la and leftv[0] == :callm and o.sym == :call
         block = ra && rightv[0] == :flatten && rightv[2].is_a?(Array) && (rightv[2][0] == :proc || rightv[2][0] == :block)
