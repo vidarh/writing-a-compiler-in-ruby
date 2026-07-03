@@ -828,6 +828,20 @@ class Compiler
           env += env2
 
           n[2] = E[n.position,:let, vars, *n[2]] if n[2]
+        elsif n[0] == :class || n[0] == :module
+          # A class/module body (n[3]) is a bare statement-LIST. The generic `find_vars(n[1..-1], ...)`
+          # fallback would treat that whole list as one tagged node and DROP its first element (the first
+          # body statement). A local assigned only there was then never registered, so a closure in the
+          # body that captured it read an uninitialised slot -> garbage/segfault (e.g.
+          # `class C; a=1; m=lambda{a}; end`). Scan the superclass expr (n[2], evaluated in the enclosing
+          # scope) and then EVERY body statement, in the current scope. Matches the pre-existing intent of
+          # descending into class bodies (that is how later body locals get captured), just without the
+          # off-by-one that dropped the first. Same failure class as the :case handling below.
+          vars, env = find_vars([n[2]], scopes, env, freq, in_lambda, false, current_params) if n[2]
+          if n[3]
+            body = (n[3].is_a?(Array) && n[3][0].is_a?(Array)) ? n[3] : [n[3]]
+            vars, env = find_vars(body, scopes, env, freq, in_lambda, false, current_params)
+          end
         else
           if    n[0] == :callm
             # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
