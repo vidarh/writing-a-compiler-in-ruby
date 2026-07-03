@@ -2189,6 +2189,16 @@ class Compiler
           end
         end
       end
+      # Array literal with a splat element (`[1, *obj]`). compile_array lowers this to `Array[1, *obj]` at
+      # COMPILE time -- after this pass -- so the splat operand never reaches the call handling above and
+      # was left uncoerced: the eventual splat push read the operand's @len directly, a garbage count for a
+      # non-Array (e.g. an mspec mock) -> wild `subl %esp` SIGSEGV. Coerce each splat operand to an Array in
+      # place, exactly like the mixed-call case.
+      if e.is_a?(Array) && e[0] == :array && e.length > 1 && e[1..-1].any? { |a| coercible_splat?(a) }
+        (1...e.length).each do |i|
+          e[i][1] = E[:callm, e[i][1], :__splat_to_a] if coercible_splat?(e[i])
+        end
+      end
       :next
     end
   end

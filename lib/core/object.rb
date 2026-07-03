@@ -77,6 +77,12 @@ class Object
   # rewrite_splat_to_array transform, which evaluates this ONCE into a temp BEFORE the splat stack setup.
   def __splat_to_a
     return self if is_a?(Array)
+    # Ruby's splat coercion: nil splats to [] (never [nil]); an object that responds to #to_a is expanded
+    # via it (so `*hash`, `*range`, and a mock with a stubbed #to_a expand correctly); everything else
+    # wraps to [self]. Previously this always wrapped to [self], which both mis-expanded such objects and
+    # -- crucially for the array-literal splat path -- meant `*nil` had to be left uncoerced.
+    return [] if nil?
+    return to_a if respond_to?(:to_a)
     [self]
   end
 
