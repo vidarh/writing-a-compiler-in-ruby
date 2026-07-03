@@ -376,6 +376,31 @@ module Tokens
       @s.expect(Quoted) { @parser.parse_defexp } #, nil]
     end
 
+    # Join two adjacent string-literal values. Two plain Strings concatenate at parse time (matching MRI's
+    # single frozen literal); if either carries interpolation it is a [:concat, ...part] node, so merge the
+    # parts into one [:concat, ...] that concatenates them at runtime.
+    def concat_string_literals(a, b)
+      return a + b if a.is_a?(String) && b.is_a?(String)
+      aparts = (a.is_a?(Array) && a[0] == :concat) ? a[1..-1] : [a]
+      bparts = (b.is_a?(Array) && b[0] == :concat) ? b[1..-1] : [b]
+      [:concat, *aparts, *bparts]
+    end
+
+    # Consume a run of adjacent string literals and concatenate them onto `s` (Ruby joins `"a" "b"` =>
+    # "ab", including across a backslash-continued line). Skip SAME-LINE whitespace between them (nolfws
+    # joins a backslash+newline but stops at a real newline, so `"a"\n"b"` stays two statements) and, while
+    # another string literal immediately follows, parse and join it. Without this the juxtaposed values
+    # were parsed as a command call `"a"("b")` -- calling a String literal through its data -> SIGSEGV.
+    def get_adjacent_strings(s)
+      @s.nolfws
+      # 34/39/96 = " ' ` -- the string-literal delimiters.
+      while (nx = @s.peek) && (nx.ord == 34 || nx.ord == 39 || nx.ord == 96)
+        s = concat_string_literals(s, get_quoted_exp)
+        @s.nolfws
+      end
+      s
+    end
+
     def get_raw(prev_lastop = false)
       # FIXME: Workaround for a bug where "first" is not
       # identified as a variable if first introduced inside
@@ -393,7 +418,10 @@ module Tokens
 
       case @s.peek
       when ?`,?",?'
-        return [get_quoted_exp, nil]
+        # Adjacent string literals are concatenated (Ruby): `"foo" "bar" "baz"` => "foobarbaz". See
+        # get_adjacent_strings; kept in its own method so its loop variable is a clean method local (a var
+        # assigned only inside a case/when branch is not reliably registered by the self-hosted compiler).
+        return [get_adjacent_strings(get_quoted_exp), nil]
       when DIGITS
         return [Number.expect(@s, prev_lastop), nil]
       when ALPHA, ?@, ?$, ?:, ?_
