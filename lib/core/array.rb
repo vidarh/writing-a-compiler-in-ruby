@@ -495,6 +495,10 @@ class Array
   def __range_get(idx)
      start = idx.first
      xend  = idx.last
+     # Beginless (..e) / endless (b..) ranges: nil endpoints mean "from 0" / "to the end".
+     start = 0 if start.nil?
+     endless = xend.nil?
+     xend = length - 1 if endless
      %s(assign start (__int (callm self __offset_to_pos(start))))
      %s(assign xend  (__int (callm self __offset_to_pos(xend))))
 
@@ -507,7 +511,7 @@ class Array
      end
 
      # For an exclusive range (1...3) stop one before the end index.
-     if idx.exclude_end?
+     if !endless && idx.exclude_end?
        xend = xend - 1
      end
 
@@ -665,9 +669,17 @@ class Array
     if args.length == 1 && args[0].is_a?(Range)
       r = args[0]
       s = r.begin
+      s = 0 if s.nil?
       s = n + s if s < 0
-      e = r.exclude_end? ? r.end : r.end + 1
-      e = n + e if e < 0
+      re = r.end
+      if re.nil?
+        # Endless range: remove everything from s
+        e = n
+      else
+        # Normalize a negative end BEFORE the inclusive +1 (-1 means "last element")
+        re = n + re if re < 0
+        e = r.exclude_end? ? re : re + 1
+      end
     else
       s = args[0]
       s = n + s if s < 0

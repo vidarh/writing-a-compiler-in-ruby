@@ -415,7 +415,9 @@ module OpPrec
           @vstack << E[:hash] + elements
         else
           # For ternalt, don't compact - nil rightv is meaningful for keyword shorthand (a:)
-          if o.sym == :ternalt
+          # For ranges, a nil operand is a beginless/endless range: compacting turned
+          # (2..) into Range.new(2) (arity error) and (..5) into Range.new(5) (wrong range).
+          if o.sym == :ternalt || o.sym == :range || o.sym == :exclusive_range
             result = E[o.sym, lv, rightv]
           else
             result = E[o.sym, lv, rightv].compact
