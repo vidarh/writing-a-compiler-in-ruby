@@ -123,6 +123,15 @@ class Data
   end
 
   def inspect
+    # Cycle guard: a self-referential Data (a member pointing back at the object) would otherwise recurse
+    # through inspect forever -> stack overflow / segfault. MRI prints "#<data ...:...>" for a Data already
+    # being inspected. Track it with a per-object flag, like Array#/Hash#inspect. (The class name that MRI
+    # includes for NAMED Data classes is omitted here -- Data.define does not yet set the subclass name, so
+    # self.class.name is always "Data"; adding it would wrongly prefix anonymous Data too. Separate fix.)
+    if @__inspecting
+      return "#<data ...>"
+    end
+    @__inspecting = true
     m = members
     parts = []
     i = 0
@@ -132,6 +141,7 @@ class Data
       parts << (name + "=" + val)
       i = i + 1
     end
+    @__inspecting = false
     "#<data " + parts.join(", ") + ">"
   end
 
