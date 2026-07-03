@@ -1296,6 +1296,7 @@ class Compiler
         vars << :__tmp_proc # Used in rewrite_lambda. Same caveats as for __env_
       end
 
+      rest_sym = nil
       if rest && rest != :__copysplat
         # rest might be a symbol or an indexed env access [:index, :__env__, N]
         # after variable renaming. Extract the symbol if needed.
@@ -1324,6 +1325,13 @@ class Compiler
       end
 
       b3 = []
+      vars.to_a.each do |v|
+        next if !v.is_a?(Symbol)
+        next if v.to_s.start_with?("__")
+        next if v == rest_sym
+        next if trailing_params.include?(v)
+        b3 << E[:assign, v, :nil]
+      end
       if rest_func
         b3.concat(rest_func)
       end
