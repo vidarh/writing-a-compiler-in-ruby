@@ -111,7 +111,14 @@ class Data
 
   def ==(other)
     return false if other.class != self.class
-    other.to_h == @__data
+    # Cycle guard: a self-referential Data (a member pointing back at the object) compares its members via
+    # Hash#==, which re-enters this ==, recursing forever -> stack overflow. MRI's recursion detection
+    # treats an already-in-progress comparison of the same object as equal. Mirror Array#==' @__comparing.
+    return true if @__comparing
+    @__comparing = true
+    result = (other.to_h == @__data)
+    @__comparing = false
+    result
   end
 
   def eql?(other)
