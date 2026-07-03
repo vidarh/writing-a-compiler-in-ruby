@@ -268,8 +268,32 @@ class Compiler
 
       # Compile eigenclass body. Method defs resolve def-time `self` to the metaclass global via
       # EigenclassScope#get_arg, so their __set_vtable installs land on the metaclass.
-      exps.each do |e|
-        compile_do(escope, e)
+      #
+      # A closure created directly in the eigenclass body (`class << obj; l = -> {...}; end`) needs an
+      # __env__/__closure__/__tmp_proc to reference, exactly like a class body (see compile_class's
+      # closure branch): the transformed body contains the full proc-creation machinery, and compiling
+      # it without these in scope emitted references to unresolvable names -> garbage proc @addr ->
+      # SIGSEGV on call. Also declare the body's own locals so they persist across statements.
+      body_locals = class_body_locals(exps)
+      if class_body_creates_closure?(exps)
+        let(escope, :__env__, :__closure__, :__tmp_proc, *body_locals) do |lscope|
+          compile_eval_arg(lscope, [:sexp, [:assign, :__closure__, 0]])
+          env_slots = [2, class_body_env_size(exps) + 1].max
+          compile_eval_arg(lscope, [:sexp, [:assign, :__env__, [:call, :__alloc_env, env_slots]]])
+          exps.each do |e|
+            compile_do(lscope, e)
+          end
+        end
+      elsif !body_locals.empty?
+        let(escope, *body_locals) do |lscope|
+          exps.each do |e|
+            compile_do(lscope, e)
+          end
+        end
+      else
+        exps.each do |e|
+          compile_do(escope, e)
+        end
       end
 
       # Return the eigenclass (the metaclass)
