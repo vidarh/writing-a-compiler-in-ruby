@@ -37,8 +37,15 @@ class Object
     %s(__int self)
   end
 
+  # Identity hash. NOT plain object_id: that tags the RAW POINTER as a fixnum, and a heap address at
+  # or above 2^30 overflows the 30-bit tagged range -- Hash#_find_slot's `h % @capacity` then computes
+  # a position beyond the table and the probe loop walks out-of-bounds memory that never looks empty:
+  # an INFINITE LOOP that appears/disappears with allocation layout (whether this object's address
+  # crosses 2^30). Shift the pointer down 3 bits (allocations are 8-aligned, so no distribution is
+  # lost) and mask to 29 bits so the result always fits a non-negative fixnum. sarl is an ARITHMETIC
+  # shift and stack/high addresses have the sign bit set, hence the mask.
   def hash
-    object_id
+    %s(__int (bitand (sarl 3 self) 536870911))
   end
 
   def eql? other
@@ -49,8 +56,14 @@ class Object
     self.==(other)
   end
 
+  # Identity: a RAW pointer compare. NOT object_id equality -- object_id tags the raw pointer as a
+  # fixnum, and for heap addresses at or above 2^30 the tag overflows into (broken) heap-integer
+  # territory, where == mis-compares: the SAME object then reads as not-equal?, purely depending on
+  # where the allocator placed it. (That layout-sensitivity broke the define_method registry's
+  # identity scans, among other things.)
   def equal?(other)
-    object_id == other.object_id
+    %s(if (eq self other) (return true))
+    false
   end
 
   # Truthiness predicate used by FalseClass#|/#^ and TrueClass#&/#^ (e.g. `false | other` is
@@ -125,6 +138,24 @@ class Object
 
   def frozen?
     false
+  end
+
+  # Every missing-method vtable thunk lands HERE (see __vtable_thunks_helper in compiler.rb), not
+  # directly in method_missing: methods installed at RUNTIME via Class#define_method live in the
+  # $__defined_methods registry (a vtable slot holds a raw function pointer, not a Proc), so consult
+  # the registry along the receiver's class chain first, then fall back to method_missing (which a
+  # user class may override). The call-site block arrives as &blk and is forwarded.
+  def __dispatch_missing__(sym, *args, &blk)
+    if $__dm_classes
+      pr = self.class.__find_defined_method(sym)
+      if pr
+        # Publish the call-site block for the proc's own &param (__call_with_self cannot take a
+        # &blk itself -- see the note there), then invoke the registered proc with self rebound.
+        %s(assign __proc_call_block blk)
+        return pr.__call_with_self(self, *args)
+      end
+    end
+    method_missing(sym, *args, &blk)
   end
 
   def method_missing (sym, *args)
