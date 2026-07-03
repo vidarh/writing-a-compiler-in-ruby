@@ -345,6 +345,12 @@ class Struct
   end
 
   def inspect
+    # Cycle guard: a self-referential struct (a member pointing back at the struct) would otherwise recurse
+    # through inspect forever -> stack overflow / segfault. Mirror Array#/Data#inspect's @__inspecting flag.
+    if @__inspecting
+      return "#<struct ...>"
+    end
+    @__inspecting = true
     m = members
     parts = []
     i = 0
@@ -352,6 +358,7 @@ class Struct
       parts << (m[i].to_s + "=" + @__struct_values[i].inspect)
       i = i + 1
     end
+    @__inspecting = false
     "#<struct " + parts.join(", ") + ">"
   end
   alias to_s inspect
