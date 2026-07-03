@@ -69,7 +69,12 @@ class NilClass
     {}
   end
 
-  def rationalize(arg=nil)
+  # nil.rationalize -> (0/1). An optional precision argument is accepted and ignored;
+  # more than one argument is an ArgumentError (matching MRI). The empty stub returned
+  # a raw 0 (not even nil), so `nil.rationalize.should ...` dereferenced null and crashed.
+  def rationalize(*args)
+    raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0..1)" if args.length > 1
+    Rational(0, 1)
   end
 
   # FIXME: Stub - should raise TypeError
