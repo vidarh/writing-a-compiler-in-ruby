@@ -25,6 +25,36 @@ class Range
     @exclude_end == true
   end
 
+  # Compute [min, max] from the endpoints instead of iterating. Enumerable#minmax would walk the whole
+  # range, which never terminates for an endless range (`(1..)`) and is effectively a hang for a huge one
+  # (`1..Float::INFINITY`, where INFINITY is a large stub Integer here). An endless range has no maximum.
+  # A custom comparator block still needs element-wise iteration, so defer to Enumerable for finite ranges.
+  def minmax(&block)
+    raise RangeError, "cannot get the maximum of endless range" if @max.nil?
+    if block
+      # Custom comparator: walk elements (the range is finite here). `super` cannot be used -- it does not
+      # reach the Enumerable#minmax mixed into Range in this runtime.
+      mn = nil
+      mx = nil
+      seen = false
+      each do |e|
+        if !seen
+          mn = e
+          mx = e
+          seen = true
+        else
+          mn = e if block.call(e, mn) < 0
+          mx = e if block.call(e, mx) > 0
+        end
+      end
+      return [mn, mx]
+    end
+    mx = @max
+    mx = mx - 1 if @exclude_end && mx.is_a?(Integer)
+    return [nil, nil] if @min > mx
+    [@min, mx]
+  end
+
   # Ruby: first/last with no arg return the endpoint; with a count n they return up to n elements from the
   # start/end as an Array. The no-arg call must still work (begin/end alias it). A 1-arg call previously
   # raised ArgumentError ("given 1, expected 0").
