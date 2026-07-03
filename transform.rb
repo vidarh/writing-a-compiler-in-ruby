@@ -1817,6 +1817,23 @@ class Compiler
     result
   end
 
+  # Build the assignment for one destructuring target. A plain lvalue (local, ivar, [:index, ...])
+  # becomes `[:assign, target, value]`. But a call-form target -- `a[i]` / `a[*idx]` (a `:[]` getter)
+  # or `obj.attr` -- must become a SETTER call `recv.meth=(args..., value)` HERE, not left as an
+  # `[:assign, getter-callm, value]`. The parser already emits the setter for a single `a[i] = v`, but
+  # multiple-assignment targets are parsed as plain getter-callms; leaving them for compile_assign works
+  # for a bare index but NOT for a splat index (`a[*idx]`), because rewrite_splat_to_array runs first and
+  # rewrites the getter-callm into a value-returning let-block, which is then an invalid assignment lhs.
+  def destruct_target_assign(target, value)
+    if target.is_a?(Array) && (target[0] == :callm || target[0] == :safe_callm) && target[1] != :__destruct
+      setter = (target[2].to_s + "=").to_sym
+      args = target[3] || []
+      args = [args] unless args.is_a?(Array)
+      return E[:callm, target[1], setter, args + [value]]
+    end
+    E[:assign, target, value]
+  end
+
   def rewrite_destruct(exps)
     # Handle single splat assignment: (*a) = [1, 2, 3] => a = [1, 2, 3]
     exps.depth_first(:assign) do |e|
@@ -1906,7 +1923,7 @@ class Compiler
             elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
               v = [:destruct, *v]
             end
-            ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
+            ex[2] << destruct_target_assign(v, [:callm,:__destruct,:[],[i]])
           end
 
           # After splat: use negative indices from the end
@@ -1924,7 +1941,7 @@ class Compiler
               end
               # Use negative index: -1 for last element, -2 for second-to-last, etc
               neg_idx = -after_splat + offset - 1
-              ex[2] << [:assign, v, [:callm,:__destruct,:[],[neg_idx]]]
+              ex[2] << destruct_target_assign(v, [:callm,:__destruct,:[],[neg_idx]])
             end
           end
 
@@ -1940,15 +1957,15 @@ class Compiler
             # Range endpoints must be Integer OBJECTS (like the single-element `[i]` accesses above), not
             # raw `[:sexp, N]` ints: Array#[](range) -> __range_get calls `.first`/`.last`/`.__get_raw` on
             # the endpoints, which dereferences a raw int as an object pointer and SIGSEGVs.
-            ex[2] << [:assign, splat_var,
+            ex[2] << destruct_target_assign(splat_var,
               [:callm, :__destruct, :[],
-                [[:range, start_idx, end_idx]]]]
+                [[:range, start_idx, end_idx]]])
           else
             # No elements after splat, use range to end: __destruct[start_idx..-1]. Endpoints are Integer
             # objects, not raw `[:sexp, N]` ints (see note above -- __range_get dereferences them as objects).
-            ex[2] << [:assign, splat_var,
+            ex[2] << destruct_target_assign(splat_var,
               [:callm, :__destruct, :[],
-                [[:range, start_idx, -1]]]]
+                [[:range, start_idx, -1]]])
           end
         else
           # No splat: simple destructuring
@@ -1962,7 +1979,7 @@ class Compiler
             elsif v.is_a?(Array) && ![:deref, :callm, :index, :call, :sexp, :pair, :ternalt, :hash, :array, :rest, :block, :keyrest, :key, :keyreq].include?(v[0])
               v = [:destruct, *v]
             end
-            ex[2] << [:assign, v, [:callm,:__destruct,:[],[i]]]
+            ex[2] << destruct_target_assign(v, [:callm,:__destruct,:[],[i]])
           end
         end
       end
