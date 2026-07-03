@@ -52,6 +52,31 @@ class Compiler
   # For a splat argument, push it onto the stack,
   # forwards relative to register "indir".
   #
+  # Number of fixed argument slots preceding a forwarded `*__copysplat` rest param in the ENCLOSING
+  # method: the raw-splat forward copies `numargs - <this>` slots out of the caller's argument area.
+  # It was hardcoded to 2 (self + __closure__), which is right for `def call(*__copysplat)`-shaped
+  # methods but copied ONE EXTRA slot (a stray stack word -- e.g. a Proc -- appended to the args) for
+  # any method with a named param before the splat, like `__call_with_self(newself, *__copysplat)`.
+  # Compute it from the method's own arg list (a &block param is popped from Function#args and takes
+  # no positional slot). Falls back to 2 when no enclosing function is visible.
+  def copysplat_fixed_count(scope)
+    f = scope.method
+    if f && f.respond_to?(:args) && f.args
+      idx = nil
+      i = 0
+      while i < f.args.length
+        a = f.args[i]
+        if a.respond_to?(:rest?) && a.rest?
+          idx = i
+          break
+        end
+        i += 1
+      end
+      return idx if idx
+    end
+    2
+  end
+
   # FIXME: This method is almost certainly much
   # less efficient than it could be.
   #
@@ -59,7 +84,7 @@ class Compiler
     @e.with_register do |splatcnt|
       if a[1] == :__copysplat
         @e.comment("SPLAT COPY")
-        param = @e.save_to_reg(compile_eval_arg(scope, [:sub, :numargs, 2]))
+        param = @e.save_to_reg(compile_eval_arg(scope, [:sub, :numargs, copysplat_fixed_count(scope)]))
         @e.movl(param, splatcnt)
         param = compile_eval_arg(scope, a[1])
         copy_splat_loop(splatcnt, indir)
@@ -120,7 +145,7 @@ class Compiler
     args.each_with_index do |a, i|
       if a.is_a?(Array) && a[0] == :splat
         if a[1] == :__copysplat
-          exprlist << [:sub, :numargs, 2]
+          exprlist << [:sub, :numargs, copysplat_fixed_count(scope)]
         else
           # We do this, rather than Array#length, because the class may not
           # have been created yet. This *requires* Array's @len ivar to be
