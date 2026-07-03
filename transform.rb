@@ -462,9 +462,18 @@ class Compiler
             body]
         end
 
+        # __env__[0] holds __stackframe__: the frame a non-local `return`/`break` from this
+        # proc must unwind to -- the ENCLOSING METHOD's frame. Only assign it when the slot is
+        # still 0 (the env is calloc'd fresh per method invocation). The method sets it when it
+        # creates its first block, before any nested block runs; a nested block created inside
+        # another block shares the same env, so re-running [:stackframe] here would CLOBBER the
+        # method frame with the intermediate (soon-dead) block frame -- when such a block is saved
+        # and invoked later (e.g. `outer{ inner{ add{ return } } }; @saved.call`), preturn then
+        # jumps to a dead frame and segfaults. Guarding on 0 keeps env[0] pinned to the method.
         e.replace(
           E[:do,
-            [:assign, [:index, :__env__,0], [:stackframe]],
+            [:if, [:eq, [:index, :__env__,0], 0],
+              [:assign, [:index, :__env__,0], [:stackframe]]],
             [:assign, :__tmp_proc,
               [:defun, "__lambda_#{@e.get_local[1..-1]}",
                 full_params,
