@@ -314,6 +314,16 @@ class Compiler
     seen = false
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
+      # A nested :defm is its OWN scope, processed by rewrite_let_env's depth_first(:defm) ->
+      # process_scope_env -> its own find_vars/rewrite_env_vars/rewrite_lambda sequence. Converting its
+      # blocks HERE -- from an enclosing method's rewrite_lambda pass -- turns them into :defun before
+      # the inner defm's own scope pass runs, so find_vars (which skips :defun) can no longer see the
+      # blocks' captured variables: an inner block's reference to the defm's parameter was never moved
+      # into the defm's __env__ and compiled to garbage (e.g. the raw __env__ pointer passed as a
+      # method argument -> a wrong value, or a segfault when dispatched on). find_vars and
+      # rewrite_env_vars already treat nested :defm as a scope boundary; rewrite_lambda was the one
+      # pass that did not.
+      next :skip if e[0] == :defm
       # A real lambda/proc node's args (e[1]) is always nil, :block, or an array. A :let variables
       # list whose first variable happens to be named `proc` or `lambda` -- e.g. [:proc, :lambda] for
       # locals `proc` and `lambda` -- is structurally identical at e[0] but has a bare Symbol at e[1];
