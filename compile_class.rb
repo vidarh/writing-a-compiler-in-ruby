@@ -242,6 +242,18 @@ class Compiler
 
       compile_eval_arg(outer_scope, [:assign, :__eigenclass_obj, expr])
 
+      # `class << 1` (a tagged Integer immediate) would have its "slots" indexed/written through the
+      # tag below -- a wild pointer access -> SIGSEGV -- and MRI does not give Integer/Symbol
+      # receivers singleton classes at all: it raises TypeError. Guard with RAW checks (a bit-0 tag
+      # test, and a slot-0 class-pointer compare against Symbol) so the happy path stays dispatch-free:
+      # core-library eigenclasses run during startup, before Object's method defs are installed, so a
+      # method call here would hit an empty vtable. The raising helper is only dispatched on the
+      # failure path, which only user code can reach.
+      compile_eval_arg(outer_scope, [:sexp, [:if, [:ne, [:bitand, :__eigenclass_obj, 1], 0],
+        [:callm, :self, :__raise_singleton_type_error, []]]])
+      compile_eval_arg(outer_scope, [:sexp, [:if, [:eq, [:index, :__eigenclass_obj, 0], :Symbol],
+        [:callm, :self, :__raise_singleton_type_error, []]]])
+
       compile_eval_arg(outer_scope, [:assign, ec_self,
         mk_new_class_object(
           eksize,                                # size = Class's klass_size

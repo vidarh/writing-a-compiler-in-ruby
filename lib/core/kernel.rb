@@ -59,6 +59,15 @@ class Kernel
     raise LocalJumpError.new("unexpected return")
   end
 
+  # Called by compile_eigenclass (via a raw inline tag/class check -- NOT a dispatch on the happy
+  # path, which must stay dispatch-free: core-library eigenclasses run during startup before these
+  # defs are installed) when `class << obj` is opened on an Integer immediate or a Symbol. Indexing
+  # a tagged immediate's "slots" would be a wild pointer access (the old behaviour segfaulted), and
+  # MRI does not give Integer/Symbol singleton classes at all: it raises TypeError.
+  def __raise_singleton_type_error
+    raise TypeError, "can't define singleton"
+  end
+
   def raise(exc_or_msg = nil, msg = nil)
     if exc_or_msg.nil?
       # Bare `raise` re-raises the exception currently being handled ($!). During a rescue body the
