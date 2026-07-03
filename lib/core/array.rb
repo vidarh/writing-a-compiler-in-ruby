@@ -1483,9 +1483,19 @@ class Array
 
   # Cartesian product of self with the given arrays: every [a, b, ...] with a from self, b from others[0]...
   def product(*others)
-    result = [[]]
     arrays = [self]
     others.each { |o| arrays << o }
+    # Guard against an unreasonably large result: the number of tuples is the product of the lengths, which
+    # for `a.product(a, a, ...)` can be ~1e22 -> building them all is an OOM/hang. MRI raises RangeError
+    # when that count would overflow a long. Any empty input array makes the whole product empty.
+    total = 1
+    arrays.each do |arr|
+      n = arr.length
+      return [] if n == 0
+      raise RangeError, "product result is too large" if total > (0x7fffffff / n)
+      total = total * n
+    end
+    result = [[]]
     arrays.each do |arr|
       nxt = []
       result.each do |combo|
