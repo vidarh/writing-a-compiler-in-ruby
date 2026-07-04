@@ -29,12 +29,23 @@ class Array
     # from __new_empty. May want to create new method to handle the whol
     # basic nasty splat allocation
     # @capacity = (newlen * 4 / 3) + 4
-    %s(assign @capacity (add (div (mul newlen 4) 3) 4))
-
-    %s(if (ne @ptr 0)
-         (assign @ptr (__realloc @ptr (mul @capacity 4)))
-         (assign @ptr (__array @capacity))
-         )
+    # Fresh buffers come from calloc (zeroed), but __realloc is plain realloc: the extension
+    # holds GARBAGE. The zeroed-buffer invariant is load-bearing -- __index_set documents that
+    # a growing `a[i] = v` leaves the gap reading as nil (element reads map raw 0 to nil), so
+    # garbage there gets dispatched on by #== / #inspect -> SIGSEGV (array/fill_spec died
+    # printing `[1,2,3,4,5].fill(8, 2){...}`: realloc left slots 5..7 unzeroed). Zero the
+    # extension explicitly, tracking the old capacity.
+    %s(let (oldcap)
+        (assign oldcap @capacity)
+        (assign @capacity (add (div (mul newlen 4) 3) 4))
+        (if (ne @ptr 0)
+          (do
+            (assign @ptr (__realloc @ptr (mul @capacity 4)))
+            (while (lt oldcap @capacity)
+              (do
+                (assign (index @ptr oldcap) 0)
+                (assign oldcap (add oldcap 1)))))
+          (assign @ptr (__array @capacity))))
   end
 
   #FIXME: Private.

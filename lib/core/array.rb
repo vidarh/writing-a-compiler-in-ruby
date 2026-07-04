@@ -986,6 +986,10 @@ class Array
       s = 0 if s < 0
       e = spec1.nil? ? n : s + spec1
     end
+    # Same out-of-range guard as __fill_n (Array.new): MRI raises rather than attempt an absurd
+    # allocation. Without this, `fill(10, 1, fixnum_max)` ground through 2^30 growing element
+    # writes until the process was OOM-killed (array/fill_spec hung there).
+    raise ArgumentError.new("array size too big") if e > 268435456
     i = s
     while i < e
       self[i] = block ? block.call(i) : obj
