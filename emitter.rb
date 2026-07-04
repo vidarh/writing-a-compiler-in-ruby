@@ -459,6 +459,7 @@ class Emitter
   def pushl arg; emit(:pushl, arg); end
   def je arg;    emit(:je, arg); end
   def jz arg;    emit(:jz, arg); end
+  def jne arg;   emit(:jne, arg); end
 
   def ret; emit(:ret); end
   def leave; emit(:leave); end

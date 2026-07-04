@@ -1576,6 +1576,17 @@ class Compiler
     exp.depth_first do |e|
       if e.is_a?(Array) && e[0] == :callm && (e[1] == :Class || e[1] == :Module) && e[2] == :new
         args = e[3]
+        # Normalize the argument shape BEFORE inspecting it (mirrors compile_callm): a single
+        # paren-less argument arrives as a bare node, not a one-element list -- `Class.new sup do..end`
+        # parses to args == :sup, and an expression superclass to an unwrapped [:callm,...]/keyword
+        # node. Without this the args.is_a?(Array) test below silently dropped the superclass and
+        # based the anonymous class on Object (wrong ancestry, wrong metaclass, lost methods).
+        if args && !args.is_a?(Array)
+          args = [args]
+        elsif e[4] && args.is_a?(Array) && args.length > 1 && args[0].is_a?(Symbol) &&
+              (@@keywords.include?(args[0]) || [:call, :callm, :safe_callm, :lambda, :proc].include?(args[0]))
+          args = [args]
+        end
         # Class.new(sup) takes an optional superclass; Module.new takes none (modules do not inherit) --
         # base an anonymous module on Object so it has a valid layout, and rely on the block for its methods.
         if e[1] == :Class && args.is_a?(Array) && args.length > 0

@@ -377,6 +377,17 @@ class Compiler
   # Load the super-class pointer
   def load_super(scope)
     @e.load_instance_var(:eax, 3)
+    # Slot 3 (superclass) is 0 for the bootstrap roots (e.g. Object), so `super`
+    # from a method defined there -- a toplevel def, or a block's zsuper resolving
+    # to one -- used to emit `call *voff(0)`: a NULL call -> SIGSEGV. Substitute
+    # __base_vtable, the table of method_missing thunks used to fill unimplemented
+    # vtable slots: the dispatch then raises NoMethodError through the normal
+    # missing-method path instead of crashing.
+    l_ok = @e.get_local
+    @e.testl(:eax, :eax)
+    @e.jne(l_ok)
+    @e.movl(@e.addr_value("__base_vtable"), :eax)
+    @e.label(l_ok)
   end
 
   # if we called a method on something other than self,

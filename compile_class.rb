@@ -254,26 +254,75 @@ class Compiler
       compile_eval_arg(outer_scope, [:sexp, [:if, [:eq, [:index, :__eigenclass_obj, 0], :Symbol],
         [:callm, :self, :__raise_singleton_type_error, []]]])
 
+      # REUSE an existing eigenclass rather than wrapping it in a new one. Each `def self.x` /
+      # `class << obj` used to create a FRESH metaclass whose superclass was the object's previous
+      # slot-0 -- so a class with two singleton defs got a CHAIN of eigenclasses (ec_bar -> ec_foo
+      # -> real class). `super` in a class method resolves at runtime via self.class.superclass;
+      # with the chain, that landed on the SIBLING eigenclass (holding the very method being
+      # super'd from) instead of the superclass's eigenclass -> infinite recursion
+      # (language/super_spec: B.bar -> super -> A.bar -> foo -> B.foo -> super looped forever).
+      #
+      # Detection is by the INHERITANCE CHAIN: for a CLASS receiver, slot 0 is either Class itself
+      # (no eigenclass yet) or an eigenclass -- whose superclass chain contains Class, because an
+      # eigenclass-of-a-class is created with `superclass = the class's previous slot 0`, which
+      # bottoms out at Class. An ordinary class's ANCESTRY never contains Class (Class is its
+      # class, not its ancestor), so for a plain-object receiver the walk finds nothing and we
+      # create as before (plain objects' repeated singleton defs still chain -- they have no
+      # structural discriminator, which is why MRI carries an FL_SINGLETON flag).
+      # The walk reads raw slot-3 links; chains terminate at 0 (the bootstrap classes' root).
+      #
+      # The chain test alone is NOT sufficient: class creation copies classob from the superclass
+      # (`classob = superclass[0]` in compile_class), so a subclass of a class that already has an
+      # eigenclass INHERITS that eigenclass as its slot 0 -- the walk finds Class in its chain even
+      # though it belongs to the superclass. Reusing it would install the subclass's singleton
+      # methods into the SUPERCLASS's metaclass (clobbering its methods, and making super from
+      # there skip to Class). So additionally require OWNERSHIP: the eigenclass's superclass must
+      # be exactly the class of obj's superclass (obj[0][3] == obj[3][0]) -- that is precisely what
+      # creation set it to (ec.superclass = obj's previous slot 0 = classob copied from obj[3]).
+      # An inherited pointer fails this: it IS obj[3][0], and no class is its own superclass.
+      # obj[3] is only dereferenced after the chain walk proved obj is a class (and guarded
+      # non-zero for the bootstrap root).
+      #
+      # Creation path notes (unchanged semantics):
+      # - @instance_size (slot 1) is inherited from the base class: __new_class_object only copies
+      #   vtable slots >= 6, so it would stay 0 otherwise and instances allocated through the
+      #   singleton class would be zero-slot -> heap overflow on ivar writes.
+      # - slot 3 holds the superclass (the object's original class), set by __new_class_object.
+      # The walk runs in raw sexp (let-locals, raw slot reads) and RETURNS the existing eigenclass
+      # or 0; the result lands in ec_self via a normal Ruby-level assign ($-globals resolve through
+      # the normal machinery, not inside raw sexp). Creation below stays the original Ruby-level
+      # statement sequence, now conditional on that result.
       compile_eval_arg(outer_scope, [:assign, ec_self,
-        mk_new_class_object(
-          eksize,                                # size = Class's klass_size
-          [:index, :__eigenclass_obj, 0],        # superclass = obj.class
-          eksize,                                # ssize = Class's klass_size
-          0                                      # classob = 0 (defaults to Class)
-        )
-      ])
+        [:sexp, [:let, [:eck, :ecfound],
+          [:assign, :ecfound, 0],
+          [:assign, :eck, [:index, :__eigenclass_obj, 0]],
+          [:if, [:ne, :eck, :Class],
+            [:while, [:ne, :eck, 0],
+              [:do,
+                [:if, [:eq, :eck, :Class],
+                  [:do, [:assign, :ecfound, 1], [:assign, :eck, 0]],
+                  [:assign, :eck, [:index, :eck, 3]]]]]],
+          [:if, [:ne, :ecfound, 0],
+            [:if, [:ne, [:index, :__eigenclass_obj, 3], 0],
+              [:if, [:eq, [:index, [:index, :__eigenclass_obj, 0], 3],
+                          [:index, [:index, :__eigenclass_obj, 3], 0]],
+                [:index, :__eigenclass_obj, 0],
+                0],
+              0],
+            0]]]])
 
-      compile_eval_arg(outer_scope, [:assign, [:index, :__eigenclass_obj, 0], ec_self])
-
-      # Inherit @instance_size (slot 1) from the base class. __new_class_object only copies vtable
-      # slots >= 6 from the superclass, so the eigenclass's @instance_size stays 0 otherwise --
-      # and instances allocated/cloned through the singleton class (self.class == eigenclass) then
-      # get a zero-slot object whose ivar writes overflow the heap. slot 3 holds the superclass
-      # (obj's original class), set by __new_class_object.
-      compile_eval_arg(outer_scope, [:assign, [:index, ec_self, 1], [:index, [:index, ec_self, 3], 1]])
-
-      # Set eigenclass name
-      compile_eval_arg(outer_scope, [:assign, [:index, ec_self, 2], "Eigenclass_#{unique_id}"])
+      compile_eval_arg(outer_scope, [:if, ec_self, 0,
+        [:do,
+          [:assign, ec_self,
+            mk_new_class_object(
+              eksize,                                # size = Class's klass_size
+              [:index, :__eigenclass_obj, 0],        # superclass = obj.class
+              eksize,                                # ssize = Class's klass_size
+              0                                      # classob = 0 (defaults to Class)
+            )],
+          [:assign, [:index, :__eigenclass_obj, 0], ec_self],
+          [:assign, [:index, ec_self, 1], [:index, [:index, ec_self, 3], 1]],
+          [:assign, [:index, ec_self, 2], "Eigenclass_#{unique_id}"]]])
 
       escope = EigenclassScope.new(outer_scope, "Eigenclass_#{unique_id}", @vtableoffsets, class_scope)
       escope.self_global = ec_self
