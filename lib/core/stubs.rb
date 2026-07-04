@@ -108,6 +108,115 @@ class Mutex
   end
 end
 
+# Minimal Time: enough that fixture-level `Time.now` / `Time.at` and simple arithmetic and
+# comparison run instead of ABORTING whole spec files at load with "uninitialized constant
+# Time" (the entire core/time family plus marshal specs died this way). Seconds come from
+# libc time() via a raw sexp call. The value is stored REBASED to 2020-01-01 (epoch
+# 1577836800): a raw 2026 epoch (~1.78e9) overflows this compiler's tagged 31-bit fixnums.
+# to_i re-adds the base (wrapping -- absolute values are only approximate), so intra-process
+# arithmetic, ordering, and subtraction behave; absolute wall-clock correctness and all the
+# zone/format machinery are out of scope for this stub.
+class Time
+  def initialize
+    %s(assign @sec (__int (sub (time 0) 1577836800)))
+  end
+
+  def self.now
+    Time.new
+  end
+
+  def self.at(sec)
+    t = Time.new
+    t.__set_rebased(sec.to_i - 1577836800)
+    t
+  end
+
+  def __set_rebased(s)
+    @sec = s
+    self
+  end
+
+  def __rebased
+    @sec
+  end
+
+  def to_i
+    @sec + 1577836800
+  end
+
+  def to_f
+    to_i
+  end
+
+  def +(other)
+    t = Time.new
+    t.__set_rebased(@sec + other.to_i)
+    t
+  end
+
+  def -(other)
+    if other.is_a?(Time)
+      @sec - other.__rebased
+    else
+      t = Time.new
+      t.__set_rebased(@sec - other.to_i)
+      t
+    end
+  end
+
+  def <=>(other)
+    @sec <=> other.__rebased
+  end
+
+  def ==(other)
+    other.is_a?(Time) && @sec == other.__rebased
+  end
+
+  def <(other);  @sec < other.__rebased;  end
+  def >(other);  @sec > other.__rebased;  end
+  def <=(other); @sec <= other.__rebased; end
+  def >=(other); @sec >= other.__rebased; end
+
+  def sec; to_i % 60; end
+  def usec; 0; end
+  def nsec; 0; end
+  def subsec; 0; end
+
+  def utc; self; end
+  def gmtime; self; end
+  def localtime; self; end
+  def utc?; true; end
+  def gmt?; true; end
+
+  def inspect
+    "#<Time #{to_i}>"
+  end
+
+  def to_s
+    inspect
+  end
+end
+
+# Marshal stub: binary serialization is unimplemented. The methods raise (rescued per-test by
+# the spec harness); the CONSTANT must exist because specs reference `Marshal` in describe
+# arguments -- evaluated before any rescue -- which aborted whole files at load.
+module Marshal
+  MAJOR_VERSION = 4
+  MINOR_VERSION = 8
+
+  def self.dump(obj, io = nil, limit = nil)
+    raise NotImplementedError.new("Marshal.dump not implemented")
+  end
+
+  def self.load(source, proc = nil)
+    raise NotImplementedError.new("Marshal.load not implemented")
+  end
+
+  def self.restore(source, proc = nil)
+    raise NotImplementedError.new("Marshal.restore not implemented")
+  end
+end
+
 # Stub for Module class
 # FIXME: Module should be a superclass of Class, but that requires
 # significant refactoring of the object model

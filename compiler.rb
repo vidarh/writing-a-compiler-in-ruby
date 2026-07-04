@@ -392,7 +392,19 @@ class Compiler
       end
     end
 
-    get_arg(cscope,right)
+    ret = get_arg(cscope,right)
+    # An unknown member under a statically-known parent falls all the way through the scope
+    # chain to a BARE-name global lookup ([:runtime_const, right] -> __const_get_global(right)),
+    # losing the parent qualification: `Struct::Useful` raised "uninitialized constant Useful"
+    # even though Struct.new("Useful", ...) had registered "Struct::Useful" in the runtime
+    # constant table. Emit the QUALIFIED runtime lookup instead.
+    if ret.is_a?(Array) && ret[0] == :runtime_const
+      args_array = const_name_to_string_ast(left.to_s) + const_name_to_string_ast(right.to_s)
+      res = compile_eval_arg(scope, [:call, :__const_get, args_array])
+      @e.save_result(res)
+      return Value.new([:subexpr])
+    end
+    ret
   end
 
 
@@ -909,7 +921,14 @@ class Compiler
       # Pop the value from stack if needed
       if source.is_a?(Symbol)
         @e.popl(:eax)
-        source = :eax
+        # A raw register symbol cannot ride the AST into compile_callm: an :eax argument is
+        # compiled by get_arg as a NAME, emitting a `self.eax` dispatch -> method_missing 'eax'
+        # (`def run_specs; SomeConst = 12; end` aborted language/class_spec this way). Spill the
+        # value to a dedicated global (also a GC root) and reference THAT in the argument list.
+        # Registered via add_global so output_global_init emits/initializes the storage.
+        @global_scope.add_global(:__const_assign_tmp) if @global_scope
+        @e.save_to_address(:eax, :__const_assign_tmp)
+        source = [:sexp, :__const_assign_tmp]
       end
 
       # Transform to: __const_set_global(const_name, value)

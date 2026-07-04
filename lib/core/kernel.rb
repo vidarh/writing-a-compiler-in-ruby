@@ -215,30 +215,88 @@ class Kernel
     end
   end
 
-  # Runtime constant lookup - stub implementation
-  # Used when constant cannot be resolved statically
+  # Walk the runtime constant table for an exact key; nil when absent (a runtime constant
+  # legitimately holding nil is indistinguishable -- acceptable for this table's uses).
+  def __runtime_const_lookup(key)
+    n = $__runtime_const_names
+    return nil if !n
+    i = 0
+    while i < n.length
+      return $__runtime_const_vals[i] if n[i] == key
+      i += 1
+    end
+    nil
+  end
+
+  # Runtime constant lookup (Parent::Name form the compiler could not resolve statically).
+  # Consults the runtime table under the qualified key (see __const_set_global) -- e.g.
+  # `Struct.new("Useful", ...)` registers Struct::Useful -- before raising.
   def __const_get(parent_name, const_name)
-    STDERR.puts "Runtime constant lookup not implemented: #{parent_name}::#{const_name}"
-    raise "NameError: uninitialized constant #{parent_name}::#{const_name}"
+    v = __runtime_const_lookup("#{parent_name}::#{const_name}")
+    return v if v
+    raise NameError.new("uninitialized constant #{parent_name}::#{const_name}")
   end
 
-  # Runtime constant lookup on an object - stub implementation
+  # Runtime constant lookup on an object (parent known only at runtime). Try the parent's
+  # qualified name in the runtime table before raising.
   def __const_get_on(parent_obj, const_name)
-    STDERR.puts "Runtime constant lookup not implemented: <object>::#{const_name}"
-    raise "NameError: uninitialized constant #{const_name}"
-  end
-
-  # Runtime constant lookup in global scope.
-  # FIXME: Should look up dynamic constants from a runtime hash / call const_missing.
-  def __const_get_global(const_name)
+    if parent_obj.is_a?(Class)
+      v = __runtime_const_lookup("#{parent_obj.name}::#{const_name}")
+      return v if v
+    end
     raise NameError.new("uninitialized constant #{const_name}")
   end
 
-  # Runtime constant assignment in global scope - stub implementation
-  # Dynamic constant assignment is not supported in this AOT compiler
+  # Runtime constant lookup in global scope. Consults the runtime table maintained by
+  # __const_set_global before giving up, so dynamically assigned constants (below) resolve.
+  def __const_get_global(const_name)
+    n = $__runtime_const_names
+    if n
+      i = 0
+      while i < n.length
+        return $__runtime_const_vals[i] if n[i] == const_name
+        i += 1
+      end
+    end
+    raise NameError.new("uninitialized constant #{const_name}")
+  end
+
+  # Runtime constant assignment in global scope. Constants assigned where the compiler has no
+  # static home for them (e.g. inside a def -- rubyspec files are wrapped in `def run_specs` by
+  # the harness, so their "toplevel" constants land here) go into a runtime table of parallel
+  # name/value arrays; __const_get_global consults it. The old raising stub ABORTED whole spec
+  # files at load (language/class_spec: `ClassSpecsNumber = 12` -> NameError before any test).
   def __const_set_global(const_name, value)
-    STDERR.puts "Runtime constant assignment not implemented: #{const_name}"
-    raise "NameError: dynamic constant assignment not supported: #{const_name}"
+    if !$__runtime_const_names
+      $__runtime_const_names = []
+      $__runtime_const_vals = []
+    end
+    n = $__runtime_const_names
+    i = 0
+    while i < n.length
+      if n[i] == const_name
+        $__runtime_const_vals[i] = value
+        return value
+      end
+      i += 1
+    end
+    n << const_name
+    $__runtime_const_vals << value
+    value
+  end
+
+  # autoload registers a path for LAZY loading -- meaningless in this AOT compiler (everything
+  # is compiled in up front), so accept and ignore the registration. autoload? reports no
+  # pending autoload, which is also the truthful answer here. A missing method ABORTED whole
+  # spec files at load (kernel/autoload_spec, module/const_get_spec fixtures call it at
+  # toplevel). If the named constant was compiled in it resolves normally; if not, referencing
+  # it raises NameError as usual.
+  def autoload(name, path)
+    nil
+  end
+
+  def autoload?(name)
+    nil
   end
 
   # Runtime require - stub implementation

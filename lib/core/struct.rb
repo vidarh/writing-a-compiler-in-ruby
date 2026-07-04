@@ -46,6 +46,14 @@ class Struct
         i = i + 1
       end
       klass = Class.new(Struct)
+      # `Struct.new("Name", ...)` names the class Struct::Name. Register it in the runtime
+      # constant table (see Kernel#__const_set_global) under the qualified key so a later
+      # `Struct::Name` -- compiled as a runtime __const_get -- resolves. Previously the name
+      # was silently dropped and marshal's fixtures aborted their whole file at load on
+      # "uninitialized constant Useful".
+      if start == 1 && args[0]
+        __const_set_global("Struct::" + args[0], klass)
+      end
       Struct.__struct_registry[klass.object_id] = syms
       # Store the raw keyword_init: value (or nil when unspecified) so keyword_init? can distinguish
       # true / false / nil, while initialize still just tests it for truthiness.

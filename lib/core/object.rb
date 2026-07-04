@@ -111,6 +111,26 @@ class Object
     GenericEnumerator.new(self, meth, *args)
   end
 
+  # Ivar-by-name reflection stubs. Ivar slots are assigned STATICALLY by the compiler with no
+  # runtime name->slot table, so set is a lossy no-op (returns the value) and get reports nil.
+  # Wrong for real reflection, but fixtures calling these at load (marshal's set ivars on
+  # literals) aborted whole spec files on the missing methods.
+  def instance_variable_set(name, value)
+    value
+  end
+
+  def instance_variable_get(name)
+    nil
+  end
+
+  def instance_variables
+    []
+  end
+
+  def instance_variable_defined?(name)
+    false
+  end
+
   def == other
     object_id == other.object_id
   end

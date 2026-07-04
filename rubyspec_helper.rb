@@ -65,13 +65,27 @@ def describe(description, options = nil, &block)
     # For now, treat it as normal describe
     $spec_descriptions.push(options)
     puts options
-    block.call
+    __describe_call(block)
     $spec_descriptions.pop
   else
     $spec_descriptions.push(description)
     puts description
-    block.call
+    __describe_call(block)
     $spec_descriptions.pop
+  end
+end
+
+# Run a describe body, containing failures. A raise at REGISTRATION time (describe-level code
+# touching an unimplemented class -- e.g. the whole core/time family died on `uninitialized
+# constant Time` in describe bodies) used to abort the file before any summary printed,
+# classifying every test in it as CRASH. mspec protects each context; do the same: count one
+# failure for the broken context and let the rest of the file register and run.
+def __describe_call(block)
+  begin
+    block.call
+  rescue => e
+    $spec_failed = $spec_failed + 1
+    puts "    \e[31mFAILED: Unhandled exception in describe body: #{e.to_s}\e[0m"
   end
 end
 

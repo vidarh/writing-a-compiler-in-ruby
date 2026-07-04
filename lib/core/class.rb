@@ -237,6 +237,13 @@ class Class
     result
   end
 
+  # Class variables have no runtime reflection table in this compiler (cvars compile to storage
+  # slots), so report none defined. Wrong for actually-defined cvars, but a missing method here
+  # ABORTED whole spec files at load (language/defined_spec dispatched it at describe level).
+  def class_variable_defined?(name)
+    false
+  end
+
   # The method names available on instances of this class/module. Iterates the global name->vtable-offset
   # map and keeps names whose slot in THIS class holds a real method (outside the shared thunk range) --
   # the same test Object#respond_to? uses. `include_super` is accepted but not yet honoured (inherited
