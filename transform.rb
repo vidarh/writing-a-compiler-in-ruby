@@ -805,6 +805,21 @@ class Compiler
     end
   end
 
+  # True if the tree contains a :proc/:lambda NODE (args slot nil/:block/Array -- same shape
+  # test rewrite_lambda uses, so a :let list whose first var is named `proc` doesn't count).
+  def __contains_proc_node?(n)
+    return false if !n.is_a?(Array)
+    if (n[0] == :proc || n[0] == :lambda) && (n[1].nil? || n[1] == :block || n[1].is_a?(Array))
+      return true
+    end
+    i = 0
+    while i < n.length
+      return true if n[i].is_a?(Array) && __contains_proc_node?(n[i])
+      i += 1
+    end
+    false
+  end
+
   def find_vars_ary(ary, scopes, env, freq, in_lambda = false, in_assign = false, current_params = Set.new)
     vars = []
     ary.each do |e|
@@ -876,7 +891,20 @@ class Compiler
           # they need to propagate up. The rewrite_env_vars will add initialization.
           env += env2
 
-          n[2] = E[n.position,:let, vars, *n[2]] if n[2]
+          # Declare __tmp_proc in the let of any lambda whose body CREATES nested procs:
+          # rewrite_lambda (which runs after this pass) inserts `__tmp_proc` assignments there.
+          # The outermost method body gets the declaration via process_scope_env's
+          # `vars << :__tmp_proc`, but a NESTED lambda's let did not -- __tmp_proc in its body
+          # then aliased the let's first local slot, so creating an inner proc overwrote that
+          # local with the raw lambda address (array/comparison_spec: `lhs = Array.new(3){...}`
+          # inside an each-block turned lhs into a code pointer -> __NDX dispatch on it ->
+          # SIGSEGV). Conditional on an actual nested proc node: declaring it in EVERY lambda
+          # made a proc-free lambda's bare __tmp_proc name resolve oddly downstream (selftest:
+          # "undefined method '__tmp_proc' for GenericEnumerator").
+          if n[2]
+            extra = __contains_proc_node?(n[2]) ? [:__tmp_proc] : []
+            n[2] = E[n.position,:let, vars + extra, *n[2]]
+          end
         elsif n[0] == :class || n[0] == :module
           # A class/module body (n[3]) is a bare statement-LIST. The generic `find_vars(n[1..-1], ...)`
           # fallback would treat that whole list as one tagged node and DROP its first element (the first
@@ -920,9 +948,19 @@ class Compiler
               env  += env3
             end
           elsif    n[0] == :call
-            # Wrap receiver if it's an array (AST node) to prevent element-by-element iteration
-            receiver = n[1].is_a?(Array) ? [n[1]] : n[1]
-            vars, env = find_vars(receiver, scopes, env, freq, in_lambda, false, current_params)
+            # n[1] is the callee. For an ordinary `f(...)` it is the function NAME -- not a
+            # variable reference. Scanning it registered a phantom "variable" named after the
+            # function; inside a lambda that phantom got CAPTURED into __env__, skewing the env
+            # layout so the closure machinery's writes landed on a NEIGHBORING live object
+            # (valgrind-clean corruption): `mock("#{x}")` in a nested block turned a sibling
+            # local's array into a lambda address (array/comparison_spec SIGSEGV on lhs[0]).
+            # Only a COMPUTED callee (an Array node, e.g. raw-sexp indirect calls through a
+            # function-pointer expression) contains variable references worth scanning.
+            if n[1].is_a?(Array)
+              vars, env = find_vars([n[1]], scopes, env, freq, in_lambda, false, current_params)
+            else
+              vars = []
+            end
             if n[2]
               nodes = n[2]
               nodes = [nodes] if !nodes.is_a?(Array)
