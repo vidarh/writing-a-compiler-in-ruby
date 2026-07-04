@@ -5,23 +5,77 @@ module Enumerable
     Enumerator::Lazy.new(self)
   end
 
-  def all?
-    self.each do |item|
-#      unless yield(item)
-#        return false
-#      end
+  # all?/any?/none?/one? support three forms: a block, a pattern argument
+  # (matched with #===), or neither (element truthiness).
+  def all?(*pattern, &block)
+    if pattern.length > 0
+      pat = pattern[0]
+      self.each do |item|
+        return false if !(pat === item)
+      end
+    elsif block
+      self.each do |item|
+        return false if !block.call(item)
+      end
+    else
+      self.each do |item|
+        return false if !item
+      end
     end
-    return true
+    true
   end
 
 
-  def any?
-    self.each do |item|
-      if yield(item)
-        return true
+  def any?(*pattern, &block)
+    if pattern.length > 0
+      pat = pattern[0]
+      self.each do |item|
+        return true if pat === item
+      end
+    elsif block
+      self.each do |item|
+        return true if block.call(item)
+      end
+    else
+      self.each do |item|
+        return true if item
       end
     end
-    return false
+    false
+  end
+
+
+  def none?(*pattern, &block)
+    !any?(*pattern, &block)
+  end
+
+
+  def one?(*pattern, &block)
+    n = 0
+    if pattern.length > 0
+      pat = pattern[0]
+      self.each do |item|
+        if pat === item
+          n += 1
+          return false if n > 1
+        end
+      end
+    elsif block
+      self.each do |item|
+        if block.call(item)
+          n += 1
+          return false if n > 1
+        end
+      end
+    else
+      self.each do |item|
+        if item
+          n += 1
+          return false if n > 1
+        end
+      end
+    end
+    n == 1
   end
 
 
@@ -480,6 +534,190 @@ module Enumerable
       end
     end
     result
+  end
+
+  # Hash of element -> occurrence count.
+  def tally
+    h = {}
+    each do |x|
+      c = h[x]
+      if c.nil?
+        h[x] = 1
+      else
+        h[x] = c + 1
+      end
+    end
+    h
+  end
+
+  # first / first(n)
+  def first(*n)
+    if n.length == 0
+      each do |x|
+        return x
+      end
+      return nil
+    end
+    cnt = n[0]
+    raise ArgumentError, "negative array size" if cnt < 0
+    out = []
+    each do |x|
+      break if out.length >= cnt
+      out << x
+    end
+    out
+  end
+
+  def grep(pattern, &block)
+    out = []
+    each do |x|
+      if pattern === x
+        if block
+          out << block.call(x)
+        else
+          out << x
+        end
+      end
+    end
+    out
+  end
+
+  def grep_v(pattern, &block)
+    out = []
+    each do |x|
+      if !(pattern === x)
+        if block
+          out << block.call(x)
+        else
+          out << x
+        end
+      end
+    end
+    out
+  end
+
+  def find_index(*obj, &block)
+    i = 0
+    if obj.length > 0
+      target = obj[0]
+      each do |x|
+        return i if x == target
+        i += 1
+      end
+    else
+      return to_enum(:find_index) if !block
+      each do |x|
+        return i if block.call(x)
+        i += 1
+      end
+    end
+    nil
+  end
+
+  def take(n)
+    raise ArgumentError, "attempt to take negative size" if n < 0
+    out = []
+    each do |x|
+      break if out.length >= n
+      out << x
+    end
+    out
+  end
+
+  def take_while(&block)
+    return to_enum(:take_while) if !block
+    out = []
+    each do |x|
+      break if !block.call(x)
+      out << x
+    end
+    out
+  end
+
+  def drop(n)
+    raise ArgumentError, "attempt to drop negative size" if n < 0
+    out = []
+    i = 0
+    each do |x|
+      out << x if i >= n
+      i += 1
+    end
+    out
+  end
+
+  def drop_while(&block)
+    return to_enum(:drop_while) if !block
+    out = []
+    dropping = true
+    each do |x|
+      dropping = false if dropping && !block.call(x)
+      out << x if !dropping
+    end
+    out
+  end
+
+  # to_h over [key, value] pairs; with a block, the block maps each element
+  # to a [key, value] pair first.
+  def to_h(&block)
+    h = {}
+    each do |x|
+      x = block.call(x) if block
+      raise TypeError, "wrong element type #{x.class} (expected array)" if !x.is_a?(Array)
+      raise ArgumentError, "wrong array length (expected 2, was #{x.length})" if x.length != 2
+      h[x[0]] = x[1]
+    end
+    h
+  end
+
+  def uniq(&block)
+    seen = {}
+    out = []
+    each do |x|
+      k = x
+      k = block.call(x) if block
+      if !seen.key?(k)
+        seen[k] = true
+        out << x
+      end
+    end
+    out
+  end
+
+  def minmax_by(&block)
+    return to_enum(:minmax_by) if !block
+    minx = nil
+    miny = nil
+    maxx = nil
+    maxy = nil
+    found = false
+    each do |x|
+      y = block.call(x)
+      if !found
+        minx = x
+        miny = y
+        maxx = x
+        maxy = y
+        found = true
+      else
+        if (y <=> miny) < 0
+          minx = x
+          miny = y
+        end
+        if (y <=> maxy) > 0
+          maxx = x
+          maxy = y
+        end
+      end
+    end
+    [minx, maxx]
+  end
+
+  def each_entry(&block)
+    return to_enum(:each_entry) if !block
+    each do |x|
+      block.call(x)
+    end
+    self
   end
 end
 

@@ -10,7 +10,9 @@ class Kernel
     i = 0
     while i < na
       raw = str[i]
-      if raw
+      # nil prints as an empty line, but `false` (also falsy!) must print "false" --
+      # test nil explicitly, not truthiness.
+      if !raw.nil?
         raw = raw.to_s
         last = raw[-1]
         raw = raw.__get_raw
