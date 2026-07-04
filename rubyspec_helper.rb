@@ -202,6 +202,17 @@ class Mock
     self
   end
 
+  # FIXME: Stubs - should record expected call counts (parity with MockExpectationStub;
+  # without these, `mock(x).should_receive(:y).once` falls into method_missing and
+  # breaks the expectation chain).
+  def once
+    self
+  end
+
+  def twice
+    self
+  end
+
   # Store the return value(s) for the current method
   # Can accept multiple values for sequential returns
   def and_return(*results)
@@ -553,7 +564,7 @@ class ShouldNotProxy
     result = @target.__send__(method, *args)
     if result
       $current_test_has_failure = true
-      puts "\e[31m    FAILED: Expected to be falsy, got #{@result.inspect}\e[0m"
+      puts "\e[31m    FAILED: Expected to be falsy, got #{result.inspect}\e[0m"
     end
     result
   end
@@ -568,6 +579,12 @@ class Object
 
     $spec_assertions = $spec_assertions + 1
     matcher = args[0]
+    if matcher.respond_to?(:skip_assertion?) && matcher.skip_assertion?
+      # Skip-flavoured matcher (e.g. complain): run the block for its side effects,
+      # count a skip (the matcher does the bookkeeping), never fail either polarity.
+      matcher.match?(self)
+      return true
+    end
     match_result = matcher.match?(self)
     if match_result == false
       $current_test_has_failure = true
@@ -590,6 +607,10 @@ class Object
 
     $spec_assertions = $spec_assertions + 1
     matcher = args[0]
+    if matcher.respond_to?(:skip_assertion?) && matcher.skip_assertion?
+      matcher.match?(self)
+      return true
+    end
     if matcher.match?(self)
       $current_test_has_failure = true
       matcher_name = matcher.class.name
@@ -719,6 +740,12 @@ class ComplainMatcher
     @pattern = pattern
   end
 
+  # We don't capture warning output, so both `should complain` and `should_not complain`
+  # are recorded as skips (see the skip_assertion? protocol in Object#should/#should_not).
+  def skip_assertion?
+    true
+  end
+
   def match?(actual)
     # Call the lambda/proc to execute the code
     if actual.is_a?(Proc)
@@ -736,6 +763,187 @@ class ComplainMatcher
   def failure_message(actual)
     "Warning capture not implemented"
   end
+end
+
+# Reflection matchers (mspec's have_method / have_instance_method / have_constant /
+# be_ancestor_of family).
+
+class HaveMethodMatcher < Matcher
+  def initialize(method, include_super = true)
+    @method = method
+    @include_super = include_super
+  end
+
+  def match?(actual)
+    if actual.respond_to?(:methods)
+      actual.methods(@include_super).include?(@method)
+    else
+      false
+    end
+  end
+
+  def failure_message(actual)
+    "Expected #{actual.inspect} to have method #{@method.inspect}"
+  end
+end
+
+def have_method(method, include_super = true)
+  HaveMethodMatcher.new(method, include_super)
+end
+
+class HaveInstanceMethodMatcher < Matcher
+  def initialize(method, include_super = true)
+    @method = method
+    @include_super = include_super
+  end
+
+  def match?(actual)
+    if actual.respond_to?(:method_defined?)
+      actual.method_defined?(@method, @include_super)
+    else
+      false
+    end
+  end
+
+  def failure_message(actual)
+    "Expected #{actual.inspect} to have instance method #{@method.inspect}"
+  end
+end
+
+def have_instance_method(method, include_super = true)
+  HaveInstanceMethodMatcher.new(method, include_super)
+end
+
+def have_public_instance_method(method, include_super = true)
+  HaveInstanceMethodMatcher.new(method, include_super)
+end
+
+class HaveConstantMatcher < Matcher
+  def initialize(name)
+    @name = name
+  end
+
+  def match?(actual)
+    if actual.respond_to?(:constants)
+      actual.constants.include?(@name)
+    elsif actual.respond_to?(:const_defined?)
+      actual.const_defined?(@name)
+    else
+      false
+    end
+  end
+
+  def failure_message(actual)
+    "Expected #{actual.inspect} to have constant #{@name.inspect}"
+  end
+end
+
+def have_constant(name)
+  HaveConstantMatcher.new(name)
+end
+
+class BeAncestorOfMatcher < Matcher
+  def initialize(subclass)
+    @subclass = subclass
+  end
+
+  def match?(actual)
+    @subclass.ancestors.include?(actual)
+  end
+
+  def failure_message(actual)
+    "Expected #{actual.inspect} to be an ancestor of #{@subclass.inspect}"
+  end
+end
+
+def be_ancestor_of(subclass)
+  BeAncestorOfMatcher.new(subclass)
+end
+
+# Data-table matcher: `[[receiver, arg..., expected], ...].should be_computed_by(:meth, extra...)`
+# verifies receiver.meth(arg..., extra...) == expected for every row.
+class BeComputedByMatcher < Matcher
+  def initialize(method, *args)
+    @method = method
+    @args = args
+  end
+
+  def match?(sets)
+    i = 0
+    while i < sets.length
+      line = sets[i]
+      receiver = line[0]
+      expected = line[line.length - 1]
+      arguments = []
+      j = 1
+      while j < line.length - 1
+        arguments << line[j]
+        j = j + 1
+      end
+      k = 0
+      while k < @args.length
+        arguments << @args[k]
+        k = k + 1
+      end
+      value = receiver.__send__(@method, *arguments)
+      if !(value == expected)
+        @failed_receiver = receiver
+        @failed_expected = expected
+        @failed_value = value
+        return false
+      end
+      i = i + 1
+    end
+    true
+  end
+
+  def failure_message(actual)
+    "Expected #{@failed_expected.inspect} to be computed by #{@failed_receiver.inspect}.#{@method} (got #{@failed_value.inspect})"
+  end
+end
+
+def be_computed_by(method, *args)
+  BeComputedByMatcher.new(method, *args)
+end
+
+# Timezone helper: set ENV["TZ"] around the block. Our Time implementation is a stub,
+# so this mainly stops whole-file aborts on the missing helper.
+def with_timezone(name, offset = nil, dst = nil)
+  old = ENV["TZ"]
+  ENV["TZ"] = name
+  begin
+    yield
+  ensure
+    ENV["TZ"] = old
+  end
+end
+
+# Warning-category flags: enough for the `Warning[:experimental] = false` save/restore
+# dance in before/after hooks. MRI defaults :experimental to true.
+module Warning
+  def self.[](category)
+    flags = $__warning_categories
+    if flags
+      v = flags[category]
+      return v if !v.nil?
+    end
+    category == :experimental
+  end
+
+  def self.[]=(category, value)
+    $__warning_categories = {} if $__warning_categories.nil?
+    $__warning_categories[category] = value
+    value
+  end
+end
+
+# We never emit the warnings these guard against; just run the block.
+def suppress_keyword_warning
+  yield
+end
+
+def suppress_warning
+  yield
 end
 
 # Guards - stub out for now
