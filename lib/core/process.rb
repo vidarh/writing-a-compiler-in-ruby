@@ -67,14 +67,6 @@ module Process
     getpgrp
   end
 
-  def self.exit(status = 0)
-    %s(exit (callm status __get_raw))
-  end
-
-  def self.exit!(status = 0)
-    %s(exit (callm status __get_raw))
-  end
-
   def self.abort(msg = nil)
     STDERR.puts(msg) if msg
     %s(exit 1)
