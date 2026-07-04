@@ -215,7 +215,14 @@ class Compiler
       i = 0
       while i < e.length
         c = e[i]
-        if c == :"block_given?" || (c.is_a?(Array) && c[0] == :call && c[1] == :"block_given?")
+        # Never rewrite a METHOD-NAME slot: `Kernel.block_given?` carries the bare symbol at
+        # :callm slot 2, and replacing it left an :if node as the dispatch target -> garbage
+        # call -> SIGSEGV (kernel/block_given_spec's KernelBlockGiven fixture). A receiver-full
+        # call stays a normal runtime dispatch.
+        is_method_name = (i == 2 && (e[0] == :callm || e[0] == :safe_callm)) ||
+                         (i == 1 && e[0] == :call && !c.is_a?(Array))
+        if !is_method_name &&
+           (c == :"block_given?" || (c.is_a?(Array) && c[0] == :call && c[1] == :"block_given?"))
           e[i] = E[:if, [:ne, :__closure__, 0], :true, :false]
         end
         i += 1
@@ -593,6 +600,7 @@ class Compiler
   # nodes are gone). Detect them without crossing into DEEPER defuns' bodies.
   def __contains_proc_node_defun?(n)
     return false if !n.is_a?(Array)
+    return false if n[0] == :class || n[0] == :module
     return false if n[0] == :defm
     return false if n[0] == :defun && !(n[1].is_a?(String) && n[1].start_with?("__lambda_"))
     return true if n[0] == :defun && n[1].is_a?(String) && n[1].start_with?("__lambda_")
@@ -611,6 +619,7 @@ class Compiler
   # prologue set it; kept for shape stability), and __new_proc's env argument becomes the wrapper.
   def __repoint_creations(n, in_defun = false)
     return if !n.is_a?(Array)
+    return if n[0] == :class || n[0] == :module
     return if n[0] == :defm
     return if n[0] == :defun && !(n[1].is_a?(String) && n[1].start_with?("__lambda_"))
     if n[0] == :defun && n[1].is_a?(String) && n[1].start_with?("__lambda_")
@@ -643,6 +652,7 @@ class Compiler
   # find_vars for proc-creating lambdas). [:stackframe] here is THIS defun activation's frame.
   def __inject_wrapenv_prologue(n)
     return false if !n.is_a?(Array)
+    return false if n[0] == :class || n[0] == :module
     return false if n[0] == :defm || n[0] == :defun
     if n[0] == :let && n[1].is_a?(Array) && n[1].include?(:__wrapenv)
       n.insert(2, E[:sexp, E[:assign, :__wrapenv, E[:call, :__alloc_env, 2]]],
@@ -947,6 +957,10 @@ class Compiler
   # test rewrite_lambda uses, so a :let list whose first var is named `proc` doesn't count).
   def __contains_proc_node?(n)
     return false if !n.is_a?(Array)
+    # A class/module body executes against a REBOUND __env__ (compile_class) -- procs inside it
+    # belong to that scope, not to any enclosing lambda, so they must not make the enclosing
+    # lambda an allocator (matching the :class boundaries in the __nest_proc_envs walkers).
+    return false if n[0] == :class || n[0] == :module
     if (n[0] == :proc || n[0] == :lambda) && (n[1].nil? || n[1] == :block || n[1].is_a?(Array))
       return true
     end
@@ -1014,7 +1028,11 @@ class Compiler
           env = env1 + env2
           vars = vars1+vars2
           vars.each {|v| push_var(scopes,env,v) if !is_special_name?(v) }
-        elsif n[0] == :lambda || n[0] == :proc
+        elsif (n[0] == :lambda || n[0] == :proc) && (n[1].nil? || n[1] == :block || n[1].is_a?(Array))
+          # NB: the e[1] shape test mirrors rewrite_lambda's -- a :let VARIABLE LIST whose first
+          # variable is a user local named `lambda`/`proc` is structurally identical at n[0]
+          # but has a bare Symbol at n[1]; treating it as a proc node mutated the var list into
+          # a bogus let (with :__wrapenv appended, four spec files crashed on the debris).
           # Extract parameter names (handle arrays like [:param, default])
           params_raw = n[1] || []
           param_names = params_raw.is_a?(Array) ? params_raw.collect { |p| p.is_a?(Array) ? p[0] : p } : []
@@ -1064,7 +1082,12 @@ class Compiler
           vars, env = find_vars([n[2]], scopes, env, freq, in_lambda, false, current_params) if n[2]
           if n[3]
             body = (n[3].is_a?(Array) && n[3][0].is_a?(Array)) ? n[3] : [n[3]]
-            vars, env = find_vars(body, scopes, env, freq, in_lambda, false, current_params)
+            # The class BODY executes against a REBOUND __env__ (fresh, parentless -- see
+            # compile_class's closure branch); analyse it OUTSIDE any lambda context so its
+            # blocks' captures/lets are computed relative to that fresh env, matching the
+            # depth-0 reset in __rewrite_env_vars_r. Leaking in_lambda=true here made
+            # class-in-it-block bodies hop through the fresh env's null parent (for_spec).
+            vars, env = find_vars(body, scopes, env, freq, false, false, current_params)
           end
         else
           if    n[0] == :callm || n[0] == :safe_callm
@@ -1243,6 +1266,29 @@ class Compiler
     in_lambda = @env_in_lambda
     seen = false
     exp.depth_first do |e|
+      # A class/module BODY executes against a REBOUND __env__ (compile_class allocates a fresh
+      # one with no parent link -- see the class-body closure branch). Depth accumulated from
+      # lambdas OUTSIDE the class must not leak in: hop chains would dereference the fresh
+      # env's parent slot (0) and crash (language/for_spec: for-loop blocks in a class body
+      # inside an it-block). Recurse the body at depth 0, outside-lambda state.
+      if e.is_a?(Array) && (e[0] == :class || e[0] == :module) && e[3]
+        if depth > 0 || in_lambda
+          @env_depth = 0
+          @env_in_lambda = false
+          body = (e[3].is_a?(Array) && e[3][0].is_a?(Array)) ? e[3] : [e[3]]
+          body.each do |stmt|
+            seen = true if stmt.is_a?(Array) && __rewrite_env_vars_r(stmt, env)
+          end
+          @env_depth = depth
+          @env_in_lambda = in_lambda
+          # superclass expr (e[2]) evaluates in the ENCLOSING scope -- let depth_first continue
+          # into it via the normal path by handling it here explicitly, then skipping children.
+          if e[2].is_a?(Array)
+            seen = true if __rewrite_env_vars_r(e[2], env)
+          end
+          next :skip
+        end
+      end
       # Never redirect inside an inlined library (:required) subtree: a top-level capture pass redirects by
       # NAME, and a common user-captured name (a/acc/...) would get rewritten to __env__[k] inside library
       # startup code -> crash. The library's own scopes are handled separately.
@@ -1301,7 +1347,12 @@ class Compiler
         # First, process the body to rewrite variable references. Entering a lambda from the
         # method body keeps depth 0 (its __env__ param IS the root env); entering one from
         # inside another lambda adds a parent hop (the enclosing lambda's wrapper interposes).
-        if e[body_index] && !is_nested_def
+        # e[body_index] must be an ARRAY: a :let VARIABLE LIST whose first entry is a user
+        # local named `lambda`/`proc` is structurally identical at e[0] (same hazard
+        # rewrite_lambda guards against), and with :__wrapenv appended to such lists its
+        # bare-symbol entries landed here as a "body" -> NoMethodError on depth_first
+        # (proc/new_spec).
+        if e[body_index] && e[body_index].is_a?(Array) && !is_nested_def
           # Entering a lambda from the method body keeps depth (its __env__ param IS the root
           # env); entering one from inside another lambda adds a parent hop (the enclosing
           # lambda's wrapper interposes). Explicit if, not a ternary (self-hosting).
@@ -1322,7 +1373,7 @@ class Compiler
 
         # Then insert initialization for captured parameters (after rewriting)
         # This way the RHS (parameter) won't be rewritten
-        if !captured_params.empty? && e[body_index] && !is_nested_def
+        if !captured_params.empty? && e[body_index] && e[body_index].is_a?(Array) && !is_nested_def
           # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
           param_inits = captured_params.collect do |p|
             idx = env.index(p)
@@ -1507,7 +1558,18 @@ class Compiler
       freq   = Hash.new(0)
 
       s = Set.new
-      vars,env= find_vars(body_in,scopes,s, freq)
+      # A `def ... ensure/rescue ... end` body arrives as a BARE [:block, args, stmts, ...]
+      # node, not a statement list. find_vars iterates its ARGUMENT as a list, so the block
+      # node's elements were visited as "statements": the :block branch never fired, the
+      # generic fallback dropped the first real statement, and every lambda inside was
+      # invisible to capture analysis -- no let, no captures, and (under nested envs) creation
+      # triples repointed to an undeclared __wrapenv (32 rubyspec files went COMPILE_FAIL:
+      # "undefined reference to __wrapenv"). Wrap it so the block node is visited AS A NODE.
+      fv_body = body_in
+      if fv_body.is_a?(Array) && fv_body[0] == :block && fv_body[1].is_a?(Array)
+        fv_body = [fv_body]
+      end
+      vars,env= find_vars(fv_body,scopes,s, freq)
 
       env << :__closure__
 
@@ -2947,6 +3009,12 @@ class Compiler
 
       body = e[bodyi]
       body = [] unless body.is_a?(Array)
+      # A `def ... ensure/rescue ... end` body is ONE bare [:block, args, stmts, ...] node.
+      # Keep it intact as a single statement: the `+ body` concatenations below otherwise
+      # splice its ELEMENTS in as statements -- the :block tag became a bogus statement, the
+      # ensure clause was silently dropped, and the mangled body defeated find_vars' capture
+      # analysis (part of the __wrapenv COMPILE_FAIL regression).
+      body = [body] if body[0] == :block && body[1].is_a?(Array)
 
       # If the method also has a splat (`*args`), __kwargs CANNOT be a trailing positional param: a
       # trailing param after a splat behaves like `*args, x` and steals the last positional (so
