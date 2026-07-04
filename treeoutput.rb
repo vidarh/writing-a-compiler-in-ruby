@@ -278,6 +278,28 @@ module OpPrec
         else
           @vstack << leftv + args
         end
+      elsif o.sym == :assign and ra and rightv[0] == :callm and rightv[2].is_a?(Array)
+        # RHS twin of the MLHS branch below: comma (pri 99) binds tighter than `.` (pri 98), so on
+        # a multi-value RHS whose first element is a method call (`a, b = recv.m, v` or
+        # `a, b = recv.m(1), recv.m(2)`), the whole comma list lands in the `.`'s METHOD slot:
+        # [:callm, recv, [m, v, ...]]. A real method name is always a Symbol, so an Array method
+        # slot is unambiguously this mis-parse (it compiled to a garbage dispatch -> SIGSEGV, or
+        # passed the extra values as arguments to the first call). The slot's first element is the
+        # method itself -- a name symbol (paren-less) or an already-reduced [:call, name, args]
+        # node (paren'd; reduced before the dot) -- and the rest are complete value nodes.
+        # Rebuild the first callm and re-emit the assign with the flat RHS list, the same shape
+        # the generic comma branch produces for `a, b = 1, 2`.
+        ms = rightv[2]
+        first = ms[0]
+        rest = ms[1..-1].map { |x| x.is_a?(Array) && x[0] == :comma ? flatten(x) : [x] }.inject([]) { |a, x| a + x }
+        recv = rightv[1]
+        if first.is_a?(Array) && first[0] == :call
+          oper_call_right(recv, Oper.new(98, :callm, :infix), first)
+          cm = @vstack.pop
+        else
+          cm = E[:callm, recv, first]
+        end
+        @vstack << E[:assign, leftv, E[cm] + rest]
       elsif la and (leftv[0] == :callm || leftv[0] == :safe_callm) and o.sym == :assign and leftv[2].is_a?(Array)
         # Multiple-assignment to method-call (attribute) targets: `a.x, b.y = ...`. Comma (pri 99) binds
         # tighter than `.` (pri 98), so the comma list bound into the `.`'s method slot -- leftv came out
