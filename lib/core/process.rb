@@ -4,6 +4,21 @@
 # perturbs the vtable and regresses unrelated specs). Subprocess operations (spawn/fork/exec/wait/kill)
 # are not supported and raise NotImplementedError rather than crash on a missing method.
 module Process
+  # Same semantics as Kernel#exit / #exit!: exit RAISES SystemExit (catchable; uncaught it
+  # terminates with the status after at_exit handlers), exit! terminates immediately. A missing
+  # Process.exit aborted core/process/exit_spec at its first test.
+  def self.exit(code = 0)
+    code = 0 if code == true
+    code = 1 if code == false
+    $__exception_runtime.raise(SystemExit.new(code))
+  end
+
+  def self.exit!(code = 0)
+    code = 0 if code == true
+    code = 1 if code == false
+    %s(exit (callm code __get_raw))
+  end
+
   # Values from getpid/getuid/... are small; tagging with __int is safe.
   def self.pid
     v = 0

@@ -157,10 +157,19 @@ class Kernel
     nil
   end
 
-  # Exit the program with the given status (true -> 0, false -> 1, else the integer), running at_exit
-  # handlers first.
+  # Exit by RAISING SystemExit (true -> 0, false -> 1, else the integer), as MRI does: an
+  # enclosing `rescue SystemExit` (or ensure) can intercept it, and rubyspec files calling exit
+  # inside a test no longer TERMINATE mid-run (which dropped the summary and classified the
+  # whole file as CRASH). Uncaught, the exception runtime terminates with the status and runs
+  # the at_exit handlers there (see ExceptionRuntime#raise).
   def exit(code = 0)
-    __run_at_exit
+    code = 0 if code == true
+    code = 1 if code == false
+    $__exception_runtime.raise(SystemExit.new(code))
+  end
+
+  # exit! terminates immediately: no SystemExit, no at_exit handlers.
+  def exit!(code = 0)
     code = 0 if code == true
     code = 1 if code == false
     %s(exit (callm code __get_raw))

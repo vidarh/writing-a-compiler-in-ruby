@@ -139,6 +139,16 @@ class ExceptionRuntime
       %s(unwind handler)
       # Never returns
     else
+      # Unhandled SystemExit is not an error: Kernel#exit RAISES it (so `begin; exit; rescue
+      # SystemExit; end` can intercept, as MRI does); reaching here uncaught means terminate
+      # silently with its status, running at_exit handlers at actual termination. The bare
+      # constant read is raw 0 (falsy) during early bootstrap before the class object exists.
+      if SystemExit && exception_obj.is_a?(SystemExit)
+        st = exception_obj.status
+        st = 0 if st.nil?
+        __run_at_exit
+        %s(exit (callm st __get_raw))
+      end
       # Unhandled exception
       %s(printf "Unhandled exception: ")
       msg = exception_obj.to_s
@@ -295,6 +305,18 @@ class SecurityError < Exception
 end
 
 class SystemExit < Exception
+  def initialize(status = 0, msg = "exit")
+    @message = msg
+    @status = status
+  end
+
+  def status
+    @status
+  end
+
+  def success?
+    @status.nil? || @status == 0
+  end
 end
 
 class SystemStackError < Exception
