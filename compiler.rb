@@ -1143,7 +1143,15 @@ class Compiler
   def compile_begin_rescue(scope, exps, rescue_clause, ensure_body = nil)
     # Handle ensure-only blocks (no rescue)
     if !rescue_clause && ensure_body
+      # Track the enclosing ensure for `return` inside the body: compile_return unwinds
+      # @ensure_stack so the ensure code runs before the frame is torn down (Ruby semantics --
+      # language/return_spec's begin/return/ensure-in-a-lambda). Function bodies compile
+      # DEFERRED (compile_defun registers them; output_functions emits later), so contexts
+      # never leak across functions.
+      @ensure_stack ||= []
+      @ensure_stack.push([ensure_body, false])
       compile_do(scope, *exps)
+      @ensure_stack.pop
       # Save result before ensure clause (ensure might overwrite eax)
       @e.pushl(:eax)
       compile_do(scope, *ensure_body)
@@ -1196,8 +1204,14 @@ class Compiler
         [:callm, :__handler, :save_stack_state, [[:stackframe], [:stackpointer], [:addr, rescue_label]]])
 
       # Compile try block -- its result is the value of the whole begin unless an else clause is present
-      # (an else REPLACES the body value in Ruby).
+      # (an else REPLACES the body value in Ruby). Track the handler + ensure for `return`
+      # inside the body (see the ensure-only path above): the return must pop this handler and
+      # run the ensure before leaving the frame, or the handler goes stale (later raises unwind
+      # into a dead frame) and the ensure is skipped.
+      @ensure_stack ||= []
+      @ensure_stack.push([ensure_body, true])
       compile_do(lscope, *exps)
+      @ensure_stack.pop
 
       if else_body
         # else runs only on no-exception and is NOT protected by the rescue, so pop the handler first,

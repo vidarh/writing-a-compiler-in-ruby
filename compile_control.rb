@@ -147,6 +147,27 @@ class Compiler
 
   def compile_return(scope, arg = :nil)
     @e.save_result(compile_eval_arg(scope, arg)) if arg
+    # Unwind enclosing begin/rescue/ensure contexts (innermost first) before leaving the frame:
+    # pop each pushed exception handler (or it points at a dead frame after we return) and run
+    # each ensure body (Ruby runs ensures on return -- language/return_spec). The return value
+    # is preserved across both, which clobber %eax. Contexts are compile-time-scoped to this
+    # function (see @ensure_stack in compile_begin_rescue).
+    if @ensure_stack && !@ensure_stack.empty?
+      @ensure_stack.reverse.each do |ctx|
+        eb = ctx[0]
+        has_handler = ctx[1]
+        if has_handler
+          @e.pushl(:eax)
+          compile_eval_arg(scope, [:callm, :$__exception_runtime, :pop_handler])
+          @e.popl(:eax)
+        end
+        if eb
+          @e.pushl(:eax)
+          compile_do(scope, *eb)
+          @e.popl(:eax)
+        end
+      end
+    end
     @e.movl("-4(%ebp)",:ebx)
     @e.evict_all
     reload_self(scope)

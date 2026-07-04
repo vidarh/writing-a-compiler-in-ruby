@@ -219,6 +219,13 @@ class Compiler
   def rewrite_proc_return(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
+      # A nested LAMBDA's `return` is LOCAL to the lambda (Ruby lambda semantics) -- do not
+      # convert it to a method-frame preturn. Without this boundary, a `-> { return }` inside
+      # a proc (e.g. rubyspec it-blocks) unwound to the enclosing method's frame instead of
+      # returning from the lambda (language/return_spec crashed; standalone runs exited with
+      # garbage status). Nested :proc nodes DO keep converting -- return inside a proc-in-a-proc
+      # still returns from the defining method.
+      next :skip if e[0] == :lambda && (e[1].nil? || e[1] == :block || e[1].is_a?(Array))
       if e[0] == :return
         e[0] = :preturn
       end
