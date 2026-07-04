@@ -24,12 +24,11 @@ a full failure triage and ranked plan.
 
 ### 1. Live bugs found by the 2026-07-04 review (see review/ANALYSIS.md)
 
-- **`def f(a = 1); body; ensure; cleanup; end` crashes at runtime** — third pass
-  (`rewrite_default_args`) mishandling the bare `[:block, args, stmts, rescue,
-  ensure]` defm body. Fix via body-shape normalization (refactoring item R1).
-- **`a, b = recv&.m, v` / `f x&.m, v` parse mangled** — the dot-comma
-  normalization in `TreeOutput#oper` matches only `:callm`, not `:safe_callm`
-  (refactoring item R4 step 1).
+- ~~`def f(a = 1); body; ensure; cleanup; end` crashes at runtime~~ — FIXED
+  `67f79f4` (R1 `normalize_body_shape`; repros test/repros/de1.rb, de2.rb).
+- ~~`a, b = recv&.m, v` / `f x&.m, v` parse mangled~~ — FIXED (R4 step 1:
+  dot-comma normalization extended to `:safe_callm`; repros test/repros/sc1.rb,
+  sc2.rb). MLHS safe-nav (`s&.x, c = ...`) is a SyntaxError in MRI.
 - **Op-assign of an env-captured target inside a block leaks a raw AST
   s-expression into a constant scope name** (`uninitialized constant
   [:index,[:index,:__env__,1],3]::A`) — language/assignments_spec.
@@ -83,6 +82,10 @@ Root-caused but intentionally not yet fixed:
 - **core/string/scan_spec.rb hangs the compiler** (infinite loop at compile
   time; no single extracted construct reproduces). Masked by COMPILE_TIMEOUT in
   run_rubyspec (surfaces as COMPILE_FAIL). Needs bisection of the preprocessed file.
+- **language/ensure_spec.rb: compile-time infinite recursion** (2026-07-04) —
+  SystemStackError, ~8.7k frames cycling through compile_exp/compile_sexp
+  (funcscope get_arg). NOT the (fixed) bare-block body-shape bug. Needs
+  bisection of the preprocessed file.
 
 ### 6. `Array#initialize` — `send` edge cases
 

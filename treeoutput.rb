@@ -239,7 +239,7 @@ module OpPrec
       end
 
       # Rewrite rules to simplify the tree
-      if ra and rightv[0] == :comma and o.sym == :callm
+      if ra and rightv[0] == :comma and (o.sym == :callm || o.sym == :safe_callm)
         # Comma (pri 99) binds tighter than `.` (pri 98), so in `f x.m, v` / `x.m, v = ...`
         # the whole comma list lands as the dot's RIGHT operand -- the method slot became a
         # list ([:callm, x, [m, v]]), and consumers dispatched garbage (IO.copy_stream

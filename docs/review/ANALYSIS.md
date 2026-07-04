@@ -29,8 +29,8 @@ picked at during a burndown loop.
 | # | Bug | Status |
 |---|---|---|
 | 1 | `instance_eval`/`instance_exec` missing `blkarg` in `__call_with_self` — instance_exec routed its first user argument into the block channel (object.rb:633/637) | **FIXED, committed `17dffc5`** (gates green: selftest/selftest-c Fails: 0, battery 98/98) |
-| 2 | `def f(a = 1); ...; ensure; ...; end` crashes at runtime — `rewrite_default_args` is a THIRD pass mishandling the bare `[:block, args, stmts, rescue, ensure]` defm body, splicing `:block` in as a statement | Open — fixed structurally by **R1** (body-shape normalization) |
-| 3 | `a, b = recv&.m, v` and `f x&.m, v` still parse mangled — dot-comma normalization matches only `:callm`, not `:safe_callm` | Open — fixed by **R4 step 1** |
+| 2 | `def f(a = 1); ...; ensure; ...; end` crashes at runtime — `rewrite_default_args` is a THIRD pass mishandling the bare `[:block, args, stmts, rescue, ensure]` defm body, splicing `:block` in as a statement | **FIXED `67f79f4`** (R1 normalize_body_shape pass; repros test/repros/de1.rb, de2.rb) |
+| 3 | `a, b = recv&.m, v` and `f x&.m, v` still parse mangled — dot-comma normalization matches only `:callm`, not `:safe_callm` | **FIXED** (R4 step 1; repros test/repros/sc1.rb, sc2.rb). Note: MLHS safe-nav (`s&.x, c = 1, 2`) is a SyntaxError in MRI — the safe_callm MLHS unmangle branch supports an illegal form |
 | 4 | Op-assign of an env-captured target inside a block leaks a raw AST s-expression into the constant scope name (`uninitialized constant [:index,[:index,:__env__,1],3]::A`) | Open — language/assignments; part of triage C5 |
 | 5 | Stabby lambda with rest-args whose body creates a nested proc: `__tmp_proc` not declared in the lambda's let → `undefined method '__tmp_proc'` — gates 253 fails in file/printf + the shared :kernel_sprintf suite | Open — same family as the fixed rewrite_lambda bugs (transform.rb:1050 region) |
 | 6 | `Array.[]`/subclass instantiation (`MyArray[...]`): allocate-based implementations segfault the self-hosted compiler (array.rb:463 comment) — gates ~40 array spec files | Open — compiler bug hunt, medium/hard |
