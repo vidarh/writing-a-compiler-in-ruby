@@ -253,6 +253,14 @@ class Class
     Module.new
   end
 
+  # ruby2_keywords marks a rest-arg method's trailing Hash for keyword forwarding -- a no-op
+  # here (kwargs are not generally supported). It is used as a method DECORATOR
+  # (`ruby2_keywords def m(*a)`) at class body level, so a missing method aborted whole spec
+  # files at load. Returns the method-name symbol, as MRI's def-expression form expects.
+  def ruby2_keywords(name, *rest)
+    name
+  end
+
   # The method names available on instances of this class/module. Iterates the global name->vtable-offset
   # map and keeps names whose slot in THIS class holds a real method (outside the shared thunk range) --
   # the same test Object#respond_to? uses. `include_super` is accepted but not yet honoured (inherited

@@ -197,6 +197,43 @@ class Time
   end
 end
 
+# Binding stub: there is no runtime scope reflection, so a Binding carries nothing. The class
+# and Kernel#binding must EXIST because specs call `binding` at toplevel/describe level
+# (main/define_method_spec died at load); its methods (eval, local_variable_get, ...) are
+# missing and fail per-test.
+class Binding
+end
+
+class Object
+  def binding
+    Binding.new
+  end
+end
+
+# Signal stub: no signal handling, but Signal.list is called at describe level (signal specs
+# died at load). Provide the standard Linux signal map with correct numbers.
+module Signal
+  def self.list
+    { "EXIT" => 0, "HUP" => 1, "INT" => 2, "QUIT" => 3, "ILL" => 4, "TRAP" => 5,
+      "ABRT" => 6, "BUS" => 7, "FPE" => 8, "KILL" => 9, "USR1" => 10, "SEGV" => 11,
+      "USR2" => 12, "PIPE" => 13, "ALRM" => 14, "TERM" => 15, "CHLD" => 17,
+      "CONT" => 18, "STOP" => 19, "TSTP" => 20, "TTIN" => 21, "TTOU" => 22,
+      "URG" => 23, "XCPU" => 24, "XFSZ" => 25, "VTALRM" => 26, "PROF" => 27,
+      "WINCH" => 28, "IO" => 29, "PWR" => 30, "SYS" => 31 }
+  end
+
+  def self.trap(sig, command = nil, &block)
+    "DEFAULT"
+  end
+
+  def self.signame(num)
+    list.each do |name, n|
+      return name if n == num
+    end
+    nil
+  end
+end
+
 # Marshal stub: binary serialization is unimplemented. The methods raise (rescued per-test by
 # the spec harness); the CONSTANT must exist because specs reference `Marshal` in describe
 # arguments -- evaluated before any rescue -- which aborted whole files at load.

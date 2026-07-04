@@ -19,6 +19,17 @@ module Process
     %s(exit (callm code __get_raw))
   end
 
+  # getrlimit/setrlimit: no rlimit syscall binding; report a large finite limit for everything.
+  # Wrong values, but getrlimit_spec calls this at TOPLEVEL (outside any rescue), so a missing
+  # method aborted the whole file before any summary.
+  def self.getrlimit(resource)
+    [536870911, 536870911]
+  end
+
+  def self.setrlimit(resource, cur, max = nil)
+    nil
+  end
+
   # Values from getpid/getuid/... are small; tagging with __int is safe.
   def self.pid
     v = 0
