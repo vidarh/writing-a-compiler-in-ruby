@@ -30,8 +30,6 @@ E = 2
 #  - The ones that fails because they haven't been implemented
 # Enumerable=8 #Here because modules doesn't work yet
 
-# raise is now implemented in lib/core/kernel.rb
-
 # FIXME:
 %s(defun range (a b)
   (puts "Compiler range construct is not implemented yet")

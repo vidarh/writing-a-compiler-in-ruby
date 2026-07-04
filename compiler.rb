@@ -241,7 +241,6 @@ class Compiler
     # Global names are already assembly-safe (aliases applied, $ prefix stripped by globalscope.rb)
     vars = (@global_constants.to_a + @global_scope.globals.keys).collect{|s| s.to_s}.sort.uniq - ["__roots_start","__roots_end"]
     @e.bss    do
-      #@e.bsslong("__stack_top")
       @e.label("__roots_start")
       vars.each { |c|    @e.bsslong(c) }
       @e.label("__roots_end")
@@ -595,12 +594,10 @@ class Compiler
     test_value = test_exprs
     xrest = nil
     if test_exprs.is_a?(Array)
-      #STDERR.puts test_exprs.inspect
       if test_exprs[0] == :comma
         test_value = test_exprs[1]
         xrest = test_exprs[2]  # Keep as-is, don't wrap in Array()
       end
-      #STDERR.puts xrest.inspect
     end
     # When compare_exp is nil (case with no condition), test for truthiness
     # Otherwise use === comparison
@@ -655,17 +652,6 @@ class Compiler
     # expression `arg.rest` to be misinterpreted during rewrite to
     # method call relative to the contents of the `rest` variable,
     # which needless to say is a total disaster.
-    #
-    # Further, there is likely another problem here, in that it looks like
-    # a single, shared, environment is created for the two lambdas, but that
-    # may be unavoidable given Ruby semantics.
-
-    # FIXME:
-    # Implement like this: compile_eval_arg
-    # save the register, and loop over the "when"'s.
-    # Compile each of the "when"'s as "if"'s where the value
-    # is loaded from the stack and compared with the value
-    # (or values) in the when clause
 
     @e.comment("compiling case expression")
     compare_exp = args.first
@@ -811,7 +797,6 @@ class Compiler
         if arg[0] != :defm
           @e.lineno(arg.position)
         end
-        # trace(arg.position,arg)
       end
       @lastpos = pos
     end
@@ -908,10 +893,8 @@ class Compiler
       # Debug: check if this looks like a valid target list
       valid_targets = left.all? { |t| t.is_a?(Symbol) || (t.is_a?(Array) && [:index, :deref].include?(t[0])) }
       if !valid_targets
-        # This array contains something that's not a simple target
-        # Log and skip - let it fall through to the error
-        STDERR.puts "DEBUG: Malformed destructuring target: #{left.inspect}"
-        STDERR.puts "  right: #{right.inspect}"
+        # This array contains something that's not a simple target;
+        # let it fall through to the error
       else
         # This is multiple assignment targets - we need to extract from right side array
         # and assign each element
@@ -1422,26 +1405,14 @@ class Compiler
     if pos && exp[0] != :defm
       @e.lineno(pos) if pos
     end
-    #trace(pos,exp)
 
     # check if exp is within predefined keywords list
 
-    ## FIXME: Attempt at fixing segfault
-    cmd = nil
-    r = nil
+    # NOTE: the bare `exp` below is a load-bearing self-host workaround
+    # (lifting the variable before the dynamic send); do not remove.
     exp
     if(@@keywords.include?(exp[0]))
-      # FIXME: This variation segfaults
       return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
-      #exp
-      #cmd = "compile_#{exp[0].to_s}"
-      #if cmd == "compile_defm"
-        # FIXME: Uncommenting this causes crash to move elsewhere.
-        #STDERR.puts scope.object_id
-      #  r = exp.rest
-      #  return self.compile_defm(scope, *r)
-      #end
-      #return self.send(cmd, scope, *exp.rest)
     elsif @@oper_methods.member?(exp[0])
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
@@ -1521,7 +1492,6 @@ class Compiler
 
     classes = 0
     exp.depth_first(:class) { |c| classes += 1; :skip }
-    #warning("INFO: Max vtable offset when compiling is #{@vtableoffsets.max} in #{classes} classes, for a total vtable overhead of #{@vtableoffsets.max * classes * 4} bytes")
   end
 
   # When we hit a vtable slot for a method that doesn't exist for

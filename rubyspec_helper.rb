@@ -267,7 +267,6 @@ class Mock
         result
       end
     else
-      STDERR.puts("Mock: No expectation set for #{method}")
       nil
     end
   end
@@ -1248,14 +1247,8 @@ def after(type = :each, &block)
 end
 
 # Helper methods from MSpec
-# FIXME: These are fake values for 32-bit compatibility
-# The real Ruby values would be 64-bit bignums, but:
-# 1) The parser has issues with hex literals (especially with underscores)
-# 2) The 32-bit implementation doesn't support actual bignums
-# These values allow tests to run but don't actually test bignum behavior
 def bignum_value(plus = 0)
   # Returns 2^64 + plus (a value that requires multiple limbs)
-  # Now that we have large integer literal support, we can use the real value
   18446744073709551616 + plus
 end
 
@@ -1303,22 +1296,6 @@ def max_long
 end
 
 # Helper to create mock object that responds to to_int
-# FIXME: This is a minimal stub class, not a proper mock
-# DISABLED: Causes crash during class definition
-# class MockInt
-#   def initialize(value)
-#     @value = value
-#   end
-#
-#   def to_int
-#     @value
-#   end
-#
-#   def __get_raw
-#     %s(sar (callm @value __get_raw))
-#   end
-# end
-
 def mock_int(value)
   # MockInt.new(value)
   # Return a simple fixnum for now

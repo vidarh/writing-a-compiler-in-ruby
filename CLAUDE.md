@@ -108,7 +108,7 @@ If you think you need to use these methods, you are approaching the problem inco
 
 When creating documentation:
 - ✅ Place all .md files in `docs/` directory
-- ✅ Use existing documentation files when updating status (e.g., `docs/WORK_STATUS.md`)
+- ✅ Use existing documentation files when updating status (e.g., `docs/KNOWN_ISSUES.md`, `docs/TODO.md`)
 - ✅ Keep root directory clean - only `README.md` and `CLAUDE.md` allowed in root
 - ❌ **NEVER** create session summaries, bug reports, or investigation files in root
 - ❌ **NEVER** create multiple copies of the same documentation
@@ -260,10 +260,13 @@ end
 - Delete/move to rubyspec/ once bug is fixed
 - See spec/README.md for full guidelines and examples
 
-### Docker Environment
-- `make buildc` - Build Docker development environment
+### Build Environment
+- Compilation uses the LOCAL i386 toolchain in `toolchain/32root` by default;
+  `./compile` auto-detects it and only falls back to Docker (`COMPILE_MODE` env).
+- `make buildc` - Build the Docker development environment (fallback path, and
+  the route to tgc instrumentation/valgrind: the local toolchain cannot build
+  tgc.c, only the `ruby-compiler-buildenv` image can).
 - `make cli` - Start interactive Docker shell
-- All compilation happens inside Docker containers for i386 compatibility
 
 ### Debugging
 - `make valgrind` - Run selftest under Valgrind
@@ -322,10 +325,13 @@ end
 ## Key Constraints and Limitations
 
 ### Missing Language Features
-- **Exceptions**: Limited begin/rescue support (commented out for bootstrap)
-- **Regular expressions**: Not implemented
-- **Float**: Not implemented
+- **Float**: Entirely stubbed (arithmetic returns self) — the single biggest
+  current gap; see docs/review/ANALYSIS.md
 - **eval**: Not supported (ahead-of-time compilation model)
+- **Threads/Fibers**: No runtime support
+- (Exceptions ARE implemented: typed rescue, `rescue => e`, ensure incl.
+  return-through-ensure, retry, re-raise. Regexp has a pure-Ruby engine in
+  lib/core/regexp.rb — mostly passing, validation gaps remain.)
 
 ### Compilation Model
 - Statically compiled to native x86 (32-bit) code
@@ -347,13 +353,15 @@ end
 - `test/` - Minimal self-hosted test framework
 - `spec/` - Reduced test cases and compiler unit tests (for development)
 - `rubyspec/` - Comprehensive Ruby compatibility test suite (do not edit)
-- `mybin/` - Utility scripts
+- `test/repros/` - Canonical crash/bug repros; `test/repros/battery/` is the
+  crash-regression corpus run by `tools/crash_battery.sh` (part of the gate)
 - `docs/` - Architecture documentation and development notes
-  - `TODO.md` - Outstanding tasks
+  - `TODO.md` - Outstanding tasks (headline order; details in review/ANALYSIS.md)
   - `KNOWN_ISSUES.md` - Current bugs and limitations
-  - `WORK_STATUS.md` - Journaling space for ongoing work
   - `ARCHITECTURE.md` - System architecture
   - `DEBUGGING_GUIDE.md` - Debugging techniques
+  - `review/ANALYSIS.md` - 2026-07 review: failure triage + ranked plan
+  - `spec_status.md` / `.jsonl` - auto-generated sweep results
 
 ### Self-Hosting Process
 The goal is a three-stage bootstrap:
@@ -361,7 +369,10 @@ The goal is a three-stage bootstrap:
 2. `compiler1` compiles source → `compiler2`
 3. `compiler2` compiles source → `compiler3` (should equal `compiler2`)
 
-### Docker Environment
-Development requires i386 toolchain and specific dependencies managed via Docker. The `ruby-compiler-buildenv` image provides the complete build environment including GCC multilib, Valgrind, and Ruby 2.5.
+### Toolchain / Docker
+Compilation uses the local `toolchain/32root` i386 toolchain by default. The
+`ruby-compiler-buildenv` Docker image remains the fallback and provides the
+full environment (GCC multilib, Valgrind, Ruby 2.5) — needed for building/
+instrumenting tgc.c and for valgrind runs.
 - Rubyspecs are run with ./run_rubyspec [path to the spec directory or file] for a single spec/dir, or `make specs-parallel` (parallel, prefer on ax52) for the tracked set.
 - Keep `docs/spec_status.md` (+ `.jsonl`) up to date by running `make specs-parallel`. Commit the result with your changes to track progress. (The old per-category `docs/rubyspec_*.txt` files are retired in favour of this single diffable summary.)

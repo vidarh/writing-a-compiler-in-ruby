@@ -165,21 +165,26 @@ Global variables (starting with `$`) require special handling:
 - 4-byte pointers (`PTR_SIZE = 4`)
 - Uses x86 calling conventions
 - Leverages x86 specific optimizations
-- All development done in Docker containers for consistency
+- Compilation uses the local `toolchain/32root` i386 toolchain by default;
+  the `ruby-compiler-buildenv` Docker image is the fallback (and required for
+  building/instrumenting tgc.c and valgrind runs)
 
 **Dependencies:**
 - GCC for final assembly and linking
-- Docker environment for reproducible builds
-- Valgrind for memory debugging
+- Local 32-bit toolchain (Docker as fallback)
+- Valgrind for memory debugging (via the Docker buildenv)
 
 ### Language Limitations
 
 **Unsupported Features:**
-- Exceptions (begin/rescue/ensure) - minimal support only
-- Regular expressions
-- Floating point arithmetic
+- Floating point arithmetic (Float entirely stubbed — biggest current gap)
 - eval and runtime code generation
-- Full metaprogramming (const_missing, etc.)
+- Threads/Fibers
+- Full metaprogramming (const_missing, instance_variable_get, etc.)
+
+(Exceptions are IMPLEMENTED — typed rescue, `rescue => e`, ensure incl.
+return-through-ensure, retry; see lib/core/exception.rb. Regexp has a
+pure-Ruby engine in lib/core/regexp.rb.)
 
 **Workarounds in Compiler Source:**
 - Code marked with `@bug` indicates compiler bug workarounds

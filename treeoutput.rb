@@ -65,8 +65,6 @@ module OpPrec
         if key.is_a?(Array) && key[0] == :ternalt
           # Don't convert nested ternalt in key position - leave as-is
           # This happens in pattern matching with complex patterns
-          # Debug: uncomment to see what's being passed
-          # STDERR.puts "DEBUG: Nested ternalt in convert_ternalt_to_pair: #{elem.inspect}"
           return elem
         end
 
@@ -425,7 +423,6 @@ module OpPrec
         # which it sometimes does. These work, since Fixnum#[] returns 0 or 1, and
         # 0 or 1 never matches :flatten or :comma, but it's not very satisfying code
 
-        #STDERR.puts "o=#{o.inspect} rightv=#{rightv.inspect} leftv=#{leftv.inspect}"
         if o.sym == :call || o.sym == :callm and
           o.type == :prefix and
           rightv && (!ra || rightv[0] != :flatten) and

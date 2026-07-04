@@ -309,12 +309,6 @@ class Array
   end
 
 
-  # Set Intersection.
-  # Returns a new array containing elements common to the two arrays, with no duplicates.
-#  def &(other_array)
-#    return self.uniq.select{|item| other_array.include?(item)}
-#  end
-
   # Repetition.
   # With a String argument (or something with #to_str), equivalent to self.join(str).
   # Otherwise the argument is coerced to an Integer and a new array is returned built
@@ -514,9 +508,6 @@ class Array
      if !endless && idx.exclude_end?
        xend = xend - 1
      end
-
-     # Single item gets passed back to #[]
-     #return self.[](start) if start == xend
 
      # FIXME
      # This is an inefficient first pass vs. allocating sufficient capacity
@@ -736,14 +727,6 @@ class Array
     # FIXME: consider whether to actually shrink
     %s(assign @len 0)
     self
-  end
-
-
-  # Invokes the block once for each element of self, replacing the element with the value
-  # returned by block.
-  # See also Enumerable#collect.
-  def collect!
-    # replace all elements with new ones by calling block on each
   end
 
 
@@ -1564,7 +1547,6 @@ class Array
   end
 
   def flatten level=nil
-    #STDERR.puts "FLATTEN: #{self.inspect}"
     # Cycle guard: a self-referential array would recurse forever through e.flatten -> segfault.
     # MRI raises ArgumentError "tried to flatten recursive array". Track the in-progress flatten with
     # a per-array flag; re-entering flatten on the same array raises.
@@ -1666,13 +1648,6 @@ class Array
       end
       i+=1
     end
-    # FIXME: This seems to fail when compiling the compiler.
-    #self.each_with_index do |item, idx|
-    #  if item == obj
-    #    return index
-    #  end
-    #end
-
     return nil
   end
 
@@ -1821,9 +1796,8 @@ class Array
   end
 
 
-  # Invokes block once for each element of self.
-  # Creates a new array containing the values returned by the block.
-  # See also Enumerable#collect.
+  # Invokes the block once for each element of self, replacing the element
+  # with the value returned by the block (in place). Returns self.
   def collect!
     i = 0
     n = self.size
@@ -1835,9 +1809,8 @@ class Array
   end
 
 
-  # Invokes block once for each element of self.
-  # Creates a new array containing the values returned by the block.
-  # See also Enumerable#collect.
+  # Invokes the block once for each element of self, replacing the element
+  # with the value returned by the block (in place). Returns self.
   def map!
     i = 0
     n = self.size
@@ -2292,9 +2265,4 @@ class Array
   end
 
 
-  # Set Union.
-  # Returns a new array by joining this array with other_array, removing duplicates.
-#  def |(other_array)
-#    return (self + other_array).uniq
-#  end
 end

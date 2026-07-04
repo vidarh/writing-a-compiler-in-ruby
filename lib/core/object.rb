@@ -277,12 +277,6 @@ class Object
     self.class.__send_for_obj__(self, sym, block, *args)
   end
 
-  # FIXME: Add splat support for s-expressions / call so that
-# the below works
-#  def printf format, *args
-#    %s(printf format (rest args))
-#  end
-
   def p ob
     puts ob.inspect
     ob
@@ -515,8 +509,6 @@ class Object
     copy
   end
 
-  # clone: like #dup but in full Ruby also copies frozen state and the singleton class. We do the same
-  # shallow slot (ivar) copy as #dup; the freeze: keyword is accepted and ignored.
   # clone: like #dup here (we do not model frozen state or the singleton class). Delegate to the proven
   # #dup path (a tagged fixnum returns self via the guard below; heap objects get a shallow slot copy).
   def clone(*args)
@@ -589,11 +581,9 @@ class Object
   end
 
   # Stub for test framework - returns nil
-  # WORKAROUND: No exceptions - validate args manually to avoid FPE crashes in specs
   def index(*args)
     if args.length != 1
-      STDERR.puts("ArgumentError: wrong number of arguments (given #{args.length}, expected 1)")
-      return nil
+      raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 1)"
     end
     nil
   end

@@ -21,7 +21,6 @@
 #
 
 # Don't output PASS's
-#$quiet = true
 $quiet = false
 $fails = 0
 
@@ -62,7 +61,6 @@ require 'print_sexp'
 require 'vtableoffsets'
 
 require 'ast'
-#require 'value'
 require 'compiler'
 
 class MockParser
@@ -181,7 +179,6 @@ def test_array
   part = [42,2,5,1].partition {|v| v > 4}
   expect_eq(part.inspect, [[42,5], [2,1]].inspect, "Array#partition should split an array in two based on provided block")
 
-  #expect_eq([42,2,3,1].sort,     [1,2,3,42], "Array#sort")
   res = [42,2,3,1].sort_by {|v| v }
   expect_eq(res.inspect, [1,2,3,42].inspect , "Array#sort_by (ascending)")
 
@@ -625,14 +622,6 @@ def test_depth_first
     out << e
   end
   expect_eq(out.inspect, [[:if, [:a, :b], [:do, :c]], [:a, :b], [:do, :c]].inspect, "#depth_first should descent into each array")
-end
-
-def mock_preprocess(exp)
-  prog = mock_parse(exp, false)
-  #e = Emitter.new
-  #c = Compiler.new(e)
-  #c.preprocess(prog)
-  #c.compile(prog)
 end
 
 include AST

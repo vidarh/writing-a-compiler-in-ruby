@@ -52,12 +52,12 @@ FAIL→CRASH now that its `Warning` before-hook no longer aborts every test.
 Fix: capture pattern bindings (run the rewrite before find_vars, or register its
 lvars) — see also refactoring item R5 (pass manifest).
 
-### 3. Exception containment escape on runtime-redefined method raise (tmp/st5.rb)
+### 3. Exception containment escape on runtime-redefined method raise (test/repros/st5.rb)
 
 When a method redefined at runtime via alias + def-in-block (e.g.
 `Integer#<=>` := raise) raises, the exception escapes the spec harness's
 it-rescue entirely and aborts the file. Behind core/array/sort_spec's abort and
-the pattern_matching crash above. 18-line repro: tmp/st5.rb.
+the pattern_matching crash above. 18-line repro: test/repros/st5.rb.
 
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 

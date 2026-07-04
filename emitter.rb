@@ -126,11 +126,11 @@ class Emitter
   end
 
   def result_value
-    return :eax # ster.new(:eax)
+    return :eax
   end
 
   def scratch
-    return :ebx #Register.new(:ebx)
+    return :ebx
   end
 
   def result
@@ -138,7 +138,7 @@ class Emitter
   end
 
   def sp
-    return :esp # Register.new(:esp)
+    return :esp
   end
 
 
@@ -206,8 +206,6 @@ class Emitter
       return load_arg(aparam,reg || result_value)
     when :lvar
       return load_local_var(aparam,reg || result_value)
-#    when :ivar
-#      return load_instance_var(aparam)
     when :cvar
       return load_class_var(aparam)
     when :global
@@ -250,7 +248,6 @@ class Emitter
   end
 
   def load_instance_var(ob, aparam)
-    #STDERR.puts "load_instance_var: #{aparam}"
     movl("#{aparam.to_i*PTR_SIZE}(#{to_operand_value(ob)})", result_value)
     return result_value
   end
@@ -292,10 +289,6 @@ class Emitter
     return result_value
   end
 
-  def save_to_indirect(src, dest)
-    movl(src,"(%#{dest.to_s})")
-  end
-
   def load_indirect8(arg)
     movzbl("(#{to_operand_value(arg,:stripdollar)})", :eax)
     :eax
@@ -319,12 +312,6 @@ class Emitter
     base_str = to_operand_value(base, :stripdollar)
     fstpl("#{offset}(#{base_str})")
     nil
-  end
-
-  # Load a double (8 bytes) from the given address (returns in FPU st0, but we don't track that)
-  def loaddouble(addr)
-    fldl("(#{to_operand_value(addr,:stripdollar)})")
-    :st0  # Return symbolic FPU register
   end
 
   def with_local(args, &block)
@@ -597,10 +584,6 @@ class Emitter
     evict_all
     jmp(l)
     local(br)
-  end
-
-  def load_ptr areg,off
-    movl("#{off*Emitter::PTR_SIZE}(%#{areg.to_s})", result_value)
   end
 
   def func(name, position = nil,varfreq= nil, minarty = nil, maxarity = nil, strname = "")

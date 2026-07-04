@@ -533,8 +533,6 @@ class Compiler
           # Argh. Ok, then. Lets do send
           off = @vtableoffsets.get_offset(:__send__)
           args.insert(1,":#{method}".to_sym)
-          # warning("WARNING: No vtable offset for '#{method}' (with args: #{args.inspect}) -- you're likely to get a method_missing")
-          #error(err_msg, scope, [:callm, ob, method, args])
           m = off
         else
           m = "__voff__#{clean_method_name(method)}"

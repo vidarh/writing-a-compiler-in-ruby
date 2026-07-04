@@ -449,7 +449,7 @@ class Compiler
         # Bind a block's splat (rest) param. process_scope_env adds the `rest = __splat_to_Array(__splat,
         # numargs-ac)` prologue for :defm methods, but blocks become :defun HERE and never got it -- so
         # `{|*x|}`'s x was unbound garbage. Mirror that prologue. Proc#call invokes the defun as
-        # `@addr(self, __closure__, __env__, *args)`, so the defun has a 3-slot prefix (vs a method's 1 self):
+        # `@addr(self, __callblk__, __env__, *args)`, so the defun has a 3-slot prefix (vs a method's 1 self):
         # with rest at full-params index rest_idx, ac = rest_idx - 2 makes __splat_to_Array collect exactly
         # the trailing user args. :__copysplat (forwarding) is left alone.
         # ABI slot 2 is the CALL-TIME block (see Proc#call). It is deliberately NOT named
@@ -876,7 +876,6 @@ class Compiler
         next unless v.is_a?(Symbol)
         name = v.to_s
         if name[0] == ?:
-          #STDERR.puts v.inspect
           if !@symbols.member?(v)
             @symbols << name[1..-1]
           end
@@ -984,7 +983,7 @@ class Compiler
 
   # FIXME: Rewrite using "depth first"?
   def find_vars(e, scopes, env, freq, in_lambda = false, in_assign = false, current_params = Set.new)
-    return [],env, false if !e
+    return [], env if !e
     e = [e] if !e.is_a?(Array)
     e.each do |n|
       if n.is_a?(Array)
@@ -1236,7 +1235,6 @@ class Compiler
     last_scope = scopes[-1]
     a = last_scope.to_a
     return a, env
-    # return scopes[-1].to_a, env
   end
 
   # `depth` = parent hops needed to reach the ROOT env (which holds all captured variables)
@@ -1402,7 +1400,6 @@ class Compiler
 
       # We need to expand "yield" before we rewrite.
       # yield becomes __closure__.call(args...)
-      # Proc#call sets @env[1] to caller's stackframe for break support.
       if e.is_a?(Array) && e[0] == :call && e[1] == :yield
         seen = true
         args = e[2] || []
@@ -1629,8 +1626,8 @@ class Compiler
       rest_sym = nil
       if rest && rest != :__copysplat
         # rest might be a symbol or an indexed env access [:index, :__env__, N]
-        # after variable renaming. Extract the symbol if needed.
-        rest_sym = rest.is_a?(Symbol) ? rest : rest
+        # after variable renaming.
+        rest_sym = rest
         rest_target = rest  # Use original rest as assignment target
 
         vars << rest_sym if rest_sym.is_a?(Symbol)

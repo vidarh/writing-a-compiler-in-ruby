@@ -14,7 +14,6 @@
    (if (eq classob 0) (assign classob Class))
    (assign ob (__array size))
    (assign i 6) # Skips the initial instance vars
- #  %s(printf "class object: %p (%d bytes) / Class: %p / super: %p / size: %d\n" ob size Class superclass ssize)
   (while (lt i ssize) (do
        (assign (index ob i) (index superclass i))
        (assign i (add i 1))
@@ -307,21 +306,11 @@ class Class
     UnboundMethod.new(self, name)
   end
 
-  # FIXME
-  # &block will be a "bare" %s(lambda) (that needs to be implemented),
-  # define_method needs to attach that to the vtable (for now) and/or
-  # to a hash table for "overflow" (methods lacking vtable slots).
-  # This requires a painful decision:
-  #
-  # - To type-tag Symbol or not to type-tag
-  #
-  # It also means adding a function to look up a vtable offset from
-  # a symbol, which effectively means a simple hash table implementation
-  #
-  # Runtime fallback no-op. Most define_method calls are rewritten to a real `def` at compile time
-  # (transform.rb rewrite_define_method); forms it can't statically rewrite (exotic block params, a dynamic
-  # body) reach here. Accept the optional body arg (`define_method(:name, proc)`) so it doesn't raise
-  # "wrong number of arguments", and do nothing rather than crash while a fixture loads.
+  # Runtime define_method registry. Most define_method calls are rewritten to a real `def` at compile
+  # time (transform.rb rewrite_define_method); forms it can't statically rewrite (exotic block params, a
+  # dynamic body) reach here and are recorded in a per-class table consulted by method_missing dispatch.
+  # Accept the optional body arg (`define_method(:name, proc)`) so it doesn't raise "wrong number of
+  # arguments".
   # The registry is an ASSOCIATION LIST (parallel arrays scanned with equal?), NOT a Hash keyed by
   # the class object: object-keyed Hash lookups go through Object#hash/eql? machinery that proved
   # fragile for class objects (layout-sensitive infinite probe loops). Identity scan + symbol-keyed

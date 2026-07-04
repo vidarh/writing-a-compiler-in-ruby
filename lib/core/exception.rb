@@ -4,8 +4,10 @@
 # separate exception stack approach (fully self-hosted in Ruby).
 #
 # CURRENT FEATURES:
-# - Raising exceptions with Kernel#raise
-# - Catching exceptions with begin/rescue/end blocks
+# - Raising exceptions with Kernel#raise (incl. bare re-raise of $!)
+# - Catching with begin/rescue/end: typed rescue (rescue SpecificError),
+#   rescue variable binding (rescue => e), multiple rescue clauses, ensure
+#   blocks (incl. return-through-ensure), retry
 # - Stack unwinding using saved %ebp and rescue label addresses
 # - Unhandled exception detection and reporting
 # - Exception message support via Exception#to_s and Exception#message
@@ -37,12 +39,7 @@
 #      * Immediate backtrace available
 #      * Small overhead on all calls
 #
-# 2. Typed rescue (rescue SpecificError)
-# 3. Rescue variable binding (rescue => e)
-# 4. Multiple rescue clauses
-# 5. Ensure blocks (ensure cleanup)
-# 6. Retry support (retry from rescue)
-# 7. Exception cause chains (raise new_exc from original_exc)
+# 2. Exception cause chains (raise new_exc from original_exc)
 #
 # Exception handler structure
 # Stores saved stack state for unwinding
@@ -404,5 +401,5 @@ module Errno
 end
 
 # Initialize special exception globals
-# $! holds the current exception message (set by raise, cleared after rescue)
+# $! holds the current exception OBJECT (set by raise, cleared after rescue)
 $! = nil

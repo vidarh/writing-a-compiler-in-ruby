@@ -237,12 +237,6 @@ class ModuleScope < Scope
     return [:addr, a]
   end
 
-  # Returns the size of a class object.
-  # This is a multiple of @vtableoffsets.max, but this
-  # is deceiving as the offsets starts at a value that
-  # is based on the amount of data needed at the start of
-  # the class object as instance variables for the class
-  # object.
   # Returns the size of a class object in slots (not bytes).
   # This is @vtableoffsets.max because vtable slot indices start at
   # CLASS_IVAR_NUM and go up to max-1.

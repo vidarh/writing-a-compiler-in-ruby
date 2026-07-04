@@ -25,10 +25,6 @@ class Array
     # growing. Too rapid growth and it wastes memory; to slow and
     # it is, well, slow to append to.
 
-    # FIXME: This called __int, which means it fails when called
-    # from __new_empty. May want to create new method to handle the whol
-    # basic nasty splat allocation
-    # @capacity = (newlen * 4 / 3) + 4
     # Fresh buffers come from calloc (zeroed), but __realloc is plain realloc: the extension
     # holds GARBAGE. The zeroed-buffer invariant is load-bearing -- __index_set documents that
     # a growing `a[i] = v` leaves the gap reading as nil (element reads map raw 0 to nil), so
