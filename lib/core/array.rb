@@ -348,16 +348,103 @@ class Array
     return added
   end
 
-  # Array Difference.
-  # Returns a new array that is a copy of the original array,
-  # removing any items that also appear in other_array.
-  # (If you need set-like behavior, see the library class Set.)
-  # FIXME: Merely uncommenting this (without calling it) causes weird errors.
-  # def -(other_array)
-  #  self.reject do |item| 
-  #    other_array.include?(item)
-  #  end
-  #end
+  # Set intersection: elements common to both arrays, no duplicates, self's order.
+  # Membership via a Hash for O(n+m) (and Hash keying uses eql?, matching MRI).
+  def &(other)
+    other = __coerce_to_ary(other)
+    seen = {}
+    other.each { |x| seen[x] = true }
+    out = []
+    added = {}
+    each do |x|
+      if seen.key?(x) && !added.key?(x)
+        added[x] = true
+        out << x
+      end
+    end
+    out
+  end
+
+  def intersection(*others)
+    r = self.uniq
+    others.each { |o| r = r & o }
+    r
+  end
+
+  def intersect?(other)
+    other = __coerce_to_ary(other)
+    seen = {}
+    other.each { |x| seen[x] = true }
+    each do |x|
+      return true if seen.key?(x)
+    end
+    false
+  end
+
+  # Set union: concatenation with duplicates removed, preserving first occurrence.
+  def |(other)
+    other = __coerce_to_ary(other)
+    out = []
+    added = {}
+    each do |x|
+      if !added.key?(x)
+        added[x] = true
+        out << x
+      end
+    end
+    other.each do |x|
+      if !added.key?(x)
+        added[x] = true
+        out << x
+      end
+    end
+    out
+  end
+
+  def union(*others)
+    r = self | []
+    others.each { |o| r = r | o }
+    r
+  end
+
+  def difference(*others)
+    r = self
+    others.each { |o| r = r - __coerce_to_ary(o) }
+    r = r.dup if others.empty?
+    r
+  end
+
+  # Coerce an argument to an Array via #to_ary (TypeError otherwise), like MRI's set ops.
+  def __coerce_to_ary(other)
+    return other if other.is_a?(Array)
+    if other.respond_to?(:to_ary)
+      r = other.to_ary
+      return r if r.is_a?(Array)
+    end
+    raise TypeError, "no implicit conversion of #{other.class} into Array"
+  end
+
+  # Array of [key, value] pairs -> Hash (with an optional pair-mapping block).
+  def to_h(&block)
+    h = {}
+    each do |x|
+      x = block.call(x) if block
+      raise TypeError, "wrong element type #{x.class} (expected array)" if !x.is_a?(Array)
+      raise ArgumentError, "wrong array length (expected 2, was #{x.length})" if x.length != 2
+      h[x[0]] = x[1]
+    end
+    h
+  end
+
+  def self.try_convert(obj)
+    return obj if obj.is_a?(Array)
+    if obj.respond_to?(:to_ary)
+      r = obj.to_ary
+      return r if r.is_a?(Array) || r.nil?
+      raise TypeError, "can't convert #{obj.class} to Array (#{obj.class}#to_ary gives #{r.class})"
+    end
+    nil
+  end
 
   # Pushes the given object on to the end of this array. This expression
   # returns the array itself, so several appends may be chained together.

@@ -547,10 +547,115 @@ class Hash
   end
 
   # A new hash with each key passed through the block (later keys win on collision).
-  def transform_keys(&block)
+  # MRI also accepts a mapping-hash argument (unmapped keys pass through), and both
+  # can combine: the hash mapping wins, the block handles the rest.
+  def transform_keys(mapping = nil, &block)
     h = {}
-    each { |k, v| h[block.call(k)] = v }
+    each do |k, v|
+      if mapping && mapping.key?(k)
+        h[mapping[k]] = v
+      elsif block
+        h[block.call(k)] = v
+      else
+        h[k] = v
+      end
+    end
     h
+  end
+
+  # In-place transform_keys; returns self.
+  def transform_keys!(mapping = nil, &block)
+    replacement = transform_keys(mapping, &block)
+    old_keys = keys
+    old_keys.each { |k| delete(k) }
+    replacement.each { |k, v| self[k] = v }
+    self
+  end
+
+  # Subset/superset comparisons: every pair of the smaller hash must be present
+  # (same key AND value) in the larger.
+  def __subset_of?(other)
+    each do |k, v|
+      return false if !other.key?(k)
+      return false if !(other[k] == v)
+    end
+    true
+  end
+
+  def <=(other)
+    raise TypeError, "no implicit conversion of #{other.class} into Hash" if !other.is_a?(Hash)
+    __subset_of?(other)
+  end
+
+  def <(other)
+    raise TypeError, "no implicit conversion of #{other.class} into Hash" if !other.is_a?(Hash)
+    length < other.length && __subset_of?(other)
+  end
+
+  def >=(other)
+    raise TypeError, "no implicit conversion of #{other.class} into Hash" if !other.is_a?(Hash)
+    other.__subset_of?(self)
+  end
+
+  def >(other)
+    raise TypeError, "no implicit conversion of #{other.class} into Hash" if !other.is_a?(Hash)
+    other.length < length && other.__subset_of?(self)
+  end
+
+  # First [key, value] pair whose key == the argument (nil if none).
+  def assoc(key)
+    each do |k, v|
+      return [k, v] if k == key
+    end
+    nil
+  end
+
+  # First [key, value] pair whose VALUE == the argument (nil if none).
+  def rassoc(value)
+    each do |k, v|
+      return [k, v] if v == value
+    end
+    nil
+  end
+
+  def each_key(&block)
+    return keys.each if !block
+    keys.each { |k| block.call(k) }
+    self
+  end
+
+  def each_value(&block)
+    return values.each if !block
+    values.each { |v| block.call(v) }
+    self
+  end
+
+  # to_h: self (a copy for subclass instances in MRI; plain dup here), or with a
+  # block, a new Hash of the block's [key, value] pairs.
+  def to_h(&block)
+    return self if !block && self.class == Hash
+    h = {}
+    each do |k, v|
+      if block
+        pair = block.call(k, v)
+        raise TypeError, "wrong element type #{pair.class} (expected array)" if !pair.is_a?(Array)
+        raise ArgumentError, "element has wrong array length (expected 2, was #{pair.length})" if pair.length != 2
+        h[pair[0]] = pair[1]
+      else
+        h[k] = v
+      end
+    end
+    h
+  end
+
+  def self.try_convert(obj)
+    return obj if obj.is_a?(Hash)
+    if obj.respond_to?(:to_hash)
+      r = obj.to_hash
+      return r if r.is_a?(Hash) || r.nil?
+      raise TypeError, "can't convert #{obj.class} to Hash (#{obj.class}#to_hash gives #{r.class})"
+    end
+    nil
   end
 
   # A copy with all nil-valued pairs removed.
