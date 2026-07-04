@@ -44,8 +44,23 @@ $LOAD_PATH=[]
 # need *something* to distinguish from MRI.
 RUBY_ENGINE="vidarh/compiler"
 
-# Stub for Thread class (not implemented)
+# Stub for Thread class (not implemented). Single-threaded: current/main return one
+# shared instance, stored in a global rather than a class-level ivar (ivar writes in
+# class methods address slots on the CLASS object -- vtable territory). Fixtures
+# commonly capture Thread.current at load time and identity-compare it in callbacks
+# (e.g. tracepoint's target_thread?); without this every such spec aborted at startup
+# before printing a summary, classifying as CRASH.
 class Thread
+  def self.current
+    if !$__thread_current
+      $__thread_current = Thread.new
+    end
+    $__thread_current
+  end
+
+  def self.main
+    Thread.current
+  end
 end
 
 # Single-threaded Mutex: with no real threads, lock/unlock just track a flag. Enough for the non-blocking
