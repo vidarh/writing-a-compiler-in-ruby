@@ -1,94 +1,62 @@
 # Ruby Compiler TODO
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-07-04
 
 ## Test Status
 
-**Selftest**: All passing (selftest and selftest-c)
+Current numbers live in the auto-generated **[spec_status.md](spec_status.md)**
+(do not copy them here — they rot). Selftest: both gates green, always
+(hard commit requirement).
 
-**Language Specs**: 78 files
-- Passed: 3 files (4%)
-- Failed: 28 files (36%)
-- Crashed: 47 files (60%)
-- Compile fail: 0 files
-
-**Individual Test Cases**: 994 total, 272 passed, 705 failed, 17 skipped, 27% pass rate
-
----
-
-## Priority 1: Medium Effort (Days)
-
-### 1.1 Break from Blocks - Wrong Return Target (Partially Fixed)
-
-**Status**: No longer crashes, but semantics not Ruby-compliant
-
-**2025-12-01 Fix**: Fixed crash when break is called from top-level blocks.
-The issue was that after unwinding stack frames, %ebx was restored from the
-wrong frame. Fix: Save %ebx to %edx before unwinding, restore after.
-
-**Remaining issue**: `break` still exits DEFINER instead of YIELDER (wrong Ruby semantics).
-
-**Ruby semantics**:
-- `break` should exit the method that YIELDED to the block
-- `return` should exit the method that DEFINED the block
-- Current implementation has both behave like `return`
-
-**Previous fix attempts** (blocked):
-1. Two-slot env: Shifts `__closure__` index, crashes self-compilation
-2. Global variable: Crashes for unknown reasons
-
-**Specs**: block_spec, lambda_spec, proc_spec, loop_spec
+The prioritized work plan is **[review/ANALYSIS.md](review/ANALYSIS.md)**
+(2026-07-04): phased ease-vs-payoff ranking covering harness gaps, the
+pack/unpack codec, lib/core method sweeps, structural refactors R1–R12, and
+the parked projects. This file only tracks the headline order.
 
 ---
 
-### 1.2 super() in define_method
+## Priority 1: current phase (from review/ANALYSIS.md)
 
-**Remaining edge case**: `define_method(:name) { super() }` needs method name from define_method argument, not scope lookup. Main super() implementation is complete.
+1. ~~Phase 0a: rubyspec_helper matcher/helper batch~~ (DONE 6ec0a6f)
+2. Phase 0b: cleanup commit (dead code, stale comments, backup-file purge —
+   docs/review/cleanup.md top-15)
+3. Phase 1: R1 defm-body shape normalization (fixes live default-arg+ensure
+   crash); R4 safe_callm dot-comma normalization (fixes two live parse bugs);
+   R3 self-host miscompile corpus in spec/selfhost/
+4. Phase 2: pack/unpack integer codec (~4,900 assertions) + lib/core trivial
+   sweeps (Kernel#open, ENV, Symbol, Enumerable, Array/Hash small methods,
+   strict Integer(), String case/byte, module_function)
 
----
+## Priority 2: medium, localized (Phase 3)
 
-## Priority 2: Larger Features
+- defined? coverage; $!/$@ wiring; qualified-constant assignment + op-assign;
+  block-param/masgn destructuring protocol; kwargs correctness (incl. super
+  forwarding); glob engine; regexp match globals; Enumerator::Lazy;
+  Module#const_get; the __tmp_proc stabby-lambda bug; MyArray segfault hunt.
+- super() in define_method: `define_method(:name) { super() }` needs the
+  method name from the define_method argument, not scope lookup. Related:
+  `return` inside a define_method'd proc needs method-return semantics.
 
-### 2.1 Float Support
+## Priority 3: projects (parked; schedule deliberately)
 
-**Impact**: ~17 test failures
-
-**Approach**: Implement Float class with IEEE 754 representation.
-
----
-
-### 2.2 Command Execution
-
-**Impact**: ~8 test failures
-
-**Approach**: Implement backticks/`%x{}` via `fork`/`exec`.
-
----
-
-### 2.3 Literal eval() Support
-
-**Impact**: ~100 test failures (partial)
-
-**Approach**: Transform `eval("literal string")` to inline lambda at compile time.
-
----
-
-## Completed
-
-- Break crash fix, super in deep hierarchies, super in blocks, classes in lambdas (2025-12-01)
-- Array#<< growth, postfix if/unless nil, parallel assignment, :: prefix, block param defaults, break/next newlines, hash spread (2025-11-30)
+- **Float** — biggest single blocker (~2,300+ assertions, 4 of 10 remaining
+  CRASH files). Do first among the projects.
+- Time (zones/strftime), Thread family, code loading, encodings, pattern
+  matching (full), Marshal (by design), eval (AOT limits).
 
 ---
 
 ## Testing Commands
 
 ```bash
-make selftest        # Must pass
-make selftest-c      # Must pass
-./run_rubyspec rubyspec/language/   # Language specs
+make selftest        # Must pass before any commit
+make selftest-c      # Must pass before any commit
+./run_rubyspec rubyspec/language/some_spec.rb   # One spec file
+make specs-parallel  # Full sweep (updates docs/spec_status.*)
 ```
 
 ## References
 
-- **KNOWN_ISSUES.md** - Detailed bug documentation
-- **DEBUGGING_GUIDE.md** - Debugging techniques
+- **[review/ANALYSIS.md](review/ANALYSIS.md)** — ranked plan (start here)
+- **[KNOWN_ISSUES.md](KNOWN_ISSUES.md)** — active bug documentation
+- **[DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md)** — debugging techniques

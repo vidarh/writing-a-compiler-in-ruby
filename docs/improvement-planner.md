@@ -17,39 +17,31 @@ plus `rubyspec/library/`, `rubyspec/command_line/`, and `spec/` for
 project-specific tests. Any file or directory can be passed to
 `./run_rubyspec`.
 
-## Slow Targets and Results Files
+## Sweep Results and Slow Runs
 
-The `make rubyspec-*` convenience targets are **slow** — each one compiles
-and runs dozens of spec files sequentially (with a 30-second timeout per
-file), taking many minutes to complete. The three slow targets and their
-results files are:
-
-| Target | Results file |
-|---|---|
-| `make rubyspec-integer` | `docs/rubyspec_integer.txt` |
-| `make rubyspec-language` | `docs/rubyspec_language.txt` |
-| `make rubyspec-regexp` | `docs/rubyspec_regexp.txt` |
-
-Each target **automatically writes** its output to the corresponding
-results file via `tee` (see Makefile). You never need to manually redirect
-or pipe the output.
+Full-tree sweep results are kept in **`docs/spec_status.md`** (human-readable
+summary) and **`docs/spec_status.jsonl`** (one JSON record per spec file:
+outcome, pass/fail/skip counts). They are written by the parallel runner
+(`make specs-parallel`, which drives `tools/run_specs_parallel.rb`), and
+`tools/classify_failures.rb` clusters the jsonl by failure signature.
 
 **Rules:**
 
-1. **Read the results files** (`docs/rubyspec_*.txt`) to understand current
-   spec status. Do NOT re-run a slow target just to see results — the file
-   already contains the latest output from the last run.
-2. **Only re-run** `make rubyspec-*` targets to **validate actual code
-   changes**. If you have not changed any compiler or library code, there
-   is no reason to re-run them.
-3. **Never manually pipe** target output to the results file (e.g.,
-   `make rubyspec-language > docs/rubyspec_language.txt`). The target
-   already writes to that file via `tee` — piping manually wastes time
-   and duplicates what the Makefile does automatically.
+1. **Read `docs/spec_status.md` / `.jsonl`** to understand current spec
+   status. Do NOT launch a sweep just to see results — the files contain the
+   latest completed sweep.
+2. **A full sweep is slow** (~2,150 files; the better part of an hour even in
+   parallel). Only re-run it to measure the aggregate effect of actual code
+   changes; for a single fix, `./run_rubyspec <file-or-dir>` on the affected
+   specs is the right validation.
+3. Per-file compile/run timeouts (COMPILE_TIMEOUT / SPEC_TIMEOUT, defaults
+   120s/30s) mean hangs surface as COMPILE_FAIL/TIMEOUT outcomes rather than
+   stalling a run.
 
-**Note:** `make spec` (project-specific specs in `spec/`) is fast and does
-not have a results file — this guidance applies only to the `make rubyspec-*`
-targets listed above.
+**Note:** `make spec` (project-specific specs in `spec/`) is fast and has no
+results file. Also read **`docs/review/ANALYSIS.md`** — the current ranked
+failure triage and work plan; plans that duplicate an item already ranked
+there should reference it.
 
 ## Investigation Workflow
 
