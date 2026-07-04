@@ -104,6 +104,7 @@ require 'core/encoding'
 require 'core/rbconfig'
 require 'core/math'
 require 'core/binding'
+require 'core/pack'        # Shared Array#pack / String#unpack byte codec
 
 #
 # Other support

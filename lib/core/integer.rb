@@ -4313,12 +4313,19 @@ class Integer < Numeric
     end
 
     # FIXME: Encoding parameter is ignored for now
+    # Build the byte directly (snprintf "%c" of 0 would leave strlen-based
+    # machinery seeing an empty string); __set_len records the true length so
+    # 0.chr is a real 1-byte NUL string.
+    s = ""
     %s(let (buf raw_val)
          (assign raw_val (callm self __get_raw))
          (assign buf (__alloc_leaf 2))
-         (snprintf buf 2 "%c" raw_val)
-       (__get_string buf)
+         (assign (bindex buf 0) raw_val)
+         (assign (bindex buf 1) 0)
+         (assign s (__get_string buf))
      )
+    s.__set_len(1)
+    s
   end
 
   def ord

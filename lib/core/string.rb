@@ -27,7 +27,11 @@ class String
     # value 0.
 
     @flags  = 0
-    @length = 0
+    # @length is the authoritative byte length, stored RAW (not tagged): every %s site
+    # below reads/writes it raw. @buffer stays NUL-terminated at @length so C interop
+    # (strcmp-free now, but printf/open/... take @buffer) keeps working; NUL bytes
+    # INSIDE the string are legal and counted.
+    %s(assign @length 0)
     # NB: do NOT null @buffer before the copy branch. For a self-replace (`str.send(:initialize, str)`)
     # the source IS self, so nulling @buffer would make __copy_initialize read a NULL buffer
     # (strlen/memmove on NULL -> segfault, core/string/initialize_spec self-replacing example).
@@ -103,7 +107,7 @@ class String
   def hash
     %s(assign h 5381)
     %s(assign i 0)
-    %s(assign len (strlen @buffer))
+    %s(assign len @length)
     %s(while (lt i len) (do
       (assign c (bindex @buffer i))
       (assign h (mul h 33))
@@ -317,7 +321,11 @@ class String
   def == other
     s = other.is_a?(String)
     return false if !s
-    %s(assign res (if (strcmp @buffer (callm other __get_raw)) false true))
+    return false if length != other.length
+    # memcmp over the full byte length: NUL bytes inside the string compare correctly
+    # (strcmp stopped at the first NUL).
+    olen = length
+    %s(assign res (if (memcmp @buffer (callm other __get_raw) (callm olen __get_raw)) false true))
     return res
   end
 
@@ -331,17 +339,32 @@ class String
     %s(assign @capacity (add len 8))
     %s(assign @buffer (__stralloc @capacity))
     %s(memmove @buffer str len)
-    %s(assign (bindex @buffer (sub len 1)) 0)
+    # NOTE: @length must be derived BEFORE the bindex terminator store below --
+    # compiling the (bindex .. (sub len 1)) statement clobbers the `len` local
+    # (register writeback), so deriving from `len` after it is off by one.
+    %s(assign @length (sub len 1))
+    %s(assign (bindex @buffer @length) 0)
     nil
    end
 
   def __set_raw(str)
     @buffer = str
     # Rebind @capacity to the new buffer. Leaving it at the previous value is unsafe: concat trusts
-    # @capacity to decide between an in-place strcat and a realloc, so a stale (larger) capacity after
+    # @capacity to decide between an in-place append and a realloc, so a stale (larger) capacity after
     # the buffer shrinks lets a later `<<` write past the new allocation and corrupt the heap. A
     # conservative capacity (valid length + 1) never overflows -- concat just reallocs when it must.
-    %s(assign @capacity (add (strlen @buffer) 1))
+    # This is the C-STRING entry point (literals, getenv, ...) so strlen defines the length;
+    # NUL-containing strings must go through __copy_raw/__set_len instead.
+    %s(assign @length (strlen @buffer))
+    %s(assign @capacity (add @length 1))
+  end
+
+  # Runtime internal: set the byte length explicitly, for buffers written raw that may
+  # contain NUL bytes (e.g. Integer#chr of 0). The caller guarantees @buffer holds (at
+  # least) l bytes plus a NUL terminator.
+  def __set_len(l)
+    %s(assign @length (callm l __get_raw))
+    self
   end
 
   def __get_raw
@@ -903,10 +926,7 @@ class String
   end
 
   def length
-    # FIXME: yes, we should not assume C-strings
-    # FIXME: Also, this is not nice if @buffer == -
-    %s(assign l (strlen @buffer))
-    %s(__int l)
+    %s(__int @length)
   end
 
   def size
@@ -945,12 +965,14 @@ class String
   # Replace this string's contents in place with `other`'s (String#replace), returning self.
   def replace(other)
     o = other.to_s
+    olen = o.length
     %s(do
       (assign ro (callm o __get_raw))
-      (assign osize (strlen ro))
+      (assign osize (callm olen __get_raw))
       (assign @capacity (add osize 8))
       (assign @buffer (__stralloc @capacity))
-      (strcpy @buffer ro)
+      (memmove @buffer ro osize)
+      (assign (bindex @buffer osize) 0)
       (assign @length osize)
     )
     self
@@ -996,33 +1018,29 @@ class String
     self
   end
 
-  # FIXME: This is horrible: Need to keep track of capacity separate from length,
-  # and need to store length to be able to handle strings with \0 in the middle.
   def concat(other)
     if (other.is_a?(Integer))
       other = other.chr
     else
       other = other.to_s
     end
+    olen = other.length
     %s(do
          (assign ro (callm other __get_raw))
-         (assign osize (strlen ro))
+         (assign osize (callm olen __get_raw))
          (if (ge osize 1) (do
-           (assign bsize (strlen @buffer))
+           (assign bsize @length)
            (assign size (add bsize osize))
-           (assign @length size)
            (assign size (add size 1))
            (if (gt size @capacity) (do
                (assign @capacity (add size 8))
                (assign newb (__stralloc @capacity))
-               (strcpy newb @buffer)
-               (strcat newb ro)
+               (memmove newb @buffer bsize)
                (assign @buffer newb)
-             )
-             (do
-               (strcat @buffer ro)
-             )
-           )
+             ))
+           (memmove (add @buffer bsize) ro osize)
+           (assign @length (add bsize osize))
+           (assign (bindex @buffer @length) 0)
          ))
        )
     self
@@ -1896,51 +1914,16 @@ class String
     !pattern.match(self, pos).nil?
   end
 
-  # Minimal String#unpack: supports the 8-bit directives C (unsigned) and c (signed), each
-  # with an optional count or '*'. Multi-byte/endian directives and inputs containing NUL
-  # bytes are not handled yet (the latter needs a binary-safe String).
+  # String#unpack: delegates to the shared __Pack codec (lib/core/pack.rb).
+  # Integer directives (C c S s L l Q q N n V v J j I i w U), string directives
+  # (a A Z b B h H m u) and position directives (x X @) with <>/!/_ modifiers.
+  # Float directives raise NotImplementedError until Float lands.
   def unpack(format)
-    result = []
-    pos = 0
-    blen = length
-    fi = 0
-    flen = format.length
-    while fi < flen
-      d = format[fi].ord
-      fi = fi + 1
-      count = 1
-      star = false
-      if fi < flen
-        nc = format[fi].ord
-        if nc == 42        # '*'
-          star = true
-          fi = fi + 1
-        elsif nc >= 48 && nc <= 57   # digit: a count modifier
-          count = 0
-          while fi < flen && format[fi].ord >= 48 && format[fi].ord <= 57
-            count = count * 10 + (format[fi].ord - 48)
-            fi = fi + 1
-          end
-        end
-      end
-      if d == 67 || d == 99   # 'C' / 'c'
-        n = count
-        n = blen - pos if star
-        i = 0
-        while i < n
-          if pos < blen
-            b = self[pos].ord
-            b = b - 256 if d == 99 && b > 127   # 'c' is signed
-            result << b
-          else
-            result << nil
-          end
-          pos = pos + 1
-          i = i + 1
-        end
-      end
+    if !format.is_a?(String)
+      raise TypeError, "no implicit conversion of #{format.class} into String" if !format.respond_to?(:to_str)
+      format = format.to_str
     end
-    result
+    __Pack.unpack(self, format)
   end
 
   # Return a new string with characters in reverse order

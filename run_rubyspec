@@ -17,11 +17,14 @@ inline_fixture() {
         nf=$(echo "$nested" | sed "s/.*require_relative *['\"]\\([^'\"]*\\)['\"].*/\\1/")
         np="$fdir/$nf"; [ -f "$np" ] || np="$fdir/$nf.rb"
         if [ -f "$np" ]; then
-            grep -v "require_relative" "$np" >> "$out"
+            grep -v "require_relative" "$np" | sed "s/instance_variable_get(:@method)/\$spec_shared_method/g" >> "$out"
             echo "" >> "$out"
         fi
     done
-    grep -v "require_relative" "$fpath" >> "$out"
+    # instance_variable_get(:@method) is the mspec idiom for "the shared-example
+    # parameter" (e.g. unpack_format in string/fixtures/classes.rb); ivar reflection
+    # is unimplemented, so map it to the harness's $spec_shared_method global.
+    grep -v "require_relative" "$fpath" | sed "s/instance_variable_get(:@method)/\$spec_shared_method/g" >> "$out"
     echo "" >> "$out"
 }
 
@@ -103,6 +106,7 @@ run_single_spec() {
                 cat "$SHARED_PATH" | \
                     grep -v "require_relative" | \
                     sed "s/, *shared: *true *do/, {:shared => true} do/" | \
+                    sed "s/instance_variable_get(:@method)/@method/g" | \
                     sed "s/@method/\$spec_shared_method/g" | \
                     sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
                     sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
@@ -403,6 +407,7 @@ elif [ -f "$TARGET" ]; then
                 cat "$SHARED_PATH" | \
                     grep -v "require_relative" | \
                     sed "s/, *shared: *true *do/, {:shared => true} do/" | \
+                    sed "s/instance_variable_get(:@method)/@method/g" | \
                     sed "s/@method/\$spec_shared_method/g" | \
                     sed 's/@@/CLASS_VAR_MARKER/g; s/%@/PERCENT_AT_MARKER/g; s/@\([a-zA-Z_][a-zA-Z0-9_]*\)/$spec_\1/g; s/CLASS_VAR_MARKER/@@/g; s/PERCENT_AT_MARKER/%@/g' | \
                     sed 's/^\([[:space:]]*\)describe \(.*\) do$/\1describe(\2) do/' | \
