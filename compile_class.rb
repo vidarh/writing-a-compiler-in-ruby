@@ -668,6 +668,33 @@ class Compiler
       end
     end
 
+    # Reopening a constant that does not hold a class/module (`B = 1; module B; end`) used to fall
+    # through to the machinery below, which writes the class object's metadata slots: on a tagged
+    # immediate that is a wild write (SIGSEGV -- language/module_spec died here), on nil/true/false/
+    # String it silently corrupts the shared object. MRI raises TypeError. Detect structurally, with
+    # a dispatch-free happy path (this runs for every class statement, including bootstrap before
+    # Object's methods are installed): a genuine class/module object's slot-0 chain reaches Class --
+    # the same walk as compile_eigenclass; modules qualify since their classob is Class. Skip the
+    # check while the Class global is still 0 (bootstrap roots created before Class itself). The
+    # raising helper only dispatches on the failure path, which only user code can reach.
+    ct = (use_global_for_object || explicit_namespace) ? fq_name : assign_name
+    compile_eval_arg(scope, [:sexp, [:let, [:ck, :okc],
+      [:assign, :okc, 0],
+      [:if, [:eq, :Class, 0],
+        [:assign, :okc, 1],
+        [:if, [:eq, [:bitand, ct, 1], 0],
+          [:do,
+            [:assign, :ck, [:index, ct, 0]],
+            # slot 0 == 0 is a bootstrap root created before the Class global existed (its classob
+            # is fixed up later); user constants can never hold such an object, so accept it.
+            [:if, [:eq, :ck, 0], [:assign, :okc, 1]],
+            [:while, [:ne, :ck, 0],
+              [:do,
+                [:if, [:eq, :ck, :Class],
+                  [:do, [:assign, :okc, 1], [:assign, :ck, 0]],
+                  [:assign, :ck, [:index, :ck, 3]]]]]]]],
+      [:if, [:eq, :okc, 0], [:callm, ct, :__raise_reopen_type_error, []]]]])
+
     @global_constants << fq_name
 
     # In the context of "cscope", "self" refers to the Class object of the newly instantiated class.

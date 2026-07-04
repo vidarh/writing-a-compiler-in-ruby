@@ -68,6 +68,15 @@ class Kernel
     raise TypeError, "can't define singleton"
   end
 
+  # Reached from the class-statement guard in compile_class (same dispatch-free-happy-path
+  # pattern as above) when a class/module statement reopens a constant that does not hold a
+  # class or module (`B = 1; module B; end`): writing the class object's metadata slots into
+  # a tagged immediate was a wild write (SIGSEGV), into nil/true/false/a String it silently
+  # corrupted the shared object. MRI raises TypeError.
+  def __raise_reopen_type_error
+    raise TypeError, "not a class/module"
+  end
+
   def raise(exc_or_msg = nil, msg = nil)
     if exc_or_msg.nil?
       # Bare `raise` re-raises the exception currently being handled ($!). During a rescue body the
