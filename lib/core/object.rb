@@ -180,7 +180,12 @@ class Object
 
   def method_missing (sym, *args)
     receiver_info = self.inspect
-    raise "undefined method '#{sym.to_s}' for #{receiver_info}"
+    # Throw through the exception runtime DIRECTLY, not via `raise`: raise is an ordinary
+    # method dispatched on self, so an object that OVERRIDES raise (thread/kernel raise_spec
+    # fixtures do) re-enters its override from here -- and when that override was itself the
+    # missing-method trampoline's caller, the two recurse until stack overflow (SIGSEGV deep
+    # inside calloc). Same exception class/message as `raise <string>` produced before.
+    $__exception_runtime.raise(RuntimeError.new("undefined method '#{sym.to_s}' for #{receiver_info}"))
   end
 
     def respond_to?(method)
