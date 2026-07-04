@@ -30,15 +30,20 @@ class Set
     @set.size
   end
 
-  # FIXME: Belongs in Enumerable
-  def select
+  # Set#select is NOT overridden in MRI (<= 3.2): Enumerable#select semantics,
+  # returning an Array. Direct @set iteration just avoids the extra to_a.
+  def select(&block)
     a = []
     @set.each do |e,_|
-      if yield(e)
+      if block.call(e)
         a << e
       end
     end
     a
+  end
+
+  def filter(&block)
+    select(&block)
   end
 
   def each
@@ -214,5 +219,203 @@ class Set
   def delete key
     @set.delete(key)
     self
+  end
+
+  # Remove every element of enum from self; returns self.
+  def subtract(enum)
+    enum.each { |e| @set.delete(e) }
+    self
+  end
+
+  # Set difference/union/intersection/xor operators over enumerables.
+  def ^(enum)
+    other = Set.new(enum)
+    result = Set.new
+    each { |e| result << e if !other.include?(e) }
+    other.each { |e| result << e if !include?(e) }
+    result
+  end
+
+  def union(*enums)
+    r = dup
+    enums.each { |e| r = r | e }
+    r
+  end
+
+  def intersection(*enums)
+    r = self
+    enums.each { |e| r = r & e }
+    r
+  end
+
+  def difference(*enums)
+    r = dup
+    enums.each { |e| r = r - e }
+    r
+  end
+
+  # Comparison operators: strict/non-strict subset and superset.
+  def <(other)
+    proper_subset?(other)
+  end
+
+  def <=(other)
+    subset?(other)
+  end
+
+  def >(other)
+    proper_superset?(other)
+  end
+
+  def >=(other)
+    superset?(other)
+  end
+
+  # <=> per MRI: -1/0/1 when comparable as sub/superset, nil otherwise.
+  def <=>(other)
+    return nil if !other.is_a?(Set)
+    return 0 if self == other
+    return -1 if proper_subset?(other)
+    return 1 if proper_superset?(other)
+    nil
+  end
+
+  # Set#=== is membership.
+  def ===(o)
+    include?(o)
+  end
+
+  # Divide into a Set of Sets grouped by the block's value (1-arity form).
+  def divide(&block)
+    groups = {}
+    each do |e|
+      k = block.call(e)
+      g = groups[k]
+      if g.nil?
+        g = Set.new
+        groups[k] = g
+      end
+      g << e
+    end
+    result = Set.new
+    groups.each { |_, g| result << g }
+    result
+  end
+
+  # Recursively flatten nested Sets.
+  def flatten
+    result = Set.new
+    each do |e|
+      if e.is_a?(Set)
+        e.flatten.each { |x| result << x }
+      else
+        result << e
+      end
+    end
+    result
+  end
+
+  def flatten!
+    has_nested = false
+    each do |e|
+      if e.is_a?(Set)
+        has_nested = true
+      end
+    end
+    return nil if !has_nested
+    replace(flatten)
+    self
+  end
+
+  def join(sep = nil)
+    to_a.join(sep)
+  end
+
+  # In-place filters. keep_if/delete_if return self; select!/reject! return
+  # self when changed, nil otherwise.
+  def keep_if(&block)
+    arr = to_a
+    i = 0
+    while i < arr.length
+      e = arr[i]
+      @set.delete(e) if !block.call(e)
+      i += 1
+    end
+    self
+  end
+
+  def delete_if(&block)
+    arr = to_a
+    i = 0
+    while i < arr.length
+      e = arr[i]
+      @set.delete(e) if block.call(e)
+      i += 1
+    end
+    self
+  end
+
+  # NOTE: the in-place filters iterate with WHILE loops, not to_a.each { }:
+  # calling a captured &block param from inside another block is a known
+  # self-host hazard (transform.rb FIXME; here block.call read always-truthy
+  # inside the each-block, so reject! emptied the set).
+  # (A pre-captured `n = size` compared after the loop read a CLOBBERED n --
+  # the same local-across-statements clobber as String#__copy_raw's note --
+  # so track changes with an in-loop flag instead.)
+  def select!(&block)
+    changed = 0
+    arr = to_a
+    i = 0
+    while i < arr.length
+      e = arr[i]
+      if !block.call(e)
+        @set.delete(e)
+        changed = 1
+      end
+      i += 1
+    end
+    return nil if changed == 0
+    self
+  end
+
+  def filter!(&block)
+    select!(&block)
+  end
+
+  def reject!(&block)
+    changed = 0
+    arr = to_a
+    i = 0
+    while i < arr.length
+      e = arr[i]
+      if block.call(e)
+        @set.delete(e)
+        changed = 1
+      end
+      i += 1
+    end
+    return nil if changed == 0
+    self
+  end
+
+  def collect!(&block)
+    replace(to_a.map { |e| block.call(e) })
+    self
+  end
+
+  def map!(&block)
+    collect!(&block)
+  end
+
+  def to_set
+    self
+  end
+
+  def hash
+    to_a.map { |e| e.hash }.inject(0) { |a, b| a + b }
+  end
+
+  def eql?(other)
+    self == other
   end
 end
