@@ -416,26 +416,26 @@ class Class
       # Ruby yields the receiver to the block as its argument too (module_eval/class_eval), so a block
       # written as `Struct.new(:a) { |klass| ... }` receives the class. Pass self as the argument as well
       # as rebinding self; blocks tolerate an unused extra argument.
-      block.__call_with_self(self, self)
+      block.__call_with_self(self, nil, self)
     end
   end
 
   def module_eval &block
     if block
-      block.__call_with_self(self)
+      block.__call_with_self(self, nil)
     end
   end
 
   # class_exec / module_exec: like *_eval but forward arguments to the block.
   def class_exec *args, &block
     if block
-      block.__call_with_self(self, *args)
+      block.__call_with_self(self, nil, *args)
     end
   end
 
   def module_exec *args, &block
     if block
-      block.__call_with_self(self, *args)
+      block.__call_with_self(self, nil, *args)
     end
   end
 

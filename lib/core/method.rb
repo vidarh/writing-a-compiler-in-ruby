@@ -22,8 +22,8 @@ class Method
   # (`obj.instance_exec(&some_method)`). Unlike a Proc, a bound Method keeps its own receiver, so the
   # rebinding `newself` is ignored -- we just call the method on @target. Mirrors MRI, where
   # `3.instance_exec(4, &5.method(:+))` == `5 + 4` == 9 (the 3 is not used).
-  def __call_with_self(newself, *args, &block)
-    call(*args, &block)
+  def __call_with_self(newself, blkarg, *args)
+    call(*args, &blkarg)
   end
 
   # Method#=== invokes the method (so a Method can be used as a case/when condition).

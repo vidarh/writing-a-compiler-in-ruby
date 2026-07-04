@@ -203,6 +203,27 @@ class Compiler
     exp
   end
 
+  # Expand block_given? at TRANSFORM time (it used to be a compile-time special case emitting a
+  # textual __closure__ read): running before rewrite_let_env lets the env-capture machinery box
+  # __closure__ per context, so block_given? inside a BLOCK correctly reports the DEFINING
+  # METHOD's block (the lambda ABI's own slot 2 now carries the call-time block instead --
+  # see full_params in rewrite_lambda). Skips raw sexps and matches both the bare-symbol and
+  # no-arg call forms.
+  def rewrite_block_given(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      i = 0
+      while i < e.length
+        c = e[i]
+        if c == :"block_given?" || (c.is_a?(Array) && c[0] == :call && c[1] == :"block_given?")
+          e[i] = E[:if, [:ne, :__closure__, 0], :true, :false]
+        end
+        i += 1
+      end
+    end
+    exp
+  end
+
   # For 'bare' blocks, or "Proc" objects created with 'proc', we
   # replace the standard return with ":preturn", which ensures the
   # return is forced to exit the defining scope, instead of "just"
@@ -424,7 +445,10 @@ class Compiler
         # `@addr(self, __closure__, __env__, *args)`, so the defun has a 3-slot prefix (vs a method's 1 self):
         # with rest at full-params index rest_idx, ac = rest_idx - 2 makes __splat_to_Array collect exactly
         # the trailing user args. :__copysplat (forwarding) is left alone.
-        full_params = [:self, :__closure__, :__env__] + normalized_args
+        # ABI slot 2 is the CALL-TIME block (see Proc#call). It is deliberately NOT named
+        # __closure__: that name aliases to the env-captured METHOD block under
+        # rewrite_env_vars, which is exactly what yield/block_given? in the block body want.
+        full_params = [:self, :__callblk__, :__env__] + normalized_args
         rest_idx = nil
         rest_target = nil
         fpi = 0
@@ -481,13 +505,12 @@ class Compiler
           body = newbody
         end
 
-        # Bind a &block parameter of a block/lambda (`{ |&blk| ... }`). It must capture the block passed
-        # to THIS proc's invocation -- which is NOT the lambda's __closure__ parameter: Proc#call passes
-        # the proc's CAPTURED @closure there (the creator's block, so `yield` inside the block reaches
-        # the enclosing method's block). The call-time block is published in the __proc_call_block
-        # global by Proc#call/#[] (and by __dispatch_missing__ before __call_with_self). Bind via a RAW
-        # sexp read of that global -- NOT a method call: this binding runs before the rest-param
-        # prologue, and a method call here clobbers the raw numargs register that
+        # Bind a &block parameter of a block/lambda (`{ |&blk| ... }`) from the __callblk__ ABI
+        # slot: the block passed to THIS proc's invocation (Proc#call/#[] pass their own &blk
+        # there; __call_with_self passes its explicit blkarg). `yield`/block_given? inside the
+        # block reach the DEFINING METHOD's block separately, via the env-captured __closure__.
+        # The binding is a plain register-safe assign -- NOT a method call: it runs before the
+        # rest-param prologue, and a call here clobbers the raw numargs register that
         # `__splat_to_Array(__splat, numargs-ac)` consumes, so `{ |*a, &b| }` collected a garbage
         # count. The global always holds nil-or-proc (every publisher stores a Ruby value; the raw-0
         # initial state is unreachable because lambdas are only ever invoked through Proc methods,
@@ -496,8 +519,12 @@ class Compiler
         if blockp
           bname = blockp[0]
           full_params.delete(blockp)
+          # Bind the block's own &param from the __callblk__ ABI slot: the CALL-TIME block,
+          # passed per invocation by Proc#call/#[]/__call_with_self (nil when none). No global
+          # channel -- re-entrant and thread/fiber-safe. (`yield`/block_given? inside the block
+          # still reach the DEFINING METHOD's block via the env-captured __closure__.)
           body = E[:let, [bname],
-            E[:assign, bname, E[:sexp, :__proc_call_block]],
+            E[:assign, bname, :__callblk__],
             body]
         end
 
@@ -2582,6 +2609,7 @@ class Compiler
     rewrite_safe_opassign(exp)   # nil-guard `recv&.m OP= v` before other assignment rewrites see it
     rewrite_index_opassign(exp)  # expand `recv[*idx] ||=/&&= v` before rewrite_splat_to_array mangles the lvalue
     rewrite_splat_to_array(exp)
+    rewrite_block_given(exp)     # expand before env capture so __closure__ boxes per-context
     rewrite_let_env(exp)
   end
 

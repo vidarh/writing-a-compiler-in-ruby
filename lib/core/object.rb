@@ -169,10 +169,9 @@ class Object
     if $__dm_classes
       pr = self.class.__find_defined_method(sym)
       if pr
-        # Publish the call-site block for the proc's own &param (__call_with_self cannot take a
-        # &blk itself -- see the note there), then invoke the registered proc with self rebound.
-        %s(assign __proc_call_block blk)
-        return pr.__call_with_self(self, *args)
+        # Invoke the registered proc with self rebound; the call-site block travels as
+        # __call_with_self's explicit blkarg (it cannot take &blk -- see the note there).
+        return pr.__call_with_self(self, blk, *args)
       end
     end
     method_missing(sym, *args, &blk)
@@ -258,17 +257,6 @@ class Object
   def display
     print self
     nil
-  end
-
-  # The nilable view of __proc_call_block (see lib/core/base.rb): the block passed to the CURRENT
-  # Proc invocation, or nil when none was given. A block's own &param (`proc { |&b| ... }`) binds
-  # from this in the lambda prologue (rewrite_lambda) -- the CALL-TIME block -- as opposed to the
-  # lambda's __closure__ parameter, which carries the block captured at the proc's creation (what
-  # `yield` inside the block uses).
-  def __call_block__
-    b = nil
-    %s(if (ne __proc_call_block 0) (assign b __proc_call_block))
-    b
   end
 
   # FIXME: Private

@@ -43,14 +43,6 @@
   (__array size)
 ))
 
-# The raw block (0 when none) passed to the CURRENT Proc invocation. Proc#call/#[]/#__call_with_self
-# publish their own __closure__ here just before jumping into the lambda; a block's own &param
-# (`proc { |&b| ... }`) binds from this via Object#__call_block__ -- NOT from the lambda's __closure__
-# parameter, which carries the block captured at the proc's CREATION so that `yield` inside the block
-# still reaches the enclosing method's block. Freshly written by every Proc invocation, and consumed
-# in the lambda prologue before any further Proc call can run, so no save/restore is needed.
-%s(assign __proc_call_block 0)
-
 # We'll use this for various instrumentation
 %s(assign __cnt 0)
 %s(defun __docnt () (do

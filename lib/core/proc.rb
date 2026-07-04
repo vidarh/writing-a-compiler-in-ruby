@@ -42,16 +42,11 @@ class Proc
   end
 
   def call *__copysplat, &blk
-    # Publish the block passed to THIS invocation (nil when none) for the lambda's own &param to pick
-    # up (see __proc_call_block in lib/core/base.rb). The lambda's __closure__ parameter stays
-    # @closure -- the block captured at creation -- which is what `yield` inside the block must reach.
-    # NOTE: this must go through the &blk PARAM, not a textual `__closure__` reference: naming
-    # __closure__ in the body makes rewrite_env_vars box the closure into a heap __env__ (an
-    # allocation on every call!) and the restructuring breaks the implicit numargs register contract
-    # between the splat prologue and the (splat __copysplat) call emission -> garbage argument counts.
-    # The &param's nilable binding is injected AFTER the env rewrite, so it is safe.
-    %s(assign __proc_call_block blk)
-    %s(call @addr (@s @closure @env (splat __copysplat)))
+    # ABI slot 2 (__callblk__) carries the CALL-TIME block for the lambda's own &param -- blk
+    # here, nil when none. No global channel (re-entrant, thread/fiber-safe). `yield` and
+    # block_given? inside the block reach the DEFINING METHOD's block through the env-captured
+    # __closure__, so @closure is no longer passed at invocation.
+    %s(call @addr (@s blk @env (splat __copysplat)))
 
     # WARNING: Do not do extra stuff here. If this is a 'proc'/bare block
     # code after the %s(call ...) above will not get executed.
@@ -63,18 +58,15 @@ class Proc
   # on `newself`.
   # NOTE: no &blk param here, and none may be added: this method re-expands its splat through the
   # RAW `(splat __copysplat)` s-exp below, whose argument marshalling assumes the signature is
-  # exactly (fixed..., *rest) -- an appended &blk made it collect one extra argument (the closure
-  # slot leaked into __copysplat). Callers that need the call-time block published for the callee's
-  # own &param (see __proc_call_block in lib/core/base.rb) must publish it themselves before calling
-  # (as Object#__dispatch_missing__ does); Proc#call publishes its own because its signature has no
-  # leading fixed param, which is the combination that breaks.
-  def __call_with_self newself, *__copysplat
-    %s(call @addr (newself @closure @env (splat __copysplat)))
+  # exactly (fixed..., *rest) -- an appended &blk made it collect one extra argument. The
+  # call-time block therefore travels as the EXPLICIT blkarg fixed parameter (nil when none),
+  # which lands in the lambda ABI's __callblk__ slot.
+  def __call_with_self newself, blkarg, *__copysplat
+    %s(call @addr (newself blkarg @env (splat __copysplat)))
   end
 
   def [] *__copysplat, &blk
-    %s(assign __proc_call_block blk)
-    %s(call @addr (@s @closure @env (splat __copysplat)))
+    %s(call @addr (@s blk @env (splat __copysplat)))
   end
 
   # Proc#yield is an alias of #call (kept separate rather than a raw duplicate so it does not have the
