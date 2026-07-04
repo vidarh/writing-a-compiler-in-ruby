@@ -2628,9 +2628,42 @@ class Compiler
     exp
   end
 
+  # R1 (docs/review/refactoring.md): canonicalize the defm/proc/lambda BODY shape ONCE,
+  # before any other pass runs. `def ... rescue/ensure ... end` (and block/lambda bodies
+  # with rescue/ensure) parse to the BARE node [:block, args, stmts, rescue?, ensure?]
+  # sitting alone in the body slot instead of a statement list. Downstream passes iterate
+  # bodies as statement lists, and three of them historically mishandled or locally
+  # re-wrapped the bare shape (the __wrapenv 32-file COMPILE_FAIL regression; the
+  # default-arg+ensure runtime crash in rewrite_default_args). Wrap the bare node as a
+  # one-statement list here so a body is ALWAYS a statement list downstream.
+  # The discriminator matches the proven per-pass compensations (which remain as
+  # harmless wrap-if-bare guards for defm/proc nodes CONSTRUCTED by later rewrites):
+  # a genuine bare block node has an Array args slot at [1]; a statement list whose
+  # first statement is a variable named `block` does not.
+  def normalize_body_shape(exp)
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      bodyi = nil
+      if e[0] == :defm
+        bodyi = 3
+      elsif e[0] == :proc || e[0] == :lambda
+        bodyi = 2
+      end
+      if bodyi
+        body = e[bodyi]
+        if body.is_a?(Array) && body[0] == :block && body[1].is_a?(Array)
+          e[bodyi] = [body]
+        end
+      end
+    end
+  end
+
   def preprocess exp
     # Move `require`d file content to the top level BEFORE any scope/ivar analysis runs.
     hoist_requires(exp)
+
+    # Canonicalize rescue/ensure body shapes before anything else inspects bodies.
+    normalize_body_shape(exp)
 
     # The global scope is needed for some rewrites
     setup_global_scope(exp)
