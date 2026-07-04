@@ -729,10 +729,10 @@ def test_compiler
   end
 ')
   c.preprocess(prog)
-  # env layout: [0]=__stackframe__, [1]=__closure__, ...
+  # env layout: [0]=__stackframe__, [1]=__envparent__ (0 for a root env), [2]=__closure__, ...
   # yield is now guarded so that a yield with no block raises LocalJumpError (MRI) instead of calling
   # a null __closure__: if __closure__ != 0 then __closure__.call(...) else raise LocalJumpError.
-  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_env, 2]]], [:assign, [:index, :__env__, 1], :__closure__], [:if, [:ne, [:index, :__env__, 1], 0], [:callm, [:index, :__env__, 1], :call, []], [:call, :__raise_no_block, []]]]",
+  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_env, 3]]], [:assign, [:index, :__env__, 2], :__closure__], [:if, [:ne, [:index, :__env__, 2], 0], [:callm, [:index, :__env__, 2], :call, []], [:call, :__raise_no_block, []]]]",
     "yield triggers a rewrite even with no arguments")
 
 end

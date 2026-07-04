@@ -517,7 +517,111 @@ class Compiler
         )
       end
     end
+    __nest_proc_envs(exp) if seen
     return seen
+  end
+
+  # Post-pass over rewrite_lambda's output: any generated __lambda_ defun whose body ITSELF
+  # creates procs gets a per-activation wrapper env, and its creation sites are repointed at it.
+  # Wrapper layout matches the root env's head (see process_scope_env): [0] = this activation's
+  # frame (the break target for the procs created here), [1] = the parent env (this lambda's
+  # own __env__ parameter). Without this, every proc in a method shared the single root env, so
+  # env[0] was pinned to the FIRST activation that created any block: break from a nested block
+  # skipped the intermediate activations' continuations, and a stored block invoked from a later
+  # activation (rubyspec shared examples) unwound into a dead frame -> SIGSEGV.
+  def __nest_proc_envs(n)
+    return if !n.is_a?(Array)
+    # A nested real method (:defm, or a non-lambda :defun) is its OWN scope with its own
+    # rewrite_let_env pass -- walking into it here would repoint ITS method-level creation
+    # triples at a __wrapenv that does not exist in that scope (and double-inject prologues
+    # when the toplevel pass re-walks already-processed defm bodies).
+    return if n[0] == :defm
+    if n[0] == :defun && !(n[1].is_a?(String) && n[1].start_with?("__lambda_"))
+      return
+    end
+    if n[0] == :defun && n[1].is_a?(String) && n[1].start_with?("__lambda_")
+      body = n[3]
+      if __contains_proc_node_defun?(body)
+        __repoint_creations(body)
+        __inject_wrapenv_prologue(body)
+      end
+      __nest_proc_envs(body)
+      return
+    end
+    i = 0
+    while i < n.length
+      __nest_proc_envs(n[i]) if n[i].is_a?(Array)
+      i += 1
+    end
+  end
+
+  # After rewrite_lambda, nested procs appear as the generated __lambda_ defuns (the :proc/:lambda
+  # nodes are gone). Detect them without crossing into DEEPER defuns' bodies.
+  def __contains_proc_node_defun?(n)
+    return false if !n.is_a?(Array)
+    return false if n[0] == :defm
+    return false if n[0] == :defun && !(n[1].is_a?(String) && n[1].start_with?("__lambda_"))
+    return true if n[0] == :defun && n[1].is_a?(String) && n[1].start_with?("__lambda_")
+    i = 0
+    while i < n.length
+      return true if n[i].is_a?(Array) && __contains_proc_node_defun?(n[i])
+      i += 1
+    end
+    false
+  end
+
+  # Rewrite the creation triples DIRECTLY inside this defun body (not those inside deeper
+  # defuns) to build their procs against :__wrapenv. The triple shape is fixed (emitted by
+  # rewrite_lambda): [:do, <env[0] guard :if>, [:assign, :__tmp_proc, [:defun,...]], [:sexp,
+  # [:call, :__new_proc, [...]]]]. The guard becomes a wrapenv-slot re-check (a no-op after the
+  # prologue set it; kept for shape stability), and __new_proc's env argument becomes the wrapper.
+  def __repoint_creations(n, in_defun = false)
+    return if !n.is_a?(Array)
+    return if n[0] == :defm
+    return if n[0] == :defun && !(n[1].is_a?(String) && n[1].start_with?("__lambda_"))
+    if n[0] == :defun && n[1].is_a?(String) && n[1].start_with?("__lambda_")
+      return if in_defun
+      # descend into the created lambda's body only to find ITS creation sites? No: those belong
+      # to the deeper defun and are handled when __nest_proc_envs reaches it. Stop here.
+      return
+    end
+    if n[0] == :do && n[1].is_a?(Array) && n[1][0] == :if &&
+       n[1][1].is_a?(Array) && n[1][1][0] == :eq &&
+       n[1][1][1].is_a?(Array) && n[1][1][1][0] == :index && n[1][1][1][1] == :__env__ &&
+       n.last.is_a?(Array) && n.last[0] == :sexp &&
+       n.last[1].is_a?(Array) && n.last[1][0] == :call && n.last[1][1] == :__new_proc
+      # guard: [:if, [:eq, [:index, :__env__, 0], 0], [:assign, [:index, :__env__, 0], [:stackframe]]]
+      n[1][1][1][1] = :__wrapenv
+      n[1][2][1][1] = :__wrapenv if n[1][2].is_a?(Array) && n[1][2][0] == :assign &&
+                                    n[1][2][1].is_a?(Array) && n[1][2][1][0] == :index
+      # __new_proc args: [tmp, env, self, len, closure]
+      args = n.last[1][2]
+      args[1] = :__wrapenv if args.is_a?(Array) && args[1] == :__env__
+    end
+    i = 0
+    while i < n.length
+      __repoint_creations(n[i], in_defun) if n[i].is_a?(Array)
+      i += 1
+    end
+  end
+
+  # Insert the wrapper allocation at the head of the let that declares :__wrapenv (added by
+  # find_vars for proc-creating lambdas). [:stackframe] here is THIS defun activation's frame.
+  def __inject_wrapenv_prologue(n)
+    return false if !n.is_a?(Array)
+    return false if n[0] == :defm || n[0] == :defun
+    if n[0] == :let && n[1].is_a?(Array) && n[1].include?(:__wrapenv)
+      n.insert(2, E[:sexp, E[:assign, :__wrapenv, E[:call, :__alloc_env, 2]]],
+                  E[:sexp, E[:assign, E[:index, :__wrapenv, 0], E[:stackframe]]],
+                  E[:sexp, E[:assign, E[:index, :__wrapenv, 1], :__env__]])
+      return true
+    end
+    i = 0
+    while i < n.length
+      return true if n[i].is_a?(Array) && __inject_wrapenv_prologue(n[i])
+      i += 1
+    end
+    false
   end
 
 
@@ -902,7 +1006,16 @@ class Compiler
           # made a proc-free lambda's bare __tmp_proc name resolve oddly downstream (selftest:
           # "undefined method '__tmp_proc' for GenericEnumerator").
           if n[2]
-            extra = __contains_proc_node?(n[2]) ? [:__tmp_proc] : []
+            # __tmp_proc: rewrite_lambda's per-creation temp. __wrapenv: this lambda's
+            # PER-ACTIVATION wrapper env [frame, parent] -- allocated in its prologue by
+            # __nest_proc_envs so that procs created here capture THIS activation's frame as
+            # their break target (see the env-layout comment in process_scope_env).
+            # Explicit if, not a ternary (self-hosting; see bdepth note in rewrite_env_vars).
+            if __contains_proc_node?(n[2])
+              extra = [:__tmp_proc, :__wrapenv]
+            else
+              extra = []
+            end
             n[2] = E[n.position,:let, vars + extra, *n[2]]
           end
         elsif n[0] == :class || n[0] == :module
@@ -1069,7 +1182,31 @@ class Compiler
     # return scopes[-1].to_a, env
   end
 
+  # `depth` = parent hops needed to reach the ROOT env (which holds all captured variables)
+  # from the CURRENT position's __env__: 0 in the method body and in level-1 blocks (their
+  # __env__ parameter IS the root), +1 for each additional level of block nesting (each
+  # enclosing block-creating lambda interposes its per-activation wrapper env; slot 1 is the
+  # parent link -- see process_scope_env's layout comment and __nest_proc_envs).
+  def __env_hops(depth)
+    t = :__env__
+    depth.times { t = E[:index, t, 1] }
+    t
+  end
+
+  # Public entry: resets the depth-tracking state and delegates. The depth/in_lambda pair is
+  # carried in INSTANCE variables saved+restored around the lambda-body recursion rather than
+  # as extra defaulted parameters: the parameter form miscompiled under the self-hosted
+  # compiler (the compiled selftest looped in preprocess), and ivars + locals are proven
+  # constructs.
   def rewrite_env_vars(exp, env)
+    @env_depth = 0
+    @env_in_lambda = false
+    __rewrite_env_vars_r(exp, env)
+  end
+
+  def __rewrite_env_vars_r(exp, env)
+    depth = @env_depth
+    in_lambda = @env_in_lambda
     seen = false
     exp.depth_first do |e|
       # Never redirect inside an inlined library (:required) subtree: a top-level capture pass redirects by
@@ -1100,10 +1237,10 @@ class Compiler
           if recv.is_a?(Symbol)
             rnum = env.index(recv)
             if rnum
-              e[1][0] = E[:index, :__env__, rnum]
+              e[1][0] = E[:index, __env_hops(depth), rnum]
               seen = true
             end
-          elsif rewrite_env_vars(recv, env)
+          elsif __rewrite_env_vars_r(recv, env)
             seen = true
           end
         end
@@ -1127,12 +1264,26 @@ class Compiler
         # redirected into __env__ by the code above.)
         is_nested_def = (e[0] == :defm || e[0] == :defun)
 
-        # First, process the body to rewrite variable references
+        # First, process the body to rewrite variable references. Entering a lambda from the
+        # method body keeps depth 0 (its __env__ param IS the root env); entering one from
+        # inside another lambda adds a parent hop (the enclosing lambda's wrapper interposes).
         if e[body_index] && !is_nested_def
+          # Entering a lambda from the method body keeps depth (its __env__ param IS the root
+          # env); entering one from inside another lambda adds a parent hop (the enclosing
+          # lambda's wrapper interposes). Explicit if, not a ternary (self-hosting).
+          if in_lambda
+            bdepth = depth + 1
+          else
+            bdepth = depth
+          end
+          @env_depth = bdepth
+          @env_in_lambda = true
           # FIXME: seen |= ... failed to compile
-          if rewrite_env_vars(e[body_index], env)
+          if __rewrite_env_vars_r(e[body_index], env)
             seen = true
           end
+          @env_depth = depth
+          @env_in_lambda = in_lambda
         end
 
         # Then insert initialization for captured parameters (after rewriting)
@@ -1141,7 +1292,11 @@ class Compiler
           # Note: using .collect instead of .map (map doesn't exist in lib/core/array.rb)
           param_inits = captured_params.collect do |p|
             idx = env.index(p)
-            E[:assign, E[:index, :__env__, idx], p]
+            if in_lambda
+              E[:assign, E[:index, __env_hops(depth + 1), idx], p]
+            else
+              E[:assign, E[:index, __env_hops(depth), idx], p]
+            end
           end
 
           # Insert at start of body
@@ -1173,6 +1328,20 @@ class Compiler
         e[3] = E[:call, :__raise_no_block, []]
       end
 
+      if __rewrite_node_refs(e, env, depth)
+        seen = true
+      end
+    end
+    seen
+  end
+
+  # The per-node child rewrite, extracted from __rewrite_env_vars_r: replace each child that
+  # names a captured variable with its env reference (hop-wrapped for nested-lambda depth).
+  # Extraction keeps the walker function small -- the combined function repeatedly tripped a
+  # layout-sensitive miscompile under the self-hosted compiler (env.index results read back as
+  # garbage-truthy), the same fragility this function's historical FIXMEs dance around.
+  def __rewrite_node_refs(e, env, depth)
+    seen = false
       e.each_with_index do |ex, i|
         # FIXME: This is necessary in order to avoid rewriting compiler keywords in some
         # circumstances. The proper solution would be to introduce more types of
@@ -1224,7 +1393,7 @@ class Compiler
         num = env.index(ex)
         if num
           seen = true
-          e[i] = E[:index, :__env__, num]
+          e[i] = E[:index, __env_hops(depth), num]
           # If this was a BARE single argument of a call -- e.g. `m(x)` parsed as [:call,:m,:x] (not
           # [:call,:m,[:x]]) -- rewriting it in place leaves [:index,__env__,N] sitting directly in the
           # argument slot, which the caller side then reads as a 3-element ARG LIST (:index,__env__,N) and
@@ -1233,7 +1402,6 @@ class Compiler
           e[i] = E[e[i]] if (e[0] == :call || e[0] == :callm) && i > 1
         end
       end
-    end
     seen
   end
 
@@ -1309,8 +1477,12 @@ class Compiler
 
       env << :__closure__
 
-      # For "preturn". see Compiler#compile_preturn
-      aenv = [:__stackframe__] + env.to_a
+      # Env layout (uniform for this root env and, later, per-activation wrapper envs of nested
+      # block-creating lambdas): slot 0 = __stackframe__ (frame of the activation that ALLOCATED
+      # the env -- `break`'s unwind target), slot 1 = __envparent__ (the enclosing env; 0 for
+      # this root -- calloc'd, so no explicit init needed; preturn walks it to find the method
+      # frame), slots 2.. = captured variables. See also Compiler#compile_preturn.
+      aenv = [:__stackframe__, :__envparent__] + env.to_a
       env << :__stackframe__
 
       body = body_in
@@ -1464,7 +1636,7 @@ class Compiler
       tvars, te = find_vars(exp, [Set.new], Set.new, Hash.new(0))
       if te && !te.to_a.empty?
         tenv = te
-        rewrite_env_vars(exp, [:__stackframe__] + te.to_a)
+        rewrite_env_vars(exp, [:__stackframe__, :__envparent__] + te.to_a)
       end
     end
     if rewrite_lambda(exp)
@@ -1484,7 +1656,7 @@ class Compiler
           # __closure__ must be 0 at top level since there's no enclosing closure
           # __tmp_proc is used by rewrite_lambda to hold the temporary proc
           # __env__ must be sized to hold the captured vars (stackframe slot + each captured var), not just 2.
-          envsize = tenv ? [2, ([:__stackframe__] + tenv.to_a).size].max : 2
+          envsize = tenv ? [3, ([:__stackframe__, :__envparent__] + tenv.to_a).size].max : 3
           inner = exp[1..-1].dup
           exp.clear
           exp << :do

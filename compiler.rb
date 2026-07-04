@@ -128,7 +128,22 @@ class Compiler
   # for now __env__[0] which contains a stackframe pointer used by
   # :preturn.
   def lookup_type(var, index = nil)
-    (var == :__env__ && index != 0) ? :object : nil
+    # Captured-variable env slots hold Ruby OBJECTS (so conditions on them need full nil/false
+    # truthiness); slot 0 (stack frame) and slot 1 (parent env link) are raw words. The base may
+    # be :__env__ itself or a parent-hop chain [:index, [...], 1] bottoming out at :__env__
+    # (nested-env wrappers; see __env_hops in transform.rb). Without the unwrap, a captured
+    # variable read from a nested block was typed raw, and `captured && ...` took the truthy
+    # branch on a FALSE object (nonzero pointer) -- compile_callm's own do_load_super guard then
+    # called false.to_sym when the compiler compiled itself.
+    v = var
+    while v.is_a?(Array) && v[0] == :index && v[2] == 1
+      v = v[1]
+    end
+    if v == :__env__ && index != 0 && index != 1
+      :object
+    else
+      nil
+    end
   end
 
   # Returns an argument with its type identifier.
@@ -704,11 +719,24 @@ class Compiler
     @e.save_result(compile_eval_arg(scope, arg)) if arg
     @e.pushl(:eax)
 
-    # We load the return address pre-saved in __stackframe__ on creation of the proc.
-    # __stackframe__ is automatically added to __env__ in `rewrite_let_env`
-
-    ret = compile_eval_arg(scope,[:index,:__env__,0])
-    @e.movl(ret,:eax) if ret != :eax
+    # The target is the DEFINING METHOD's frame: slot 0 of the ROOT env. Under nested envs
+    # (see process_scope_env's layout comment) the current __env__ may be a per-activation
+    # wrapper; walk the parent links (slot 1; 0 terminates at the root) first, then read the
+    # root's slot 0. `break` by contrast targets slot 0 of the CURRENT env (its defining
+    # activation) in compile_break. Emitted directly (a sexp-let here mis-resolved __env__ as
+    # a raw asm symbol in some scopes).
+    ret = compile_eval_arg(scope, :__env__)
+    @e.save_result(ret)
+    l_walk = @e.get_local + "_pwalk"
+    l_done = @e.get_local + "_pdone"
+    @e.local(l_walk)
+    @e.movl("4(%eax)", :edx)     # parent link (slot 1); 0 at the root
+    @e.testl(:edx, :edx)
+    @e.je(l_done)
+    @e.movl(:edx, :eax)
+    @e.jmp(l_walk)
+    @e.local(l_done)
+    @e.movl("(%eax)", :eax)      # root slot 0 = defining method's frame
 
     # Pre-scan (mirrors compile_break's): before jumping, verify the target frame is actually on the
     # current stack by walking the saved-%ebp chain from the current frame. A proc containing `return`

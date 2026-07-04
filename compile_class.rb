@@ -826,8 +826,18 @@ class Compiler
       return if !n.is_a?(Array)
       # A nested let that rebinds __env__ owns a separate environment; don't descend into it.
       return if n[0] == :let && n[1].is_a?(Array) && n[1].include?(:__env__)
-      if n[0] == :index && n[1] == :__env__ && n[2].is_a?(Integer)
-        max = n[2] if n[2] > max
+      if n[0] == :index && n[2].is_a?(Integer)
+        # Count direct root-env refs AND hop-wrapped ones: a ref from a depth-d nested block
+        # arrives as [:index, [:index, ... [:index, :__env__, 1] ...], k] (parent hops -- see
+        # __env_hops in transform.rb). Unwrap the hop chain; if it bottoms out at :__env__ the
+        # index targets a ROOT slot and must be covered by the allocation, or writes from deep
+        # blocks land past the buffer (heap corruption -- selftest's String tests died in a
+        # later calloc).
+        t = n[1]
+        while t.is_a?(Array) && t[0] == :index && t[2] == 1
+          t = t[1]
+        end
+        max = n[2] if t == :__env__ && n[2] > max
       end
       n.each { |c| walk.call(c) }
     end
