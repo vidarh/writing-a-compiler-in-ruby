@@ -285,6 +285,12 @@ class Kernel
     value
   end
 
+  # Refinements are not supported (see Class#refine, which returns an inert module and never
+  # runs its block) -- activating one is therefore a no-op.
+  def using(mod)
+    self
+  end
+
   # autoload registers a path for LAZY loading -- meaningless in this AOT compiler (everything
   # is compiled in up front), so accept and ignore the registration. autoload? reports no
   # pending autoload, which is also the truthful answer here. A missing method ABORTED whole

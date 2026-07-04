@@ -244,6 +244,15 @@ class Class
     false
   end
 
+  # Refinements are not supported. The block is deliberately NOT run: class_eval'ing it would
+  # define the "refined" methods GLOBALLY on the target class, which is worse than ignoring
+  # them (a refinement is scoped to `using` callers). Returns an empty module standing in for
+  # the refinement module. A missing method here aborted whole spec files at load -- the
+  # binding fixtures call `refine(String) { ... }` in a module body.
+  def refine(klass, &block)
+    Module.new
+  end
+
   # The method names available on instances of this class/module. Iterates the global name->vtable-offset
   # map and keeps names whose slot in THIS class holds a real method (outside the shared thunk range) --
   # the same test Object#respond_to? uses. `include_super` is accepted but not yet honoured (inherited
