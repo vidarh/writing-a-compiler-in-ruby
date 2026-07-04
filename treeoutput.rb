@@ -362,8 +362,15 @@ module OpPrec
         if rest.empty?
           @vstack << E[:splat, first]
         else
-          result = E[:comma, E[:splat, first], rest[0]]
-          rest[1..-1].each {|r| result = E[:comma, result, r]}
+          # Rebuild RIGHT-nested -- comma(splat(a), comma(b, c)) -- the canonical shape `a, b, c`
+          # parses to. The old left-nested rebuild (comma(comma(splat(a), b), c)) defeated
+          # flatten(), which only recurses into the RIGHT child: a paren-less call with a leading
+          # splat (`obj.send :m=, *x, 2, 3`) kept a residual [:comma,...] node in its argument
+          # list, which compiled to a dispatch on the method `comma` -- or, via a lambda's env,
+          # read garbage as a splat length and moved %esp by it (language/method_spec SIGSEGV).
+          result = rest[-1]
+          rest[0..-2].reverse.each {|r| result = E[:comma, r, result]}
+          result = E[:comma, E[:splat, first], result]
           @vstack << result
         end
       elsif ra and rightv[0] == :comma and o.sym == :return

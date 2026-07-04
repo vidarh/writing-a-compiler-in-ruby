@@ -2530,9 +2530,14 @@ class Compiler
       new_args = []
       args.each do |arg|
         if arg.is_a?(Array) && arg[0] == :forward_args
-          # Replace with: *__fwd_args__, **__fwd_kwargs__, &__fwd_block__
+          # Replace with: *__fwd_args__, &__fwd_block__ -- exactly the shape an explicit
+          # `def m(*a, &b)` lowers to, so the whole thing rides the proven splat + block-param
+          # machinery. No keyrest: kwargs are not generally supported, and the old
+          # [:__fwd_kwargs__, :keyrest] param plus a [:hash, [:hash_splat, ...]] argument at the
+          # forward site compiled to garbage -- `def m(...); super(...); end` inside a Class.new
+          # block SIGSEGV'd (language/method_spec) and every forwarded call grew a spurious
+          # trailing hash argument.
           new_args << [:__fwd_args__, :rest]
-          new_args << [:__fwd_kwargs__, :keyrest]
           new_args << [:__fwd_block__, :block]
         else
           new_args << arg
@@ -2563,19 +2568,18 @@ class Compiler
           # &__fwd_block__ => handled via block parameter, not in args
           new_call_args = call_args.map do |arg|
             if arg == :forward_args
-              # Return array of arguments to be flattened in
-              [[:splat, :__fwd_args__], [:hash, [:hash_splat, :__fwd_kwargs__]]]
+              # Forward positionals and the block: `f(...)` -> `f(*__fwd_args__, &__fwd_block__)`.
+              # [:to_block, ...] is the canonical &-forwarding argument shape (see the explicit
+              # `q(*a, &b)` parse); compile_callm/compile_call pop it into the block slot, and a
+              # nil __fwd_block__ correctly means "no block". The old form dropped the block
+              # entirely and passed a bogus kwargs hash instead.
+              [[:splat, :__fwd_args__], [:to_block, :__fwd_block__]]
             else
               arg
             end
           end.flatten(1)  # Flatten one level to merge the arrays
 
           node[args_index] = new_call_args
-
-          # For :call nodes, block is separate; for :callm it's also separate
-          # We need to set the block parameter if there's a block
-          # But actually, blocks are passed differently - they're not in the args array
-          # TODO: Handle block forwarding properly
         end
       end
     end
