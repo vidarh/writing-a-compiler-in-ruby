@@ -300,6 +300,21 @@ class Kernel
     self
   end
 
+  # Runtime fallbacks for the compile-time __method__/__callee__ rewrite (transform.rb,
+  # rewrite_method_name_introspection). Uses inside a def are rewritten to the method-name
+  # symbol at compile time and never reach these; what does reach them is class-body/toplevel
+  # code -- where MRI returns nil -- plus indirect calls (send "__method__", define_method
+  # blocks), which MRI resolves to the caller's frame and we approximate as nil. Without a
+  # runtime definition, a class-body use aborted the whole file at load (kernel/__method__
+  # fixtures assign `@@method = __method__` in a class body).
+  def __method__
+    nil
+  end
+
+  def __callee__
+    nil
+  end
+
   # autoload registers a path for LAZY loading -- meaningless in this AOT compiler (everything
   # is compiled in up front), so accept and ignore the registration. autoload? reports no
   # pending autoload, which is also the truthful answer here. A missing method ABORTED whole

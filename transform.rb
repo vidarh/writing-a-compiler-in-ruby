@@ -2355,6 +2355,7 @@ class Compiler
     rewrite_integer_constant(exp)
     rewrite_alias_method(exp)   # must precede rewrite_symbol_constant (needs bare :sym args)
     rewrite_define_method(exp)  # ditto -- needs the bare :sym name + the :proc block
+    rewrite_method_name_introspection(exp) # inserts :sym literals -- must precede rewrite_symbol_constant
     rewrite_symbol_constant(exp)
     rewrite_operators(exp)
     rewrite_yield(exp)
@@ -2516,6 +2517,44 @@ class Compiler
   #   def foo(*__fwd_args__, **__fwd_kwargs__, &__fwd_block__)
   #     bar(*__fwd_args__, **__fwd_kwargs__, &__fwd_block__)
   #   end
+  # `__method__` / `__callee__` resolve to the enclosing method's name at COMPILE time -- there
+  # is no runtime frame introspection. Correct for __method__ even under aliasing (it reports
+  # the ORIGINAL name, which is exactly the compile-time name); __callee__ should report the
+  # aliased callee and is approximated with the same name. Blocks inside the method see the
+  # enclosing method's name (Ruby semantics); nested defm subtrees are skipped -- depth_first
+  # visits them with their own name. Bare uses outside any method stay unresolved and raise
+  # (MRI returns nil there; only reachable from toplevel scripts).
+  def rewrite_method_name_introspection(exp)
+    exp.depth_first(:defm) do |e|
+      name = e[1]
+      name = name.last if name.is_a?(Array)
+      next :next if !name.is_a?(Symbol)
+      sym = (":" + name.to_s).to_sym
+      __subst_method_name(e[3], sym)
+      :next
+    end
+  end
+
+  # Replace bare :__method__ / :__callee__ identifiers and their no-arg call forms with the
+  # given symbol literal, in place, without descending into nested :defm subtrees.
+  def __subst_method_name(n, sym)
+    return if !n.is_a?(Array)
+    i = 0
+    while i < n.length
+      c = n[i]
+      if c == :__method__ || c == :__callee__
+        n[i] = sym
+      elsif c.is_a?(Array)
+        if c[0] == :call && (c[1] == :__method__ || c[1] == :__callee__)
+          n[i] = sym
+        elsif c[0] != :defm
+          __subst_method_name(c, sym)
+        end
+      end
+      i += 1
+    end
+  end
+
   def rewrite_forward_args(exp)
     exp.depth_first(:defm) do |e|
       args = e[2]
