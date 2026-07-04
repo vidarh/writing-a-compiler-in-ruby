@@ -105,15 +105,16 @@ def it(description, &block)
   # Track whether this specific test had any assertion failures
   $current_test_has_failure = false
 
-  # Run before :each blocks
-  i = 0
-  while i < $before_each_blocks.length
-    $before_each_blocks[i].call
-    i = i + 1
-  end
-
-  # Wrap block.call in begin/rescue to catch unhandled exceptions
+  # Run the before :each blocks INSIDE the rescue: a raise in a before block (e.g. fixtures
+  # touching an unimplemented class) must fail THIS example and skip its body -- as mspec does --
+  # not abort the whole file. An abort prints no summary, which classifies the entire spec file
+  # as CRASH instead of recording the per-test failures.
   begin
+    i = 0
+    while i < $before_each_blocks.length
+      $before_each_blocks[i].call
+      i = i + 1
+    end
     block.call
   rescue => e
     $current_test_has_failure = true
