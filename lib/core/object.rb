@@ -630,11 +630,11 @@ class Object
   # Evaluate the block with self bound to this object (its `def`s become singleton methods on it, via
   # __def_target -> singleton_class). instance_exec additionally forwards arguments to the block.
   def instance_eval &block
-    block.__call_with_self(self) if block
+    block.__call_with_self(self, nil) if block
   end
 
   def instance_exec *args, &block
-    block.__call_with_self(self, *args) if block
+    block.__call_with_self(self, nil, *args) if block
   end
 end
 
