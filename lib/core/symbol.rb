@@ -118,8 +118,48 @@ class Symbol
     @hash
   end
 
-  def [] i
-    to_s[i]
+  # NOTE: Symbol#[] deliberately mirrors this runtime's String#[] (single Integer
+  # index -> byte CODE), NOT MRI (which returns a 1-char String). The COMPILER
+  # SOURCE relies on the byte behavior somewhere in its name-mangling paths:
+  # making this return Strings corrupted the self-compiled compiler's emitted
+  # global labels (garbage bss names -> assembly failure). Migrate the compiler
+  # to .to_s[...] before making this MRI-correct. Symbol#slice below IS
+  # MRI-correct (returns Strings) and is what the specs mostly exercise.
+  def [](*args)
+    to_s[*args]
+  end
+
+  # MRI-shaped element access: returns Strings (or nil), every form.
+  def slice(*args)
+    s = to_s
+    if args.length == 1 && args[0].is_a?(Integer)
+      c = s[args[0]]
+      return nil if c.nil?
+      return c.chr
+    end
+    s[*args]
+  end
+
+  def match(pattern, pos = 0)
+    to_s.match(pattern, pos)
+  end
+
+  def match?(pattern, pos = 0)
+    to_s.match?(pattern, pos)
+  end
+
+  def =~(pattern)
+    to_s =~ pattern
+  end
+
+  def casecmp(other)
+    return nil if !other.is_a?(Symbol)
+    to_s.casecmp(other.to_s)
+  end
+
+  def casecmp?(other)
+    return nil if !other.is_a?(Symbol)
+    to_s.casecmp?(other.to_s)
   end
 
   # Case/length operations mirror the String ones (returning a Symbol for the case methods).

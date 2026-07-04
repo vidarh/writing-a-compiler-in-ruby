@@ -536,6 +536,22 @@ class String
     length
   end
 
+  # Case-insensitive comparison (ASCII case folding, like our upcase/downcase).
+  # Returns -1/0/1, or nil when other is not string-convertible.
+  def casecmp(other)
+    if !other.is_a?(String)
+      return nil if !other.respond_to?(:to_str)
+      other = other.to_str
+    end
+    downcase <=> other.downcase
+  end
+
+  def casecmp?(other)
+    r = casecmp(other)
+    return nil if r.nil?
+    r == 0
+  end
+
   # Byte at index i as an unsigned 0..255 value (nil if out of range). self[i] yields a possibly-signed
   # char code, so fold negatives back into 0..255.
   def getbyte(i)

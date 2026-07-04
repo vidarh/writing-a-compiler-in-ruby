@@ -111,10 +111,14 @@ class File < IO
   # File.open(path, mode="r") -> a File, or with a block yields the File, closes it, and returns the
   # block's value (the ubiquitous `File.open(name) { |f| ... }` idiom). No ensure: a raising block leaves
   # the file open, acceptable for the current runtime.
-  def self.open(path, mode = "r")
+  # Uses an explicit &blk param (NOT block_given?/yield): a caller forwarding `&b` with b == nil
+  # (e.g. Kernel#open's delegation) puts the nil OBJECT in the block slot, which fools
+  # block_given? -- but the &blk param binding reads it back as nil, so blk.nil? is correct
+  # for both "no block" encodings.
+  def self.open(path, mode = "r", &blk)
     f = File.new(path, mode)
-    return f if !block_given?
-    result = yield(f)
+    return f if blk.nil?
+    result = blk.call(f)
     f.close
     result
   end

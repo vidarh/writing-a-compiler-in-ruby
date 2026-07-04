@@ -277,6 +277,17 @@ class Object
     self.class.__send_for_obj__(self, sym, block, *args)
   end
 
+  # Kernel#open: delegate to File.open, or IO.popen for a "|cmd" path.
+  def open(path, *args, &block)
+    if !path.is_a?(String) && path.respond_to?(:to_str)
+      path = path.to_str
+    end
+    if path.is_a?(String) && path.length > 0 && path[0] == 124   # '|'
+      return IO.popen(path[1, path.length - 1], *args, &block)
+    end
+    File.open(path, *args, &block)
+  end
+
   def p ob
     puts ob.inspect
     ob

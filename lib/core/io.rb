@@ -39,7 +39,8 @@ class IO < Object
   # closes it, and returns the block's value. The command STRINGS are held in Ruby locals so the GC does
   # not free the buffers whose raw pointers are handed to execve. (mspec ruby_exe still won't work -- it
   # needs a ruby interpreter to spawn -- but real external commands do.)
-  def self.popen(cmd, mode = "r")
+  # &blk (not block_given?/yield): survives `&nil` forwarding -- see File.open.
+  def self.popen(cmd, mode = "r", &blk)
     sh = "/bin/sh"
     dashc = "-c"
     cmdstr = cmd.to_s
@@ -74,8 +75,8 @@ class IO < Object
             (do (close (index pb 1)) (assign fd (__int (index pb 0))))))))
     io = new(fd)
     io.__set_pid(childpid)
-    return io if !block_given?
-    result = yield(io)
+    return io if blk.nil?
+    result = blk.call(io)
     io.close
     result
   end

@@ -58,6 +58,23 @@ When a method redefined at runtime via alias + def-in-block (e.g.
 it-rescue entirely and aborts the file. Behind core/array/sort_spec's abort and
 the pattern_matching crash above. 18-line repro: test/repros/st5.rb.
 
+### 3b. Forwarded `&nil` fools block_given?/yield (2026-07-04)
+
+`f(*a, &b)` with b == nil puts the nil OBJECT (a nonzero pointer) in the block
+slot; MRI treats `&nil` as "no block", but `block_given?` and the yield guard
+test only `!= 0`, so the callee tries `nil.call`. An explicit `&blk` PARAM is
+immune (its binding reads back as nil — `blk.nil?` is correct), so the
+convention for delegation targets is: use `&blk` + `blk.nil?`/`blk.call`, not
+block_given?/yield (File.open, IO.popen converted). Three compiler-side fixes
+all broke bootstrap-critical paths and were reverted — do NOT retry without
+reading the failure notes: (a) wrapping the to_block call-site arg in a
+`__block_arg` call corrupted `Class#new`'s splat marshalling; (b) an inline
+`[:and, [:ne,..,0], [:ne,..,:nil]]` guard MISCOMPILED self-hosted (eigenclass
+yields emitted garbage asm); (c) a prologue sexp normalizing the `__closure__`
+arg slot crashed stage-1 with SIGFPE. The eventual fix probably needs (b)
+root-caused first — it is the cleanest design and its miscompile is a compiler
+bug in its own right.
+
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
 Basic kwargs work (required/optional/`**rest`). Wrong: kw-vs-positional-hash
