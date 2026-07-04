@@ -4471,63 +4471,19 @@ def Integer(*args)
   raise TypeError.new("can't convert to Integer")
 end
 
-def __Integer_digit_value(c)
-  if c >= 48 && c <= 57
-    c - 48
-  elsif c >= 97 && c <= 122
-    c - 97 + 10
-  elsif c >= 65 && c <= 90
-    c - 65 + 10
-  else
-    nil
-  end
-end
-
 def __Integer_from_string(str, base, exception)
-  s = str.strip
-  n = s.length
-  i = 0
-  neg = false
-  if n > 0 && (s[0] == 43 || s[0] == 45)   # '+' / '-'
-    neg = s[0] == 45
-    i = 1
+  # Delegate to the shared strict parser (String#__parse_int): full-string
+  # validation, 0x/0o/0b/0d prefixes AND bare leading-0 octal with base 0/nil,
+  # single underscores between digits, surrounding whitespace, bignum-safe.
+  b = 0
+  b = base if !base.nil?
+  if !(b.is_a?(Integer) && (b == 0 || (b >= 2 && b <= 36)))
+    return nil if !exception
+    raise ArgumentError.new("invalid radix #{b}")
   end
-  b = base
-  # Optional radix prefix (0x/0b/0o/0d). Honoured when no conflicting explicit base was given.
-  if i + 1 < n && s[i] == 48                # leading '0'
-    c = s[i + 1]
-    if (c == 120 || c == 88) && (b.nil? || b == 16)      # x/X
-      b = 16; i = i + 2
-    elsif (c == 98 || c == 66) && (b.nil? || b == 2)     # b/B
-      b = 2; i = i + 2
-    elsif (c == 111 || c == 79) && (b.nil? || b == 8)    # o/O
-      b = 8; i = i + 2
-    elsif (c == 100 || c == 68) && (b.nil? || b == 10)   # d/D
-      b = 10; i = i + 2
-    end
-  end
-  b = 10 if b.nil?
-
-  result = 0
-  seen = false
-  last_us = false
-  while i < n
-    c = s[i]
-    if c == 95                            # '_' allowed once between digits
-      return __Integer_fail(str, exception) if !seen || last_us
-      last_us = true
-      i = i + 1
-    else
-      d = __Integer_digit_value(c)
-      return __Integer_fail(str, exception) if d.nil? || d >= b
-      result = result * b + d
-      seen = true
-      last_us = false
-      i = i + 1
-    end
-  end
-  return __Integer_fail(str, exception) if !seen || last_us
-  neg ? -result : result
+  r = str.__parse_int(b, true)
+  return __Integer_fail(str, exception) if r.nil?
+  r
 end
 
 def __Integer_fail(str, exception)

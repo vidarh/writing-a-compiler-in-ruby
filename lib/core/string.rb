@@ -644,34 +644,111 @@ class String
     %s(call __get_symbol buffer)
   end
 
-  def to_i
-    num = 0
+  # Shared numeric-string parser behind String#to_i and Kernel#Integer.
+  # base 0 = auto-detect from a 0x/0o/0b/0 prefix (default decimal).
+  # strict: the WHOLE string (modulo surrounding whitespace) must be a valid
+  # numeral -> returns nil on any violation (Kernel#Integer raises on nil).
+  # lenient: skip leading whitespace, parse the longest valid prefix, 0 if none.
+  # Digits accumulate through ordinary Integer arithmetic, so bignums work.
+  def __parse_int(base, strict)
     i = 0
     len = length
-    neg = false
-    if self[0] == ?-
-      neg = true
-      i+=1
+    # leading whitespace
+    while i < len && (self[i] == 32 || (self[i] >= 9 && self[i] <= 13))
+      i += 1
     end
-
-    # 30-bit limit (accounting for 1-bit tagging)
-    # Stop parsing if number gets too big to prevent overflow
-    max_safe = 268435456  # 2^28 - Stop before we overflow
-
-    while i <  len
-      s = self[i]
-      break if !(?0..?9).member?(s)
-
-      # Stop if next digit would cause overflow
-      break if num > max_safe
-
-      num = num*10 + s.ord - 48 # "0" == 48
-      i = i + 1
+    neg = false
+    if i < len && (self[i] == 45 || self[i] == 43)   # '-' / '+'
+      neg = self[i] == 45
+      i += 1
+    end
+    # prefix / base detection
+    if i + 1 < len && self[i] == 48                   # '0'
+      c = self[i + 1]
+      if c == 120 || c == 88                          # x X
+        if base == 0 || base == 16
+          base = 16
+          i += 2
+        end
+      elsif c == 111 || c == 79                       # o O
+        if base == 0 || base == 8
+          base = 8
+          i += 2
+        end
+      elsif c == 98 || c == 66                        # b B
+        if base == 0 || base == 2
+          base = 2
+          i += 2
+        end
+      elsif c == 100 || c == 68                       # d D
+        if base == 0 || base == 10
+          base = 10
+          i += 2
+        end
+      elsif base == 0
+        base = 8
+      end
+    end
+    base = 10 if base == 0
+    num = 0
+    ndigits = 0
+    # NOTE: integer flag, not a boolean local -- a boolean here hit the known
+    # false-object-truthiness miscompile (the second consecutive underscore
+    # sailed through the guard).
+    lastu = 0
+    while i < len
+      c = self[i]
+      if c == 95                                      # '_'
+        # single underscores between digits only
+        if ndigits == 0 || lastu == 1
+          return nil if strict
+          break
+        end
+        lastu = 1
+        i += 1
+      else
+        v = nil
+        if c >= 48 && c <= 57
+          v = c - 48
+        elsif c >= 97 && c <= 122
+          v = c - 87
+        elsif c >= 65 && c <= 90
+          v = c - 55
+        end
+        if v.nil? || v >= base
+          break
+        end
+        num = num * base + v
+        ndigits += 1
+        lastu = 0
+        i += 1
+      end
+    end
+    if strict
+      return nil if ndigits == 0
+      return nil if lastu == 1
+      # only trailing whitespace may remain
+      while i < len && (self[i] == 32 || (self[i] >= 9 && self[i] <= 13))
+        i += 1
+      end
+      return nil if i != len
     end
     if neg
-      num = num * (-1)
+      num = 0 - num
     end
-    return num
+    num
+  end
+
+  # String#to_i(base = 10): lenient longest-prefix parse (0 when no digits).
+  def to_i(base = 10)
+    if !base.is_a?(Integer)
+      raise TypeError, "no implicit conversion of #{base.class} into Integer" if !base.respond_to?(:to_int)
+      base = base.to_int
+    end
+    raise ArgumentError, "invalid radix #{base}" if base < 0 || base == 1 || base > 36
+    r = __parse_int(base, false)
+    return 0 if r.nil?
+    r
   end
 
   def slice!(b, e = nil)
