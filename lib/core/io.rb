@@ -283,8 +283,14 @@ class IO < Object
   def write(str)
     s = str.to_s
     len = s.bytesize
-    %s(write (callm @fd __get_raw) (callm s __get_raw) (callm len __get_raw))
-    len
+    res = 0
+    %s(assign res (__int (write (callm @fd __get_raw) (callm s __get_raw) (callm len __get_raw))))
+    # write(2) returns -1 on error (EBADF for a read-only fd, EPIPE, ...). Silently reporting
+    # success made `IO.copy_stream(src, readonly_io)` "work" (io/copy_stream_spec expects
+    # IOError) and hid every downstream write failure. The raise only dispatches on the
+    # failure path; normal startup writes never take it.
+    raise IOError.new("not opened for writing") if res < 0
+    res
   end
 
   def print(*args)
@@ -431,12 +437,9 @@ class IO < Object
   end
 end
 
-class IOError
-end
-
-# EOFError < IOError in MRI; defined here so IOError (above) is already in scope.
-class EOFError < IOError
-end
+# IOError / EOFError are defined in lib/core/exception.rb: they subclass StandardError,
+# which does not exist yet at this point (core/io loads before core/exception). IO methods
+# only reference them at RUNTIME, after everything is loaded.
 
 class IOSpecs
 end

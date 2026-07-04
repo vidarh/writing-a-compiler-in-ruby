@@ -241,7 +241,26 @@ module OpPrec
       end
 
       # Rewrite rules to simplify the tree
-      if ra and rightv[0] == :lambda and o.sym == :callm
+      if ra and rightv[0] == :comma and o.sym == :callm
+        # Comma (pri 99) binds tighter than `.` (pri 98), so in `f x.m, v` / `x.m, v = ...`
+        # the whole comma list lands as the dot's RIGHT operand -- the method slot became a
+        # list ([:callm, x, [m, v]]), and consumers dispatched garbage (IO.copy_stream
+        # @object.from, to_io jumped to NULL in io/copy_stream_spec). Only the comma's FIRST
+        # element belongs to the dot (a name symbol, or an already-reduced [:call, name, args]
+        # node for the paren'd form); rebuild the callm and re-emit the comma with the callm
+        # as its first element so every consumer -- argument lists, assigns, returns -- sees
+        # the canonical shape. The MLHS/assign unmangle branches below become unreachable for
+        # this shape and fall through to the generic destruct handling, which is equivalent.
+        first = rightv[1]
+        rest = rightv[2]
+        if first.is_a?(Array) && first[0] == :call
+          oper_call_right(leftv, o, first)
+          cm = @vstack.pop
+        else
+          cm = E[o.sym, leftv, first]
+        end
+        @vstack << E[:comma, cm, rest]
+      elsif ra and rightv[0] == :lambda and o.sym == :callm
         # `recv.lambda { body }`: `lambda { }` reduced to a [:lambda] literal (via the :call+:lambda
         # rule further down) BEFORE the `.` bound it, leaving the lambda node sitting in the callm's
         # METHOD slot -> a callm with no method name -> garbage dispatch and a crash (hit through

@@ -304,6 +304,15 @@ end
 class SecurityError < Exception
 end
 
+# IOError/EOFError live here rather than in core/io.rb: io loads BEFORE exception, so
+# StandardError does not exist yet there (as a bare class, IOError.new("msg") raised
+# ArgumentError and bare rescue missed it). IO methods only reference them at runtime.
+class IOError < StandardError
+end
+
+class EOFError < IOError
+end
+
 class SystemExit < Exception
   def initialize(status = 0, msg = "exit")
     @message = msg
