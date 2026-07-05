@@ -2698,6 +2698,94 @@ class Compiler
   # prepend `a, b = __destruct_argN` to the body; rewrite_destruct (which runs
   # right after this pass) expands it through the normal masgn machinery,
   # including nested groups.
+  # module_function support. Two parse shapes inside a module body:
+  #  - BARE `module_function` swallows the FOLLOWING defms as its paren-less
+  #    argument: [:module_function, <defm>] -- unwrap them back into the body
+  #    and mark everything from there on.
+  #  - `module_function :name, ...` is a normal [:call, :module_function, args].
+  # For each marked instance method, a DUPLICATED `def self.name` (deep-copied
+  # subtree -- later passes mutate in place) is appended to the module body, so
+  # the method is callable both as an instance method (for include) and
+  # directly on the module (MRI copies to the singleton class).
+  def __deep_dup_node(n)
+    return n if !n.is_a?(Array)
+    out = E[]
+    i = 0
+    while i < n.length
+      out << __deep_dup_node(n[i])
+      i += 1
+    end
+    out
+  end
+
+  def rewrite_module_function(exp)
+    exp.depth_first(:module) do |mod|
+      body = mod[3]
+      next if !body.is_a?(Array)
+      # Body can be a single statement node or a list; normalize view
+      stmts = body
+      if body[0].is_a?(Symbol)
+        # single-statement body: wrap AND write the wrapper back so element
+        # replacements/appends are visible in the tree
+        stmts = E[body]
+        mod[3] = stmts
+      end
+      mode_from = nil
+      named = {}
+      newstmts = E[]
+      i = 0
+      while i < stmts.length
+        st = stmts[i]
+        i += 1
+        if st.is_a?(Array) && st[0] == :module_function
+          # Bare form: the paren-less call swallowed the FOLLOWING defm(s) as
+          # its argument -- either one defm node or a LIST of nodes. Splice
+          # them all back as body statements.
+          mode_from = newstmts.length if mode_from.nil?
+          # the swallowed nodes are st's elements from index 1 onward
+          k = 1
+          while k < st.length
+            newstmts << st[k]
+            k += 1
+          end
+        elsif st.is_a?(Array) && st[0] == :call && st[1] == :module_function
+          args = st[2]
+          if args.is_a?(Array) && args.length > 0
+            args.each do |a|
+              if a.is_a?(Symbol)
+                nm = a.to_s
+                nm = nm[1 .. -1] if nm[0] == ?:
+                named[nm.to_sym] = true
+              end
+            end
+          else
+            mode_from = newstmts.length if mode_from.nil?
+          end
+        else
+          newstmts << st
+        end
+      end
+      stmts.replace(newstmts)
+      next if mode_from.nil? && named.empty?
+      extra = []
+      i = 0
+      while i < stmts.length
+        st = stmts[i]
+        if st.is_a?(Array) && st[0] == :defm && st[1].is_a?(Symbol)
+          want = false
+          want = true if !mode_from.nil? && i >= mode_from
+          want = true if named[st[1]]
+          if want
+            extra << E[:defm, E[:self, st[1]], __deep_dup_node(st[2]), __deep_dup_node(st[3])]
+          end
+        end
+        i += 1
+      end
+      extra.each { |d| stmts << d }
+    end
+    exp
+  end
+
   def rewrite_destruct_block_params(exp)
     count = 0
     exp.depth_first do |e|
@@ -2781,6 +2869,7 @@ class Compiler
                               # crash. Must run BEFORE rewrite_destruct so `a, b = expr rescue [..]` still
                               # has its plain [:assign, [:comma..], rhs] shape for the assign-hoist below.
     rewrite_for(exp)
+    rewrite_module_function(exp)        # module_function -> duplicated def self.x (before other body rewrites)
     rewrite_destruct_block_params(exp)  # |(a,b)| params -> synthetic arg + masgn (before rewrite_destruct)
     rewrite_destruct(exp)
     rewrite_bare_super(exp)   # expand bare `super` to forward the method's args (before splat/symbol rewrites)
