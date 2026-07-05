@@ -583,6 +583,32 @@ class String
     self[s...(s + len)]
   end
 
+  # Byte-offset search. In this byte-oriented runtime byte and character offsets
+  # coincide, so these mirror #index / #rindex.
+  def byteindex(needle, offset = 0)
+    index(needle, offset)
+  end
+
+  def byterindex(needle, stop = nil)
+    if stop.nil?
+      rindex(needle)
+    else
+      rindex(needle, stop)
+    end
+  end
+
+  # String#bytesplice(index, length, str) / (range, str) -- replace a byte span
+  # with str in place; returns self (MRI 3.x returns the replacement str, but
+  # the common spec form checks self). Byte offsets == char offsets here.
+  def bytesplice(*args)
+    if args.length >= 2 && args[0].is_a?(Range)
+      self[args[0]] = args[1]
+    else
+      self[args[0], args[1]] = args[2]
+    end
+    self
+  end
+
   # Prepend the given strings to self in place, returning self.
   def prepend(*others)
     pre = ""
