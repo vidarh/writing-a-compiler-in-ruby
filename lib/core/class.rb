@@ -110,30 +110,19 @@
 # - Multiple includes work correctly (first defined wins)
 #
 %s(defun __include_module (klass mod)
-   (let (i sup)
+   (let (i)
     # Skip if module is not yet initialized (0/null)
     # This can happen if a class tries to include a module that's defined later
     (if (eq mod 0) (return 0))
 
-    (assign sup (index klass 3))    # klass's superclass (0 for Object)
     (assign i 6)  # Skip the initial instance vars (slots 0-5)
     (while (lt i __vtable_size)
        (do
-          # Copy the module's method into klass when klass's slot is either:
-          #  (a) uninitialized (still the method_missing thunk), OR
-          #  (b) still the INHERITED method (equal to the superclass's slot) --
-          #      a class that includes a module gets [C, Mod, Super...] ancestry,
-          #      so a module method must override a method inherited from Super
-          #      (notably Object#== / #<=> etc., which are real slots and blocked
-          #      case (a)). `include` runs before the class's own defs, so at this
-          #      point klass[i] == sup[i] iff klass has NOT overridden it -- a later
-          #      `def` in klass re-sets the slot and wins, as MRI requires.
-          #  __set_vtable (not plain assign) propagates to already-created subclasses.
+          # Only copy if the class slot is still uninitialized. __set_vtable (rather than a
+          # plain assign) propagates the included method to already-created subclasses, the
+          # same way a normal `def` does.
           (if (eq (index klass i) (index __base_vtable i))
              (__set_vtable klass i (index mod i))
-             (if (ne sup 0)
-               (if (eq (index klass i) (index sup i))
-                 (__set_vtable klass i (index mod i))))
           )
           (assign i (add i 1))
        )

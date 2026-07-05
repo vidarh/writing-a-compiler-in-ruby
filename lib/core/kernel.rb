@@ -215,15 +215,44 @@ class Kernel
     out
   end
 
-  # Convert argument to Array
+  # Convert argument to Array. nil -> [] (MRI); #to_ary then #to_a; else wrap.
   def Array(arg)
+    return [] if arg.nil?
     if arg.respond_to?(:to_ary)
-      arg.to_ary
-    elsif arg.respond_to?(:to_a)
-      arg.to_a
-    else
-      [arg]
+      r = arg.to_ary
+      return r if !r.nil?
     end
+    if arg.respond_to?(:to_a)
+      r = arg.to_a
+      return r if !r.nil?
+    end
+    [arg]
+  end
+
+  # Convert argument to String via #to_s (must return a String).
+  def String(arg)
+    return arg if arg.is_a?(String)
+    if arg.respond_to?(:to_str)
+      r = arg.to_str
+      return r if r.is_a?(String)
+    end
+    if arg.respond_to?(:to_s)
+      r = arg.to_s
+      return r if r.is_a?(String)
+    end
+    raise TypeError, "can't convert #{arg.class} into String"
+  end
+
+  # Convert argument to Hash: nil / [] -> {}, a Hash passes through, else #to_hash.
+  def Hash(arg)
+    return {} if arg.nil?
+    return arg if arg.is_a?(Hash)
+    return {} if arg.is_a?(Array) && arg.empty?
+    if arg.respond_to?(:to_hash)
+      r = arg.to_hash
+      return r if r.is_a?(Hash)
+    end
+    raise TypeError, "can't convert #{arg.class} into Hash"
   end
 
   # Walk the runtime constant table for an exact key; nil when absent (a runtime constant
