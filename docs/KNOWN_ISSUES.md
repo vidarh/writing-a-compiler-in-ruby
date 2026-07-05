@@ -162,6 +162,26 @@ b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
 ladder. Highest-count actionable compiler bug in the burndown.
 
+### 3h. `class <localvar>::Name` — local namespace base emitted as undefined symbol (2026-07-05)
+
+`class parent::C` where `parent` is a LOCAL variable (holding a class) fails to
+link: `undefined reference to 'parent'`. Three deterministic COMPILE_FAILs share
+this cause -- core/class/inherited_spec, language/class_spec (`meta::...`),
+core/module/const_added_spec. The name parses to `[:class, [:deref, :parent, :C], ...]`;
+`find_vars` does not treat the deref BASE (`:parent`) as a variable use, so the
+local is never registered/captured and the assignment + reads emit a bare global
+symbol `parent` (`movl %eax, parent`) that nothing defines -> link error. (Using
+the same local as a normal runtime value works: `Class.new(parent)` inside a block
+compiles fine -- so it is specifically the class-keyword namespace base.) A real
+constant namespace is always Capitalised, so a lowercase deref base is always a
+local/method needing RUNTIME evaluation. Fix needs BOTH: find_vars to count the
+lowercase deref base as a var use (so it is captured), and compile_class to
+resolve/create the constant in that runtime namespace instead of flattening to a
+static `parent__C` global. Risky (class-definition codegen); a tried
+`compile_class.rb` name-flattening tweak did NOT help (the undefined symbol comes
+from the uncaptured local, not the flattened name) and was reverted. Dedicated
+session with the full gate ladder; do not attempt piecemeal.
+
 ### 3f. Anonymous classes not named by constant assignment (2026-07-05)
 
 `Anon = Class.new` (and `D = Data.define(...)`, `S = Struct.new(:a)` without a
