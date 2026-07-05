@@ -89,6 +89,10 @@ class File < IO
   def path
     @path
   end
+
+  def to_path
+    @path
+  end
   
   def initialize(path, mode = "r")
     @path = path
@@ -203,32 +207,88 @@ class File < IO
     return lines
   end
 
-  def self.basename(name)
-    i = name.rindex(SEPARATOR)
-    if !i && ALT_SEPARATOR
-      i = name.rindex(ALT_SEPARATOR)
+  # MRI File.basename: strip trailing separators, take the last component;
+  # "/" stays "/". An optional suffix is removed (".*" = any extension).
+  def self.basename(name, suffix = nil)
+    name = __coerce_path(name)
+    e = name.length
+    while e > 1 && name[e - 1] == 47      # trailing '/'s (but keep a lone "/")
+      e -= 1
     end
-
-    if i
-      i = i + 1
-      return name[i .. -1]
+    return "/" if e == 1 && name[0] == 47
+    s = name[0, e].to_s
+    i = s.rindex(SEPARATOR)
+    if !i.nil?
+      s = s[(i + 1) .. -1].to_s
     end
-    return name
+    if !suffix.nil?
+      suffix = __coerce_path(suffix)
+      if suffix == ".*"
+        d = s.rindex(".")
+        if !d.nil? && d > 0
+          s = s[0, d].to_s
+        end
+      elsif suffix.length > 0 && s.length > suffix.length && s.end_with?(suffix)
+        s = s[0, s.length - suffix.length].to_s
+      end
+    end
+    s
   end
 
-  def self.dirname(dname)
-    i = dname.rindex(SEPARATOR)
-    if !i && ALT_SEPARATOR
-      i = dname.rindex(ALT_SEPARATOR)
+  # MRI File.dirname: everything before the last component ("." when there is
+  # no separator, "/" for root-level paths). level peels multiple components.
+  def self.dirname(dname, level = 1)
+    raise ArgumentError, "negative level: #{level}" if level < 0
+    d = __coerce_path(dname)
+    while level > 0
+      d = __dirname_one(d)
+      level -= 1
     end
+    d
+  end
 
-    if i && i > 0
-      i = i - 1
-      r = 0..i
-      d = dname[r]
-      return d
+  def self.__dirname_one(dname)
+    e = dname.length
+    while e > 1 && dname[e - 1] == 47     # strip trailing '/'s
+      e -= 1
     end
-    return nil
+    return "/" if e == 1 && dname[0] == 47
+    s = dname[0, e].to_s
+    i = s.rindex(SEPARATOR)
+    return "." if i.nil?
+    while i > 0 && s[i - 1] == 47         # collapse separator run
+      i -= 1
+    end
+    return "/" if i == 0
+    s[0, i].to_s
+  end
+
+  # Extension of the last component: from the last "." that is neither the
+  # component's first byte nor followed by nothing... MRI: "a.rb" -> ".rb",
+  # ".profile" -> "", "a" -> "", "a.rb.txt" -> ".txt".
+  def self.extname(name)
+    b = basename(name)
+    d = b.rindex(".")
+    return "" if d.nil? || d == 0
+    b[d .. -1].to_s
+  end
+
+  # [dirname, basename] pair.
+  def self.split(name)
+    [dirname(name), basename(name)]
+  end
+
+  def self.__coerce_path(p)
+    return p if p.is_a?(String)
+    if p.respond_to?(:to_str)
+      r = p.to_str
+      return r if r.is_a?(String)
+    end
+    if p.respond_to?(:to_path)
+      r = p.to_path
+      return r if r.is_a?(String)
+    end
+    raise TypeError, "no implicit conversion of #{p.class} into String"
   end
 
   # File.join(a, b, ...) -- join path components with SEPARATOR, collapsing a doubled separator at each
