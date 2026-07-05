@@ -2658,8 +2658,15 @@ class Compiler
         kind = p[1]
         if kind == :rest
           fwd << E[:splat, nm]
-        elsif kind == :block || kind == :keyrest || kind == :key || kind == :keyreq
-          # block forwards implicitly; keyword forwarding not handled here yet
+        elsif kind == :key || kind == :keyreq
+          # Forward the keyword's CURRENT binding as a call-site pair (same shape
+          # convert_ternalt_in_calls emits; group_keyword_arguments -- which runs
+          # after this pass -- folds it into the trailing kwargs hash).
+          fwd << E[:pair, E[:sexp, nm.inspect.to_sym], nm]
+        elsif kind == :keyrest
+          fwd << E[:hash_splat, nm]
+        elsif kind == :block
+          # block forwards implicitly
         else
           fwd << nm   # [:name, :default, expr] and any other positional -> forward by name
         end
