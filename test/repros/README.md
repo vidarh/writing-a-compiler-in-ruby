@@ -19,5 +19,6 @@ messages and docs/KNOWN_ISSUES.md.
 | enum1.rb | Block-less Array iterators return an Enumerator (each_index/find/sort_by/…) | feature (block-less guards) |
 | misc1.rb | Range#size, Array#max(n)/min(n)+block, String#delete_prefix/suffix | feature (common methods) |
 | grep1.rb | Array#grep/grep_v (=== match + map block), block-less detect/each_entry | feature (Array<-Enumerable) |
+| hashenum1.rb | Hash sort/first/take/drop/find/group_by/partition; Array entries/minmax_by | feature (Hash<-Enumerable) |
 | st5.rb | Exception containment ESCAPE: alias+def-in-block redefined `Integer#<=>` raising escapes the it-rescue | OPEN (KNOWN_ISSUES active 3) |
 | pm1.rb | Pattern binding (`in [a, 1] if a >= 0`) inside a block: `a` not env-captured | OPEN (KNOWN_ISSUES active 2) |

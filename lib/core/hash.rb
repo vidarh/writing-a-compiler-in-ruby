@@ -441,6 +441,57 @@ class Hash
     best
   end
 
+  # Pair-oriented Enumerable methods. Where a "value" is needed these use the [k, v] pair (via #to_a,
+  # which yields pairs in insertion order); block forms call the block with (key, value).
+  def sort(&block)
+    to_a.sort(&block)
+  end
+
+  def first(n = nil)
+    return to_a.first if n.nil?
+    to_a.first(n)
+  end
+
+  def take(n)
+    to_a.take(n)
+  end
+
+  def drop(n)
+    to_a.drop(n)
+  end
+
+  def find(&block)
+    return to_enum(:find) if !block
+    each { |k, v| return [k, v] if block.call(k, v) }
+    nil
+  end
+  alias detect find
+
+  def group_by(&block)
+    return to_enum(:group_by) if !block
+    result = {}
+    each do |k, v|
+      key = block.call(k, v)
+      result[key] = [] if !result.has_key?(key)
+      result[key] << [k, v]
+    end
+    result
+  end
+
+  def partition(&block)
+    return to_enum(:partition) if !block
+    yes = []
+    no = []
+    each do |k, v|
+      if block.call(k, v)
+        yes << [k, v]
+      else
+        no << [k, v]
+      end
+    end
+    [yes, no]
+  end
+
   def each_with_index(&block)
     return to_enum(:each_with_index) if !block
     i = 0

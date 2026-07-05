@@ -1427,6 +1427,17 @@ class Array
     [min, max]
   end
 
+  # [min_by(&block), max_by(&block)] in one pass' worth of API (two here). Block-less yields an Enumerator.
+  def minmax_by(&block)
+    return to_enum(:minmax_by) if !block
+    [min_by(&block), max_by(&block)]
+  end
+
+  # Enumerable#entries is a synonym for #to_a.
+  def entries
+    to_a
+  end
+
   # Returns true if any element matches the given block (or is truthy if no block given)
   def any?
     i = 0
