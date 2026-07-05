@@ -224,6 +224,54 @@ class Class
   # (Class#include copies the vtable without recording the module), so this returns the class chain
   # only -- enough that Module#ancestors is not a missing method (which raised at describe-level in
   # specs and, being unrescued, exited -> tgc_sweep abort).
+  # Runtime constant reflection over the dynamic constant table (compile-time
+  # constants have no runtime name->value table yet -- see KNOWN_ISSUES 7's
+  # ivar-table sibling; this covers dynamically assigned constants and
+  # registrations like Struct.new("Name")). Probes self's qualified key, each
+  # ancestor's, then the bare global key.
+  def const_get(name, inherit = true)
+    s = name.to_s
+    # A::B path: resolve stepwise
+    di = s.index("::")
+    if !di.nil?
+      head = const_get(s[0, di].to_s, inherit)
+      rest = s[(di + 2) .. -1].to_s
+      raise NameError.new("uninitialized constant #{s}") if !head.is_a?(Class)
+      return head.const_get(rest, inherit)
+    end
+    v = __runtime_const_lookup("#{self.name}::#{s}")
+    return v if !v.nil?
+    if inherit
+      a = ancestors
+      i = 0
+      while i < a.length
+        an = a[i]
+        i += 1
+        next if !an.is_a?(Class)
+        v = __runtime_const_lookup("#{an.name}::#{s}")
+        return v if !v.nil?
+      end
+    end
+    v = __runtime_const_lookup(s)
+    return v if !v.nil?
+    raise NameError.new("uninitialized constant #{self.name}::#{s}")
+  end
+
+  def const_defined?(name, inherit = true)
+    begin
+      const_get(name, inherit)
+      true
+    rescue NameError
+      false
+    end
+  end
+
+  # Register under this module's qualified key so const_get/deref fallbacks find it.
+  def const_set(name, value)
+    __const_set_global("#{self.name}::#{name.to_s}", value)
+    value
+  end
+
   def ancestors
     result = []
     k = self
