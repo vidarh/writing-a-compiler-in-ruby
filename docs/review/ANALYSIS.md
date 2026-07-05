@@ -37,6 +37,19 @@ picked at during a burndown loop.
 | 7 | `__get_raw` unreachable on Array *subclasses* (7× in variables_spec) | Open — easy standalone |
 | 8 | rubyspec_helper.rb:556 failure messages interpolate unset `@result` (always nil) | Open — one-line, in harness batch |
 
+## Execution status (loop of 2026-07-04/05)
+
+Phases 0–2 are COMPLETE and Phase 3 is largely done (~36 gated commits;
+tests 5,935 → ~9,000+, sweeps committed as they land). Landed beyond the
+plan: binary-safe String (hidden pack/unpack prerequisite), the Dir#read
+dirent-aliasing memory-corruption fix, &nil-forwarding via the &blk-param
+convention (three compiler-side fixes reverted — KNOWN_ISSUES 3b), and a
+codegen-hazard playbook (memory: compiler-analysis-loop-2026-07-05).
+Remaining from Phase 3: kwargs **{}-elision edge, nested destructure groups,
+bare-constant ancestry resolution, MyArray/Array-copy-ctor hunt, the
+strictness long tail. Then Phase 4 refactors and the parked projects
+(Float first).
+
 ## Recommended next-session plan (ease × payoff)
 
 Phase ordering interleaves "protect the codebase" items (R1/R4, which fix live
