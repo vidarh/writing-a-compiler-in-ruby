@@ -272,6 +272,29 @@ class Class
     value
   end
 
+  # remove_const: drop a dynamically-registered constant from the runtime table,
+  # returning its value. MRI raises NameError when the constant is not defined,
+  # but here compile-time constants have no runtime entry, so a strict raise
+  # would abort ensure blocks that clean up compile-time consts -- returning nil
+  # for a not-in-table name is the safer divergence. Covers the const_set /
+  # dynamic-assignment cases the constants_spec ensure blocks exercise.
+  def remove_const(name)
+    key = "#{self.name}::#{name.to_s}"
+    n = $__runtime_const_names
+    return nil if n.nil?
+    i = 0
+    while i < n.length
+      if n[i] == key
+        v = $__runtime_const_vals[i]
+        n.delete_at(i)
+        $__runtime_const_vals.delete_at(i)
+        return v
+      end
+      i += 1
+    end
+    nil
+  end
+
   def ancestors
     result = []
     k = self
