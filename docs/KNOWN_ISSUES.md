@@ -85,10 +85,13 @@ the PREVIOUS item's value from interpolation while the calls used the current
 one). Workarounds in tree: Dir.glob's queue walk (lib/core/glob.rb, per-item
 method frames + inline indexing), Enumerator::Product (ivars),
 Set in-place filters (in-loop change flags), String#__copy_raw (derive before
-bindex). RELATED, same family: adding ANY extra branch to Array.[] (even one
-that never fires self-hosted) segfaults stage-1 self-compilation — see the
-pinned note in lib/core/array.rb; that single bug gates ~40 MyArray specs
-(slice_spec measured 9→52 with the bypass in place). Root-causing this is the
+bindex). RELATED, same family: adding ANY extra branch to Array.[] segfaults or
+fails stage-1 self-compilation — THREE variants confirmed 2026-07-05:
+unconditional __new, Ruby-guarded (`if self.equal?(Array)`), and a raw
+`%s(if (eq self Array) ...)` sexp branch. The guard never fires self-hosted,
+so this is purely shape/layout-sensitive miscompilation of Array.[] (the
+hottest bootstrap function). That single bug gates ~40 MyArray specs
+(slice_spec measured 9→52 with the bypass). Root-causing this is the
 highest-leverage compiler hunt right now.
 
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
