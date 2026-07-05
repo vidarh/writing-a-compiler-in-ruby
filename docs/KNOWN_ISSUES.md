@@ -131,8 +131,12 @@ program AND a 600-method module body BOTH containing the exact
 `m = Module.new{} + m.instance_method` pattern compile and run FINE. So
 the trigger is a SPECIFIC CONSTRUCT COMBINATION in the fixture (it has
 module_function, nested modules, `class << self`, alias, private, class
-vars), not line count. Needs a construct-bisection of the fixture (block-
-balanced cuts) to isolate the interacting construct, the same family as the other layout-sensitive
+vars), not line count. LAYOUT/ASLR-SENSITIVE: under `setarch -R` (ASLR off) the crashing binary
+exits cleanly (0 tests, no segfault) instead of dying -- so a deterministic
+repro needs the ASLR-off + valgrind/watchpoint tooling from the crash-
+burndown era, not simple bisection (5+ construct-repro attempts and the
+full fixture-minus-requires all fail to trigger it in isolation). A
+dedicated debugging session, not a loop-tick fix, the same family as the other layout-sensitive
 miscompiles (glob loop-carried locals, Array.[] extra-branch,
 b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
