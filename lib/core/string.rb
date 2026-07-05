@@ -2004,7 +2004,8 @@ class String
   def match?(pattern, pos = 0)
     pattern = Regexp.new(pattern) if pattern.is_a?(String)
     return false if pattern.nil?
-    !pattern.match(self, pos).nil?
+    # Regexp#match? does not publish $~ (MRI); #match would.
+    pattern.match?(self, pos)
   end
 
   # String#unpack: delegates to the shared __Pack codec (lib/core/pack.rb).

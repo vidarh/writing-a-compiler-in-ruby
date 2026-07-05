@@ -40,11 +40,47 @@ class Regexp
     @options || 0
   end
 
-  # Match regexp against string - returns position of match or nil
-  # Phase 4: Supports literals, metacharacters, character classes, and basic quantifiers
+  # Match regexp against string - returns position of match or nil.
+  # Routes through #match so the $~ family is published.
   def =~(string)
-    result = match_internal(string)
-    result ? result[0] : nil
+    return nil if string.nil?
+    m = match(string)
+    m ? m.begin(0) : nil
+  end
+
+  # Publish the $~ family. $&/$`/$'/$1..$9 are PLAIN global slots in this
+  # runtime (no frame-local semantics, no derived reads), so they are all
+  # assigned at match time. match? paths deliberately skip this (MRI).
+  def __set_last_match(m)
+    $~ = m
+    if m.nil?
+      $& = nil
+      $` = nil
+      $' = nil
+      $1 = nil
+      $2 = nil
+      $3 = nil
+      $4 = nil
+      $5 = nil
+      $6 = nil
+      $7 = nil
+      $8 = nil
+      $9 = nil
+    else
+      $& = m[0]
+      $` = m.pre_match
+      $' = m.post_match
+      $1 = m[1]
+      $2 = m[2]
+      $3 = m[3]
+      $4 = m[4]
+      $5 = m[5]
+      $6 = m[6]
+      $7 = m[7]
+      $8 = m[8]
+      $9 = m[9]
+    end
+    m
   end
 
   # Match method - returns MatchData or nil
@@ -55,9 +91,9 @@ class Regexp
     # character before pos.
     result = match_internal(text, pos)
     if result
-      MatchData.new(self, text, result[0], result[1], result[2], result[3], result[4])
+      __set_last_match(MatchData.new(self, text, result[0], result[1], result[2], result[3], result[4]))
     else
-      nil
+      __set_last_match(nil)
     end
   end
 
