@@ -492,6 +492,33 @@ class Hash
     [yes, no]
   end
 
+  # map/collect over (key, value): the block is called with two arguments, so `{|k, v| ... }` works
+  # directly (a one-parameter block receives only the key, as when Hash#each's pair is not repacked).
+  def map(&block)
+    return to_enum(:map) if !block
+    result = []
+    each { |k, v| result << block.call(k, v) }
+    result
+  end
+  alias collect map
+
+  # each_with_object yields ([k, v], memo) -- the element is the pair, so both `{|(k,v), m| }` and
+  # `{|pair, m| }` bind correctly -- and returns the memo.
+  def each_with_object(memo, &block)
+    each { |k, v| block.call([k, v], memo) }
+    memo
+  end
+
+  # reduce/inject and tally operate on the [k, v] pairs; delegate to Array over #to_a.
+  def reduce(*args, &block)
+    to_a.reduce(*args, &block)
+  end
+  alias inject reduce
+
+  def tally
+    to_a.tally
+  end
+
   def each_with_index(&block)
     return to_enum(:each_with_index) if !block
     i = 0

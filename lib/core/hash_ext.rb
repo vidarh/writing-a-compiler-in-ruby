@@ -62,8 +62,10 @@ class Hash
     to_a.sort_by {|pair| yield(pair[0], pair[1]) }
   end
 
-  def collect
-    to_a.collect
+  # Delegate to Hash#map (defined in hash.rb). The previous body `to_a.collect` dropped the block and
+  # returned a bare Enumerator, so `h.collect {|k,v| ... }` never mapped.
+  def collect(&block)
+    map(&block)
   end
   def inspect
     # Cycle guard: a self-referential hash (h[:k]=h) would recurse forever through v.inspect ->

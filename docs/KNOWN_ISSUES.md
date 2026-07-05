@@ -65,10 +65,12 @@ works: `{|(x,y)| ... }` binds correctly (transform.rb `:destruct` params, ~440),
 and native two-value yielders are fine (`Hash#each`/`min_by`/`merge` with
 `{|k,v| }` all pass). So the gap is specifically implicit single-array →
 multi-param splat in the block prologue. Compiler-level (block parameter binding),
-not a lib fix — high value (hits `arr_of_pairs.map {|a,b| }`, a very common form,
-and `Hash#map` which is also absent because it would rely on this). Also note
-`Hash#map` is simply undefined (NoMethodError) — but adding it is entangled with
-this splat/arity behavior, so both want the same session.
+not a lib fix — high value (hits `arr_of_pairs.map {|a,b| }`, a very common form).
+NOTE (2026-07-05): `Hash#map`/`collect`/`each_with_object`/`reduce` were since
+added (they yield the two values natively, so `{|k,v| }` needs no splat); the
+splat gap only affects the rarer one-parameter block over already-paired
+elements (`arr_of_pairs.map {|pair| }` still binds pair=first-element, and a
+Hash enumerator's `.map {|pair,i| }` mis-binds). Still compiler-level.
 
 ### 3. Exception containment escape on runtime-redefined method raise (test/repros/st5.rb)
 
