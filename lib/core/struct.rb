@@ -52,7 +52,12 @@ class Struct
       # was silently dropped and marshal's fixtures aborted their whole file at load on
       # "uninitialized constant Useful".
       if start == 1 && args[0]
-        __const_set_global("Struct::" + args[0], klass)
+        full = "Struct::" + args[0]
+        __const_set_global(full, klass)
+        # Also set the class object's @name (metadata slot 2, a raw C string) so
+        # klass.name / #inspect report "Struct::Animal" rather than the inherited
+        # "Struct". slot 2 = @name (see the layout comment in lib/core/class.rb).
+        %s(assign (index klass 2) (callm full __get_raw))
       end
       Struct.__struct_registry[klass.object_id] = syms
       # Store the raw keyword_init: value (or nil when unspecified) so keyword_init? can distinguish
