@@ -127,6 +127,9 @@ class ExceptionRuntime
   # Unwinds stack and jumps to handler (like :preturn for Proc)
   def raise(exception_obj)
     @current_exception = exception_obj
+    # $! is the user-visible current exception; live from raise until the
+    # handling rescue completes (see #clear).
+    $! = exception_obj
 
     if @exc_stack
       handler = @exc_stack
@@ -162,6 +165,7 @@ class ExceptionRuntime
   # Clear current exception (after rescue handles it)
   def clear
     @current_exception = nil
+    $! = nil
   end
 end
 
