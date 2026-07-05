@@ -4145,9 +4145,21 @@ class Integer < Numeric
       return nil
     end
 
-    # For integers, rounding always returns self since they're already whole numbers
-    # The ndigits and half parameters don't change the result for integers
-    self
+    prec = 0
+    prec = args[0] if args.length >= 1 && args[0].is_a?(Integer)
+    # Non-negative precision: an integer is already whole -> self.
+    return self if prec >= 0
+
+    # Negative precision: round to the nearest 10^(-prec), half away from zero.
+    # e.g. 12345.round(-2) = 12300, 12355.round(-2) = 12400, -12345.round(-2) = -12300.
+    power = 10 ** (-prec)
+    neg = self < 0
+    n = neg ? -self : self
+    q = n / power
+    r = n - q * power
+    q += 1 if r * 2 >= power
+    result = q * power
+    neg ? -result : result
   end
 
   def magnitude
