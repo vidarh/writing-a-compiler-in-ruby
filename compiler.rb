@@ -308,6 +308,27 @@ class Compiler
   # For now we are assuming statically resolvable chains, and not
   # tested multi-level dereference (e.g. Foo::Bar::Baz)
   #
+  # Flatten a deref parent chain to its qualified name ("Outer::Inner").
+  # Returns nil when any component is not a plain symbol (dynamic parent).
+  def __deref_parent_name(left)
+    return left.to_s if left.is_a?(Symbol)
+    if left.is_a?(Array) && left[0] == :deref
+      parts = []
+      n = left
+      while n.is_a?(Array) && n[0] == :deref
+        if n.length == 3
+          return nil if !n[2].is_a?(Symbol)
+          parts.unshift(n[2].to_s)
+        end
+        n = n[1]
+      end
+      return nil if !n.is_a?(Symbol)
+      parts.unshift(n.to_s)
+      return parts.join("::")
+    end
+    nil
+  end
+
   def compile_deref(scope, left = nil, right = nil)
     # Handle malformed :deref node (no children)
     # This can occur when transform.rb incorrectly adds [:deref] to a :let variables list
@@ -379,7 +400,9 @@ class Compiler
     if !cscope || !cscope.is_a?(ModuleScope)
       # Cannot resolve statically - generate runtime constant lookup
       # This commonly appears in defined?(Undefined::Constant) where the constant doesn't exist
-      args_array = const_name_to_string_ast(left.to_s) + const_name_to_string_ast(right.to_s)
+      pname = __deref_parent_name(left)
+      pname = left.to_s if pname.nil?
+      args_array = const_name_to_string_ast(pname) + const_name_to_string_ast(right.to_s)
       res = compile_eval_arg(scope, [:call, :__const_get, args_array])
       @e.save_result(res)
       return Value.new([:subexpr])
@@ -413,7 +436,11 @@ class Compiler
     # even though Struct.new("Useful", ...) had registered "Struct::Useful" in the runtime
     # constant table. Emit the QUALIFIED runtime lookup instead.
     if ret.is_a?(Array) && ret[0] == :runtime_const
-      args_array = const_name_to_string_ast(left.to_s) + const_name_to_string_ast(right.to_s)
+      # left may be a NESTED deref ([:deref, :Outer, :Inner]) -- flatten to the
+      # qualified name; left.to_s would bake the raw AST into the key.
+      pname = __deref_parent_name(left)
+      pname = left.to_s if pname.nil?
+      args_array = const_name_to_string_ast(pname) + const_name_to_string_ast(right.to_s)
       res = compile_eval_arg(scope, [:call, :__const_get, args_array])
       @e.save_result(res)
       return Value.new([:subexpr])
@@ -863,13 +890,19 @@ class Compiler
     # Handle Foo::Bar = value or self::Bar = value
     # These are static constant assignments, not method calls
     if left.is_a?(Array) && left[0] == :deref
-      # [:deref, parent, const_name] = value
-      # This is a scoped constant assignment
+      # [:deref, parent, const_name] = value -- scoped constant assignment.
       parent = left[1]
       const_name = left[2]
-
-      # For self::Const or Foo::Const, just treat as a constant in current scope for now
-      # FIXME: Should handle proper scoping with parent modules/classes
+      pname = __deref_parent_name(parent)
+      if pname
+        # Register under the QUALIFIED key ("Outer::Inner::CONST"), matching the
+        # __const_get read fallback. The old flatten-to-bare-name write made
+        # reads of Scope::CONST assigned inside blocks/defs unresolvable.
+        qualified = pname + "::" + const_name.to_s
+        return compile_callm(scope, :self, :__const_set_global,
+                             [const_name_to_string_ast(qualified), right])
+      end
+      # Dynamic parent (e.g. self::Const): keep the historical current-scope fallback.
       left = const_name
     end
 
