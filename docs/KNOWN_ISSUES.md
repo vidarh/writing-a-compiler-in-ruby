@@ -35,9 +35,10 @@ a full failure triage and ranked plan.
 - **Stabby lambda with rest-args whose body creates a nested proc**: `__tmp_proc`
   not declared in the lambda's let → `undefined method '__tmp_proc'`. Gates 253
   fails in file/printf_spec and the shared :kernel_sprintf suite.
-- **`Array.[]` / subclass instantiation (`MyArray[...]`)**: allocate-based
-  implementations segfault the self-hosted compiler (see lib/core/array.rb:463
-  comment). Gates ~40 array spec files.
+- **`Array.[]` / subclass instantiation (`MyArray[...]`)**: CONFIRMED and
+  pinned 2026-07-05 (see 3c below and lib/core/array.rb) — both unconditional
+  and subclass-guarded `__new` bypasses segfault stage-1 self-compilation.
+  The `Array.new(other_array)` copy half IS fixed (8eb49b4).
 - **`__get_raw` unreachable on Array subclasses** (variables_spec destructuring).
 
 ### 2. Pattern binding inside a block is not env-captured (exposed 2026-07-04)
@@ -74,6 +75,21 @@ yields emitted garbage asm); (c) a prologue sexp normalizing the `__closure__`
 arg slot crashed stage-1 with SIGFPE. The eventual fix probably needs (b)
 root-caused first — it is the cleanest design and its miscompile is a compiler
 bug in its own right.
+
+### 3c. Loop-carried locals go stale in call-rich loop bodies (2026-07-05) — COMPILER BUG, pinned
+
+Locals reassigned each iteration from array reads (`item = queue[qi]`) in a
+while body containing calls read STALE values across those calls — two
+divergent storage locations for the same local (an instrumented run printed
+the PREVIOUS item's value from interpolation while the calls used the current
+one). Workarounds in tree: Dir.glob's queue walk (lib/core/glob.rb, per-item
+method frames + inline indexing), Enumerator::Product (ivars),
+Set in-place filters (in-loop change flags), String#__copy_raw (derive before
+bindex). RELATED, same family: adding ANY extra branch to Array.[] (even one
+that never fires self-hosted) segfaults stage-1 self-compilation — see the
+pinned note in lib/core/array.rb; that single bug gates ~40 MyArray specs
+(slice_spec measured 9→52 with the bypass in place). Root-causing this is the
+highest-leverage compiler hunt right now.
 
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
