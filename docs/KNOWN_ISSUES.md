@@ -170,10 +170,40 @@ So `2**64` and `5**50` are exact but `(5**50)*(5**50)` is not — the defect is 
 the large-operand multiply (carry/limb handling in the bignum `*` routine, likely
 the `%s(...)` sexp path in lib/core/integer.rb or the bignum representation), and
 `**` (repeated-squaring) surfaces it too. Latent — most specs never build numbers
-this large — but a genuine correctness bug. NOT a loop-tick fix: needs isolation
-of the multiply limb loop with a differential over operand sizes. First reproduce
-by bisecting operand magnitude (find the smallest N where `(2**N)*(2**N)` first
-diverges from MRI) to localize the carry boundary.
+this large — but a genuine correctness bug.
+
+**The divergence is DATA-dependent, not size-dependent** (bisected 2026-07-05):
+EVERY power of two squared is correct up to 2^128 (single-bit operands exert no
+carry pressure), while among powers of three `3^40 * 3^40` is WRONG but
+`3^50 * 3^50` is CORRECT — non-monotonic in size. That rules out a simple
+"limb-count threshold" and points to a carry-propagation bug that fires only for
+particular limb-value patterns. NOT a loop-tick fix (a wrong patch corrupts ALL
+arithmetic): needs a dedicated session that isolates the exact limb inputs of a
+failing product (e.g. dump the limb arrays of `3^40` and multiply them by hand
+against the routine) and audits the carry loop. `3^40 * 3^40 != 3^80` is a compact
+starting repro.
+
+**Partially investigated (2026-07-05):** the defect is in
+`Integer#__multiply_heap_by_heap` (lib/core/integer.rb ~903), a hand-rolled
+school multiplication over 30-bit limbs (limb base 2^30). Two carry injections
+there use a RAW `+` without limb-overflow propagation (line ~976 adding
+`product_carry_high`, line ~1002 adding `1`), unlike the main accumulation which
+uses `__add_two_limbs_with_overflow`. Those raw `+`s ARE latent bugs, BUT fixing
+them (routing through a carry-propagating `__add_carry_into` helper) AND adding a
+final limb-normalization sweep does **NOT** fix the symptom — verified: `3^40 * 3^40`
+still diverges. So the raw-`+` injections are not the (whole) root cause.
+
+Sharper clue: **multiplication is not commutative** for the failing operands
+(`(11**29) * x != x * (11**29)`), and `__multiply_heap_by_heap` is asymmetric
+(outer loop over `other`'s limbs, inner over `self`'s). That points the finger at
+the per-limb step `__multiply_limb_by_fixnum_with_carry` (its carry-out math at
+lines ~787-799: the `sum_high*4 + (sum_low>>30)` reconstruction and the
+`sign_adjust` for negative `sum_low`) or the main accumulation carry logic
+(~947-980), not the two injection points. `60!` (a fixnum-accumulation path,
+`__multiply_heap_by_fixnum`) is CORRECT, so the fixnum path is fine — only
+heap*heap is broken. Next session: instrument `__multiply_limb_by_fixnum_with_carry`
+with a differential against `limb*fixnum+carry` computed in plain Ruby over the
+actual limb values of `3^40`, and check the carry-out reconstruction.
 
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
