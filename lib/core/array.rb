@@ -197,9 +197,10 @@ class Array
 
 
   # FIXME: Cut and paste from Enumerable
-  def detect(ifnone = nil)
+  def detect(ifnone = nil, &block)
+    return to_enum(:detect) if !block
     self.each do |item|
-      if yield(item)
+      if block.call(item)
         return item
       end
     end
@@ -207,6 +208,37 @@ class Array
       return ifnone.call
     end
     return nil
+  end
+
+  # grep / grep_v: select elements the pattern does (does not) match via `===`, optionally mapping each
+  # kept element through a block. Array cannot `include Enumerable` in this runtime, so these mirror the
+  # Enumerable definitions directly (both walk via #each, which Array provides).
+  def grep(pattern, &block)
+    out = []
+    each do |x|
+      if pattern === x
+        out << (block ? block.call(x) : x)
+      end
+    end
+    out
+  end
+
+  def grep_v(pattern, &block)
+    out = []
+    each do |x|
+      if !(pattern === x)
+        out << (block ? block.call(x) : x)
+      end
+    end
+    out
+  end
+
+  # Like #each, but returns an Enumerator when called without a block (Array elements are single values,
+  # so there is nothing to re-pack -- this just provides the method Enumerable would otherwise supply).
+  def each_entry(&block)
+    return to_enum(:each_entry) if !block
+    each { |x| block.call(x) }
+    self
   end
 
   # FIXME: Cut and paste from Enumerable
