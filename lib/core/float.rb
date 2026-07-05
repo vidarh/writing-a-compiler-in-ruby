@@ -5,6 +5,17 @@ class Float
   # Use computed values instead
   INFINITY = 1 << 28  # Large value without literal overflow
   MAX = (1 << 28) - 1
+  # A true IEEE NaN is not representable while Float is stubbed; the CONSTANT
+  # must exist though -- specs reference Float::NAN in before-blocks, and a
+  # missing constant aborted whole files (kernel/sprintf, string/modulo).
+  # NOTE: no 0.0 literals here -- the SELF-HOSTED compiler cannot compile
+  # float literals yet (String#to_f is missing; MRI-hosted works, selftest-c
+  # dies), which is also why INFINITY/MAX are integer expressions.
+  NAN = Float.new
+  EPSILON = Float.new
+  MIN = Float.new
+  DIG = 15
+  MANT_DIG = 53
 
   # Reserve space for double value (8 bytes = 2 slots)
   # We use instance variables to ensure the compiler allocates space

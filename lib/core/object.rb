@@ -298,8 +298,15 @@ class Object
   # objects that expose only #to_int (a common mspec mock idiom) format under %d/%x/%o/%b.
   def __fmt_to_int(val)
     return val if val.is_a?(Integer)
+    if val.is_a?(String)
+      # MRI coerces %d/%x/... string arguments STRICTLY (like Kernel#Integer).
+      r = val.__parse_int(0, true)
+      raise ArgumentError, "invalid value for Integer(): #{val.inspect}" if r.nil?
+      return r
+    end
     return val.to_int if val.respond_to?(:to_int)
-    val.to_i
+    return val.to_i if val.respond_to?(:to_i)
+    raise TypeError, "can't convert #{val.class} into Integer"
   end
 
   # Minimal sprintf: parses %[flags][width][.prec]type. Types: d/i/u, s, x/X, o, b, c, f/e/g, p, %.
@@ -349,13 +356,47 @@ class Object
             i = i + 1
           end
         end
+        if i >= flen
+          raise ArgumentError, "incomplete format specifier; use %% (double %) instead"
+        end
         type = fmt[i]
         i = i + 1
+        # Named references: %{name} interpolates hash[name] as a string;
+        # %<name>TYPE reads the value then formats with TYPE. args[0] must be
+        # a Hash; a missing key raises KeyError (kernel/sprintf specs).
+        named = nil
+        if type == 123 || type == 60          # '{' / '<'
+          closer = 125                         # '}'
+          closer = 62 if type == 60            # '>'
+          nm = ""
+          while i < flen && fmt[i] != closer
+            nm = nm + fmt[i].chr
+            i = i + 1
+          end
+          raise ArgumentError, "malformed format string" if i >= flen
+          i = i + 1
+          h = args[0]
+          raise ArgumentError, "one hash required" if !h.is_a?(Hash)
+          k = nm.to_sym
+          raise KeyError, "key<#{nm}> not found" if !h.key?(k)
+          if type == 123
+            out = out + h[k].to_s
+            next
+          end
+          named = h[k]
+          type = fmt[i]
+          i = i + 1
+        end
         if type == 37
           out = out + "%"
         else
-          val = args[ai]
-          ai = ai + 1
+          if named.nil?
+            raise ArgumentError, "too few arguments" if ai >= args.length
+            val = args[ai]
+            ai = ai + 1
+          else
+            val = named
+          end
           body = ""
           numeric = false
           neg = false
@@ -380,8 +421,15 @@ class Object
           elsif type == 98    # b
             body = __fmt_to_int(val).to_s(2); numeric = true
           elsif type == 99    # c
-            body = val.is_a?(Integer) ? val.chr : val.to_s
-          elsif type == 102 || type == 101 || type == 103   # f e g
+            if val.is_a?(Integer)
+              body = val.chr
+            else
+              # MRI takes the FIRST character of a longer string.
+              s = val.to_s
+              raise ArgumentError, "%c requires a character" if s.length == 0
+              body = s[0, 1].to_s
+            end
+          elsif type == 102 || type == 101 || type == 103 || type == 69 || type == 71   # f e g E G
             body = __format_float(val.to_f, prec < 0 ? 6 : prec)
             numeric = true
             if body.length > 0 && body[0] == 45
@@ -390,8 +438,10 @@ class Object
             end
           elsif type == 112   # p
             body = val.inspect
-          else
+          elsif type == 97 || type == 65      # a A (hex float) -- Float-blocked, format decimally
             body = val.to_s
+          else
+            raise ArgumentError, "malformed format string - %#{type.chr}"
           end
           sign = ""
           if numeric
