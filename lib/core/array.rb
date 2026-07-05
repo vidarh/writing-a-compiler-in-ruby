@@ -129,6 +129,7 @@ class Array
 
   # FIXME: Belongs in Enumerable
   def find # FIXME: ifnone
+    return to_enum(:find) if !block_given?
     each do |e|
       r = yield(e)
       return e if r != false
@@ -210,9 +211,11 @@ class Array
 
   # FIXME: Cut and paste from Enumerable
   def each_with_index(&block)
+    return to_enum(:each_with_index) if !block_given?
     self.each_index do |i|
       block.call(self[i], i)
     end
+    self
   end
 
   # each_cons / each_slice are defined directly on Array (which cannot `include Enumerable` here). Both
@@ -939,6 +942,7 @@ class Array
 
   # First index of obj (==) or of the first element for which the block is true; nil if none.
   def find_index(*args, &block)
+    return to_enum(:find_index) if !block && args.empty?
     i = 0
     n = length
     if block
@@ -1004,11 +1008,13 @@ class Array
   # Same as Array#each, but passes the index of the element
   # instead of the element itself.
   def each_index
+    return to_enum(:each_index) if !block_given?
     i = 0
     while i < self.size
       yield(i)
       i += 1
     end
+    self
   end
 
   # Returns true if self array contains no elements.
@@ -1105,6 +1111,7 @@ class Array
 
   # Elements from the front while the block is true.
   def take_while
+    return to_enum(:take_while) if !block_given?
     result = []
     each do |x|
       break if !yield(x)
@@ -1115,6 +1122,7 @@ class Array
 
   # Elements after the leading run for which the block is true.
   def drop_while
+    return to_enum(:drop_while) if !block_given?
     result = []
     dropping = true
     each do |x|
@@ -2096,6 +2104,7 @@ class Array
 
   # FIXME: This belongs in Enumberable once "include" works.
   def partition &block
+    return to_enum(:partition) if !block
     trueArr = []
     falseArr = []
 
@@ -2121,6 +2130,7 @@ class Array
   #   - In place partitioning after initial copy.
   #   - Proper pivot selection to reduce chance of hitting worst case
   def sort_by &block
+    return to_enum(:sort_by) if !block
     return self if length <= 1
     pivot_el = self[0]
     pivot = block.call(pivot_el)

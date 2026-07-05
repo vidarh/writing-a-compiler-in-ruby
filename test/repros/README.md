@@ -16,5 +16,6 @@ messages and docs/KNOWN_ISSUES.md.
 | rat1.rb | Rational arithmetic/comparison/rounding, incl. Integer-promoted mixed ops | feature (full Rational impl) |
 | cx1.rb | Complex exact arithmetic (+ - * == conjugate abs2 rect), Integer coercion | feature (Complex exact subset) |
 | tor1.rb | String#to_r parses leading rational literals (whitespace/junk tolerant) | feature (String#to_r) |
+| enum1.rb | Block-less Array iterators return an Enumerator (each_index/find/sort_by/…) | feature (block-less guards) |
 | st5.rb | Exception containment ESCAPE: alias+def-in-block redefined `Integer#<=>` raising escapes the it-rescue | OPEN (KNOWN_ISSUES active 3) |
 | pm1.rb | Pattern binding (`in [a, 1] if a >= 0`) inside a block: `a` not env-captured | OPEN (KNOWN_ISSUES active 2) |

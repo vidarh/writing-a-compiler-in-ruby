@@ -52,6 +52,24 @@ FAIL→CRASH now that its `Warning` before-hook no longer aborts every test.
 Fix: capture pattern bindings (run the rewrite before find_vars, or register its
 lvars) — see also refactoring item R5 (pass manifest).
 
+### 2b. Implicit block-argument auto-splat is not performed (2026-07-05)
+
+When a block declares multiple parameters but the yielder passes a SINGLE array
+argument, Ruby auto-splats the array across the parameters:
+`[[1,2],[3,4]].map {|x,y| x+y }` binds x=1,y=2. We do not: the whole `[1,2]`
+lands in the first parameter (`select {|x,y| x>1}` fails with "undefined method
+'>' for [1,2]"), and `map`/`each` over pairs crash inconsistently ("undefined
+method 'each' for nil", one element succeeding then the next aborting — smells
+like a codegen/register issue in the partial handling). EXPLICIT destructuring
+works: `{|(x,y)| ... }` binds correctly (transform.rb `:destruct` params, ~440),
+and native two-value yielders are fine (`Hash#each`/`min_by`/`merge` with
+`{|k,v| }` all pass). So the gap is specifically implicit single-array →
+multi-param splat in the block prologue. Compiler-level (block parameter binding),
+not a lib fix — high value (hits `arr_of_pairs.map {|a,b| }`, a very common form,
+and `Hash#map` which is also absent because it would rely on this). Also note
+`Hash#map` is simply undefined (NoMethodError) — but adding it is entangled with
+this splat/arity behavior, so both want the same session.
+
 ### 3. Exception containment escape on runtime-redefined method raise (test/repros/st5.rb)
 
 When a method redefined at runtime via alias + def-in-block (e.g.
