@@ -777,6 +777,53 @@ class String
     r
   end
 
+  # Parse a leading rational literal into a Rational, ignoring surrounding whitespace and trailing
+  # junk (MRI semantics): "1/2" -> (1/2), "3" -> (3/1), "0.75" -> (3/4), "-3/4" -> (-3/4). A string with
+  # no leading number returns (0/1). self[i] yields a byte code in this runtime, so digits are '0'..'9'
+  # == 48..57 and the punctuation is matched by code ('.'=46, '/'=47, '-'=45, '+'=43, ws in 9/10/13/32).
+  def to_r
+    i = 0
+    n = length
+    while i < n && (self[i] == 32 || self[i] == 9 || self[i] == 10 || self[i] == 13)
+      i += 1
+    end
+    sign = 1
+    if i < n && (self[i] == 45 || self[i] == 43)
+      sign = -1 if self[i] == 45
+      i += 1
+    end
+    numer = 0
+    denom = 1
+    got = false
+    while i < n && self[i] >= 48 && self[i] <= 57
+      numer = numer * 10 + (self[i] - 48)
+      i += 1
+      got = true
+    end
+    if i < n && self[i] == 46   # '.' -- accumulate fractional digits, scaling the denominator
+      i += 1
+      while i < n && self[i] >= 48 && self[i] <= 57
+        numer = numer * 10 + (self[i] - 48)
+        denom = denom * 10
+        i += 1
+        got = true
+      end
+    end
+    if i < n && self[i] == 47   # '/' -- an explicit denominator multiplies whatever scale we have
+      i += 1
+      d = 0
+      dgot = false
+      while i < n && self[i] >= 48 && self[i] <= 57
+        d = d * 10 + (self[i] - 48)
+        i += 1
+        dgot = true
+      end
+      denom = denom * d if dgot && d != 0
+    end
+    return Rational.new(0, 1) unless got
+    Rational.new(sign * numer, denom)
+  end
+
   def slice!(b, e = nil)
     l = length
     # Range form: slice!(2..), slice!(1..-2), ... -- normalize to (start, length)

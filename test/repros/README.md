@@ -14,5 +14,7 @@ messages and docs/KNOWN_ISSUES.md.
 | blk1.rb | Block semantics matrix: `&b` param, `yield`, `block_given?` across nesting | fixed (63b5875 __callblk__) |
 | ie1.rb | instance_exec must not eat first arg as blkarg (expected [1, 2, 42] / 1) | fixed (17dffc5) |
 | rat1.rb | Rational arithmetic/comparison/rounding, incl. Integer-promoted mixed ops | feature (full Rational impl) |
+| cx1.rb | Complex exact arithmetic (+ - * == conjugate abs2 rect), Integer coercion | feature (Complex exact subset) |
+| tor1.rb | String#to_r parses leading rational literals (whitespace/junk tolerant) | feature (String#to_r) |
 | st5.rb | Exception containment ESCAPE: alias+def-in-block redefined `Integer#<=>` raising escapes the it-rescue | OPEN (KNOWN_ISSUES active 3) |
 | pm1.rb | Pattern binding (`in [a, 1] if a >= 0`) inside a block: `a` not env-captured | OPEN (KNOWN_ISSUES active 2) |
