@@ -304,6 +304,12 @@ class Set
 
   # Recursively flatten nested Sets.
   def flatten
+    # Recursion guard: a self-referential set (`set << set`) would otherwise recurse through #flatten
+    # forever -> stack overflow / segfault. MRI raises ArgumentError for a recursive set. Mirror the
+    # @__inspecting/@__comparing guards used elsewhere; a distinct set per nesting level means a Set that
+    # merely appears twice (without a cycle) still flattens.
+    raise ArgumentError.new("tried to flatten recursive Set") if @__flattening
+    @__flattening = true
     result = Set.new
     each do |e|
       if e.is_a?(Set)
@@ -312,6 +318,7 @@ class Set
         result << e
       end
     end
+    @__flattening = false
     result
   end
 
