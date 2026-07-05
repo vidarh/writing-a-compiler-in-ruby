@@ -142,6 +142,20 @@ b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
 ladder. Highest-count actionable compiler bug in the burndown.
 
+### 3f. Anonymous classes not named by constant assignment (2026-07-05)
+
+`Anon = Class.new` (and `D = Data.define(...)`, `S = Struct.new(:a)` without a
+string name) leaves the class's @name inherited ("Object"/"Struct") instead of
+MRI's "Anon"/"D"/"S". MRI names an anonymous class after the FIRST constant it
+is assigned to; we do not track that. Top-level `CONST = <class>` is a
+compile-time addr assignment (not the runtime __const_set_global path), so it
+cannot be hooked in lib -- it needs a compiler change in compile_assign to
+detect a class-valued constant assignment and set the class @name to the
+constant name at runtime. ONE root cause behind several inspect/name spec
+failures (Struct/Data/anonymous Class/Module). Cosmetic-ish (mostly #inspect
+and #name strings); deferred as a compiler feature. Struct.new("Name",...)
+IS named correctly (explicit string arg, 19aae43).
+
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
 Basic kwargs work (required/optional/`**rest`). Wrong: kw-vs-positional-hash
