@@ -389,6 +389,40 @@ class Class
     nil
   end
 
+  # Visibility of class methods and constants is not tracked, so these are
+  # no-ops that return self (MRI returns the module). They exist so specs
+  # calling them do not abort.
+  def private_class_method(*names)
+    self
+  end
+
+  def public_class_method(*names)
+    self
+  end
+
+  def private_constant(*names)
+    self
+  end
+
+  def public_constant(*names)
+    self
+  end
+
+  # include/prepend/extend hooks. Our include mechanism does not route through
+  # these (it is __include_module), so they are inert stubs returning the arg;
+  # they exist for specs that reference them (e.g. as private instance methods).
+  def append_features(mod)
+    mod
+  end
+
+  def prepend_features(mod)
+    mod
+  end
+
+  def extend_object(obj)
+    obj
+  end
+
   # True if instances of this class/module respond to `name` (a real method in this class's vtable,
   # outside the shared thunk range). Visibility is not tracked, so public_method_defined? is the same.
   def method_defined?(name, inherit = true)
