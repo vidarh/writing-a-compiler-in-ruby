@@ -16,5 +16,12 @@ p h.each_with_object([]){|(k,v),acc| acc << k}  # [:a, :b, :c]
 p h.inject(0){|s,(k,v)| s+v}      # 6
 p h.reduce(:+)                    # [:a, 3, :b, 1, :c, 2]
 p h.tally                         # {[:a, 3]=>1, [:b, 1]=>1, [:c, 2]=>1}
+p h.min                           # [:a, 3]
+p h.max                           # [:c, 2]
+p h.minmax                        # [[:a, 3], [:c, 2]]
+p h.minmax_by{|k,v| v}            # [[:b, 1], [:a, 3]]
+p h.zip([1,2,3])                  # [[[:a, 3], 1], [[:b, 1], 2], [[:c, 2], 3]]
+p h.each_slice(2).to_a            # [[[:a, 3], [:b, 1]], [[:c, 2]]]
+p h.each_cons(2).to_a             # [[[:a, 3], [:b, 1]], [[:b, 1], [:c, 2]]]
 p [1,2,3].entries                 # [1, 2, 3]
 p [[1,3],[2,1],[3,2]].minmax_by{|x| x[1]}  # [[2, 1], [1, 3]]

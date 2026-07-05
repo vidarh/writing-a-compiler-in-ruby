@@ -519,6 +519,50 @@ class Hash
     to_a.tally
   end
 
+  # Extremum / slicing / zipping over the [k, v] pairs. min/max/minmax take a two-PAIR comparator block
+  # (min_by/max_by/sort_by, which yield (k,v), are defined separately). minmax_by yields (key, value).
+  def min(&block)
+    to_a.min(&block)
+  end
+
+  def max(&block)
+    to_a.max(&block)
+  end
+
+  def minmax(&block)
+    to_a.minmax(&block)
+  end
+
+  def minmax_by(&block)
+    return to_enum(:minmax_by) if !block
+    to_a.minmax_by { |pair| block.call(pair[0], pair[1]) }
+  end
+
+  def uniq(&block)
+    to_a.uniq(&block)
+  end
+
+  # Forwarding a nil &block through the splat crashes (KNOWN_ISSUES 3b), so only pass the block when one
+  # was actually given.
+  def zip(*args, &block)
+    return to_a.zip(*args, &block) if block
+    to_a.zip(*args)
+  end
+
+  def each_slice(n, &block)
+    return to_a.each_slice(n, &block) if block
+    to_a.each_slice(n)
+  end
+
+  def each_cons(n, &block)
+    return to_a.each_cons(n, &block) if block
+    to_a.each_cons(n)
+  end
+
+  def chunk_while(&block)
+    to_a.chunk_while(&block)
+  end
+
   def each_with_index(&block)
     return to_enum(:each_with_index) if !block
     i = 0
