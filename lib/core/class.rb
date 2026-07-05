@@ -355,6 +355,34 @@ class Class
     result
   end
 
+  # Method visibility is NOT tracked in the flattened vtable: every real method
+  # is effectively public. So public_instance_methods == instance_methods, and
+  # private/protected_instance_methods are empty. Correct for the (common) case
+  # of a class with no private/protected methods; the specs relying on real
+  # visibility data will still fail, but these stop the undefined-method aborts.
+  def public_instance_methods(include_super = true)
+    instance_methods(include_super)
+  end
+
+  def private_instance_methods(include_super = true)
+    []
+  end
+
+  def protected_instance_methods(include_super = true)
+    []
+  end
+
+  # Included modules are not tracked at runtime (include copies methods into the
+  # vtable, discarding the module identity). Return [] as a best effort.
+  def included_modules
+    []
+  end
+
+  # Class variables are resolved at compile time with no runtime name table.
+  def class_variables(inherit = true)
+    []
+  end
+
   # True if instances of this class/module respond to `name` (a real method in this class's vtable,
   # outside the shared thunk range). Visibility is not tracked, so public_method_defined? is the same.
   def method_defined?(name, inherit = true)
