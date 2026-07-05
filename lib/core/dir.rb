@@ -122,12 +122,17 @@ class Dir
   end
 
   # read -> the next entry name (including "." and ".."), or nil at end of stream.
+  # The name is COPIED out of the dirent: __get_string alone wraps the raw
+  # d_name pointer, which points INTO libc's readdir buffer -- reused by later
+  # readdir/opendir calls, so uncopied entry strings rotted into garbage once
+  # iteration continued (surfaced as corrupted Dir.glob results).
   def read
     return nil if !@open
     name = nil
     %s(assign ent (readdir @dirp))
     %s(if (ne ent 0) (assign name (__get_string (add ent 11))))
-    name
+    return nil if name.nil?
+    name.dup
   end
 
   def each

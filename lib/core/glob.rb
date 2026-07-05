@@ -270,53 +270,84 @@ class Dir
     __glob_walk(start, prefix, comps, 0, flags, trailing_slash, out)
   end
 
+  # Work-queue walk where each item is processed by __glob_step in its OWN
+  # method frame. Neither a recursive walk nor a single-frame queue loop
+  # compiles correctly here: recursion inside the entries loop corrupted
+  # captured locals, and loop-carried locals reassigned from item[...] in a
+  # call-rich while body went stale across calls (two divergent storage
+  # locations). A fresh frame per item gives every field a fresh slot.
   def self.__glob_walk(dir, prefix, comps, ci, flags, trailing_slash, out)
+    queue = [[dir, prefix, ci]]
+    qi = 0
+    while qi < queue.length
+      __glob_step(queue, qi, comps, flags, trailing_slash, out)
+      qi += 1
+    end
+  end
+
+  def self.__glob_step(queue, qi, comps, flags, trailing_slash, out)
+    item = queue[qi]
+    d = item[0]
+    pfx = item[1]
+    ci = item[2]
     if ci >= comps.length
-      p = prefix
-      p = "." if p.length == 0
-      p = p + "/" if trailing_slash && p[p.length - 1] != 47
-      out << p
+      if pfx.length > 0
+        # ('**' zero-match at the very top would otherwise report ".")
+        if trailing_slash && pfx[pfx.length - 1] != 47
+          out << (pfx + "/")
+        else
+          out << pfx
+        end
+      end
       return
     end
     comp = comps[ci]
+    # A FINAL bare '**' (no trailing slash) is not recursive in MRI -- it
+    # behaves like '*'. Recursive descent needs '**/' (more components or a
+    # trailing slash).
+    comp = "*" if comp == "**" && ci + 1 >= comps.length && !trailing_slash
     if comp == "**"
-      # zero directories
-      __glob_walk(dir, prefix, comps, ci + 1, flags, trailing_slash, out)
-      # or descend into each subdirectory
-      entries = __glob_entries(dir)
-      entries.each do |e|
+      queue << [d, pfx, ci + 1]
+      entries = __glob_entries(d)
+      k = 0
+      while k < entries.length
+        e = entries[k]
+        k += 1
         next if e == "." || e == ".."
         next if e.length > 0 && e[0] == 46 && (flags & File::FNM_DOTMATCH) == 0
-        full = __glob_join(dir, e)
+        full = __glob_join(d, e)
         if File.directory?(full)
-          __glob_walk(full, __glob_join_prefix(prefix, e), comps, ci, flags, trailing_slash, out)
+          queue << [full, __glob_join_prefix(pfx, e), ci]
         end
       end
       return
     end
     if !__glob_has_meta?(comp)
-      # literal component: stat directly (also matches dotfiles given literally)
-      full = __glob_join(dir, comp)
+      full = __glob_join(d, comp)
       if ci + 1 >= comps.length
         if File.exist?(full) || File.directory?(full)
-          __glob_walk(full, __glob_join_prefix(prefix, comp), comps, ci + 1, flags, trailing_slash, out)
+          queue << [full, __glob_join_prefix(pfx, comp), ci + 1] if !trailing_slash || File.directory?(full)
         end
       elsif File.directory?(full)
-        __glob_walk(full, __glob_join_prefix(prefix, comp), comps, ci + 1, flags, trailing_slash, out)
+        queue << [full, __glob_join_prefix(pfx, comp), ci + 1]
       end
       return
     end
-    entries = __glob_entries(dir)
-    entries.each do |e|
+    entries = __glob_entries(d)
+    k = 0
+    while k < entries.length
+      e = entries[k]
+      k += 1
       next if e == "." || e == ".."
       next if !File.fnmatch(comp, e, flags | File::FNM_PATHNAME)
-      full = __glob_join(dir, e)
+      full = __glob_join(d, e)
       if ci + 1 >= comps.length
-        __glob_walk(full, __glob_join_prefix(prefix, e), comps, ci + 1, flags, trailing_slash, out) if !trailing_slash || File.directory?(full)
+        queue << [full, __glob_join_prefix(pfx, e), ci + 1] if !trailing_slash || File.directory?(full)
       elsif File.directory?(full)
-        __glob_walk(full, __glob_join_prefix(prefix, e), comps, ci + 1, flags, trailing_slash, out)
+        queue << [full, __glob_join_prefix(pfx, e), ci + 1]
       end
     end
+    nil
   end
 
   def self.__glob_has_meta?(comp)
