@@ -917,6 +917,21 @@ def with_timezone(name, offset = nil, dst = nil)
   end
 end
 
+# mspec's new_io helper (mspec/helpers/io.rb, absent from this checkout): open a
+# File for the given name/mode. IOSpecs.io_fixture and ~24 io specs call it.
+# The mode string may carry an encoding suffix ("r:utf-8"); strip it -- our
+# File open ignores encodings. A Hash mode isn't used by the specs that reach here.
+def new_io(name, mode = "w")
+  m = mode
+  if m.is_a?(String)
+    c = m.index(":")
+    m = m[0, c] if !c.nil?
+  else
+    m = "w"
+  end
+  File.new(name, m)
+end
+
 # Warning-category flags: enough for the `Warning[:experimental] = false` save/restore
 # dance in before/after hooks. MRI defaults :experimental to true.
 module Warning
