@@ -128,6 +128,12 @@ class Kernel
     []
   end
 
+  # Backtraces are not captured (no shadow stack), so caller_locations returns
+  # []. Matches caller's stub; stops undefined-method aborts in specs that touch it.
+  def caller_locations(*args)
+    []
+  end
+
   # Coerce a path argument to a String the way File/Dir/FileTest methods do: a String passes through,
   # an object with #to_path (e.g. Pathname, or a mock in the specs) is asked for its path, otherwise
   # #to_str is used. Raises TypeError if none applies.

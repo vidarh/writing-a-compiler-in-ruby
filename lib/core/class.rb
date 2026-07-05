@@ -383,6 +383,12 @@ class Class
     []
   end
 
+  # Class variables have no runtime name table (resolved at compile time), so
+  # this cannot actually remove one; return nil rather than aborting the spec.
+  def remove_class_variable(name)
+    nil
+  end
+
   # True if instances of this class/module respond to `name` (a real method in this class's vtable,
   # outside the shared thunk range). Visibility is not tracked, so public_method_defined? is the same.
   def method_defined?(name, inherit = true)
