@@ -244,6 +244,26 @@ class Object
     self.class.instance_methods(all)
   end
 
+  # Visibility is not tracked in the flattened vtable, so every method is
+  # effectively public: public_methods == methods, private/protected == [].
+  # singleton_methods likewise unavailable. Correct for objects with no
+  # private/protected/singleton methods; stops undefined-method aborts otherwise.
+  def public_methods(all = true)
+    methods(all)
+  end
+
+  def private_methods(all = true)
+    []
+  end
+
+  def protected_methods(all = true)
+    []
+  end
+
+  def singleton_methods(all = true)
+    []
+  end
+
   # Kernel#tap: yield self to the block, then return self (for method chaining).
   def tap
     yield self
