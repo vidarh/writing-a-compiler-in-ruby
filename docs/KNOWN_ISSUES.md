@@ -156,6 +156,25 @@ failures (Struct/Data/anonymous Class/Module). Cosmetic-ish (mostly #inspect
 and #name strings); deferred as a compiler feature. Struct.new("Name",...)
 IS named correctly (explicit string arg, 19aae43).
 
+### 3g. Bignum multiplication produces wrong digits for large operands (2026-07-05) — COMPILER/LIB BUG, pinned
+
+Multiplying two large bignums gives an incorrect result once the operands exceed
+~30 decimal digits, even though smaller bignums are exact:
+
+    5 ** 50            # CORRECT: 88817841970012523233890533447265625
+    a = 5 ** 50; a * a # WRONG:  ...210124184099449116383295730... (MRI ...210118054117285652827862296...)
+    5 ** 100           # WRONG (a third, different wrong value — ** path diverges from a*a path)
+    2 ** 64            # CORRECT: 18446744073709551616
+
+So `2**64` and `5**50` are exact but `(5**50)*(5**50)` is not — the defect is in
+the large-operand multiply (carry/limb handling in the bignum `*` routine, likely
+the `%s(...)` sexp path in lib/core/integer.rb or the bignum representation), and
+`**` (repeated-squaring) surfaces it too. Latent — most specs never build numbers
+this large — but a genuine correctness bug. NOT a loop-tick fix: needs isolation
+of the multiply limb loop with a differential over operand sizes. First reproduce
+by bisecting operand magnitude (find the smallest N where `(2**N)*(2**N)` first
+diverges from MRI) to localize the carry boundary.
+
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
 Basic kwargs work (required/optional/`**rest`). Wrong: kw-vs-positional-hash

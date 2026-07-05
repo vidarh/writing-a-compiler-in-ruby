@@ -1714,14 +1714,12 @@ class Integer < Numeric
       end
     end
 
-    # Remainder operation (different from modulo for negative numbers)
-    # remainder has same sign as dividend (self), modulo has same sign as divisor (other)
-    # For now, use simple implementation: self - (self / other) * other
-    quotient = self / other
-    # If division returned nil (e.g., divide by zero error), 
-    if quotient.nil?
-      
-    end
+    # Remainder has the sign of the dividend (self), unlike modulo which follows the divisor. It uses
+    # division TRUNCATED toward zero, whereas Integer#/ floors toward -infinity -- so for mixed signs the
+    # floored quotient is one too small. Compute the truncated quotient from the magnitudes instead:
+    # (-7).remainder(3) needs quotient -2 (=> -1), not the floored -3 (=> 2, which is modulo).
+    quotient = self.abs / other.abs
+    quotient = -quotient if (self < 0) != (other < 0)
     self - (quotient * other)
   end
 

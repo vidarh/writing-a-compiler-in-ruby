@@ -25,3 +25,10 @@ p(7.quo(Rational(1, 2)))             # (14/1)
 p(Rational(1, 2) < Rational(2, 3))   # true
 p(Rational(1, 1) == 1)               # true
 p(Rational(-7, 2).to_i)              # -3
+p(Rational("3/4"))                   # (3/4)  Kernel#Rational parses a String
+p(Rational("3", "4"))                # (3/4)
+p(Rational(Rational(1, 2), 3))       # (1/6)  Rational arg combined by division
+p(Rational(3, 2).clamp(Rational(0, 1), Rational(1, 1)))  # (1/1)
+p(Rational(3, 4).between?(Rational(0, 1), Rational(1, 1)))  # true
+p((-7).remainder(3))                 # -1  remainder has sign of dividend (not modulo's 2)
+p(7.remainder(-3))                   # 1

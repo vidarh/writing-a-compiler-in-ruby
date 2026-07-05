@@ -264,6 +264,24 @@ class Rational < Numeric
     false
   end
 
+  def between?(min, max)
+    self >= min && self <= max
+  end
+
+  # clamp(min, max) or clamp(range). Rational does not include Comparable, so provide it directly.
+  def clamp(min, max = nil)
+    if max.nil? && min.is_a?(Range)
+      lo = min.begin
+      hi = min.end
+      return lo if !lo.nil? && self < lo
+      return hi if !hi.nil? && self > hi
+      return self
+    end
+    return min if self < min
+    return max if self > max
+    self
+  end
+
   # Coerce an Integer or Float against this Rational. Integers promote to exact Rationals so mixed
   # arithmetic stays exact; Floats fall back to Float math.
   def coerce(other)
@@ -294,6 +312,14 @@ class Rational < Numeric
   end
 end
 
+# Kernel#Rational accepts more than two integers: a String argument ("3/4", "0.5") is parsed via
+# String#to_r, and a Rational argument (in either position) is combined by division, so
+# Rational("3/4") => (3/4), Rational("3", "4") => (3/4) and Rational(Rational(1,2), 3) => (1/6).
 def Rational(numerator, denominator = 1)
+  numerator = numerator.to_r if numerator.is_a?(String)
+  denominator = denominator.to_r if denominator.is_a?(String)
+  if numerator.is_a?(Rational) || denominator.is_a?(Rational)
+    return numerator / denominator
+  end
   Rational.new(numerator, denominator)
 end
