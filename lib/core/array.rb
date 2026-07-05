@@ -93,8 +93,27 @@ class Array
     self
   end
 
+  # Array.new(other_array) -> element-wise copy (valid MRI form). Plain Ruby:
+  # unlike initialize's raw splat context, this is an ordinary method call, so
+  # other.length/other[i] are safe. (The old __grow(other.__get_raw) called a
+  # method Array never defined -- every Array.new(array)/subclass copy raised.)
   def __copy_init other
-    __grow(other.__get_raw)
+    if !other.is_a?(Array)
+      if other.respond_to?(:to_ary)
+        other = other.to_ary
+      elsif other.respond_to?(:to_int)
+        return __fill_n(other.to_int, nil)
+      else
+        raise TypeError, "no implicit conversion of #{other.class} into Integer"
+      end
+    end
+    l = other.length
+    i = 0
+    while i < l
+      self << other[i]
+      i += 1
+    end
+    self
   end
 
   def capacity
@@ -543,10 +562,15 @@ class Array
 
   def self.[](*elements)
     # NOTE: every array literal [...] compiles to Array.[] (see Compiler#compile_array),
-    # so this is on the hottest bootstrap path -- it must stay on the well-exercised
-    # self.new path. Attempts to allocate directly (to avoid invoking a subclass's
-    # #initialize, per MRI) segfault the self-hosted compiler even when guarded to the
-    # subclass branch, so subclass-with-incompatible-#initialize via [] is unsupported.
+    # so this is on the hottest bootstrap path -- it must stay EXACTLY on the
+    # well-exercised self.new path. CONFIRMED 2026-07-05: bypassing a subclass's
+    # #initialize per MRI via Class#__new SEGFAULTS the stage-1 compiler during
+    # self-compilation BOTH unconditionally AND guarded to the subclass branch
+    # (`if self.equal?(Array)` -- the guard never even fires self-hosted, so the
+    # mere presence of the extra branch miscompiles: same layout-sensitive
+    # family as the loop-carried-local bug in lib/core/glob.rb). Root-cause that
+    # compiler bug before retrying; until then MyArray[...] with an incompatible
+    # #initialize stays unsupported (~40 gated array specs).
     a = self.new
     a.concat(elements)
     a
