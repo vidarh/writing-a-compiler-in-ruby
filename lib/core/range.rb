@@ -25,6 +25,17 @@ class Range
     @exclude_end == true
   end
 
+  # Number of integer elements, computed arithmetically (no iteration). MRI returns nil when the begin is
+  # not a number (e.g. a String range), Float::INFINITY for an endless range, and 0 for an empty one. Only
+  # integer endpoints are handled precisely here; that covers the overwhelmingly common case.
+  def size
+    return nil if !@min.is_a?(Integer)
+    return Float::INFINITY if @max.nil?
+    return nil if !@max.is_a?(Integer)
+    n = @exclude_end ? @max - @min : @max - @min + 1
+    n < 0 ? 0 : n
+  end
+
   # Compute [min, max] from the endpoints instead of iterating. Enumerable#minmax would walk the whole
   # range, which never terminates for an endless range (`(1..)`) and is effectively a hang for a huge one
   # (`1..Float::INFINITY`, where INFINITY is a large stub Integer here). An endless range has no maximum.

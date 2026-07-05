@@ -1063,6 +1063,20 @@ class String
     false
   end
 
+  # Return a copy with `prefix` removed from the front if present, otherwise an unchanged copy.
+  def delete_prefix(prefix)
+    prefix = prefix.to_str if !prefix.is_a?(String)
+    return dup if !start_with?(prefix)
+    self[prefix.length, length - prefix.length]
+  end
+
+  # Return a copy with `suffix` removed from the end if present, otherwise an unchanged copy.
+  def delete_suffix(suffix)
+    suffix = suffix.to_str if !suffix.is_a?(String)
+    return dup if !end_with?(suffix)
+    self[0, length - suffix.length]
+  end
+
   def include?(substring)
     return true if substring.length == 0
     return false if substring.length > length

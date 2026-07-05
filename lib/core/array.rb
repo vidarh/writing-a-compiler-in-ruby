@@ -1342,7 +1342,10 @@ class Array
 
   # Returns the object in the array with the maximum value
   # Uses <=> for comparison
-  def max
+  # max / max(n) / max{|a,b| } / max(n){|a,b| }. With an integer n, returns the n greatest elements in
+  # descending order (an Array); otherwise the single greatest. An optional block is a two-arg comparator.
+  def max(n = nil, &block)
+    return __extreme_n(n, true, &block) if !n.nil?
     return nil if self.empty?
 
     max_val = self[0]
@@ -1351,18 +1354,17 @@ class Array
 
     while i < s
       el = self[i]
-      if (el <=> max_val) > 0
-        max_val = el
-      end
+      c = block ? block.call(el, max_val) : (el <=> max_val)
+      max_val = el if c > 0
       i += 1
     end
 
     max_val
   end
 
-  # Returns the object in the array with the minimum value
-  # Uses <=> for comparison
-  def min
+  # min / min(n) / min{|a,b| } / min(n){|a,b| }. With n, returns the n smallest elements ascending.
+  def min(n = nil, &block)
+    return __extreme_n(n, false, &block) if !n.nil?
     return nil if self.empty?
 
     min_val = self[0]
@@ -1371,13 +1373,21 @@ class Array
 
     while i < s
       el = self[i]
-      if (el <=> min_val) < 0
-        min_val = el
-      end
+      c = block ? block.call(el, min_val) : (el <=> min_val)
+      min_val = el if c < 0
       i += 1
     end
 
     min_val
+  end
+
+  # Shared n-element extremum: sort (by the optional comparator block) ascending, reverse for the max
+  # side, and take the first n. n may exceed the length (returns all) but must not be negative.
+  def __extreme_n(n, descending, &block)
+    raise ArgumentError.new("negative size (#{n})") if n < 0
+    sorted = block ? sort {|a, b| block.call(a, b) } : sort {|a, b| a <=> b }
+    sorted = sorted.reverse if descending
+    sorted[0, n]
   end
 
   # [min, max].
