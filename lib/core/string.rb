@@ -17,6 +17,29 @@ class String
   # classes.
   #
 
+  # String.allocate must return a USABLE empty string: the binary-safe representation keeps the byte
+  # length in @length and the bytes in @buffer, and the generic Class#allocate leaves those unset, so
+  # #size/#<< on the result read garbage (core/string/allocate_spec crashed). Allocate the raw object
+  # (mirroring Array.allocate) then run the no-argument #initialize to set @flags/@length/@buffer/@capacity.
+  def self.allocate
+    ob = nil
+    %s(assign ob (__array (index self 1)))
+    %s(assign (index ob 0) self)
+    ob.__init_empty
+    ob
+  end
+
+  # Set the binary-safe empty-string fields directly (no numargs/copy logic), for String.allocate.
+  def __init_empty
+    @flags = 0
+    # @buffer must be a RAW C string (char*), not a Ruby String -- assign the bare literal via %s exactly
+    # as #initialize does; `@buffer = ""` would store a String object and corrupt the binary-safe layout.
+    %s(assign @length 0)
+    %s(assign @buffer "")
+    %s(assign @capacity 0)
+    self
+  end
+
   def initialize *__copysplat
     # @buffer contains the pointer to raw memory
     # used to contain the string.
