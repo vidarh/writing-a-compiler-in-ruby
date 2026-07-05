@@ -546,6 +546,21 @@ class Hash
     self
   end
 
+  # Hash#count: no arg -> size; with a block -> number of [key, value] pairs the
+  # block accepts. (Included Enumerable#count did not resolve here.)
+  def count(*args, &block)
+    return size if args.empty? && !block
+    n = 0
+    each do |k, v|
+      if block
+        n += 1 if block.call(k, v)
+      else
+        n += 1 if [k, v] == args[0]
+      end
+    end
+    n
+  end
+
   # A new hash with each key passed through the block (later keys win on collision).
   # MRI also accepts a mapping-hash argument (unmapped keys pass through), and both
   # can combine: the hash mapping wins, the block handles the rest.
