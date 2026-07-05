@@ -50,9 +50,24 @@ edge, nested destructure groups, bare-constant ancestry resolution (needs
 runtime lexical+ancestry const resolution -- risky), the splat+side-effecting-
 block ordering bug (KNOWN_ISSUES 3d, hot-path structural), the Array.[]
 subclass miscompile (KNOWN_ISSUES 3c, layout-sensitive compiler bug). The
-safe lib/core FILLER phase is EXHAUSTED -- surveying Array/Hash/Range/String/
-Integer/MatchData/Struct/Comparable now overwhelmingly CONFIRMS completeness
-(each has a couple of gaps at most). The next real frontier is (a) the
+safe lib/core FILLER phase was declared exhausted after a method-PRESENCE
+survey, but a second pass on 2026-07-05 using MRI-DIFFERENTIAL probing (compare
+`ruby x.rb` vs `./compile && ./out/x` on tiny programs, asserting on VALUES and
+arg-forms, not just method presence) found substantial wins that a presence
+survey misses: Rational and Complex were near-empty STUBS (no arithmetic at
+all), Integer#remainder returned modulo (sign bug), Rational#floor/ceil/round/
+truncate ignored their digit argument, Integer#quo / Array#max(n)/min(n) /
+Range#size / String#to_r / String#delete_prefix|suffix were absent, and 8
+block-less Array iterators crashed instead of returning an Enumerator. All
+landed gate-green (commits ca5a97c b62ab5d ce60e34 b522257 18d7541 e5321eb).
+By the END of that pass the vein IS thinning (broad probes over Enumerable/
+Struct/Data/Regexp/lazy now come back clean). Two NEW compiler-level gaps were
+found and pinned, NOT loop-tick-safe: KNOWN_ISSUES 2b (implicit block
+auto-splat `[[1,2]].map{|a,b|}` -- also blocks Hash#map) and 3g (bignum
+heap*heap multiply wrong for large operands, data-dependent/non-commutative).
+LESSON: "presence survey says complete" != "correct"; differential-probe with
+LOCALS (bare `p x.method` mis-parses) before declaring a class done. The next
+real frontier is (a) the
 data-driven top failure signatures via tools/classify_failures.rb on ax52,
 and (b) the parked projects -- FLOAT FIRST (blocks ~2,300 assertions + 4
 crash files; but self-hosting can't compile float literals, so it needs a
