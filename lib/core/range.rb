@@ -96,6 +96,28 @@ class Range
 
   alias include? member?
 
+  # Range#cover?(value): boundary comparison via <=> (does not iterate, so it
+  # works for continuous ranges too). For discrete-value membership our
+  # member?/include? use the same comparison, so cover? shares the logic.
+  # cover?(other_range) is true when self covers the whole of other.
+  def cover?(val)
+    if val.is_a?(Range)
+      lo_ok = @min.nil? || (!val.begin.nil? && (val.begin <=> @min) >= 0)
+      hi_ok = @max.nil? || (!val.end.nil? && __cover_end?(val))
+      return lo_ok && hi_ok
+    end
+    member?(val)
+  end
+
+  def __cover_end?(other)
+    c = other.end <=> @max
+    if @exclude_end && !other.exclude_end?
+      c < 0
+    else
+      c <= 0
+    end
+  end
+
   def === (val)
     member?(val)
   end
