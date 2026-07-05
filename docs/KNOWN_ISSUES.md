@@ -124,10 +124,10 @@ call on the module instead of the local. The core/module fixture
 `m = Module.new do..end` then `EmptyFooMethod = m.instance_method(:foo)`;
 at runtime `m` dispatches as `ModuleSpecs.m` -> "undefined method 'm' for
 ModuleSpecs", crashing all 61 module specs that load this fixture (the
-single biggest failure cluster). LOADS FINE standalone (the fixture minus
-requires runs), and a MINIMAL repro (a small module with the same
-`m = Module.new{}` + `m.instance_method` shape) works -- so it is
-SIZE/LAYOUT-sensitive, the same family as the other layout-sensitive
+single biggest failure cluster). LOADS FINE standalone (the 653-line fixture minus requires runs to
+completion), a MINIMAL repro works, but fixture + the full spec's ~1000
+lines of describe/it blocks CRASHES -- so the trigger is TOTAL PROGRAM
+SIZE, not any single line (line-cut bisection is unproductive), the same family as the other layout-sensitive
 miscompiles (glob loop-carried locals, Array.[] extra-branch,
 b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
