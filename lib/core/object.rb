@@ -183,8 +183,12 @@ class Object
     # method dispatched on self, so an object that OVERRIDES raise (thread/kernel raise_spec
     # fixtures do) re-enters its override from here -- and when that override was itself the
     # missing-method trampoline's caller, the two recurse until stack overflow (SIGSEGV deep
-    # inside calloc). Same exception class/message as `raise <string>` produced before.
-    $__exception_runtime.raise(RuntimeError.new("undefined method '#{sym.to_s}' for #{receiver_info}"))
+    # inside calloc). NoMethodError with name/receiver/args populated (MRI class; was
+    # RuntimeError, which failed every `should raise_error(NoMethodError)` expectation).
+    e = NoMethodError.new("undefined method '#{sym.to_s}' for #{receiver_info}")
+    e.__set_name_receiver(sym, self)
+    e.__set_args(args)
+    $__exception_runtime.raise(e)
   end
 
     def respond_to?(method)

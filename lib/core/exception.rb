@@ -213,6 +213,16 @@ class Exception
     e = self.class.new(msg)
     e
   end
+
+  # "message (ClassName)" -- without captured backtraces this is the whole story.
+  # opts (highlight:/order:) accepted and ignored.
+  def full_message(opts = nil)
+    "#{message} (#{self.class})\n"
+  end
+
+  def detailed_message(opts = nil)
+    "#{message} (#{self.class})"
+  end
 end
 
 class StandardError < Exception
@@ -221,10 +231,38 @@ end
 class TypeError < StandardError
 end
 
-class NoMethodError < StandardError
+# MRI hierarchy: NameError < StandardError, NoMethodError < NameError.
+class NameError < StandardError
+  def __set_name_receiver(name, receiver)
+    @name = name
+    @receiver = receiver
+    @has_receiver = 1
+    self
+  end
+
+  def name
+    @name
+  end
+
+  def receiver
+    raise ArgumentError, "no receiver is available" if @has_receiver != 1
+    @receiver
+  end
 end
 
-class NameError < StandardError
+class NoMethodError < NameError
+  def __set_args(args)
+    @args = args
+    self
+  end
+
+  def args
+    @args
+  end
+
+  def private_call?
+    false
+  end
 end
 
 class ArgumentError < StandardError
