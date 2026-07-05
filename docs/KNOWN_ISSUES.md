@@ -162,25 +162,36 @@ b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
 ladder. Highest-count actionable compiler bug in the burndown.
 
-### 3h. `class <localvar>::Name` — local namespace base emitted as undefined symbol (2026-07-05)
+### 3h. `class <Name> < <localvar>` — a runtime superclass is not supported (2026-07-05)
 
-`class parent::C` where `parent` is a LOCAL variable (holding a class) fails to
-link: `undefined reference to 'parent'`. Three deterministic COMPILE_FAILs share
-this cause -- core/class/inherited_spec, language/class_spec (`meta::...`),
-core/module/const_added_spec. The name parses to `[:class, [:deref, :parent, :C], ...]`;
-`find_vars` does not treat the deref BASE (`:parent`) as a variable use, so the
-local is never registered/captured and the assignment + reads emit a bare global
-symbol `parent` (`movl %eax, parent`) that nothing defines -> link error. (Using
-the same local as a normal runtime value works: `Class.new(parent)` inside a block
-compiles fine -- so it is specifically the class-keyword namespace base.) A real
-constant namespace is always Capitalised, so a lowercase deref base is always a
-local/method needing RUNTIME evaluation. Fix needs BOTH: find_vars to count the
-lowercase deref base as a var use (so it is captured), and compile_class to
-resolve/create the constant in that runtime namespace instead of flattening to a
-static `parent__C` global. Risky (class-definition codegen); a tried
-`compile_class.rb` name-flattening tweak did NOT help (the undefined symbol comes
-from the uncaptured local, not the flattened name) and was reverted. Dedicated
-session with the full gate ladder; do not attempt piecemeal.
+`class Foo < parent` where `parent` is a LOCAL variable (holding a class) fails.
+Three deterministic COMPILE_FAILs hit this -- core/class/inherited_spec (line 114
+`class parent::C < parent`), language/class_spec, core/module/const_added_spec.
+
+PRECISELY ISOLATED (2026-07-05, correcting an earlier wrong guess): it is the
+SUPERCLASS, not the namespace. `class parent::C` (namespace base a local) compiles
+fine on its own; `class Foo < parent` (constant name, LOCAL superclass) is the
+failing part:
+- at TOP LEVEL it compiles but silently resolves the superclass to Object
+  (`Foo.superclass == parent` is false) -- wrong but no crash;
+- inside a BLOCK it emits `parent` as an undefined global symbol -> link error
+  `undefined reference to 'parent'`.
+Root cause: `compile_class` (compile_class.rb:371) only resolves a superclass from
+the COMPILE-TIME `@classes` registry (`@classes[superclass]`) plus a qualified-name
+retry; a superclass that is a runtime local variable is never found, so it both
+mis-resolves to Object AND (in a block) references the uncaptured local as a global.
+NB `Class.new(parent)` works -- the gap is specifically the `class X < Y` keyword
+form with a runtime `Y`.
+
+Proper fix needs RUNTIME superclass evaluation: emit code that evaluates the
+superclass expression and creates the class with that class object at runtime
+(instead of statically wiring the vtable/parent from @classes). That is a real
+compiler feature touching class-creation codegen -- do NOT attempt piecemeal.
+Two prior guesses (compile_class name-flattening; find_vars class-name capture)
+were both ineffective and reverted; they targeted the namespace, which is not the
+bug. A minimal partial win MIGHT be: make the block case merely COMPILE (capture
+the superclass local so it is not an undefined symbol) to turn COMPILE_FAIL into a
+runtime FAIL -- but verify it does not become a CRASH first.
 
 ### 3f. Anonymous classes not named by constant assignment (2026-07-05)
 
