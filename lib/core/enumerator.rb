@@ -453,6 +453,20 @@ class Enumerator
     def take(n);            __step([:take, n]);       end
     def drop(n);            __step([:drop, n]);       end
     def uniq(&b);           __step([:uniq, b]);       end
+    def grep(pat, &b);      __step([:grep, pat, b]);  end
+    def grep_v(pat, &b);    __step([:grep_v, pat, b]); end
+    # Lazy zip over ARRAY-like others (indexable): pairs by running index.
+    def zip(*others)
+      oi = 0
+      while oi < others.length
+        o = others[oi]
+        raise TypeError, "wrong argument type #{o.class} (must respond to :each)" if !o.respond_to?(:each)
+        others[oi] = o.to_a if !o.is_a?(Array)
+        oi += 1
+      end
+      __step([:zip, others])
+    end
+    def eager;              to_enum(:each);            end
     # Lazy with_index: pair each value with a running index (offset-based). Must stay lazy -- the eager
     # Enumerator#with_index would walk an infinite source (`(0..Float::INFINITY).lazy.with_index...`) to
     # completion. Without a block it yields [value, index]; with a block it calls block(value, index) and
@@ -551,6 +565,33 @@ class Enumerator
                   seen << key
                   nextvals << x
                 end
+              elsif t == :grep
+                if op[1] === x
+                  if op[2]
+                    nextvals << op[2].call(x)
+                  else
+                    nextvals << x
+                  end
+                end
+              elsif t == :grep_v
+                if !(op[1] === x)
+                  if op[2]
+                    nextvals << op[2].call(x)
+                  else
+                    nextvals << x
+                  end
+                end
+              elsif t == :zip
+                idx = st[oi]
+                st[oi] += 1
+                row = [x]
+                zi = 0
+                zs = op[1]
+                while zi < zs.length
+                  row << zs[zi][idx]
+                  zi += 1
+                end
+                nextvals << row
               elsif t == :with_index
                 # st[oi] is the running count (starts 0). op[1] is the offset, op[2] the optional block.
                 idx = op[1] + st[oi]
@@ -597,5 +638,74 @@ class Enumerator
       end
       take(n).to_a
     end
+  end
+end
+
+# Enumerator.product: odometer over N enumerables (leftmost varies slowest).
+class Enumerator
+  class Product < Enumerator
+    # NOTE: takes the enum LIST as one array (no splat through Class#new --
+    # splat re-forwarding through new/initialize miscounts numargs, the
+    # Array#initialize send issue).
+    def initialize(enums)
+      @enums = enums
+    end
+
+    def __debug_enums
+      @enums
+    end
+
+    # NOTE: loop state lives in IVARS, not locals -- after block.call the
+    # locals were CLOBBERED (odometer read `lists[j]` as 0; the same post-call
+    # local-clobber family as String#__copy_raw's note). Ivar reads go through
+    # self and are immune.
+    def each(&block)
+      return self if !block
+      @lists = []
+      i = 0
+      while i < @enums.length
+        @lists << @enums[i].to_a
+        i += 1
+      end
+      n = @lists.length
+      if n == 0
+        block.call([])
+        return self
+      end
+      i = 0
+      while i < n
+        return self if @lists[i].length == 0
+        i += 1
+      end
+      @idx = []
+      i = 0
+      while i < n
+        @idx << 0
+        i += 1
+      end
+      done = 0
+      while done == 0
+        row = []
+        i = 0
+        while i < n
+          row << @lists[i][@idx[i]]
+          i += 1
+        end
+        block.call(row)
+        j = n - 1
+        while j >= 0
+          @idx[j] += 1
+          break if @idx[j] < @lists[j].length
+          @idx[j] = 0
+          j -= 1
+        end
+        done = 1 if j < 0
+      end
+      self
+    end
+  end
+
+  def self.product(*enums)
+    Product.new(enums)
   end
 end
