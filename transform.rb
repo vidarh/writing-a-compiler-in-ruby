@@ -2692,6 +2692,43 @@ class Compiler
     end
   end
 
+  # Parenthesized (destructuring) block parameters: `{ |(a, b)| ... }` parses
+  # the group as a [:destruct, a, b] PARAM, which nothing binds (reads compiled
+  # as method calls). Replace each with a synthetic positional param and
+  # prepend `a, b = __destruct_argN` to the body; rewrite_destruct (which runs
+  # right after this pass) expands it through the normal masgn machinery,
+  # including nested groups.
+  def rewrite_destruct_block_params(exp)
+    count = 0
+    exp.depth_first do |e|
+      next :skip if e[0] == :sexp
+      if (e[0] == :proc || e[0] == :lambda) && e[1].is_a?(Array)
+        params = e[1]
+        pre = []
+        pi = 0
+        while pi < params.length
+          p = params[pi]
+          if p.is_a?(Array) && p[0] == :destruct
+            tmp = ("__destruct_arg" + count.to_s).to_sym
+            count += 1
+            pre << E[:assign, p, tmp]
+            params[pi] = tmp
+          end
+          pi += 1
+        end
+        if pre.length > 0 && e[2]
+          body = e[2]
+          if body.is_a?(Array) && (body.empty? || body[0].is_a?(Array))
+            e[2] = pre + body
+          else
+            e[2] = pre + [body]
+          end
+        end
+      end
+    end
+    exp
+  end
+
   def rewrite_bare_super(exp)
     exp.depth_first(:defm) do |e|
       replace_bare_super(e[3], bare_super_fwd(e[2]))
@@ -2744,6 +2781,7 @@ class Compiler
                               # crash. Must run BEFORE rewrite_destruct so `a, b = expr rescue [..]` still
                               # has its plain [:assign, [:comma..], rhs] shape for the assign-hoist below.
     rewrite_for(exp)
+    rewrite_destruct_block_params(exp)  # |(a,b)| params -> synthetic arg + masgn (before rewrite_destruct)
     rewrite_destruct(exp)
     rewrite_bare_super(exp)   # expand bare `super` to forward the method's args (before splat/symbol rewrites)
 
