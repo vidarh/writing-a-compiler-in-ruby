@@ -494,7 +494,21 @@ class Compiler
           # no such vars list, so without an explicit let an in-method `{|*a| a}` assigns `a` but never
           # declares it -> reads compile as a method call ("undefined method 'a'"). At top level a later
           # pass happened to add the let; in-method lambdas never got one.
-          newbody = E[:let, [rest_target], prologue]
+          # MERGE with the body's existing :let (find_vars wrapped the body as
+          # [:let, vars(+ __tmp_proc/__wrapenv when procs nest), *stmts]).
+          # The old code built a FRESH [:let, [rest_target]] and copied body[1..]
+          # as statements: the original var list rode along as a bogus statement
+          # and the __tmp_proc/__wrapenv declarations were LOST -- a rest-param
+          # lambda creating a nested proc died at link time with
+          # "undefined reference to __wrapenv" (file/printf's :kernel_sprintf
+          # stabby lambda; repro test/repros/tp1.rb).
+          if body.is_a?(Array) && body[0] == :let && body[1].is_a?(Array)
+            newbody = E[:let, [rest_target] + body[1], prologue]
+            copy_from = 2
+          else
+            newbody = E[:let, [rest_target], prologue]
+            copy_from = 1
+          end
           # Rebind trailing params from the argument tail: the j-th trailing param sits at
           # __splat[numargs-ac-2 + j] (right after the middle args). A proc invoked with too few args gives
           # a negative offset -- there is no such argument, so bind nil (MRI nil-fills for a proc).
@@ -504,7 +518,7 @@ class Compiler
             newbody << E[:assign, tp,
               E[:if, E[:ge, off, 0], E[:sexp, [:index, :__splat, off2]], :nil]]
           end
-          bi = 1
+          bi = copy_from
           while bi < body.length
             newbody << body[bi]
             bi += 1
