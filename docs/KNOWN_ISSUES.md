@@ -116,6 +116,23 @@ language/send_spec once module_function un-gates its earlier tests
 (send_spec: was FAIL 10p, now CRASH at the `m(*args,2,&args.pop)` test).
 Deep in compile_callm splat+block arg ordering; pathological shape.
 
+### 3e. Module-body local miscompiles as a method call at scale (2026-07-05)
+
+In a LARGE module body, a plain local variable read resolves as a method
+call on the module instead of the local. The core/module fixture
+(rubyspec/core/module/fixtures/classes.rb, 653 lines) does
+`m = Module.new do..end` then `EmptyFooMethod = m.instance_method(:foo)`;
+at runtime `m` dispatches as `ModuleSpecs.m` -> "undefined method 'm' for
+ModuleSpecs", crashing all 61 module specs that load this fixture (the
+single biggest failure cluster). LOADS FINE standalone (the fixture minus
+requires runs), and a MINIMAL repro (a small module with the same
+`m = Module.new{}` + `m.instance_method` shape) works -- so it is
+SIZE/LAYOUT-sensitive, the same family as the other layout-sensitive
+miscompiles (glob loop-carried locals, Array.[] extra-branch,
+b94260b module-override). Fixing needs module-body local-scope analysis
+under scale; do NOT attempt without a scale repro and the full gate
+ladder. Highest-count actionable compiler bug in the burndown.
+
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
 Basic kwargs work (required/optional/`**rest`). Wrong: kw-vs-positional-hash
