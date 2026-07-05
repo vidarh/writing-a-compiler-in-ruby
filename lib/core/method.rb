@@ -48,6 +48,19 @@ class Method
   def unbind
     UnboundMethod.new(@target.class, @method)
   end
+
+  # Composition mirrors Proc's (converting through to_proc).
+  def >>(g)
+    to_proc >> g
+  end
+
+  def <<(g)
+    to_proc << g
+  end
+
+  def curry(n = nil)
+    to_proc.curry(n)
+  end
 end
 
 # A method detached from any receiver (Module#instance_method / Method#unbind). It carries the owner

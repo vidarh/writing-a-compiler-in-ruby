@@ -41,6 +41,43 @@ class Proc
     self
   end
 
+  # Function composition: (f >> g).call(x) == g.call(f.call(x)).
+  def >>(g)
+    f = self
+    proc { |*args| g.call(f.call(*args)) }
+  end
+
+  # (f << g).call(x) == f.call(g.call(x)).
+  def <<(g)
+    f = self
+    proc { |*args| f.call(g.call(*args)) }
+  end
+
+  # Currying: collect arguments across calls until `n` are gathered, then invoke.
+  # With no explicit n, use the arity (negative arity -> required count).
+  def curry(n = nil)
+    ar = n
+    if ar.nil?
+      ar = arity
+      if ar < 0
+        ar = 0 - ar - 1
+      end
+    end
+    __curry_step(ar, [])
+  end
+
+  def __curry_step(n, got)
+    fn = self
+    proc do |*args|
+      all = got + args
+      if all.length >= n
+        fn.call(*all)
+      else
+        fn.__curry_step(n, all)
+      end
+    end
+  end
+
   def call *__copysplat, &blk
     # ABI slot 2 (__callblk__) carries the CALL-TIME block for the lambda's own &param -- blk
     # here, nil when none. No global channel (re-entrant, thread/fiber-safe). `yield` and
