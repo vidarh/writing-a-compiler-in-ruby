@@ -153,7 +153,15 @@ class Compiler
     # is preserved across both, which clobber %eax. Contexts are compile-time-scoped to this
     # function (see @ensure_stack in compile_begin_rescue).
     if @ensure_stack && !@ensure_stack.empty?
-      @ensure_stack.reverse.each do |ctx|
+      # Unwind innermost-first. While compiling each ensure body, expose only the OUTER (not-yet-run)
+      # ensures via @ensure_stack: a `return` inside an ensure body must NOT re-enter the ensure we are
+      # currently running (that recursed infinitely -- `def m; return 1; ensure; return 2; end`), and in
+      # Ruby such a return supersedes the pending return and runs only the enclosing ensures. Restore the
+      # full stack afterwards so sibling code compiled later still sees its own contexts.
+      saved_stack = @ensure_stack
+      remaining = saved_stack.dup
+      while !remaining.empty?
+        ctx = remaining.pop   # innermost of those not yet unwound
         eb = ctx[0]
         has_handler = ctx[1]
         if has_handler
@@ -162,11 +170,13 @@ class Compiler
           @e.popl(:eax)
         end
         if eb
+          @ensure_stack = remaining   # only outer ensures are live while this body compiles
           @e.pushl(:eax)
           compile_do(scope, *eb)
           @e.popl(:eax)
         end
       end
+      @ensure_stack = saved_stack
     end
     @e.movl("-4(%ebp)",:ebx)
     @e.evict_all
