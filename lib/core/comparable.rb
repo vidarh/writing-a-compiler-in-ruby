@@ -14,28 +14,30 @@ module Comparable
     self
   end
 
-  def <(other)
+  # MRI: the ordering operators RAISE ArgumentError when <=> returns nil
+  # (incompatible comparison), rather than returning nil. (== stays false.)
+  def __cmp_or_raise(other)
     cmp = (self <=> other)
-    return nil if cmp.nil?
-    cmp < 0
+    if cmp.nil?
+      raise ArgumentError, "comparison of #{self.class} with #{other.class} failed"
+    end
+    cmp
+  end
+
+  def <(other)
+    __cmp_or_raise(other) < 0
   end
 
   def <=(other)
-    cmp = (self <=> other)
-    return nil if cmp.nil?
-    cmp <= 0
+    __cmp_or_raise(other) <= 0
   end
 
   def >(other)
-    cmp = (self <=> other)
-    return nil if cmp.nil?
-    cmp > 0
+    __cmp_or_raise(other) > 0
   end
 
   def >=(other)
-    cmp = (self <=> other)
-    return nil if cmp.nil?
-    cmp >= 0
+    __cmp_or_raise(other) >= 0
   end
 
   def ==(other)
