@@ -105,6 +105,7 @@ require 'core/rbconfig'
 require 'core/math'
 require 'core/binding'
 require 'core/pack'        # Shared Array#pack / String#unpack byte codec
+require 'core/glob'        # File.fnmatch + Dir.glob engine
 
 #
 # Other support
