@@ -771,6 +771,7 @@ class Compiler
         # Analyze the argument to classify it. Cases we cannot decide at compile time (constants, methods,
         # arbitrary calls) return nil -- imperfect but Ruby-correct for the undefined case and, crucially,
         # never crashes. (Constant/method liveness would need a runtime check.)
+        methodish = nil
         if arg.is_a?(Array)
           case arg[0]
           when :assign, :massign, :iasgn, :op_asgn, :or_asgn, :and_asgn,
@@ -780,9 +781,48 @@ class Compiler
             result = "assignment"
           when :array, :hash, :str, :int, :float, :sexp, :and, :or, :not
             result = "expression"
+          when :call
+            if arg[1] == :yield
+              result = :yield_check
+            else
+              methodish = arg[1]
+            end
+          when :callm, :safe_callm
+            methodish = arg[2]
+          else
+            # Raw operator nodes (rewrite_operators runs later): a defined
+            # operator method reads as "method" (e.g. defined?(1 + 1)).
+            methodish = arg[0] if arg[0].is_a?(Symbol) && @vtableoffsets.get_offset(arg[0])
           end
-        elsif arg == :nil || arg == :true || arg == :false || arg == :self
+          # A known method name classifies as "method" (approximation: presence in
+          # ANY vtable; MRI checks the actual receiver). Unknown -> nil (undefined).
+          if methodish.is_a?(Symbol)
+            result = "method" if @vtableoffsets.get_offset(methodish)
+          end
+        elsif arg == :yield
+          result = :yield_check
+        elsif arg == :nil
+          result = "nil"
+        elsif arg == :true
+          result = "true"
+        elsif arg == :false
+          result = "false"
+        elsif arg == :self
+          result = "self"
+        elsif arg.is_a?(Integer) || arg.is_a?(String)
           result = "expression"
+        elsif arg.is_a?(Symbol)
+          nm = arg.to_s
+          c0 = nm[0].ord
+          if c0 == 58                                     # :sym literal
+            result = "expression"
+          elsif c0 >= 65 && c0 <= 90                      # Constant
+            result = "constant" if @classes.member?(arg) || @global_constants.member?(arg)
+          elsif c0 != 64 && c0 != 36                      # not @ivar / $gvar (stay nil)
+            # bare identifier: a known method name reads as "method"; otherwise nil.
+            # (Local variables are not tracked by this pass -- see docs.)
+            result = "method" if @vtableoffsets.get_offset(arg)
+          end
         end
 
         # Replace with a value node. nil is the bare symbol :nil (the old E[:false] built [:false], which
@@ -793,6 +833,16 @@ class Compiler
           # normal value context; :do/:sexp wrappers make it truthy. [:and, :nil, :nil] evaluates :nil
           # normally and short-circuits to a genuine (falsy) nil.
           e.replace(E[:and, :nil, :nil])
+        elsif result == :yield_check
+          # defined?(yield) is "yield" exactly when a block was passed; runtime test.
+          # block_given? here is rewritten by the later rewrite_block_given pass.
+          lab = @string_constants["yield"]
+          if !lab
+            lab = @e.get_local
+            @string_constants["yield"] = lab
+          end
+          e.replace(E[:if, [:call, :"block_given?", []],
+                      [:sexp, [:call, :__get_string, lab.to_sym]], :nil])
         else
           lab = @string_constants[result]
           if !lab
