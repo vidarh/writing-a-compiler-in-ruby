@@ -44,7 +44,8 @@ class Numeric
   end
 end
 
-# FIXME: Stub - Rational class needs full implementation
+# Forward declaration so Rational exists before Integer loads (Integer's operators reference it). The
+# real arithmetic, comparison and rounding are supplied when lib/core/rational.rb reopens the class.
 class Rational < Numeric
   def initialize(numerator, denominator=1)
     @numerator = numerator

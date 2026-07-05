@@ -210,8 +210,8 @@ class Integer < Numeric
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
       elsif other.is_a?(Rational)
-        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
-        return Rational.new(self, 1)
+        # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
+        return Rational.new(self, 1) + other
       elsif other.respond_to?(:coerce)
         # Ruby coerce protocol: other.coerce(self) returns [a, b] where a + b is the result
         coerced = other.coerce(self)
@@ -266,8 +266,8 @@ class Integer < Numeric
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
       elsif other.is_a?(Rational)
-        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
-        return Rational.new(self, 1)
+        # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
+        return Rational.new(self, 1) - other
       elsif other.respond_to?(:coerce)
         # Ruby coerce protocol: other.coerce(self) returns [a, b] where a - b is the result
         coerced = other.coerce(self)
@@ -1648,8 +1648,8 @@ class Integer < Numeric
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
       elsif other.is_a?(Rational)
-        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
-        return Rational.new(self, 1)
+        # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
+        return Rational.new(self, 1) % other
       else
         raise TypeError.new("Integer can't be coerced")
         
@@ -1706,8 +1706,8 @@ class Integer < Numeric
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
       elsif other.is_a?(Rational)
-        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
-        return Rational.new(self, 1)
+        # Promote self to an exact Rational and let Rational#remainder do the work.
+        return Rational.new(self, 1).remainder(other)
       else
         raise TypeError.new("Integer can't be coerced")
         
@@ -1732,8 +1732,8 @@ class Integer < Numeric
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
       elsif other.is_a?(Rational)
-        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
-        return Rational.new(self, 1)
+        # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
+        return Rational.new(self, 1) * other
       elsif other.respond_to?(:to_int)
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
@@ -1903,8 +1903,8 @@ class Integer < Numeric
         # WORKAROUND: Float arithmetic not implemented, return stub Float
         return Float.new
       elsif other.is_a?(Rational)
-        # WORKAROUND: Rational arithmetic not implemented, return stub Rational
-        return Rational.new(self, 1)
+        # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
+        return Rational.new(self, 1) / other
       elsif other.respond_to?(:to_int)
         other = other.to_int
         # Check if to_int returned nil (failed conversion)
