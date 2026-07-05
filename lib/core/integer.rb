@@ -3654,6 +3654,24 @@ class Integer < Numeric
     Rational.new(self,1)
   end
 
+  # quo returns the most exact division: a Rational for Integer/Rational divisors (7.quo(2) => (7/2)),
+  # a Float only when the divisor is a Float. Unlike #/ it never truncates.
+  def quo(other)
+    if other.is_a?(Integer)
+      raise ZeroDivisionError.new("divided by 0") if other == 0
+      Rational.new(self, other)
+    elsif other.is_a?(Rational)
+      Rational.new(self, 1) / other
+    elsif other.is_a?(Float)
+      to_f / other
+    elsif other.respond_to?(:coerce)
+      a, b = other.coerce(self)
+      a / b
+    else
+      raise TypeError.new("#{other.class} can't be coerced into Integer")
+    end
+  end
+
   # Unary plus - returns self
   def +@
     self

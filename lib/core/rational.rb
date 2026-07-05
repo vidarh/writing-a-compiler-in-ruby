@@ -161,31 +161,44 @@ class Rational < Numeric
 
   # --- rounding ---------------------------------------------------------------------------------------
 
-  # floor rounds toward -infinity; Integer#/ already floors so the ratio maps directly.
+  # floor rounds toward -infinity; Integer#/ already floors so the ratio maps directly. With a non-zero
+  # digit count MRI scales by 10**digits, applies the zero-arg rounding, and returns a Rational (positive
+  # digits) or Integer (negative digits) -- see __scale_round.
   def floor(digits = 0)
-    return self if digits > 0
-    @numerator / @denominator
+    return @numerator / @denominator if digits == 0
+    __scale_round(digits, :floor)
   end
 
   # ceil rounds toward +infinity: ceil(n/d) == -floor(-n/d).
   def ceil(digits = 0)
-    return self if digits > 0
-    -((-@numerator) / @denominator)
+    return -((-@numerator) / @denominator) if digits == 0
+    __scale_round(digits, :ceil)
   end
 
   def truncate(digits = 0)
-    return self if digits > 0
-    to_i
+    return to_i if digits == 0
+    __scale_round(digits, :truncate)
   end
 
   # round: nearest integer, halves away from zero (MRI default).
   def round(digits = 0)
-    return self if digits > 0
-    d2 = 2 * @denominator
-    if @numerator < 0
-      -((-@numerator * 2 + @denominator) / d2)
+    if digits == 0
+      d2 = 2 * @denominator
+      return @numerator < 0 ? -((-@numerator * 2 + @denominator) / d2) : (@numerator * 2 + @denominator) / d2
+    end
+    __scale_round(digits, :round)
+  end
+
+  # Digit-precision rounding shared by floor/ceil/truncate/round. Positive digits: scale up by 10**digits,
+  # apply the zero-arg rounding to land on an integer, then divide back down to a Rational. Negative
+  # digits: scale down, round to an integer, and scale back up (an Integer result, as in MRI).
+  def __scale_round(digits, op)
+    if digits > 0
+      m = 10 ** digits
+      Rational.new((self * m).send(op), m)
     else
-      (@numerator * 2 + @denominator) / d2
+      m = 10 ** (-digits)
+      (self / m).send(op) * m
     end
   end
 

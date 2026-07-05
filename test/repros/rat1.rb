@@ -16,6 +16,12 @@ p(Rational(-7, 2).floor)             # -4
 p(Rational(-7, 2).ceil)              # -3
 p(Rational(5, 2).round)              # 3   (half away from zero)
 p(Rational(-7, 2).truncate)          # -3  (toward zero)
+p(Rational(3, 4).floor(1))           # (7/10)  digit-precision floor
+p(Rational(3, 4).ceil(1))            # (4/5)   digit-precision ceil
+p(Rational(3, 4).round(1))           # (4/5)   digit-precision round
+p(Rational(1, 3).truncate(2))        # (33/100)
+p(7.quo(2))                          # (7/2)   Integer#quo -> exact Rational
+p(7.quo(Rational(1, 2)))             # (14/1)
 p(Rational(1, 2) < Rational(2, 3))   # true
 p(Rational(1, 1) == 1)               # true
 p(Rational(-7, 2).to_i)              # -3
