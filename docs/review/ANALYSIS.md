@@ -45,10 +45,21 @@ plan: binary-safe String (hidden pack/unpack prerequisite), the Dir#read
 dirent-aliasing memory-corruption fix, &nil-forwarding via the &blk-param
 convention (three compiler-side fixes reverted — KNOWN_ISSUES 3b), and a
 codegen-hazard playbook (memory: compiler-analysis-loop-2026-07-05).
-Remaining from Phase 3: kwargs **{}-elision edge, nested destructure groups,
-bare-constant ancestry resolution, MyArray/Array-copy-ctor hunt, the
-strictness long tail. Then Phase 4 refactors and the parked projects
-(Float first).
+Remaining from Phase 3 (mostly hard/architectural now): kwargs **{}-elision
+edge, nested destructure groups, bare-constant ancestry resolution (needs
+runtime lexical+ancestry const resolution -- risky), the splat+side-effecting-
+block ordering bug (KNOWN_ISSUES 3d, hot-path structural), the Array.[]
+subclass miscompile (KNOWN_ISSUES 3c, layout-sensitive compiler bug). The
+safe lib/core FILLER phase is EXHAUSTED -- surveying Array/Hash/Range/String/
+Integer/MatchData/Struct/Comparable now overwhelmingly CONFIRMS completeness
+(each has a couple of gaps at most). The next real frontier is (a) the
+data-driven top failure signatures via tools/classify_failures.rb on ax52,
+and (b) the parked projects -- FLOAT FIRST (blocks ~2,300 assertions + 4
+crash files; but self-hosting can't compile float literals, so it needs a
+compiler change to emit them -- a dedicated design project, not a loop tick).
+NOTE (2026-07-05): a vtable module-override attempt to fix Comparable#==
+was LAYOUT-SENSITIVE and reverted -- see the HARD LESSON in memory; do not
+retry flattened-vtable ancestry fixes without real method resolution.
 
 ## Recommended next-session plan (ease × payoff)
 
