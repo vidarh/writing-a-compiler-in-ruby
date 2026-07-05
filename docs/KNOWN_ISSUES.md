@@ -125,9 +125,14 @@ call on the module instead of the local. The core/module fixture
 at runtime `m` dispatches as `ModuleSpecs.m` -> "undefined method 'm' for
 ModuleSpecs", crashing all 61 module specs that load this fixture (the
 single biggest failure cluster). LOADS FINE standalone (the 653-line fixture minus requires runs to
-completion), a MINIMAL repro works, but fixture + the full spec's ~1000
-lines of describe/it blocks CRASHES -- so the trigger is TOTAL PROGRAM
-SIZE, not any single line (line-cut bisection is unproductive), the same family as the other layout-sensitive
+completion), a MINIMAL repro works, but fixture + full spec CRASHES.
+RULED OUT (2026-07-05 experiments): NOT pure size -- a 1000-dummy-method
+program AND a 600-method module body BOTH containing the exact
+`m = Module.new{} + m.instance_method` pattern compile and run FINE. So
+the trigger is a SPECIFIC CONSTRUCT COMBINATION in the fixture (it has
+module_function, nested modules, `class << self`, alias, private, class
+vars), not line count. Needs a construct-bisection of the fixture (block-
+balanced cuts) to isolate the interacting construct, the same family as the other layout-sensitive
 miscompiles (glob loop-carried locals, Array.[] extra-branch,
 b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
