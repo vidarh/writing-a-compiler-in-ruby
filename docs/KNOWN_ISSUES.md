@@ -90,9 +90,17 @@ fails stage-1 self-compilation — THREE variants confirmed 2026-07-05:
 unconditional __new, Ruby-guarded (`if self.equal?(Array)`), and a raw
 `%s(if (eq self Array) ...)` sexp branch. The guard never fires self-hosted,
 so this is purely shape/layout-sensitive miscompilation of Array.[] (the
-hottest bootstrap function). That single bug gates ~40 MyArray specs
-(slice_spec measured 9→52 with the bypass). Root-causing this is the
-highest-leverage compiler hunt right now.
+hottest bootstrap function). CRASH SIGNATURE (gdb, ASLR off, raw-sexp
+variant): stage-1 dies in __method_Compiler_compile_eval_arg dispatching on
+%esi == 0 (`mov (%esi),%eax; call *0x3c(%eax)`) deep in a compile recursion
+through send/__send_for_obj__ — i.e. the modified Array.[] intermittently
+returns RAW 0 (not nil) under compiler-scale load and the null array flows
+until method dispatch. Small programs pass; the failure is state/pressure
+dependent. Start the hunt by diffing the MRI-hosted asm of Array.[] with and
+without the branch and auditing the sexp-if result/assign paths for a code
+path that leaves `a`'s slot holding 0. That single bug gates ~40 MyArray
+specs (slice_spec measured 9→52 with the bypass). Highest-leverage compiler
+hunt right now.
 
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
