@@ -102,6 +102,20 @@ path that leaves `a`'s slot holding 0. That single bug gates ~40 MyArray
 specs (slice_spec measured 9→52 with the bypass). Highest-leverage compiler
 hunt right now.
 
+### 3d. Splat + side-effecting block-pass mis-marshals (2026-07-05)
+
+`m(*a, 2, &a.pop)` where the block-pass argument MUTATES the same array
+being splatted evaluates out of source order: MRI materializes `*a` first
+then evaluates `&a.pop`, but here the block arg is evaluated interleaved,
+so the splat array captures garbage (`m(*[1,9],2,&c.pop)` gave
+`[[1,2,<garbage>],9]` instead of MRI's TypeError / the nil-pop no-block
+case's `[[1,nil,2],nil]`). Returns garbage in isolation; CRASHES in a full
+spec run when the garbage pointer is later dereferenced. Pre-existing
+(confirmed by stashing the module_function change); now REACHED by
+language/send_spec once module_function un-gates its earlier tests
+(send_spec: was FAIL 10p, now CRASH at the `m(*args,2,&args.pop)` test).
+Deep in compile_callm splat+block arg ordering; pathological shape.
+
 ### 4. Keyword arguments — correctness gaps (~85 tests, one workstream)
 
 Basic kwargs work (required/optional/`**rest`). Wrong: kw-vs-positional-hash
