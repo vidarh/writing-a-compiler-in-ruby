@@ -97,9 +97,10 @@ class Object
     return [] if nil?
     if respond_to?(:to_a)
       r = to_a
-      # Only use to_a's result when it is actually an Array; otherwise the splat machinery would read
-      # @len off a non-Array and crash. (MRI raises TypeError here; wrapping to [self] is the safe fallback.)
       return r if r.is_a?(Array)
+      # MRI: a #to_a that returns a non-Array is a TypeError (previously wrapped
+      # to [self], silently mis-expanding and hiding the protocol violation).
+      raise TypeError, "can't convert #{self.class} to Array (#{self.class}#to_a gives #{r.class})"
     end
     [self]
   end
