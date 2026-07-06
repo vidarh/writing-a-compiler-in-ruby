@@ -58,7 +58,13 @@ class Compiler
                   :unwind, # Exception stack unwinding
                   :pattern, # Pattern matching (Ruby 3.0+)
                   :as_pattern, # AS patterns in pattern matching (Ruby 3.0+)
-                  :float # Float literal [:float, "<decimal-string>"] -> see compile_float
+                  :float, # Float literal [:float, "<decimal-string>"] -> see compile_float
+                  # x87 double primitives used by lib/core/float.rb. Each takes THREE Float-object
+                  # pointers (a b result); the double lives at offset 4. `(fadd a b r)` does `r = a + b`.
+                  :fadd, :fsub, :fmul, :fdiv,
+                  # x87 <-> integer conversions. `(ftoi f)` truncates the double at 4(f) toward zero and
+                  # returns a TAGGED fixnum. `(fint i r)` writes (double)i into the Float pointed to by r.
+                  :ftoi, :fint
                   ]
 
   Keywords = @@keywords
@@ -163,6 +169,59 @@ class Compiler
   # [:float, "<decimal-string>"] literal node (produced by the tokeniser; see tokens.rb Number.expect).
   def compile_float(scope, decimal_str)
     emit_float_const(scope, decimal_str)
+  end
+
+  # x87 double binary op: `result = a <op> b`, where a/b/result are Float-object pointers whose double
+  # lives at offset 4. Each operand is evaluated then immediately consumed (fldl/f<op>l/fstpl), so no
+  # pointer is held across another evaluation. `fldl a; f<op>l b; fstpl result` is FPU-stack-balanced.
+  def compile_fbinop(scope, mnemonic, a, b, result)
+    @e.save_result(compile_eval_arg(scope, a))       # eax = ptr a
+    @e.fldl("4(%eax)")             # st0 = *a  (a now consumed onto the FPU stack)
+    @e.save_result(compile_eval_arg(scope, b))       # eax = ptr b
+    @e.emit(mnemonic, "4(%eax)")   # st0 = st0 <op> *b
+    @e.save_result(compile_eval_arg(scope, result))  # eax = ptr result
+    @e.fstpl("4(%eax)")            # *result = st0
+    Value.new([:subexpr])
+  end
+
+  def compile_fadd(scope, a, b, result); compile_fbinop(scope, :faddl, a, b, result); end
+  def compile_fsub(scope, a, b, result); compile_fbinop(scope, :fsubl, a, b, result); end
+  def compile_fmul(scope, a, b, result); compile_fbinop(scope, :fmull, a, b, result); end
+  def compile_fdiv(scope, a, b, result); compile_fbinop(scope, :fdivl, a, b, result); end
+
+  # `(ftoi f)` -> tagged fixnum. Truncates the double at 4(f) toward zero (MRI Float#to_i semantics).
+  # x87 fistpl uses the current rounding mode, so we temporarily set RC=truncate (control-word bits
+  # 10-11 = 11, i.e. |0xC00) around the store and restore the caller's mode afterwards. 8 scratch bytes:
+  # [esp]=saved cw, [esp+2]=truncate cw, [esp+4]=the 32-bit int result.
+  def compile_ftoi(scope, a)
+    @e.save_result(compile_eval_arg(scope, a))  # eax = ptr to the Float
+    @e.fldl("4(%eax)")                 # st0 = *self
+    @e.subl(8, :esp)
+    @e.emit(:fnstcw, "(%esp)")         # save current control word
+    @e.emit(:movw, "(%esp)", "%ax")
+    @e.emit(:orw, "$3072", "%ax")      # 0xC00 -> RC = round-toward-zero (truncate)
+    @e.emit(:movw, "%ax", "2(%esp)")
+    @e.emit(:fldcw, "2(%esp)")         # activate truncation
+    @e.emit(:fistpl, "4(%esp)")        # store truncated int, pop st0
+    @e.emit(:fldcw, "(%esp)")          # restore caller's rounding mode
+    @e.movl("4(%esp)", :eax)           # eax = raw signed int
+    @e.addl(8, :esp)
+    @e.leal("1(%eax,%eax,1)", :eax)    # tag as fixnum: eax*2+1
+    Value.new([:reg, :eax])
+  end
+
+  # `(fint i r)` writes (double)i into the Float pointed to by r (double at offset 4). `i` is a tagged
+  # fixnum, so we arithmetic-shift it back to a raw int, spill it to the stack, and fildl it onto st0.
+  def compile_fint(scope, a, result)
+    @e.save_result(compile_eval_arg(scope, a))       # eax = tagged fixnum
+    @e.sarl(1, :eax)                   # untag fixnum -> raw int
+    @e.subl(4, :esp)
+    @e.movl(:eax, "(%esp)")
+    @e.emit(:fildl, "(%esp)")          # st0 = (double) raw int
+    @e.addl(4, :esp)
+    @e.save_result(compile_eval_arg(scope, result))  # eax = ptr result
+    @e.fstpl("4(%eax)")                # *result = st0
+    Value.new([:subexpr])
   end
 
   # Returns an argument with its type identifier.

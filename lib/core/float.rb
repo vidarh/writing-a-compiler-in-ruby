@@ -32,8 +32,8 @@ class Float
   alias inspect to_s
 
   def to_i
-    # FIXME: Stub - proper float to int conversion not implemented
-    0
+    # Truncate toward zero (the ftoi primitive sets x87 RC=truncate around the store).
+    %s(ftoi self)
   end
 
   alias to_int to_i
@@ -52,21 +52,35 @@ class Float
     Float
   end
 
-  # FIXME: Minimal stubs - operations not fully implemented
+  # Arithmetic. Non-Float operands are coerced to Float first (Integer#to_f, etc.), then the x87
+  # primitive computes result = self <op> other into a freshly allocated Float. Divide-by-zero and
+  # 0.0/0.0 produce IEEE Infinity/NaN for free from the FPU.
   def + other
-    self
+    other = other.to_f unless other.is_a?(Float)
+    r = Float.new
+    %s(fadd self other r)
+    r
   end
 
   def - other
-    self
+    other = other.to_f unless other.is_a?(Float)
+    r = Float.new
+    %s(fsub self other r)
+    r
   end
 
   def * other
-    self
+    other = other.to_f unless other.is_a?(Float)
+    r = Float.new
+    %s(fmul self other r)
+    r
   end
 
   def / other
-    self
+    other = other.to_f unless other.is_a?(Float)
+    r = Float.new
+    %s(fdiv self other r)
+    r
   end
 
   def ** other

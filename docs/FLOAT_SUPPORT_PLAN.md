@@ -61,16 +61,27 @@ The bar for "done": `1.5 + 2.5 == 4.0`, `10.0 / 4 == 2.5`, `(3.14 <=> 3.15) == -
    selftest-c (compare `p 1.5` MRI vs compiled). Also give `Float::INFINITY`/`NAN`/
    `MAX`/`MIN`/`EPSILON` real `.double` values (`inf`, `nan`, etc. — gas understands
    them) and drop the integer stubs.
+   **[DONE — commit 65c9c11]** Literal self-hosting landed; `.double <string>` emitted
+   verbatim, `String#to_f` dropped from the literal path. (INFINITY/NAN/MAX/MIN/EPSILON
+   real-`.double` values are still integer/empty stubs — folded into Phase-1 item 5.)
 2. **Arithmetic codegen** (emitter). Add `faddl/fsubl/fmull/fdivl` (memory-operand
    forms) and the `fld st(i)`/`fxch` helpers needed. Implement `Float#+ - * /` in
    `lib/core/float.rb` via `%s`: `fldl 4(self)`, `fldl 4(other)`, `faddl`, then
    `__float_from_st0`. Mixed operands: if `other` is an Integer/Rational, coerce it to
    Float first (needs step 3's `Integer#to_f`). Handle the divide-by-zero → `Infinity`
    / `0.0/0.0` → `NaN` IEEE behaviour (x87 gives these for free).
+   **[DONE — this commit]** `fadd/fsub/fmul/fdiv` primitives (three Float-ptr args,
+   `fldl a; f<op>l 4(b); fstpl 4(r)`); `Float#+ - * /` allocate a fresh result and
+   coerce non-Float operands via `other.to_f`. Divide-by-zero → Infinity / `0.0/0.0`
+   → NaN come free from x87. (`**` still a stub — Phase 2.) Reverse coercion
+   (`Integer#+ Float` → `coerce`) not yet wired — left-operand-Float works today.
 3. **Int↔Float conversion** (emitter + lib). `Integer#to_f`: `fild` a fixnum, `fstpl`
    (replaces the current stub). `Float#to_i`/`to_int`: truncate toward zero — set the
    FPU rounding mode (or `fisttp` if SSE3 assumed) and `fistpl`. `Float#coerce`.
    (Bignum→double is deferred to Phase 3.)
+   **[DONE — this commit]** `fint` primitive (`Integer#to_f` via `fildl`) and `ftoi`
+   primitive (`Float#to_i`/`to_int`, x87 RC=truncate around `fistpl` → truncates
+   toward zero, verified for negatives). `Float#coerce` not yet added.
 4. **Comparison** (emitter + lib). Add `fucompp` + `fnstsw %ax` + `sahf`; implement
    `Float#<=> == < <= > >= eql?` returning proper `-1/0/1`/bool, incl. `NaN`
    unorderedness (`NaN <=> x` is nil; `NaN == NaN` is false). Wire `Comparable`.

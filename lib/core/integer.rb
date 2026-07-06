@@ -3802,9 +3802,10 @@ class Integer < Numeric
   end
 
   def to_f
-    # FIXME: Stub - proper integer to float conversion not implemented
-    # Return a dummy Float instance so type checks work
-    Float.new
+    # (double)self into a fresh Float via the x87 fildl primitive.
+    r = Float.new
+    %s(fint self r)
+    r
   end
 
   def size

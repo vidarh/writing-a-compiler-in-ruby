@@ -451,9 +451,17 @@ class Emitter
   def ret; emit(:ret); end
   def leave; emit(:leave); end
 
-  # Floating point instructions
+  # Floating point instructions (x87). fldl pushes a double onto st0; the binary ops take a memory
+  # operand and compute `st0 = st0 <op> mem` in place; fstpl stores st0 to memory and pops. A
+  # balanced `fldl; f<op>l; fstpl` sequence leaves the FPU stack as it found it.
   def fldl src; emit(:fldl, src); end       # Load double onto FPU stack
   def fstpl dest; emit(:fstpl, dest); end   # Store double from FPU stack and pop
+  def faddl src; emit(:faddl, src); end     # st0 += double at src
+  def fsubl src; emit(:fsubl, src); end     # st0 -= double at src
+  def fmull src; emit(:fmull, src); end     # st0 *= double at src
+  def fdivl src; emit(:fdivl, src); end     # st0 /= double at src
+  def fcompp; emit(:fcompp); end            # compare st0 with st1, pop both
+  def fnstsw_ax; emit(:fnstsw, "%ax"); end  # FPU status word -> ax (for comparison branches)
 
   def sall *args
     emit(:sall, *args)
