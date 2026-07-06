@@ -67,7 +67,9 @@ class Compiler
                   :ftoi, :fint,
                   # x87 ordered comparisons. Each returns a raw 0/1 flag (like the integer :lt/:eq
                   # primitives) for use inside `(if ...)`. NaN is unordered: flt/fgt/feq all yield 0.
-                  :flt, :fgt, :feq
+                  :flt, :fgt, :feq,
+                  # x87 unary ops: `(fneg f r)` writes -*f into r (fchs); `(fabs f r)` writes |*f| (fabs).
+                  :fneg, :fabs
                   ]
 
   Keywords = @@keywords
@@ -267,6 +269,19 @@ class Compiler
     @e.movzbl(:al, :eax)
     Value.new([:reg, :eax])
   end
+
+  # x87 unary op: result = <insn>(*a), where insn is a no-operand FPU instruction (fchs / fabs).
+  def compile_funop(scope, insn, a, result)
+    @e.save_result(compile_eval_arg(scope, a))
+    @e.fldl("4(%eax)")                 # st0 = *a
+    @e.emit(insn)                      # st0 = <insn>(st0)
+    @e.save_result(compile_eval_arg(scope, result))
+    @e.fstpl("4(%eax)")                # *result = st0
+    Value.new([:subexpr])
+  end
+
+  def compile_fneg(scope, a, result); compile_funop(scope, :fchs, a, result); end
+  def compile_fabs(scope, a, result); compile_funop(scope, :fabs, a, result); end
 
   # Returns an argument with its type identifier.
   #

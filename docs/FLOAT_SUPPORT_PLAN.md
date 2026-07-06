@@ -92,6 +92,23 @@ The bar for "done": `1.5 + 2.5 == 4.0`, `10.0 / 4 == 2.5`, `(3.14 <=> 3.15) == -
    machine word (raw 0 is a null pointer → crash). `Comparable` mixin not yet wired.
 5. **Basic unary/predicates:** `-@`, `abs`, `zero?`, `nan?`, `infinite?`, `finite?`,
    `hash` (over the 8 raw bytes). Cheap, all reuse st0 load/store.
+   **[DONE — this commit]** `fneg`/`fabs` primitives; `-@ +@ abs magnitude zero? nan?
+   infinite? finite? hash`. Real constants: `MAX/MIN/EPSILON` as finite literals;
+   `INFINITY = 1.0/0.0`, `NAN = 0.0/0.0` COMPUTED at the class-body bottom (gas rejects
+   an overflowing/NaN literal). Two pre-existing front-end limits found & worked around
+   (NOT Float regressions, both non-crashing):
+     - a bare-exponent literal `1e400`/`1e300` mis-tokenises to `0.0` (needs a dotted
+       mantissa) — irrelevant once INFINITY is computed;
+     - unary minus on a value (`-x`, `-INFINITY`) does not dispatch to `Float#-@`, so
+       `infinite?` uses `0.0 - INFINITY` for -Inf. `x.-@` works.
+
+**Phase 1 is COMPLETE.** Real Float values flow end-to-end self-hosted: arithmetic,
+Int↔Float conversion, ordered comparison (+NaN), unary ops, predicates, real
+INFINITY/NAN/MAX/MIN/EPSILON. Gates held every commit (selftest / selftest-c Fails:0,
+crash battery clean — now 106 guards incl. float_arith/float_compare/float_unary).
+Still stubbed for later phases: `to_s` (prints "0.0"), `**`, `Float#coerce`, reverse
+coercion (`Integer + Float`), `Comparable` mixin, `%`/`divmod`/`floor(ndigits)`/`round`/
+`ceil`, and the two front-end limits above.
 
 **Payoff of Phase 1:** the 4 float CRASH files stop crashing; `float/` arithmetic,
 comparison, and `integer/fdiv` largely convert; `Rational#to_f`/`Integer#fdiv` return

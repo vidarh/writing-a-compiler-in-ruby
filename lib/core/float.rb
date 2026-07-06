@@ -1,19 +1,12 @@
 
 class Float
-  # Stub constants - proper IEEE 754 values not implemented
-  # IMPORTANT: Cannot use large literals during compilation - they cause overflow
-  # Use computed values instead
-  INFINITY = 1 << 28  # Large value without literal overflow
-  MAX = (1 << 28) - 1
-  # A true IEEE NaN is not representable while Float is stubbed; the CONSTANT
-  # must exist though -- specs reference Float::NAN in before-blocks, and a
-  # missing constant aborted whole files (kernel/sprintf, string/modulo).
-  # NOTE: no 0.0 literals here -- the SELF-HOSTED compiler cannot compile
-  # float literals yet (String#to_f is missing; MRI-hosted works, selftest-c
-  # dies), which is also why INFINITY/MAX are integer expressions.
-  NAN = Float.new
-  EPSILON = Float.new
-  MIN = Float.new
+  # Real IEEE-754 values now that float literals self-host and gas does decimal->IEEE at assemble
+  # time. These finite literals assemble directly; INFINITY/NAN cannot (gas rejects an overflowing
+  # literal, and there is no NaN literal syntax) so they are COMPUTED at the bottom of the class
+  # body (1.0/0.0, 0.0/0.0), after Float#/ is defined.
+  MAX = 1.7976931348623157e308
+  MIN = 2.2250738585072014e-308
+  EPSILON = 2.220446049250313e-16
   DIG = 15
   MANT_DIG = 53
 
@@ -140,21 +133,67 @@ class Float
     r
   end
 
+  def -@
+    r = Float.new
+    %s(fneg self r)
+    r
+  end
+
+  def +@
+    self
+  end
+
+  def abs
+    r = Float.new
+    %s(fabs self r)
+    r
+  end
+
+  alias magnitude abs
+
+  def zero?
+    self == 0.0
+  end
+
   # Predicate methods
   def nan?
-    false
+    # NaN is the only value not equal to itself.
+    r = true
+    %s(if (feq self self) (assign r false))
+    r
   end
 
   def infinite?
+    # NOTE: use `0.0 - INFINITY` for -Inf, NOT the unary `-INFINITY` -- unary minus on a value
+    # does not currently dispatch to Float#-@ in the parser, so it would compare against garbage.
+    return 1 if self == INFINITY
+    return -1 if self == (0.0 - INFINITY)
     nil
   end
 
   def finite?
+    return false if nan?
+    return false if infinite?
     true
+  end
+
+  # A simple hash over the two 32-bit halves of the raw double. Consistent with eql? for finite
+  # values (the ±0.0 / NaN corners are not distinguished — acceptable for now).
+  def hash
+    lo = 0
+    hi = 0
+    %s(assign lo (__int (index self 1)))
+    %s(assign hi (__int (index self 2)))
+    lo ^ hi
   end
 
   # FIXME: Stub for internal coercion - needed by comparison operators
   def __get_raw
     0
   end
+
+  # Real IEEE special values, computed via x87 division now that Float#/ is defined: 1.0/0.0 -> +Inf,
+  # 0.0/0.0 -> NaN. (gas cannot assemble an overflowing/NaN literal, so these can't be plain literals.)
+  INFINITY = 1.0 / 0.0
+  NAN = 0.0 / 0.0
 end
