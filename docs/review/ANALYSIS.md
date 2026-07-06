@@ -1,7 +1,8 @@
 # Post-crash-burndown review: cleanup, refactoring & failure triage
 
-**Original review: 2026-07-04**, baseline `01234cd` — PASS 342 / CRASH 10 /
-COMPILE_FAIL 5; 5,935 of ~36.9k tests passing.
+**Review written 2026-07-04**, against the then-current `01234cd` — PASS 342 /
+CRASH 10 / COMPILE_FAIL 5; 5,935 of ~36.9k tests passing. (This was the compiler's
+state on that date — already well into the burndown, not any project baseline.)
 **Current (2026-07-06, sweep `09872ec`): PASS 376 / CRASH 22 / COMPILE_FAIL 1;
 9,302 tests passing.**
 
