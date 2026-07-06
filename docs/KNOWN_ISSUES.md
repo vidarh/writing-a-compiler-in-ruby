@@ -274,7 +274,7 @@ actual limb values of `3^40`, and check the carry-out reconstruction.
 Basic kwargs work (required/optional/`**rest`). Wrong: kw-vs-positional-hash
 split, `super` drops all kwargs (29 super_spec fails), `**nil`/`**{}` mishandled,
 arity errors with post-splat+kwarg params. keyword_arguments_spec no longer
-crashes — it fails 26 tests. Triage cluster C6 in review/triage-language.md.
+crashes — it fails 26 tests.
 
 ### 5. Deferred crash-adjacent findings (2026-07-01)
 

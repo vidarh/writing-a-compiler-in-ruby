@@ -1,16 +1,13 @@
 # Next Steps — Completing the Compiler
 
-> **⚠ STALE STATE (2026-06-26 roadmap).** The state figures below (e.g. "~4% files
-> pass", "27% tests") are the ORIGINAL baseline and are long superseded — current
-> status is PASS 376 / 9,302 tests passing (@ `09872ec`); see [spec_status.md](spec_status.md)
-> and [review/ANALYSIS.md](review/ANALYSIS.md). The strategic framing may still be useful;
-> the numbers are not.
-
-
-*Created: 2026-06-26. A cross-cutting roadmap proposal. Each numbered item below is
-intended to be promoted into a focused `docs/plans/<CODE>` plan via the improvement
-planner; this document is the strategy that prioritizes them (an iterative loop, not a
-fixed order — see Operating method).*
+*Created 2026-06-26 as a cross-cutting roadmap. The infrastructure workstreams (fast
+parallel/remote runner, failure classifier, machine-readable results) are BUILT, and
+the burndown itself has run (5,935 → 9,302 tests passing). The "Where things stand"
+figures below are the 2026-06-26 starting point — for current status use
+[spec_status.md](spec_status.md) + [review/ANALYSIS.md](review/ANALYSIS.md). What
+remains from this doc are the un-taken perf spikes (A6 `lib/core` Marshal precompile,
+GC re-enable). Each numbered item is intended to be promoted into a focused
+`docs/plans/<CODE>` plan via the improvement planner.*
 
 > **The standing operating procedure lives in [`docs/COMPILER_WORKFLOW.md`](COMPILER_WORKFLOW.md)** —
 > read that first on a restart, then this file for the candidate backlog and detail.

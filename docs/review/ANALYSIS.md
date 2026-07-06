@@ -9,14 +9,13 @@ The live, authoritative per-file status is the auto-generated
 [../spec_status.md](../spec_status.md) (`make specs-parallel`). Active bugs live in
 [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
 
-> **This document's Phase 0–3 plan (below) has been largely EXECUTED** across the
-> 2026-07-04→06 loop (tests 5,935 → 9,302, ~50 gated commits). It is kept as the
-> historical record and a map of what remains. The six input reports it was
-> synthesised from — [cleanup.md](cleanup.md), [refactoring.md](refactoring.md),
-> [docs-hygiene.md](docs-hygiene.md), [triage-language.md](triage-language.md),
-> [triage-core-a-h.md](triage-core-a-h.md), [triage-core-i-z.md](triage-core-i-z.md)
-> — are point-in-time 2026-07-04 snapshots whose actionable items are mostly done;
-> read them for context, not as a live to-do.
+This is the maintained synthesis of the 2026-07-04 review. **Its Phase 0–3 plan
+(below) has been largely EXECUTED** across the 2026-07-04→06 loop (tests 5,935 →
+9,302, ~50 gated commits); it is kept as the record and a map of what remains.
+(The six detailed input reports — cleanup / refactoring / docs-hygiene / triage-*
+— have been removed now that their actionable items are done and folded into this
+doc; per-spec failure detail for the parked projects is regenerable via
+`tools/classify_failures.rb` against the current `spec_status.jsonl`.)
 
 ## Headline (still true)
 

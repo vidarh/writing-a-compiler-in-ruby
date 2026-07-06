@@ -143,7 +143,7 @@ Ten functions in transform.rb currently hand-maintain this list
 `__repoint_creations`, `__inject_wrapenv_prologue`, `find_vars`,
 `__rewrite_env_vars_r`, `replace_bare_super`, `__subst_method_name`,
 `rewrite_direct_ivars`). Unifying them behind one predicate is refactoring
-item R2 (docs/review/refactoring.md). Until then: **any new walker must
+item R2 (see review/ANALYSIS.md, Phase 4). Until then: **any new walker must
 implement the table above exactly, and any boundary change must be applied to
 all ten.**
 
@@ -184,7 +184,7 @@ MRI — check this list before debugging transform logic:
   or battery is running.
 
 ## References
-- docs/review/refactoring.md — R1/R2 (shape normalization, walker unification)
+- review/ANALYSIS.md — Phase 4 R2 (walker unification; R1 shape-normalization done)
 - docs/bugs/RESOLVED_INVESTIGATIONS.md — the env/`__tmp_proc` slot-aliasing
   and eigenclass corruption post-mortems
 - test/repros/ — bk6, hop1, ie1, pm1, blk1 exercise this subsystem

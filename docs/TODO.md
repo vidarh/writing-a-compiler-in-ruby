@@ -1,6 +1,6 @@
 # Ruby Compiler TODO
 
-**Last Updated**: 2026-07-04
+**Last Updated**: 2026-07-06
 
 ## Test Status
 
@@ -8,34 +8,37 @@ Current numbers live in the auto-generated **[spec_status.md](spec_status.md)**
 (do not copy them here — they rot). Selftest: both gates green, always
 (hard commit requirement).
 
-The prioritized work plan is **[review/ANALYSIS.md](review/ANALYSIS.md)**
-(2026-07-04): phased ease-vs-payoff ranking covering harness gaps, the
-pack/unpack codec, lib/core method sweeps, structural refactors R1–R12, and
-the parked projects. This file only tracks the headline order.
+The prioritized work plan is **[review/ANALYSIS.md](review/ANALYSIS.md)**; its
+Phase 0–3 plan has been largely executed (tests 5,935 → 9,302). This file tracks
+the current headline order.
 
 ---
 
-## Priority 1: current phase (from review/ANALYSIS.md)
+## Priority 1 — DONE (2026-07-04→06)
 
-1. ~~Phase 0a: rubyspec_helper matcher/helper batch~~ (DONE 6ec0a6f)
-2. Phase 0b: cleanup commit (dead code, stale comments, backup-file purge —
-   docs/review/cleanup.md top-15)
-3. Phase 1: R1 defm-body shape normalization (fixes live default-arg+ensure
-   crash); R4 safe_callm dot-comma normalization (fixes two live parse bugs);
-   R3 self-host miscompile corpus in spec/selfhost/
-4. Phase 2: pack/unpack integer codec (~4,900 assertions) + lib/core trivial
-   sweeps (Kernel#open, ENV, Symbol, Enumerable, Array/Hash small methods,
-   strict Integer(), String case/byte, module_function)
+Phases 0–2 and most of Phase 3's easy items are complete: rubyspec_helper matcher
+batch; cleanup commit (DEBUG tripwire removed, backups purged, canonical repros in
+`test/repros/`); R1 defm-body shape normalization; R4 `:safe_callm` dot-comma;
+pack/unpack codec (`lib/core/pack.rb` + binary-safe String); the lib/core sweeps
+(Kernel#open, ENV, Symbol, Enumerable, Array/Hash methods, strict `Integer()`,
+String case/byte, module_function); the glob engine (`lib/core/glob.rb`); full
+Rational/Complex, Integer#quo, Range#size, block-less enumerator guards, and
+`class X < <localvar>` runtime superclass. Safe lib/core work is now EXHAUSTED.
 
-## Priority 2: medium, localized (Phase 3)
+## Priority 2: remaining localized compiler/runtime work (Phase 3)
 
-- defined? coverage; $!/$@ wiring; qualified-constant assignment + op-assign;
-  block-param/masgn destructuring protocol; kwargs correctness (incl. super
-  forwarding); glob engine; regexp match globals; Enumerator::Lazy;
-  Module#const_get; the __tmp_proc stabby-lambda bug; MyArray segfault hunt.
-- super() in define_method: `define_method(:name) { super() }` needs the
-  method name from the define_method argument, not scope lookup. Related:
-  `return` inside a define_method'd proc needs method-return semantics.
+- defined? coverage; $!/$@ + regexp match globals; qualified-constant op-assign
+  (live bug #4); block-param/masgn destructuring incl. implicit auto-splat
+  (KNOWN_ISSUES 2b — BROAD block-ABI blast radius, high crash risk); kwargs super
+  forwarding; Enumerator::Lazy; the __tmp_proc stabby-lambda bug (#5); MyArray
+  subclass segfault (#6, KNOWN_ISSUES 3c); bignum heap*heap multiply (3g).
+- super() in define_method: `define_method(:name) { super() }` needs the method
+  name from the define_method argument, not scope lookup. Related: `return` inside
+  a define_method'd proc needs method-return semantics.
+- **CRASH count is LAYOUT-SENSITIVE** (KNOWN_ISSUES; memory
+  compiler_crash_regression_watch): the remaining deterministic crashers are
+  latent Proc-@addr corruption exposed by layout shifts. Do NOT whack-a-mole
+  individual crashers; the fix is the latent-corruption hunt (research-grade).
 
 ## Priority 3: projects (parked; schedule deliberately)
 
