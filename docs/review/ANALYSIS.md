@@ -37,7 +37,28 @@ picked at during a burndown loop.
 | 7 | `__get_raw` unreachable on Array *subclasses* (7× in variables_spec) | Open — easy standalone |
 | 8 | rubyspec_helper.rb:556 failure messages interpolate unset `@result` (always nil) | Open — one-line, in harness batch |
 
-## Execution status (loop of 2026-07-04/05)
+## Execution status (loop of 2026-07-04/06)
+
+**2026-07-06 checkpoint (full sweep @09872ec): tests 9302 passed, PASS 376,
+COMPILE_FAIL 1, CRASH 22.** Since the 2026-07-05 numeric/method work (Rational,
+Complex, Integer#quo, full Hash/Array Enumerable surfaces, String#to_r/delete_*,
+Range#size), a recovery pass fixed 4 COMPILE_FAILs (ensure_spec return-in-ensure
+compiler recursion; String.allocate; Set#flatten recursion; and 3h `class X <
+<localvar>` runtime superclass — c538602) plus a String.allocate CRASH and
+Set#flatten CRASH, taking COMPILE_FAIL 5→1 (only syntax_error, an AOT limit,
+left). Integer#rationalize stale stub fixed (2edc83e).
+CRITICAL FINDING (see [[compiler_crash_regression_watch]]): the CRASH count is
+LAYOUT-SENSITIVE and wobbles with every code change — the 15→22 delta is partly
+flaky classification and partly latent Proc-@addr memory-corruption EXPOSED (not
+caused) by the added code shifting layout (bisected numeric/quo's crash to the
+mere presence of `def quo`). valgrind-in-docker PANICS on it; addresses aren't
+reproducible under setarch -R. Do NOT whack-a-mole individual crashers or revert
+features to chase the count — the durable fix is the latent-corruption hunt.
+The THREE remaining fronts are all DEDICATED PROJECTS, not loop-tick work:
+(1) Float (parked, biggest raw payoff + 4 crashers); (2) implicit block auto-splat
+2b (tractable but broad block-ABI blast radius — high crash risk); (3) the
+Proc-cell corruption hunt (research-grade). Safe incremental lib work is
+EXHAUSTED (verified by wide MRI-differential probing). Older status below.
 
 Phases 0–2 are COMPLETE and Phase 3 is largely done (~36 gated commits;
 tests 5,935 → ~9,000+, sweeps committed as they land). Landed beyond the
