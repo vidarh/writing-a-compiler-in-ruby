@@ -874,6 +874,10 @@ class Compiler
   def rewrite_strconst(exp)
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
+      # A [:float, "<decimal>"] node's string is a rodata `.double` operand for the assembler, NOT a
+      # runtime String literal -- leave it intact (rewriting it to __get_string emitted a garbage
+      # `.double [:sexp,...]`).
+      next :skip if e[0] == :float
       # Keep the require name readable: a :require_missing marker's string is only used
       # for the "Unable to open" build error / runtime LoadError message.
       next :skip if e[0] == :require_missing

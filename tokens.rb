@@ -261,7 +261,11 @@ module Tokens
             end
           end
 
-          return num.to_f
+          # Carry the literal as its DECIMAL STRING (not `num.to_f`): the assembler turns
+          # `.double <string>` into IEEE bytes at assemble time, so no compile-time float math /
+          # String#to_f is needed. This is what makes float literals compile SELF-HOSTED (the
+          # compiler's own String#to_f is stubbed). See compile_float / FLOAT_SUPPORT_PLAN.md.
+          return [:float, num]
         end
       end
 

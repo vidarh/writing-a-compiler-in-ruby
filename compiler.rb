@@ -57,7 +57,8 @@ class Compiler
                   :div64, # 64-bit division - divides EDX:EAX by operand
                   :unwind, # Exception stack unwinding
                   :pattern, # Pattern matching (Ruby 3.0+)
-                  :as_pattern # AS patterns in pattern matching (Ruby 3.0+)
+                  :as_pattern, # AS patterns in pattern matching (Ruby 3.0+)
+                  :float # Float literal [:float, "<decimal-string>"] -> see compile_float
                   ]
 
   Keywords = @@keywords
@@ -146,6 +147,24 @@ class Compiler
     end
   end
 
+  # Emit a Float object holding the double named by `decimal_str` (e.g. "1.5", "1.5e10", "inf", "nan").
+  # The value goes into rodata as `.double <decimal_str>` (the ASSEMBLER converts decimal->IEEE, so no
+  # compile-time float math is needed), then storedouble (x87 fldl/fstpl) copies the 8 bytes into the new
+  # object at offset 4 (after the vtable pointer). Shared by the [:float, str] literal path and any native
+  # Ruby Float that reaches get_arg MRI-hosted.
+  def emit_float_const(scope, decimal_str)
+    label = ".float_#{@float_constants.length}"
+    @float_constants[label] = decimal_str
+    ptr = compile_exp(scope, [:callm, :Float, :new])
+    @e.storedouble(:eax, 4, label)
+    ptr
+  end
+
+  # [:float, "<decimal-string>"] literal node (produced by the tokeniser; see tokens.rb Number.expect).
+  def compile_float(scope, decimal_str)
+    emit_float_const(scope, decimal_str)
+  end
+
   # Returns an argument with its type identifier.
   #
   # If a Fixnum is given, it's an int ->   [:int, a]
@@ -158,18 +177,10 @@ class Compiler
     return get_arg(scope,:nil, save) if a == nil
     return Value.new([:int, a]) if (a.is_a?(Integer))
 
-    if a.is_a?(Float)
-      # Allocate Float object and store the value
-      # Generate a label for this float constant
-      label = ".float_#{@float_constants.length}"
-      @float_constants[label] = a
-      # Use compile_exp to create the Float object
-      ptr = compile_exp(scope, [:callm, :Float, :new])
-      # Function calls return in %eax, so store the double there
-      # Store the double value at offset 4 (after vtable pointer)
-      @e.storedouble(:eax, 4, label)
-      return ptr
-    end
+    # A native Ruby Float can still reach here MRI-hosted (e.g. a constant-folded value); emit it via
+    # its own decimal string so the rodata `.double` is identical to the literal path. Self-hosted no
+    # Ruby Float is ever produced (the compiler has no float literals/arithmetic of its own).
+    return emit_float_const(scope, a.to_s) if a.is_a?(Float)
 
     if a == :"block_given?"
       return compile_exp(scope,
