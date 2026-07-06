@@ -1,5 +1,10 @@
 # Cleanup review — post crash-fixing session
 
+> **HISTORICAL — 2026-07-04 snapshot.** Most actionable items here have been
+> executed over the 2026-07-04→06 loop. See [ANALYSIS.md](ANALYSIS.md) for current
+> status (PASS 376 / CRASH 22 / COMPILE_FAIL 1, 9,302 tests passing @ `09872ec`) and
+> [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) for live bugs. Kept for context, not as a live to-do.
+
 Date: 2026-07-04. Scope: strictly NON-STRUCTURAL cleanup (comments, dead code,
 debris, litter). Files reviewed: transform.rb, compiler.rb, compile_class.rb,
 compile_calls.rb, compile_control.rb, treeoutput.rb, classcope.rb, emitter.rb,

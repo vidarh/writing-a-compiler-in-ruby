@@ -1,5 +1,10 @@
 # Triage: rubyspec/language/ failures
 
+> **HISTORICAL — 2026-07-04 snapshot.** Most actionable items here have been
+> executed over the 2026-07-04→06 loop. See [ANALYSIS.md](ANALYSIS.md) for current
+> status (PASS 376 / CRASH 22 / COMPILE_FAIL 1, 9,302 tests passing @ `09872ec`) and
+> [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) for live bugs. Kept for context, not as a live to-do.
+
 Date: 2026-07-04. Source: `docs/spec_status.jsonl` (68 language/ files with outcome
 FAIL, **1890 failing tests** total) plus fresh runs of 20 spec files (the 15
 highest failed-counts + 5 mid/low representatives). Raw outputs: `/tmp/triage-lang/*.out`.

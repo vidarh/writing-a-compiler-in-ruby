@@ -1,5 +1,10 @@
 # Refactoring Review — Structural Opportunities
 
+> **HISTORICAL — 2026-07-04 snapshot.** Most actionable items here have been
+> executed over the 2026-07-04→06 loop. See [ANALYSIS.md](ANALYSIS.md) for current
+> status (PASS 376 / CRASH 22 / COMPILE_FAIL 1, 9,302 tests passing @ `09872ec`) and
+> [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) for live bugs. Kept for context, not as a live to-do.
+
 Reviewed at commit `01234cd` (2026-07-04). Read-only review of the compiler's internal
 machinery for *structural* refactoring (extraction, unification, normalization) — not
 feature work. All claims below were re-verified against the current source; three new

@@ -1,5 +1,10 @@
 # Triage: rubyspec/core/[i-z]* failures
 
+> **HISTORICAL — 2026-07-04 snapshot.** Most actionable items here have been
+> executed over the 2026-07-04→06 loop. See [ANALYSIS.md](ANALYSIS.md) for current
+> status (PASS 376 / CRASH 22 / COMPILE_FAIL 1, 9,302 tests passing @ `09872ec`) and
+> [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) for live bugs. Kept for context, not as a live to-do.
+
 Date: 2026-07-04. Source: `docs/spec_status.jsonl` (refreshed 2026-07-04) + 20 targeted
 `run_rubyspec` runs + `docs/failure_signatures.txt`. Slice = every core/ directory
 alphabetically i-z (includes math, mutex, queue, sizedqueue, refinement, systemexit,

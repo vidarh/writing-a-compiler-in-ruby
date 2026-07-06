@@ -1,214 +1,120 @@
 # Post-crash-burndown review: cleanup, refactoring & failure triage
 
-Date: 2026-07-04. Baseline: commit `01234cd` — PASS 342 / FAIL 1797 / CRASH 10 /
-COMPILE_FAIL 5 / TIMEOUT 4 files; 5,935 of ~36.9k individual tests passing.
+**Original review: 2026-07-04**, baseline `01234cd` — PASS 342 / CRASH 10 /
+COMPILE_FAIL 5; 5,935 of ~36.9k tests passing.
+**Current (2026-07-06, sweep `09872ec`): PASS 376 / CRASH 22 / COMPILE_FAIL 1;
+9,302 tests passing.**
 
-Six detailed reports in this directory feed this synthesis:
+The live, authoritative per-file status is the auto-generated
+[../spec_status.md](../spec_status.md) (`make specs-parallel`). Active bugs live in
+[../KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
 
-| Report | Scope |
-|---|---|
-| [cleanup.md](cleanup.md) | Non-structural cleanup (comments, dead code, debris) |
-| [refactoring.md](refactoring.md) | Structural refactoring (R1–R12, ranked) |
-| [docs-hygiene.md](docs-hygiene.md) | Documentation staleness & missing docs |
-| [triage-language.md](triage-language.md) | language/ failures (1,890 tests, 68 files) |
-| [triage-core-a-h.md](triage-core-a-h.md) | core/array..hash (10,265 failed assertions) |
-| [triage-core-i-z.md](triage-core-i-z.md) | core/io..warning (17,637 failed examples) |
+> **This document's Phase 0–3 plan (below) has been largely EXECUTED** across the
+> 2026-07-04→06 loop (tests 5,935 → 9,302, ~50 gated commits). It is kept as the
+> historical record and a map of what remains. The six input reports it was
+> synthesised from — [cleanup.md](cleanup.md), [refactoring.md](refactoring.md),
+> [docs-hygiene.md](docs-hygiene.md), [triage-language.md](triage-language.md),
+> [triage-core-a-h.md](triage-core-a-h.md), [triage-core-i-z.md](triage-core-i-z.md)
+> — are point-in-time 2026-07-04 snapshots whose actionable items are mostly done;
+> read them for context, not as a live to-do.
 
-## Headline
+## Headline (still true)
 
-The FAIL population is **not dominated by hard problems**. Roughly a third of all
-failing assertions sit behind trivial/easy missing-method work in lib/core plus a
-handful of rubyspec_helper gaps, and the two single biggest items (pack/unpack,
-~4,900 assertions) share one codec. The genuinely hard buckets (Float ~2,300+,
-threads ~1,050, Marshal 1,339, Time 1,134, encodings ~1,150, code loading ~700,
-pattern matching 222) are well-bounded and should be *scheduled as projects*, not
-picked at during a burndown loop.
+The FAIL population is **not dominated by hard problems** — a large share sat
+behind trivial/easy lib/core method work, which the loop has now converted. The
+genuinely hard buckets (Float, threads, Marshal, Time, encodings, code loading,
+pattern matching) are well-bounded and are **parked as dedicated projects**
+(table at the end), not loop-tick work.
 
-## Live bugs found by this review
+## Current remaining work (2026-07-06)
+
+Safe incremental lib/core work is **EXHAUSTED** — re-verified 2026-07-06 by wide
+MRI-differential probing (compare `ruby x.rb` vs `./compile && ./out/x` on tiny
+programs, asserting on VALUES and arg-forms, using LOCALS since `p x.method`
+mis-parses) across numeric / Array / Hash / String / Range / Enumerable /
+Comparable / Struct / Data / Set / Symbol / Regexp — broad probes now come back
+clean. Remaining gaps are all one of:
+
+1. **Pinned compiler bugs** (see KNOWN_ISSUES for repros/signatures): **2b**
+   implicit block auto-splat (`[[1,2]].map{|a,b|}`, also blocks `Hash#map`'s
+   1-param form — broad block-ABI blast radius, high crash risk); **3c** `Array.[]`
+   subclass segfault; **3d** splat + side-effecting block ordering; **3g** bignum
+   `heap*heap` multiply wrong for large operands (data-dependent); plus open live
+   bugs #4/#5/#7 below.
+2. **The CRASH count is LAYOUT-SENSITIVE** (memory `compiler_crash_regression_watch`,
+   KNOWN_ISSUES): it wobbles with *every* code change. The deterministic remaining
+   crashers are latent **Proc-@addr memory-corruption** EXPOSED — not caused — by
+   added code shifting layout (bisected `numeric/quo`'s crash to the mere presence
+   of `def quo`). valgrind-in-docker PANICS on it; addresses aren't reproducible
+   under `setarch -R`. Do **NOT** whack-a-mole individual crashers or revert
+   features to chase the count — the durable fix is the latent-corruption hunt
+   (research-grade; entry point documented against the `numeric/quo` repro).
+3. **Dedicated projects** — the ceiling is now owned by these (table below).
+
+Everything above requires a *focused, gated* session, not autonomous loop ticks.
+
+## Live bugs from the original review — current status
 
 | # | Bug | Status |
 |---|---|---|
-| 1 | `instance_eval`/`instance_exec` missing `blkarg` in `__call_with_self` — instance_exec routed its first user argument into the block channel (object.rb:633/637) | **FIXED, committed `17dffc5`** (gates green: selftest/selftest-c Fails: 0, battery 98/98) |
-| 2 | `def f(a = 1); ...; ensure; ...; end` crashes at runtime — `rewrite_default_args` is a THIRD pass mishandling the bare `[:block, args, stmts, rescue, ensure]` defm body, splicing `:block` in as a statement | **FIXED `67f79f4`** (R1 normalize_body_shape pass; repros test/repros/de1.rb, de2.rb) |
-| 3 | `a, b = recv&.m, v` and `f x&.m, v` still parse mangled — dot-comma normalization matches only `:callm`, not `:safe_callm` | **FIXED** (R4 step 1; repros test/repros/sc1.rb, sc2.rb). Note: MLHS safe-nav (`s&.x, c = 1, 2`) is a SyntaxError in MRI — the safe_callm MLHS unmangle branch supports an illegal form |
-| 4 | Op-assign of an env-captured target inside a block leaks a raw AST s-expression into the constant scope name (`uninitialized constant [:index,[:index,:__env__,1],3]::A`) | Open — language/assignments; part of triage C5 |
-| 5 | Stabby lambda with rest-args whose body creates a nested proc: `__tmp_proc` not declared in the lambda's let → `undefined method '__tmp_proc'` — gates 253 fails in file/printf + the shared :kernel_sprintf suite | Open — same family as the fixed rewrite_lambda bugs (transform.rb:1050 region) |
-| 6 | `Array.[]`/subclass instantiation (`MyArray[...]`): allocate-based implementations segfault the self-hosted compiler (array.rb:463 comment) — gates ~40 array spec files | Open — compiler bug hunt, medium/hard |
-| 7 | `__get_raw` unreachable on Array *subclasses* (7× in variables_spec) | Open — easy standalone |
-| 8 | rubyspec_helper.rb:556 failure messages interpolate unset `@result` (always nil) | Open — one-line, in harness batch |
+| 1 | `instance_exec` routed its first user arg into the block channel (object.rb) | **FIXED `17dffc5`** |
+| 2 | `def f(a=1); …; ensure; …; end` crashed (bare `[:block,…]` defm body) | **FIXED `67f79f4`** (R1 normalize_body_shape) |
+| 3 | `recv&.m, v` / `f x&.m, v` parse mangled (dot-comma only matched `:callm`) | **FIXED** (R4 step 1) |
+| 4 | Op-assign of an env-captured target inside a block leaks a raw AST sexp into the constant scope name | **OPEN** — KNOWN_ISSUES; language/assignments |
+| 5 | Stabby lambda with rest-args + nested proc: `__tmp_proc` not declared in the lambda's let | **OPEN** — KNOWN_ISSUES; file/printf `:kernel_sprintf` suite |
+| 6 | `MyArray[...]` allocate-based subclass instantiation segfaults self-host | **OPEN** — KNOWN_ISSUES 3c |
+| 7 | `__get_raw` unreachable on Array *subclasses* (variables_spec) | **OPEN** — KNOWN_ISSUES; easy standalone |
+| 8 | rubyspec_helper failure messages interpolated unset `@result` | **FIXED** (harness matcher batch) |
 
-## Execution status (loop of 2026-07-04/06)
+## Parked as dedicated projects (do NOT pick at in a loop)
 
-**2026-07-06 checkpoint (full sweep @09872ec): tests 9302 passed, PASS 376,
-COMPILE_FAIL 1, CRASH 22.** Since the 2026-07-05 numeric/method work (Rational,
-Complex, Integer#quo, full Hash/Array Enumerable surfaces, String#to_r/delete_*,
-Range#size), a recovery pass fixed 4 COMPILE_FAILs (ensure_spec return-in-ensure
-compiler recursion; String.allocate; Set#flatten recursion; and 3h `class X <
-<localvar>` runtime superclass — c538602) plus a String.allocate CRASH and
-Set#flatten CRASH, taking COMPILE_FAIL 5→1 (only syntax_error, an AOT limit,
-left). Integer#rationalize stale stub fixed (2edc83e).
-CRITICAL FINDING (see [[compiler_crash_regression_watch]]): the CRASH count is
-LAYOUT-SENSITIVE and wobbles with every code change — the 15→22 delta is partly
-flaky classification and partly latent Proc-@addr memory-corruption EXPOSED (not
-caused) by the added code shifting layout (bisected numeric/quo's crash to the
-mere presence of `def quo`). valgrind-in-docker PANICS on it; addresses aren't
-reproducible under setarch -R. Do NOT whack-a-mole individual crashers or revert
-features to chase the count — the durable fix is the latent-corruption hunt.
-The THREE remaining fronts are all DEDICATED PROJECTS, not loop-tick work:
-(1) Float (parked, biggest raw payoff + 4 crashers); (2) implicit block auto-splat
-2b (tractable but broad block-ABI blast radius — high crash risk); (3) the
-Proc-cell corruption hunt (research-grade). Safe incremental lib work is
-EXHAUSTED (verified by wide MRI-differential probing). Older status below.
+The ceiling is owned by these; **Float first** (blocks the most, plus several
+remaining CRASH files). Assertion counts are 2026-07-04 estimates.
 
-Phases 0–2 are COMPLETE and Phase 3 is largely done (~36 gated commits;
-tests 5,935 → ~9,000+, sweeps committed as they land). Landed beyond the
-plan: binary-safe String (hidden pack/unpack prerequisite), the Dir#read
-dirent-aliasing memory-corruption fix, &nil-forwarding via the &blk-param
-convention (three compiler-side fixes reverted — KNOWN_ISSUES 3b), and a
-codegen-hazard playbook (memory: compiler-analysis-loop-2026-07-05).
-Remaining from Phase 3 (mostly hard/architectural now): kwargs **{}-elision
-edge, nested destructure groups, bare-constant ancestry resolution (needs
-runtime lexical+ancestry const resolution -- risky), the splat+side-effecting-
-block ordering bug (KNOWN_ISSUES 3d, hot-path structural), the Array.[]
-subclass miscompile (KNOWN_ISSUES 3c, layout-sensitive compiler bug). The
-safe lib/core FILLER phase was declared exhausted after a method-PRESENCE
-survey, but a second pass on 2026-07-05 using MRI-DIFFERENTIAL probing (compare
-`ruby x.rb` vs `./compile && ./out/x` on tiny programs, asserting on VALUES and
-arg-forms, not just method presence) found substantial wins that a presence
-survey misses: Rational and Complex were near-empty STUBS (no arithmetic at
-all), Integer#remainder returned modulo (sign bug), Rational#floor/ceil/round/
-truncate ignored their digit argument, Integer#quo / Array#max(n)/min(n) /
-Range#size / String#to_r / String#delete_prefix|suffix were absent, and 8
-block-less Array iterators crashed instead of returning an Enumerator. All
-landed gate-green (commits ca5a97c b62ab5d ce60e34 b522257 18d7541 e5321eb).
-By the END of that pass the vein IS thinning (broad probes over Enumerable/
-Struct/Data/Regexp/lazy now come back clean). Two NEW compiler-level gaps were
-found and pinned, NOT loop-tick-safe: KNOWN_ISSUES 2b (implicit block
-auto-splat `[[1,2]].map{|a,b|}` -- also blocks Hash#map) and 3g (bignum
-heap*heap multiply wrong for large operands, data-dependent/non-commutative).
-LESSON: "presence survey says complete" != "correct"; differential-probe with
-LOCALS (bare `p x.method` mis-parses) before declaring a class done. The next
-real frontier is (a) the
-data-driven top failure signatures via tools/classify_failures.rb on ax52,
-and (b) the parked projects -- FLOAT FIRST (blocks ~2,300 assertions + 4
-crash files; but self-hosting can't compile float literals, so it needs a
-compiler change to emit them -- a dedicated design project, not a loop tick).
-NOTE (2026-07-05): a vtable module-override attempt to fix Comparable#==
-was LAYOUT-SENSITIVE and reverted -- see the HARD LESSON in memory; do not
-retry flattened-vtable ancestry fixes without real method resolution.
-
-## Recommended next-session plan (ease × payoff)
-
-Phase ordering interleaves "protect the codebase" items (R1/R4, which fix live
-bugs) with the highest-density test conversions. Assertion counts are estimates
-from the triage reports.
-
-### Phase 0 — hygiene batch (half a day, no compiler risk)
-1. **rubyspec_helper gap batch** (trivial, one file): fix `ComplainMatcher` (always
-   returns true → every `should_not complain` fails), add `be_computed_by`,
-   `have_method`/`have_instance_method`/`have_constant`/`be_ancestor_of`,
-   `with_timezone`, `suppress_keyword_warning`, a `Warning` module stub, Mock
-   `once`/`twice`, and the `@result`→`result` message fix. **~80–130 direct passes
-   plus it un-gates the pack/unpack data tables (~25 spec files abort on
-   `be_computed_by`) and ~100 pattern-matching tests.** Do first; de-noises
-   everything after.
-2. **Cleanup commit** (from [cleanup.md](cleanup.md) top-15): delete the live DEBUG
-   tripwire at compiler.rb:913–914, ~30 commented-out debug/dead lines, duplicate
-   `Array#collect!` stub, stale ABI/"MISSING FEATURES"/"no-op" comments
-   (transform.rb:451/1405, exception.rb:40–44, class.rb:310–324), editor backups
-   in lib/core/ + test/ (~20 files that poison greps), tmp/ purge keeping the six
-   canonical repros (bk6, hop1, ac2, st5, mc6, blk1 — promote to test/repros/),
-   root litter (`selftest_errors.tmp` tracked-empty, `foo^bar/`, stray
-   `rubyspec_temp_*`). All non-structural; one gate run for the source-file edits.
-
-### Phase 1 — structural bug-fix refactors (1–2 days, do BEFORE feature work)
-3. **R1: normalize the defm/proc body shape once, early** (2–4h) — one
-   canonicalization pass wrapping bare `[:block,...]` bodies; deletes the two
-   existing per-pass compensations and fixes live bug #2. Kills the whole
-   32-file-regression class.
-4. **R4 step 1–2: extend dot-comma normalization to `:safe_callm`** (~1 day) —
-   fixes live bug #3 (two parse mangles), then delete the now-dead `:callm`
-   unmangle branches behind a raise-if-hit assertion period.
-5. **R3: self-host miscompile corpus** (1–2 days, test-only, zero product risk) —
-   extract the ~14 frozen miscompile repros living only as FIXME comments
-   (ternaries, `seen |= x`, defaulted recursive params, one-lining) into
-   `spec/selfhost/` run under compile2. Converts folklore into checkable rules;
-   every later refactor's risk budget depends on it.
-
-### Phase 2 — lib/core conversion sweep (~1 week, ~4,500–5,500 assertions)
-Ordered by density; all pure lib/core (+harness), no compiler changes:
-
-| Item | Est. converts | Effort |
+| Project | Blocked assertions (approx.) | Note |
 |---|---|---|
-| 6. **pack/unpack integer+string directives** — one shared width×endianness codec for `Array#pack` (only C/c/a/A/Z exist; silently skips the rest) and `String#unpack` (stub returning `[]`) | **~4,900** (2,583 pack + 1,955 unpack + 358 string dirs; float dirs stay in the Float bucket) | medium, mechanical |
-| 7. Kernel#open → File.open / IO.popen delegation | ~300–440 | trivial |
-| 8. ENV hash-like methods (snapshot→Hash→delegate→write back) | ~320 | trivial |
-| 9. Symbol string-delegation sweep (slice/[]/inspect/match/casecmp) | ~240 | trivial |
-| 10. Enumerable gap-fill (none?/one?/tally/grep/first/take/to_h...) | ~400 | easy |
-| 11. Array set ops (&,\|,-,union...) + Hash small methods (<,<=,assoc,transform_keys!...) | ~395 | trivial/easy |
-| 12. Strict Kernel#Integer + String#to_i(base) — one shared numeric parser | ~180–250 | easy |
-| 13. String case/byte family (casecmp, byteindex, bytesplice...) | ~250 | trivial/easy |
-| 14. `module_function` real implementation (bare-modifier form needs compile-time mode tracking) | ~100 | easy-medium |
-| 15. Set method sweep; File path methods (basename suffix, dirname level); format-engine validation (ArgumentError/TypeError/KeyError + Float::NAN/INFINITY constants); exception introspection (full_message etc.); proc/method combinators (curry, >>, <<) | ~1,000 combined | easy grind |
+| **Float implementation** | ~2,300+ (float, math, complex, rational, kernel/Float, numeric/step, pack/unpack float dirs, sprintf) | Self-hosting can't compile float literals → needs a compiler change to emit them. Biggest raw payoff. |
+| Thread family (real runtime) | ~1,051 | |
+| Marshal | 1,339 | largely by-design NotImplementedError |
+| Time (zones/strftime) | 1,134 | |
+| Encodings | ~1,150 | |
+| Code loading (require/load/autoload/eval) | ~700 | dynamic; inherent AOT limits |
+| Pattern matching `case/in` | 222 | parser + pattern compiler; KNOWN_ISSUES 2 |
+| Regexp engine gaps | ~300 | |
+| Wontfix-ish: SyntaxError-via-eval (~38), magic comments (~85) | ~125 | AOT limits |
 
-### Phase 3 — medium, well-localized compiler/runtime work
-- **defined?** coverage gaps (~43, one code path); **$!/$@** wiring (~40, exception
-  runtime); **qualified-constant assignment + op-assign** (~55, includes live bug
-  #4); **destructuring protocol** — `|(a,b)|` block params + masgn to_ary (~75,
-  start with the easy `__get_raw` subclass bug #7); **kwargs correctness** incl.
-  super forwarding (~85, one coherent workstream); **glob engine**
-  (Dir.glob/Dir.[]/File.fnmatch, ~436, self-contained new core file); **regexp
-  match globals** `$~ $& $1..` (~50, frame-local semantics); **Enumerator::Lazy +
-  product** (~340); **Module#const_get** over the existing runtime constant
-  registry (~155); the **__tmp_proc lambda bug** (#5, gates 253); the **MyArray
-  segfault hunt** (#6, un-gates ~40 array files); strictness long tail
-  (TypeError/FrozenError/visibility raises, ~100+ rolling filler).
+## Historical: the executed 2026-07-04 plan (for the record)
 
-### Phase 4 — remaining structural refactors (as capacity allows)
-- **R2** unified scope-boundary predicate over the TEN hand-maintained walkers
-  (2–3 days, highest leverage against regression recurrence; stage it).
-- **R5** preprocess pass manifest with ordering-constraint tests (0.5–1 day).
-- **R10** truthiness centralization + `:raw` type naming (0.5–1 day).
-- Opportunistic: R6 call-arg canonicalization, R7 compile_call/callm helpers,
-  R8 splat-prologue unification (build the parsetree-diff harness first — it
-  benefits every transform.rb change), R9 get_arg tightening.
+- **Phase 0 (hygiene) — DONE.** rubyspec_helper matcher batch (ComplainMatcher,
+  `be_computed_by`, `have_method`, `with_timezone`, Warning stub, Mock once/twice,
+  `@result`→`result`); cleanup commit (DEBUG tripwire at compiler.rb removed, dead
+  code/backups purged, canonical repros promoted to `test/repros/`).
+- **Phase 1 (structural bug-fix refactors) — DONE.** R1 body-shape normalization
+  (fixes live bug #2, kills the 32-file regression class); R4 dot-comma → `:safe_callm`
+  (fixes #3).
+- **Phase 2 (lib/core conversion sweep) — DONE.** pack/unpack shared codec
+  (`lib/core/pack.rb` + binary-safe `String`), Kernel#open, ENV, Symbol delegation,
+  Enumerable gap-fill, Array set ops + Hash methods, strict `Kernel#Integer` /
+  `String#to_i(base)`, String case/byte family, `module_function`, Set/File/format/
+  exception/proc-combinator sweep. Plus the 2026-07-05 differential-probe wins:
+  full **Rational** and **Complex** (were near-empty stubs), Integer#quo/remainder
+  fix, Rational digit-rounding fix, Array#max(n)/min(n), Range#size, String#to_r /
+  delete_prefix|suffix, block-less Array-iterator Enumerator guards, full Hash/Array
+  Enumerable surfaces.
+- **Phase 3 (localized compiler/runtime) — PARTIALLY DONE.** Glob engine
+  (`lib/core/glob.rb`) done; `class X < <localvar>` runtime superclass done
+  (`c538602`, KNOWN_ISSUES 3h fixed). Still open: defined? coverage, `$!/$@` /
+  regexp match globals, qualified-const op-assign (#4), destructuring protocol
+  (#7), kwargs super-forwarding, Enumerator::Lazy+product, the `__tmp_proc` lambda
+  bug (#5), the `MyArray` segfault hunt (#6).
+- **Phase 4 (structural refactors) — NOT STARTED** (as capacity allows): R2 unified
+  scope-boundary predicate over the ~10 hand-maintained walkers (highest leverage
+  vs regression recurrence); R5 preprocess pass manifest; R10 truthiness
+  centralization; opportunistic R6–R9 (build the parsetree-diff harness first).
 
-### Park as dedicated projects (do NOT pick at in a loop)
-| Project | Blocked assertions (approx.) |
-|---|---|
-| **Float implementation** | ~2,300+ (float/ 452, math 369, complex 310, rational ~259, kernel/Float 297, numeric/step 205, pack/unpack float dirs ~460, sprintf halves...) — unblocks 4 of the 10 remaining CRASH files too |
-| Thread family (real runtime) | ~1,051 |
-| Marshal (by-design NotImplementedError) | 1,339 |
-| Time (zones/strftime) | 1,134 |
-| Encodings | ~1,150 |
-| Code loading (require/load/autoload/eval) | ~700 |
-| Pattern matching `case/in` (parser + pattern compiler) | 222 |
-| Regexp engine gaps | ~300 |
-| Wontfix-ish: SyntaxError-via-eval (~38), magic comments (~85) | ~125 |
-
-## Docs work (from [docs-hygiene.md](docs-hygiene.md), suggested order)
-1. KNOWN_ISSUES.md + TODO.md: delete the FIXED break-target and `proc{|&b|}`
-   entries (both resolved by the nested-env/`__callblk__` rework), point stats at
-   auto-generated spec_status.md (they still say "3 files passing, 27%" from
-   2026-02-10).
-2. improvement-planner.md: retire the `make rubyspec-*` / `docs/rubyspec_*.txt`
-   section — it actively misguides the planner agent.
-3. **Write docs/CLOSURES.md** — the closure environment design (env layout,
-   `__wrapenv`, hops, lambda ABI/`__callblk__`, break/preturn/ensure semantics,
-   walker scope-boundary rules). Largest undocumented subsystem; the 620a91b
-   regression was four walkers disagreeing about exactly this.
-4. CLAUDE.md / ARCHITECTURE.md: exceptions & regexp are implemented; local
-   toolchain (not Docker) is the default compile path.
-5. README_RUBYSPEC.md rewrite as a harness reference; DEBUGGING_GUIDE refresh
-   (exceptions exist, tmp/ paths, `setarch -R`/valgrind-in-docker techniques).
-6. Plans sweep: archive BGFIX/YIELDFIX (obsoleted by 63b5875), re-validate the
-   other ~20 active plans, resolve the PEEPFIX contradiction.
-
-## Expected payoff summary
-
-Phases 0–2 are ≈1.5–2 weeks of low-risk work converting an estimated
-**~6,000–7,000 failed assertions (~20% of all failures)** and fixing 4 live bugs,
-while phase 1 removes the two structural traps (body shape, walker agreement)
-that caused this session's only regression. Phase 3 adds roughly another ~1,400.
-Beyond that, the ceiling is owned by the parked projects — **Float first** (it
-blocks the most assertions AND 4 of the 10 remaining crash files).
+Beyond landed lib/core: binary-safe String, the Dir#read dirent-aliasing
+memory-corruption fix, and a codegen-hazard playbook (memory
+`compiler_analysis_loop_2026_07_05`). Reverted as layout-sensitive: `&nil`
+forwarding compiler-side fixes (KNOWN_ISSUES 3b) and a vtable module-override for
+`Comparable#==` — do NOT retry flattened-vtable ancestry fixes without real method
+resolution (HARD LESSON in memory).

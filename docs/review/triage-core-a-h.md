@@ -1,5 +1,10 @@
 # Rubyspec triage: core/[a-h]* (array .. hash)
 
+> **HISTORICAL — 2026-07-04 snapshot.** Most actionable items here have been
+> executed over the 2026-07-04→06 loop. See [ANALYSIS.md](ANALYSIS.md) for current
+> status (PASS 376 / CRASH 22 / COMPILE_FAIL 1, 9,302 tests passing @ `09872ec`) and
+> [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) for live bugs. Kept for context, not as a live to-do.
+
 Date: 2026-07-04. Source: `docs/spec_status.jsonl` + ~20 live `run_rubyspec` runs.
 Slice totals: **10,265 failed assertions** across ~700 failing specs.
 

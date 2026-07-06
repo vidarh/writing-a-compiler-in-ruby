@@ -1,5 +1,12 @@
 # Next Steps — Completing the Compiler
 
+> **⚠ STALE STATE (2026-06-26 roadmap).** The state figures below (e.g. "~4% files
+> pass", "27% tests") are the ORIGINAL baseline and are long superseded — current
+> status is PASS 376 / 9,302 tests passing (@ `09872ec`); see [spec_status.md](spec_status.md)
+> and [review/ANALYSIS.md](review/ANALYSIS.md). The strategic framing may still be useful;
+> the numbers are not.
+
+
 *Created: 2026-06-26. A cross-cutting roadmap proposal. Each numbered item below is
 intended to be promoted into a focused `docs/plans/<CODE>` plan via the improvement
 planner; this document is the strategy that prioritizes them (an iterative loop, not a

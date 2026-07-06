@@ -1,5 +1,10 @@
 # Documentation hygiene review — staleness & drift
 
+> **HISTORICAL — 2026-07-04 snapshot.** Most actionable items here have been
+> executed over the 2026-07-04→06 loop. See [ANALYSIS.md](ANALYSIS.md) for current
+> status (PASS 376 / CRASH 22 / COMPILE_FAIL 1, 9,302 tests passing @ `09872ec`) and
+> [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) for live bugs. Kept for context, not as a live to-do.
+
 *Reviewed: 2026-07-04, against HEAD `01234cd` (spec_status: PASS 342 / FAIL 1797 / CRASH 10 /
 COMPILE_FAIL 5 / TIMEOUT 4; tests 5935 passed of ~36.9k).*
 
