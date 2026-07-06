@@ -162,7 +162,20 @@ b94260b module-override). Fixing needs module-body local-scope analysis
 under scale; do NOT attempt without a scale repro and the full gate
 ladder. Highest-count actionable compiler bug in the burndown.
 
-### 3h. `class <Name> < <localvar>` — a runtime superclass is not supported (2026-07-05)
+### 3h. `class <Name> < <localvar>` — a runtime superclass — FIXED (2026-07-06)
+
+FIXED: a lowercase-initial symbol superclass (always a local/method, never a
+constant) is now routed through the existing `__superclass__` expression path
+(evaluated at runtime) instead of being referenced as a static global symbol. One
+targeted change in compile_class.rb (the `local_super` flag). All three specs now
+COMPILE and run (core/class/inherited_spec, language/class_spec +15 passing,
+core/module/const_added_spec) -- COMPILE_FAIL 4->1. Safe: a strict no-op for every
+other superclass form (constant / absent / expression); make selftest + selftest-c
+Fails:0, crash battery 102/102, and the class+module+language sweep added no new
+crasher (alias_spec/defined_spec were already deterministic crashers at baseline
+in isolation -- their parallel FAIL-vs-CRASH classification is flaky, not a
+regression). Guarded by test/repros/battery/class_local_superclass.rb. Original
+report retained below.
 
 `class Foo < parent` where `parent` is a LOCAL variable (holding a class) fails.
 Three deterministic COMPILE_FAILs hit this -- core/class/inherited_spec (line 114

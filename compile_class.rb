@@ -581,14 +581,27 @@ class Compiler
     # size the object to match (both must be the runtime __vtable_size, not the smaller compile-time
     # klass_size, or the copy loop overruns the object). This applies only to a genuine user-constant
     # runtime superclass -- :Object/:Class/:Kernel with a nil sscope are the bootstrap case and keep ssize 0.
-    runtime_super = !sscope && superclass.is_a?(Symbol) &&
+    # A superclass given as a lowercase-initial symbol (`class Foo < parent`) is a LOCAL variable or
+    # method call, never a constant (constants are Capitalised). It must be EVALUATED at runtime -- read
+    # the local / call the method -- not referenced as a static global symbol `$parent` (which mis-resolves
+    # to Object at top level and emits an undefined symbol inside a block -> link error; KNOWN_ISSUES 3h).
+    # Route it through the same __superclass__ expression path used for `class Sub < Class.new`. This is a
+    # no-op for every other superclass form (constant / absent / expression). Test the first char with
+    # STRING comparison on a 1-char substring: works under both MRI (`to_s[0]` is a char) and self-hosted
+    # (`to_s[0]` is a byte), and avoids `=~ /regex/` which the self-hosted parser mis-reads as division.
+    local_super = false
+    if superclass.is_a?(Symbol)
+      sc_first = superclass.to_s[0, 1]
+      local_super = (sc_first >= "a" && sc_first <= "z") || sc_first == "_"
+    end
+    runtime_super = !sscope && superclass.is_a?(Symbol) && !local_super &&
       ![:Object, :Class, :Kernel].include?(superclass) && fq_name != superclass
     # A superclass given as an EXPRESSION (`class Sub < Struct.new(:a)` / `class Sub < Class.new`) is only
     # known at runtime too. It is evaluated into __superclass__ (see the superclass.is_a?(Array) branch
     # below), so it needs the same full-vtable copy as runtime_super. Otherwise ssize stays 0, __new_class_
     # object copies no methods, and every call -- including method_missing itself -- lands on a
     # method_missing thunk that recurses forever (hang).
-    expr_super = !sscope && superclass.is_a?(Array)
+    expr_super = !sscope && (superclass.is_a?(Array) || local_super)
     if sscope
       ssize = sscope.klass_size
       class_alloc_size = cscope.klass_size
@@ -627,9 +640,10 @@ class Compiler
     # If superclass is an expression (not a simple symbol/constant), wrap the class creation
     # in a let block to evaluate the superclass first. This avoids SexpScope converting
     # method calls to function calls.
-    if superclass.is_a?(Array)
-      # Superclass is an expression - evaluate it in a let block
-      # This allows method calls like remove_const(:Foo) to work correctly
+    if superclass.is_a?(Array) || local_super
+      # Superclass is an expression or a runtime local/method (class Foo < parent) - evaluate it in a let
+      # block. This allows method calls like remove_const(:Foo) and local-variable superclasses to work,
+      # reading the value with a normal assign (outside the sexp) rather than a static symbol reference.
       let(scope, :__superclass__) do |let_scope|
         compile_eval_arg(let_scope, [:assign, :__superclass__, superclass])
 
