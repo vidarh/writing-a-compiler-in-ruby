@@ -87,24 +87,57 @@ class Float
     self
   end
 
+  # Comparisons via x87 ordered compare (flt/fgt/feq return 0/1). NaN is unordered, so all three
+  # yield 0 -> ==/< /> are false and <=> is nil against a NaN, matching MRI. Integer operands are
+  # coerced to Float first.
   def == other
-    false
+    other = other.to_f if other.is_a?(Integer)
+    return false unless other.is_a?(Float)
+    %s(if (feq self other) true false)
+  end
+
+  def eql? other
+    # eql? is strict on type: 1.0.eql?(1) is false.
+    return false unless other.is_a?(Float)
+    %s(if (feq self other) true false)
   end
 
   def < other
-    false
+    other = other.to_f unless other.is_a?(Float)
+    %s(if (flt self other) true false)
   end
 
   def > other
-    false
+    other = other.to_f unless other.is_a?(Float)
+    %s(if (fgt self other) true false)
   end
 
   def <= other
-    false
+    other = other.to_f unless other.is_a?(Float)
+    r = false
+    %s(if (flt self other) (assign r true))
+    %s(if (feq self other) (assign r true))
+    r
   end
 
   def >= other
-    false
+    other = other.to_f unless other.is_a?(Float)
+    r = false
+    %s(if (fgt self other) (assign r true))
+    %s(if (feq self other) (assign r true))
+    r
+  end
+
+  def <=> other
+    other = other.to_f if other.is_a?(Integer)
+    return nil unless other.is_a?(Float)
+    r = nil          # unordered (NaN on either side) stays nil
+    # -1/0/1 must be TAGGED fixnums: a bare int in %s() is a raw machine word (raw 0 is a null
+    # pointer -> crash when the caller treats the result as an object).
+    %s(if (flt self other) (assign r (__int -1)))
+    %s(if (fgt self other) (assign r (__int 1)))
+    %s(if (feq self other) (assign r (__int 0)))
+    r
   end
 
   # Predicate methods

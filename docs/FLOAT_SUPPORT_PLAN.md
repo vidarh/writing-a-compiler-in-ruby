@@ -85,6 +85,11 @@ The bar for "done": `1.5 + 2.5 == 4.0`, `10.0 / 4 == 2.5`, `(3.14 <=> 3.15) == -
 4. **Comparison** (emitter + lib). Add `fucompp` + `fnstsw %ax` + `sahf`; implement
    `Float#<=> == < <= > >= eql?` returning proper `-1/0/1`/bool, incl. `NaN`
    unorderedness (`NaN <=> x` is nil; `NaN == NaN` is false). Wire `Comparable`.
+   **[DONE — this commit]** `flt`/`fgt`/`feq` primitives (`fucompp; fnstsw %ax; sahf`
+   then `setb/seta/sete` with a `setnp` mask so NaN is unordered → all-false).
+   `== eql? < <= >= > <=>` implemented; NaN and Integer-coercion verified vs MRI.
+   NOTE: `-1/0/1` in `<=>` MUST be `(__int n)` — a bare int in `%s()` is a raw
+   machine word (raw 0 is a null pointer → crash). `Comparable` mixin not yet wired.
 5. **Basic unary/predicates:** `-@`, `abs`, `zero?`, `nan?`, `infinite?`, `finite?`,
    `hash` (over the 8 raw bytes). Cheap, all reuse st0 load/store.
 

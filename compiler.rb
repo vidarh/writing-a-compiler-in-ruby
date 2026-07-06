@@ -64,7 +64,10 @@ class Compiler
                   :fadd, :fsub, :fmul, :fdiv,
                   # x87 <-> integer conversions. `(ftoi f)` truncates the double at 4(f) toward zero and
                   # returns a TAGGED fixnum. `(fint i r)` writes (double)i into the Float pointed to by r.
-                  :ftoi, :fint
+                  :ftoi, :fint,
+                  # x87 ordered comparisons. Each returns a raw 0/1 flag (like the integer :lt/:eq
+                  # primitives) for use inside `(if ...)`. NaN is unordered: flt/fgt/feq all yield 0.
+                  :flt, :fgt, :feq
                   ]
 
   Keywords = @@keywords
@@ -222,6 +225,47 @@ class Compiler
     @e.save_result(compile_eval_arg(scope, result))  # eax = ptr result
     @e.fstpl("4(%eax)")                # *result = st0
     Value.new([:subexpr])
+  end
+
+  # Load *b then *a so the FPU stack is st0=*a, st1=*b, then `fucompp` compares st0:st1 and pops both.
+  # `fucompp` (unordered) does NOT fault on NaN. After `fnstsw %ax; sahf`: CF=C0 (a<b OR unordered),
+  # ZF=C3 (a==b OR unordered), PF=C2 (set iff unordered). Callers mask PF to exclude the NaN case.
+  def compile_fcmp_setup(scope, a, b)
+    @e.save_result(compile_eval_arg(scope, b))
+    @e.fldl("4(%eax)")                 # st0 = *b
+    @e.save_result(compile_eval_arg(scope, a))
+    @e.fldl("4(%eax)")                 # st0 = *a, st1 = *b
+    @e.emit(:fucompp)
+    @e.fnstsw_ax
+    @e.emit(:sahf)
+  end
+
+  # a < b : CF=1 but NOT unordered (PF=0).
+  def compile_flt(scope, a, b)
+    compile_fcmp_setup(scope, a, b)
+    @e.emit(:setb, "%al")
+    @e.emit(:setnp, "%cl")
+    @e.emit(:andb, "%cl", "%al")
+    @e.movzbl(:al, :eax)
+    Value.new([:reg, :eax])
+  end
+
+  # a > b : CF=0 AND ZF=0 (`seta`). Unordered has CF=1, so `seta` already yields 0 there.
+  def compile_fgt(scope, a, b)
+    compile_fcmp_setup(scope, a, b)
+    @e.emit(:seta, "%al")
+    @e.movzbl(:al, :eax)
+    Value.new([:reg, :eax])
+  end
+
+  # a == b : ZF=1 but NOT unordered (PF=0), so NaN == NaN is false.
+  def compile_feq(scope, a, b)
+    compile_fcmp_setup(scope, a, b)
+    @e.emit(:sete, "%al")
+    @e.emit(:setnp, "%cl")
+    @e.emit(:andb, "%cl", "%al")
+    @e.movzbl(:al, :eax)
+    Value.new([:reg, :eax])
   end
 
   # Returns an argument with its type identifier.
