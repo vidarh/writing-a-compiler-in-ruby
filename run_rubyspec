@@ -37,8 +37,6 @@ fi
 
 TARGET="$1"
 
-echo "DEBUG: Starting run_rubyspec for $TARGET" >&2
-
 # Function to run a single spec file
 run_single_spec() {
     local SPEC_FILE="$1"

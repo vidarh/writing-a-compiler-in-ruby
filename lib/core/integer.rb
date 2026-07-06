@@ -3641,11 +3641,10 @@ class Integer < Numeric
   end
 
   def rationalize(eps = nil)
-    # Integers are already rational (self/1)
-    # Since we don't have Rational class, just return self
-    # In real Ruby this would return Rational(self, 1)
-    STDERR.puts("Warning: Rational not implemented, returning Integer")
-    self
+    # An integer is exactly self/1; eps is irrelevant for an exact value. MRI returns a Rational
+    # (5.rationalize => (5/1)), same as #to_r. (Was a stale stub that warned Rational was unimplemented
+    # and wrongly returned the Integer itself.)
+    Rational.new(self, 1)
   end
 
   def to_r
