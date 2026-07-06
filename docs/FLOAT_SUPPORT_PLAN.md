@@ -1,0 +1,142 @@
+# Float support — prioritised implementation plan
+
+**Goal:** real IEEE-754 `Float` in the self-hosting compiler. Unblocks ~2,300+
+assertions (float, math, complex, rational, kernel/Float, numeric/step, pack/unpack
+float dirs, sprintf) and turns 4 stub-driven CRASH files (`float/divide`,
+`float/inspect`, `float/to_s`, `integer/fdiv`) into passing/failing — so it *lowers*
+the crash count rather than risking it.
+
+## What already exists (do NOT rebuild)
+
+- **Object layout:** a `Float` is `[vtable_ptr @ slot0][raw 8-byte double @ offset 4]`
+  (`lib/core/float.rb` reserves the 8 bytes via `@value_low`/`@value_high`; the value
+  is stored raw, not as two tagged ints).
+- **Literal emission (MRI-hosted only):** `compiler.rb:161` catches an `is_a?(Float)`
+  token, registers a `.float_N` label in `@float_constants`, emits `Float.new`, then
+  `@e.storedouble(:eax, 4, label)`. `output_constants` (compiler.rb:234) emits
+  `.double <value>` in rodata; `storedouble` (emitter.rb:309) does `fldl label` /
+  `fstpl 4(base)` — i.e. x87 already loads/stores doubles.
+- **Tokeniser** already recognises float + scientific-notation literals
+  (`tokens.rb` `Number.expect`, ~line 225) — but it finishes with `num.to_f`
+  (a Ruby Float via the compiler's *own* `String#to_f`).
+
+## The two real blockers
+
+1. **Literals are MRI-only.** `num.to_f` uses the compiler's stubbed `String#to_f`
+   when self-compiled, so every float literal becomes `0.0` under selftest-c
+   (decimal→IEEE would itself need working Float — a chicken-and-egg). Fix: keep the
+   literal's **decimal string** end-to-end and emit `.double "<string>"` — `gas`
+   does decimal→IEEE at assemble time, needing no compile-time float math. Works
+   identically MRI-hosted and self-hosted.
+2. **No float codegen beyond load/store.** `emitter.rb` has `fldl`/`fstpl` only —
+   no `fadd/fsub/fmul/fdiv`, no int↔double, no compare. These must be added.
+
+## Representation & gating (applies throughout)
+
+- Keep the layout: raw `double` at offset 4. Every Float value (literal or computed)
+  is its own heap object; Floats are immutable so results allocate fresh (`Float.new`
+  + `fstpl`). A helper `__float_from_st0` (allocate + `fstpl 4(%eax)`) will be reused
+  everywhere.
+- x87 is stack-based (st0..st7). Discipline: load operands with `fldl`, operate, and
+  `fstpl` the single result — never leave values on the FPU stack across a call.
+- **Every step gates hard:** `make selftest` + `make selftest-c` both Fails:0 AND
+  `tools/crash_battery.sh` clean before committing. Float codegen is *additive*
+  (new instructions + a new class's methods, no hot-path rewrite), so its layout-risk
+  is far lower than the block-ABI / proc work — but it touches the emitter, so treat
+  each emitter change as compiler-critical. Add a `test/repros/battery/` guard per
+  landed capability. Re-sweep `float/` + `core/numeric/` after each phase.
+
+---
+
+## Phase 1 — Basics: get real Float VALUES flowing
+
+The bar for "done": `1.5 + 2.5 == 4.0`, `10.0 / 4 == 2.5`, `(3.14 <=> 3.15) == -1`,
+`5.to_f == 5.0`, `7.5.to_i == 7` all correct, self-hosted.
+
+1. **Float-literal self-hosting** (compiler + tokeniser). Carry the literal as its
+   decimal string: tokeniser returns `[:float, "1.5"]` instead of `num.to_f`; the
+   compiler stores the string in `@float_constants`; `output_constants` emits
+   `.double "1.5"` verbatim. Delete the `String#to_f` dependency from the literal
+   path. Verify: a program full of literals compiles to the *right* bytes under
+   selftest-c (compare `p 1.5` MRI vs compiled). Also give `Float::INFINITY`/`NAN`/
+   `MAX`/`MIN`/`EPSILON` real `.double` values (`inf`, `nan`, etc. — gas understands
+   them) and drop the integer stubs.
+2. **Arithmetic codegen** (emitter). Add `faddl/fsubl/fmull/fdivl` (memory-operand
+   forms) and the `fld st(i)`/`fxch` helpers needed. Implement `Float#+ - * /` in
+   `lib/core/float.rb` via `%s`: `fldl 4(self)`, `fldl 4(other)`, `faddl`, then
+   `__float_from_st0`. Mixed operands: if `other` is an Integer/Rational, coerce it to
+   Float first (needs step 3's `Integer#to_f`). Handle the divide-by-zero → `Infinity`
+   / `0.0/0.0` → `NaN` IEEE behaviour (x87 gives these for free).
+3. **Int↔Float conversion** (emitter + lib). `Integer#to_f`: `fild` a fixnum, `fstpl`
+   (replaces the current stub). `Float#to_i`/`to_int`: truncate toward zero — set the
+   FPU rounding mode (or `fisttp` if SSE3 assumed) and `fistpl`. `Float#coerce`.
+   (Bignum→double is deferred to Phase 3.)
+4. **Comparison** (emitter + lib). Add `fucompp` + `fnstsw %ax` + `sahf`; implement
+   `Float#<=> == < <= > >= eql?` returning proper `-1/0/1`/bool, incl. `NaN`
+   unorderedness (`NaN <=> x` is nil; `NaN == NaN` is false). Wire `Comparable`.
+5. **Basic unary/predicates:** `-@`, `abs`, `zero?`, `nan?`, `infinite?`, `finite?`,
+   `hash` (over the 8 raw bytes). Cheap, all reuse st0 load/store.
+
+**Payoff of Phase 1:** the 4 float CRASH files stop crashing; `float/` arithmetic,
+comparison, and `integer/fdiv` largely convert; `Rational#to_f`/`Integer#fdiv` return
+real values.
+
+---
+
+## Phase 2 — Easy spec unlocks (mechanical, high density)
+
+Each is small and mostly reuses Phase 1 + a C library call (self-host-safe: the C
+runtime does the hard numeric work).
+
+6. **`Float#to_s`/`inspect` v1** — a runtime helper backed by C `snprintf(buf,
+   "%.17g", d)` then trimmed, plus explicit `Infinity`/`-Infinity`/`NaN`. This is an
+   *approximation* of MRI's shortest-round-trip form (Phase 3 tightens it), but it
+   clears `float/to_s` + `float/inspect` from CRASH and passes the common cases.
+7. **pack/unpack float directives** (`d D f F e E g G`) in the existing `__Pack`
+   codec (`lib/core/pack.rb`) — the raw 8 bytes are already in the object, so pack is
+   a byte copy and unpack is `__float_from_bytes`. ~460 assertions.
+8. **`sprintf`/`String#%` float conversions** (`%f %e %g %a`) — route to the same
+   `snprintf` helper with width/precision/flags. Big chunk of `kernel/sprintf` +
+   `string/modulo`.
+9. **`Kernel#Float()` + `String#to_f`** — now implementable via C `strtod` (strict
+   for `Float()`, lenient/leading-parse for `to_f`). Also `String#to_r` already exists.
+10. **`Math` module** — `sqrt exp log log2 log10 sin cos tan atan atan2 pow hypot
+    cbrt floor…` each a thin wrapper over the libc `math.h` function (a `%s` C call).
+    `math/` ~369 assertions, almost entirely mechanical.
+11. **`Float#floor/ceil/round/truncate` (no-arg + integer result)**, `Float#divmod/
+    modulo/%`, `Float#step`/`Numeric#step` with a float step, `Float#to_r` (exact
+    dyadic rational from the mantissa/exponent — moderate), `Integer#fdiv` finalised.
+
+**Payoff of Phase 2:** the bulk of the ~2,300 assertions. Re-sweep to quantify.
+
+---
+
+## Phase 3 — Tougher parts (the last mile)
+
+12. **Shortest-round-trip `Float#to_s`.** MRI prints the *shortest* decimal that
+    round-trips (`0.1`, not `0.10000000000000001`). Match it (Grisu/Ryu, or the
+    classic "increase precision until it round-trips via `strtod`" loop). Needed for
+    exact `float/to_s`, `float/inspect`, and `%p`/`inspect` of containers holding
+    floats.
+13. **IEEE corner semantics:** signed zero (`-0.0`), `NaN`/`Infinity` propagation
+    through every op, `Float#round` half-to-even + `ndigits` (positive and negative),
+    `Float#{floor,ceil,round,truncate}(ndigits)` returning Float, `Comparable#clamp`
+    with NaN, `Float#coerce` edge types, `Float#eql?` vs `==` on `NaN`/`-0.0`.
+14. **Bignum↔Float:** `Integer#to_f` for heap integers (convert limb-by-limb),
+    `Float#to_i` producing a bignum for large magnitudes, and the exactness rules in
+    `Integer#fdiv`/comparison with Float.
+15. **`Rational` ⇄ `Float` exactness** (`Float#to_r`, `Float#rationalize`,
+    `Rational#to_f` correctly rounded) and **`Complex` with Float components**
+    (`abs`/`arg`/`polar`/`rectangular`, `Complex#/`) — these were the pieces the
+    2026-07-05 numeric work left stubbed on `to_f`.
+16. **`Float#round`/`%`/`divmod` boundary correctness**, `Float::DIG/MANT_DIG/
+    MAX/MIN/EPSILON` exact values, and the long tail of `float/` strictness specs
+    (TypeError/RangeError on bad coercions, `Float()` error messages).
+
+## Suggested commit cadence
+
+One gated commit per numbered item (1–16), each with a `test/repros/battery/`
+guard. Land Phase 1 as a unit first (items 1–5) — nothing below it is useful until
+real values flow — then Phase 2 items are independently shippable in any order by
+density. Re-run the full `make specs-parallel` sweep at the end of Phase 1 and again
+at the end of Phase 2 to measure and update `spec_status.md`.
