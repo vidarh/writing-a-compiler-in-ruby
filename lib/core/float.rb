@@ -592,6 +592,22 @@ class Float
 
   alias magnitude abs
 
+  # The complex argument (phase angle) of a real Float: 0 for a positive value (including +0.0 and
+  # +Infinity), Math::PI for a negative value (including -0.0 and -Infinity), and self (NaN) for NaN.
+  # -0.0 must count as negative even though it compares == 0.0, so the sign of a zero is read from
+  # 1.0/self (1.0/-0.0 == -Infinity) rather than from `self < 0.0`.
+  def arg
+    return self if nan?
+    if self < 0.0 || (self == 0.0 && (1.0 / self) < 0.0)
+      Math::PI
+    else
+      0
+    end
+  end
+
+  alias angle arg
+  alias phase arg
+
   # The adjacent representable doubles, via libm nextafter(self, +/-Infinity) called directly (each
   # double marshalled as its two 32-bit halves; the st0 return captured with fstresult). nextafter
   # already gives the exact IEEE edge behaviour the specs want (Infinity is its own next_float, MAX
