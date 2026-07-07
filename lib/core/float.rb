@@ -9,6 +9,12 @@ class Float
   EPSILON = 2.220446049250313e-16
   DIG = 15
   MANT_DIG = 53
+  # IEEE-754 double parameters (base-2 and base-10 exponent ranges, radix), matching MRI.
+  RADIX = 2
+  MIN_EXP = -1021
+  MAX_EXP = 1024
+  MIN_10_EXP = -307
+  MAX_10_EXP = 308
 
   # Reserve space for double value (8 bytes = 2 slots)
   # We use instance variables to ensure the compiler allocates space
