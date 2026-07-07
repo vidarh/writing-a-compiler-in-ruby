@@ -2359,9 +2359,14 @@ class Integer < Numeric
     # Check if types are comparable (raises ArgumentError if not)
     __check_comparable(other)
 
-    # Type check - for non-Integer numeric types (Float), return nil
-    # Returning nil causes comparison operators to return false/nil, preventing infinite loops
-    # Returning 0 would mean "all Integers equal all Floats", breaking downto/upto loops
+    # Float: compare by value via the (working) Float#<=> — returns -1/0/1, or nil for NaN. (Delegating
+    # gives the CORRECT ordering, unlike a constant 0/nil, so it does not reintroduce the loop hazards
+    # the blanket non-Integer nil below was guarding against.)
+    if other.is_a?(Float)
+      return self.to_f <=> other
+    end
+    # Other non-Integer numeric types: nil (Returning 0 would mean "all Integers equal all Floats",
+    # breaking downto/upto loops).
     if !other.is_a?(Integer)
       return nil
     end

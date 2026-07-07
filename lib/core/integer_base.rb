@@ -37,19 +37,25 @@ class Integer < Numeric
     self
   end
 
+  # NB the `(sar other)` fast path assumes `other` is a tagged fixnum; a Float is a heap pointer, so
+  # `sar` would mangle it. Delegate to the (working) Float comparison when other is a Float.
   def > other
+    return self.to_f > other if other.is_a?(Float)
     %s(if (gt (sar self) (sar other)) true false)
   end
 
   def >= other
+    return self.to_f >= other if other.is_a?(Float)
     %s(if (ge (sar self) (sar other)) true false)
   end
 
   def < other
+    return self.to_f < other if other.is_a?(Float)
     %s(if (lt (sar self) (sar other)) true false)
   end
 
   def <= other
+    return self.to_f <= other if other.is_a?(Float)
     %s(if (le (sar self) (sar other)) true false)
   end
 
