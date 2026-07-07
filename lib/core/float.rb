@@ -196,34 +196,61 @@ class Float
     self
   end
 
-  # Arithmetic. Non-Float operands are coerced to Float first (Integer#to_f, etc.), then the x87
-  # primitive computes result = self <op> other into a freshly allocated Float. Divide-by-zero and
-  # 0.0/0.0 produce IEEE Infinity/NaN for free from the FPU.
+  # Return `other` as a Float when it is directly numeric (a Float as-is, an Integer via #to_f),
+  # or nil when it is not -- the signal for the arithmetic operators to fall back to the coercion
+  # protocol. (Every Float is truthy, including 0.0, so `if __as_float(x)` distinguishes cleanly.)
+  def __as_float(other)
+    return other if other.is_a?(Float)
+    return other.to_f if other.is_a?(Integer)
+    nil
+  end
+
+  # Arithmetic. A directly-numeric operand goes straight to the x87 primitive (result computed into a
+  # freshly allocated Float; divide-by-zero / 0.0/0.0 yield IEEE Infinity/NaN for free). A non-numeric
+  # operand follows MRI's coercion protocol: `other.coerce(self)` returns a [a, b] pair to which the
+  # operator is re-applied, so a custom numeric type can participate and an exception raised inside
+  # #coerce propagates instead of being swallowed.
   def + other
-    other = other.to_f unless other.is_a?(Float)
+    o = __as_float(other)
+    if o.nil?
+      a, b = other.coerce(self)
+      return a + b
+    end
     r = Float.new
-    %s(fadd self other r)
+    %s(fadd self o r)
     r
   end
 
   def - other
-    other = other.to_f unless other.is_a?(Float)
+    o = __as_float(other)
+    if o.nil?
+      a, b = other.coerce(self)
+      return a - b
+    end
     r = Float.new
-    %s(fsub self other r)
+    %s(fsub self o r)
     r
   end
 
   def * other
-    other = other.to_f unless other.is_a?(Float)
+    o = __as_float(other)
+    if o.nil?
+      a, b = other.coerce(self)
+      return a * b
+    end
     r = Float.new
-    %s(fmul self other r)
+    %s(fmul self o r)
     r
   end
 
   def / other
-    other = other.to_f unless other.is_a?(Float)
+    o = __as_float(other)
+    if o.nil?
+      a, b = other.coerce(self)
+      return a / b
+    end
     r = Float.new
-    %s(fdiv self other r)
+    %s(fdiv self o r)
     r
   end
 
