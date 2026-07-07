@@ -329,8 +329,27 @@ class Float
 
   # Modulo (result takes the sign of the divisor) and remainder (sign of the dividend), per MRI.
   def % other
-    other = other.to_f unless other.is_a?(Float)
-    self - (self / other).floor * other
+    o = __as_float(other)
+    if o.nil?
+      a, b = __coerce_pair(other)
+      return a % b
+    end
+    # A zero divisor (Integer 0 or Float 0.0) raises ZeroDivisionError -- unlike Float#/, MRI's modulo
+    # does not return NaN/Infinity for a zero divisor. (This also pre-empts floor() -> to_i raising
+    # FloatDomainError on self/0.0 == Inf.)
+    raise ZeroDivisionError.new("divided by 0") if o == 0.0
+    # NaN operands or an infinite dividend give NaN.
+    if nan? || o.nan? || infinite?
+      return Float::NAN
+    end
+    # Modulo by +/-Infinity: the result keeps the divisor's sign. self already lies in the divisor's
+    # half-open range when they share a sign (or self is zero), otherwise one wrap (self + other) lands
+    # it there. (Without this, self/Inf == 0.0 and 0.0*Inf == NaN would poison the general formula.)
+    if o.infinite?
+      return self if self == 0.0 || (self < 0.0) == (o < 0.0)
+      return self + o
+    end
+    self - (self / o).floor * o
   end
 
   alias modulo %
