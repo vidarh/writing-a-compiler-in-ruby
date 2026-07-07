@@ -2372,6 +2372,12 @@ class Integer < Numeric
       return (oi > 0 ? -1 : 1) unless oi.nil?
       return self.to_f <=> other
     end
+    # Rational: promote self to an exact Rational and let Rational#<=> order it (mirrors the
+    # Rational.new(self, 1) promotion the arithmetic operators already use). Without this, an Integer
+    # vs Rational comparison fell through to nil, so 1 < Rational(3,2) etc. were all false.
+    if other.is_a?(Rational)
+      return Rational.new(self, 1) <=> other
+    end
     # Other non-Integer numeric types: nil (Returning 0 would mean "all Integers equal all Floats",
     # breaking downto/upto loops).
     if !other.is_a?(Integer)
