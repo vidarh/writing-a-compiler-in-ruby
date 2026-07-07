@@ -205,6 +205,16 @@ class Float
     nil
   end
 
+  # The coercion step shared by the arithmetic operators: an operand that cannot participate (does not
+  # respond to #coerce) is a TypeError, matching MRI ("X can't be coerced into Float"), rather than the
+  # NoMethodError a bare `other.coerce(self)` would raise. Otherwise return the [a, b] pair.
+  def __coerce_pair(other)
+    unless other.respond_to?(:coerce)
+      raise TypeError, "#{other.class} can't be coerced into Float"
+    end
+    other.coerce(self)
+  end
+
   # Arithmetic. A directly-numeric operand goes straight to the x87 primitive (result computed into a
   # freshly allocated Float; divide-by-zero / 0.0/0.0 yield IEEE Infinity/NaN for free). A non-numeric
   # operand follows MRI's coercion protocol: `other.coerce(self)` returns a [a, b] pair to which the
@@ -213,7 +223,7 @@ class Float
   def + other
     o = __as_float(other)
     if o.nil?
-      a, b = other.coerce(self)
+      a, b = __coerce_pair(other)
       return a + b
     end
     r = Float.new
@@ -224,7 +234,7 @@ class Float
   def - other
     o = __as_float(other)
     if o.nil?
-      a, b = other.coerce(self)
+      a, b = __coerce_pair(other)
       return a - b
     end
     r = Float.new
@@ -235,7 +245,7 @@ class Float
   def * other
     o = __as_float(other)
     if o.nil?
-      a, b = other.coerce(self)
+      a, b = __coerce_pair(other)
       return a * b
     end
     r = Float.new
@@ -246,7 +256,7 @@ class Float
   def / other
     o = __as_float(other)
     if o.nil?
-      a, b = other.coerce(self)
+      a, b = __coerce_pair(other)
       return a / b
     end
     r = Float.new
