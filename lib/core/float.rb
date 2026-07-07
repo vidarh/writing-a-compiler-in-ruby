@@ -493,6 +493,23 @@ class Float
 
   alias magnitude abs
 
+  # The adjacent representable doubles, via libm nextafter(self, +/-Infinity) called directly (each
+  # double marshalled as its two 32-bit halves; the st0 return captured with fstresult). nextafter
+  # already gives the exact IEEE edge behaviour the specs want (Infinity is its own next_float, MAX
+  # steps to Infinity, +0.0/-0.0 handling, etc.).
+  def next_float
+    r = Float.new
+    %s(do (nextafter (index self 1) (index self 2) (index INFINITY 1) (index INFINITY 2)) (fstresult r))
+    r
+  end
+
+  def prev_float
+    ni = 0.0 - INFINITY
+    r = Float.new
+    %s(do (nextafter (index self 1) (index self 2) (index ni 1) (index ni 2)) (fstresult r))
+    r
+  end
+
   def zero?
     self == 0.0
   end
