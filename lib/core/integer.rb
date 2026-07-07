@@ -1971,7 +1971,9 @@ class Integer < Numeric
   # Float division - returns a Float
   # WORKAROUND: Float arithmetic not implemented, return stub Float object
   def fdiv(other)
-    Float.new
+    # Float division: convert self to Float and divide (Float#/ coerces the divisor). The bare
+    # `Float.new` stub returned the 2.1e-314 garbage denormal.
+    self.to_f / other
   end
 
   # Divide fixnum by heap integer

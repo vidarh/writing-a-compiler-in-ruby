@@ -226,6 +226,40 @@ class Float
     self - (self / other).truncate * other
   end
 
+  # Integer floored division and [quotient, modulo]. div returns an Integer; divmod's remainder takes
+  # the sign of the divisor (matching Float#%).
+  def div other
+    other = other.to_f unless other.is_a?(Float)
+    (self / other).floor
+  end
+
+  def divmod other
+    [div(other), self % other]
+  end
+
+  # quo/fdiv are exact float division; coerce implements the numeric coercion protocol.
+  def quo other
+    other = other.to_f unless other.is_a?(Float)
+    self / other
+  end
+
+  def fdiv other
+    other = other.to_f unless other.is_a?(Float)
+    self / other
+  end
+
+  def coerce other
+    [other.to_f, self]
+  end
+
+  def positive?
+    self > 0.0
+  end
+
+  def negative?
+    self < 0.0
+  end
+
   # Comparisons via x87 ordered compare (flt/fgt/feq return 0/1). NaN is unordered, so all three
   # yield 0 -> ==/< /> are false and <=> is nil against a NaN, matching MRI. Integer operands are
   # coerced to Float first.
