@@ -718,7 +718,7 @@
 {"spec":"rubyspec/core/filetest/writable_real_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/filetest/writable_spec.rb","outcome":"PASS","passed":3,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/filetest/zero_spec.rb","outcome":"FAIL","passed":7,"failed":3,"skipped":0}
-{"spec":"rubyspec/core/float/abs_spec.rb","outcome":"FAIL","passed":3,"failed":2,"skipped":0}
+{"spec":"rubyspec/core/float/abs_spec.rb","outcome":"PASS","passed":4,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/angle_spec.rb","outcome":"FAIL","passed":0,"failed":16,"skipped":0}
 {"spec":"rubyspec/core/float/arg_spec.rb","outcome":"FAIL","passed":0,"failed":16,"skipped":0}
 {"spec":"rubyspec/core/float/case_compare_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
@@ -727,13 +727,13 @@
 {"spec":"rubyspec/core/float/comparison_spec.rb","outcome":"FAIL","passed":9,"failed":5,"skipped":0}
 {"spec":"rubyspec/core/float/constants_spec.rb","outcome":"FAIL","passed":6,"failed":11,"skipped":0}
 {"spec":"rubyspec/core/float/denominator_spec.rb","outcome":"FAIL","passed":0,"failed":6,"skipped":0}
-{"spec":"rubyspec/core/float/divide_spec.rb","outcome":"FAIL","passed":4,"failed":7,"skipped":0}
+{"spec":"rubyspec/core/float/divide_spec.rb","outcome":"PASS","passed":8,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/divmod_spec.rb","outcome":"FAIL","passed":1,"failed":5,"skipped":0}
 {"spec":"rubyspec/core/float/dup_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/eql_spec.rb","outcome":"PASS","passed":3,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/equal_value_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/exponent_spec.rb","outcome":"FAIL","passed":0,"failed":3,"skipped":0}
-{"spec":"rubyspec/core/float/fdiv_spec.rb","outcome":"FAIL","passed":12,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/float/fdiv_spec.rb","outcome":"FAIL","passed":13,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/float/finite_spec.rb","outcome":"PASS","passed":4,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/float_spec.rb","outcome":"FAIL","passed":1,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/float/floor_spec.rb","outcome":"FAIL","passed":4,"failed":3,"skipped":0}
@@ -744,10 +744,10 @@
 {"spec":"rubyspec/core/float/inspect_spec.rb","outcome":"PASS","passed":26,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/lt_spec.rb","outcome":"FAIL","passed":4,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/float/lte_spec.rb","outcome":"FAIL","passed":4,"failed":2,"skipped":0}
-{"spec":"rubyspec/core/float/magnitude_spec.rb","outcome":"FAIL","passed":3,"failed":2,"skipped":0}
+{"spec":"rubyspec/core/float/magnitude_spec.rb","outcome":"PASS","passed":4,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/minus_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/float/modulo_spec.rb","outcome":"FAIL","passed":2,"failed":20,"skipped":0}
-{"spec":"rubyspec/core/float/multiply_spec.rb","outcome":"FAIL","passed":2,"failed":1,"skipped":0}
+{"spec":"rubyspec/core/float/modulo_spec.rb","outcome":"FAIL","passed":4,"failed":14,"skipped":0}
+{"spec":"rubyspec/core/float/multiply_spec.rb","outcome":"PASS","passed":3,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/nan_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/negative_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/next_float_spec.rb","outcome":"FAIL","passed":0,"failed":18,"skipped":0}
@@ -756,9 +756,9 @@
 {"spec":"rubyspec/core/float/plus_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/positive_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/prev_float_spec.rb","outcome":"FAIL","passed":0,"failed":18,"skipped":0}
-{"spec":"rubyspec/core/float/quo_spec.rb","outcome":"FAIL","passed":12,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/float/quo_spec.rb","outcome":"FAIL","passed":13,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/float/rationalize_spec.rb","outcome":"FAIL","passed":0,"failed":9,"skipped":0}
-{"spec":"rubyspec/core/float/round_spec.rb","outcome":"FAIL","passed":3,"failed":24,"skipped":0}
+{"spec":"rubyspec/core/float/round_spec.rb","outcome":"FAIL","passed":3,"failed":23,"skipped":0}
 {"spec":"rubyspec/core/float/to_f_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/float/to_i_spec.rb","outcome":"FAIL","passed":0,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/float/to_int_spec.rb","outcome":"FAIL","passed":0,"failed":2,"skipped":0}
@@ -880,7 +880,7 @@
 {"spec":"rubyspec/core/integer/equal_value_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/even_spec.rb","outcome":"PASS","passed":6,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/exponent_spec.rb","outcome":"FAIL","passed":9,"failed":11,"skipped":2}
-{"spec":"rubyspec/core/integer/fdiv_spec.rb","outcome":"FAIL","passed":9,"failed":5,"skipped":0}
+{"spec":"rubyspec/core/integer/fdiv_spec.rb","outcome":"FAIL","passed":10,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/integer/floor_spec.rb","outcome":"PASS","passed":8,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/integer/gcd_spec.rb","outcome":"FAIL","passed":10,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/integer/gcdlcm_spec.rb","outcome":"PASS","passed":10,"failed":0,"skipped":0}
@@ -1162,7 +1162,7 @@
 {"spec":"rubyspec/core/math/acosh_spec.rb","outcome":"FAIL","passed":5,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/math/asin_spec.rb","outcome":"FAIL","passed":6,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/math/asinh_spec.rb","outcome":"FAIL","passed":4,"failed":4,"skipped":0}
-{"spec":"rubyspec/core/math/atan2_spec.rb","outcome":"FAIL","passed":5,"failed":8,"skipped":0}
+{"spec":"rubyspec/core/math/atan2_spec.rb","outcome":"FAIL","passed":7,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/math/atan_spec.rb","outcome":"FAIL","passed":4,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/math/atanh_spec.rb","outcome":"FAIL","passed":6,"failed":15,"skipped":0}
 {"spec":"rubyspec/core/math/cbrt_spec.rb","outcome":"FAIL","passed":3,"failed":2,"skipped":0}
@@ -1217,7 +1217,7 @@
 {"spec":"rubyspec/core/module/attr_reader_spec.rb","outcome":"FAIL","passed":0,"failed":7,"skipped":2}
 {"spec":"rubyspec/core/module/attr_spec.rb","outcome":"FAIL","passed":0,"failed":13,"skipped":3}
 {"spec":"rubyspec/core/module/attr_writer_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":2}
-{"spec":"rubyspec/core/module/autoload_spec.rb","outcome":"CRASH","passed":2,"failed":33,"skipped":0}
+{"spec":"rubyspec/core/module/autoload_spec.rb","outcome":"FAIL","passed":3,"failed":142,"skipped":0}
 {"spec":"rubyspec/core/module/case_compare_spec.rb","outcome":"FAIL","passed":1,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/module/class_eval_spec.rb","outcome":"FAIL","passed":5,"failed":27,"skipped":0}
 {"spec":"rubyspec/core/module/class_exec_spec.rb","outcome":"FAIL","passed":3,"failed":3,"skipped":0}
