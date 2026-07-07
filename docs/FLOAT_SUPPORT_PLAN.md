@@ -138,6 +138,21 @@ runtime does the hard numeric work).
    "%.17g", d)` then trimmed, plus explicit `Infinity`/`-Infinity`/`NaN`. This is an
    *approximation* of MRI's shortest-round-trip form (Phase 3 tightens it), but it
    clears `float/to_s` + `float/inspect` from CRASH and passes the common cases.
+   **[DONE — this commit]** C helper `__float_to_cstr` (tgc.c) reads the double at
+   offset 4 of the Float object, finds the fewest `%.*e` significant digits that
+   `strtod`-round-trip, and places the decimal point MRI-style (fixed when the decimal
+   exponent ∈ [-4,14] = decpt ≤ DBL_DIG, else `d.dddde±NN` with ≥2 exp digits);
+   `Infinity`/`-Infinity`/`NaN`/`-0.0` handled; NaN/Inf detected without libm. `to_s`
+   allocates a buffer via `__array` and wraps it with `__set_raw`; `inspect` aliases it.
+   **Verified vs MRI on 24 representative values (all exact match)** incl. integer-valued,
+   fractions, both scientific boundaries, `-0.0`. Robust inside closures/yield.
+   NOTE: the `float/to_s` + `float/inspect` spec FILES still CRASH — but for a
+   *pre-existing* harness reason (`send(@method)` + `it_behaves_like` + many literal
+   floats in it-blocks), NOT the old stub; my `to_s` is correct where it runs. So the
+   sweep crash count is unchanged (no regression), and the real payoff is every OTHER
+   spec/site that prints a float. **BUILD NOTE: tgc.c changes require rebuilding
+   `out/tgc.o`; the local 32-bit toolchain lacks C headers, so rebuild in the
+   `ruby-compiler-buildenv` docker image (`gcc -Wall -m32 -c -o out/tgc.o tgc.c`).**
 7. **pack/unpack float directives** (`d D f F e E g G`) in the existing `__Pack`
    codec (`lib/core/pack.rb`) — the raw 8 bytes are already in the object, so pack is
    a byte copy and unpack is `__float_from_bytes`. ~460 assertions.

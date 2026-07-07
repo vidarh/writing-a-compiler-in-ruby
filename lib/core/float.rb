@@ -18,8 +18,15 @@ class Float
   end
 
   def to_s
-    # FIXME: Stub - proper float to string not implemented
-    "0.0"
+    # The C helper __float_to_cstr (tgc.c) reads the raw double at offset 4 of self and writes a
+    # NUL-terminated decimal (shortest round-trip via %g/strtod, or Infinity/-Infinity/NaN) into a
+    # scratch buffer; __set_raw then wraps it into this String. `__array 16` = 64 bytes, ample.
+    s = ""
+    %s(let (buf)
+      (assign buf (__array 16))
+      (__float_to_cstr self buf)
+      (callm s __set_raw (buf)))
+    s
   end
 
   alias inspect to_s

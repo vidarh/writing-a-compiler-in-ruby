@@ -395,3 +395,73 @@ void *tgc_realloc(void *ptr, size_t size) {
 
   return NULL;
 }
+
+/* Float#to_s / #inspect helper. `obj` is a Ruby Float object; its raw IEEE-754 double lives at
+ * byte offset 4 (after the vtable slot). Writes a NUL-terminated decimal into `buf` (>= 32 bytes).
+ *
+ * v1 formatting (approximation of MRI's shortest round-trip form, refined in later phases):
+ *  - NaN / Infinity / -Infinity spelled out (MRI style).
+ *  - otherwise the SHORTEST `%.*g` that strtod-round-trips back to the exact double, then a mantissa
+ *    decimal point is ensured (`2` -> `2.0`, `1e+20` -> `1.0e+20`) to match Ruby's "always a dot" rule.
+ * Detects NaN/Inf without libm: NaN is the only value != itself; +/-Inf are the only nonzero values
+ * equal to half themselves (inf/2 == inf). */
+void __float_to_cstr(void *obj, char *buf) {
+  double d = *(double *)((char *)obj + 4);
+  if (d != d) { strcpy(buf, "NaN"); return; }
+  if (d != 0.0 && d == d / 2.0) { strcpy(buf, d < 0.0 ? "-Infinity" : "Infinity"); return; }
+
+  /* Find the fewest significant digits whose %e form round-trips back to the exact double, then
+   * place the decimal point the way Ruby does: fixed notation when the decimal exponent is in
+   * [-4, 15], scientific ("d.dddde[+-]NN", >=2 exponent digits) otherwise. */
+  char tmp[64];
+  int p;
+  for (p = 0; p < 17; p++) {
+    snprintf(tmp, sizeof(tmp), "%.*e", p, d);
+    if (strtod(tmp, NULL) == d) break;
+  }
+  if (p >= 17) snprintf(tmp, sizeof(tmp), "%.16e", d);
+
+  char *s = tmp;
+  char sign[2] = "";
+  if (*s == '-') { sign[0] = '-'; s++; }
+  char digits[40];
+  int nd = 0;
+  digits[nd++] = *s++;                 /* leading digit */
+  if (*s == '.') { s++; while (*s && *s != 'e' && *s != 'E') digits[nd++] = *s++; }
+  int exp = atoi(s + 1);               /* decimal exponent of the leading digit */
+  digits[nd] = 0;
+
+  char *o = buf;
+  char *q = sign;
+  int i;
+  while (*q) *o++ = *q++;
+  /* Ruby uses fixed notation when the decimal point position decpt = exp+1 is in [-3, 15]
+   * (i.e. exp in [-4, 14], DBL_DIG=15), scientific otherwise. */
+  if (exp >= -4 && exp <= 14) {
+    if (exp < 0) {
+      *o++ = '0'; *o++ = '.';
+      for (i = 0; i < -exp - 1; i++) *o++ = '0';
+      for (i = 0; i < nd; i++) *o++ = digits[i];
+    } else {
+      for (i = 0; i <= exp; i++) *o++ = (i < nd) ? digits[i] : '0';
+      *o++ = '.';
+      if (exp + 1 < nd) { for (i = exp + 1; i < nd; i++) *o++ = digits[i]; }
+      else *o++ = '0';
+    }
+  } else {
+    *o++ = digits[0];
+    *o++ = '.';
+    if (nd > 1) { for (i = 1; i < nd; i++) *o++ = digits[i]; }
+    else *o++ = '0';
+    *o++ = 'e';
+    int ex = exp;
+    if (ex < 0) { *o++ = '-'; ex = -ex; } else *o++ = '+';
+    char eb[8];
+    int en = 0;
+    if (ex == 0) eb[en++] = '0';
+    while (ex) { eb[en++] = '0' + ex % 10; ex /= 10; }
+    if (en < 2) eb[en++] = '0';
+    while (en) *o++ = eb[--en];
+  }
+  *o = 0;
+}
