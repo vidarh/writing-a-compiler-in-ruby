@@ -198,17 +198,83 @@ class Float
     end
   end
 
-  def round(ndigits = 0)
+  # Round self to the nearest integer-valued double, honouring the half-way rule, and return it as a
+  # Float (the caller converts to Integer or rescales). self must already be finite. The three modes
+  # map onto libm: :up (default, half away from zero) -> round; :even (banker's) -> rint (the FPU's
+  # default rounding is to-nearest-even); :down (half toward zero) -> ceil(self-0.5) / floor(self+0.5).
+  # Using libm avoids the classic (self+0.5).floor overflow, where e.g. 0.49999999999999994 + 0.5
+  # rounds up to 1.0 and floors to a spurious 1.
+  def __round_int(half)
+    r = Float.new
+    if half == :even
+      %s(do (rint (index self 1) (index self 2)) (fstresult r))
+    elsif half == :down
+      if self < 0.0
+        s = self + 0.5
+        %s(do (floor (index s 1) (index s 2)) (fstresult r))
+      else
+        s = self - 0.5
+        %s(do (ceil (index s 1) (index s 2)) (fstresult r))
+      end
+    else
+      %s(do (round (index self 1) (index self 2)) (fstresult r))
+    end
+    r
+  end
+
+  # Interpret the ndigits argument: an Integer is used as-is; any other value is taken via #to_int
+  # (so a Float like 3.999 truncates to 3), and a value with no #to_int (a String, nil, ...) is a
+  # TypeError, matching MRI.
+  def __round_ndigits(x)
+    return x if x.is_a?(Integer)
+    unless x.respond_to?(:to_int)
+      raise TypeError, "no implicit conversion of #{x.class} into Integer"
+    end
+    x.to_int
+  end
+
+  # round([ndigits[, half: mode]]). Keyword arguments arrive as a trailing options Hash in the splat
+  # (so this does not depend on keyword-argument binding). ndigits > 0 keeps that many decimals as a
+  # Float; ndigits == 0 / omitted returns an Integer; ndigits < 0 rounds to a power of ten (Integer).
+  def round(*args)
+    half = :up
+    if args.length > 0 && args[-1].is_a?(Hash)
+      opts = args.pop
+      h = opts[:half]
+      half = h unless h.nil?
+    end
+    unless half == :up || half == :down || half == :even
+      raise ArgumentError, "invalid rounding mode: #{half}"
+    end
+    given_ndigits = args.length > 0
+    ndigits = given_ndigits ? __round_ndigits(args[0]) : 0
+
+    # Exceptional values. A positive precision returns self unchanged (Inf stays Inf, NaN stays NaN).
+    # Otherwise the result must be an Integer: Infinity is a FloatDomainError at any non-positive
+    # precision, and NaN a RangeError -- except bare `round` (no ndigits given), where NaN raises
+    # FloatDomainError like Infinity.
+    if nan?
+      return self if ndigits >= 1
+      raise RangeError, "cannot convert NaN to Integer" if given_ndigits
+      raise FloatDomainError, "NaN"
+    end
+    inf = infinite?
+    unless inf.nil?
+      return self if ndigits >= 1
+      raise FloatDomainError, (inf == 1 ? "Infinity" : "-Infinity")
+    end
+
     if ndigits > 0
+      return self if ndigits >= 323          # beyond the double range: self is already exact here
       f = 10.0 ** ndigits
-      (self * f).round / f
+      scaled = self * f
+      return self if scaled.infinite?         # scaling overflowed: no fractional digits to round
+      scaled.__round_int(half) / f
     elsif ndigits < 0
       f = 10 ** (-ndigits)
-      (self / f).round * f
-    elsif self < 0.0
-      (self - 0.5).ceil
+      (self / f).__round_int(half).to_i * f
     else
-      (self + 0.5).floor
+      __round_int(half).to_i
     end
   end
 
