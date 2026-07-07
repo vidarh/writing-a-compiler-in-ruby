@@ -300,8 +300,14 @@ class Float
   # coerced to Float first.
   def == other
     other = other.to_f if other.is_a?(Integer)
-    return false unless other.is_a?(Float)
-    %s(if (feq self other) true false)
+    if other.is_a?(Float)
+      %s(if (feq self other) true false)
+    else
+      # Coercion failed (other is not numeric): defer to `other == self` so a type with a custom
+      # `==` still gets a chance to match (MRI's Numeric#== fallback). Object#== is identity, so a
+      # plain object returns false without looping.
+      other == self
+    end
   end
 
   def eql? other
