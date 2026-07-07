@@ -522,6 +522,23 @@ class Object
     result
   end
 
+  # Kernel#Float(arg) — strict conversion. Integers/Floats convert directly; a String must be a
+  # single valid float (surrounding whitespace allowed, no trailing junk) or ArgumentError is raised
+  # (via the C __float_strict helper). Non-numeric, non-String values raise TypeError. (v1 omits
+  # MRI's digit-group underscores and the exception: keyword.)
+  def Float(arg)
+    return arg if arg.is_a?(Float)
+    return arg.to_f if arg.is_a?(Integer)
+    if arg.is_a?(String)
+      r = Float.new
+      ok = false
+      %s(if (__float_strict (callm arg __get_raw) r) (assign ok true))
+      raise ArgumentError, "invalid value for Float(): #{arg.inspect}" if !ok
+      return r
+    end
+    raise TypeError, "can't convert #{arg.class} into Float"
+  end
+
   def sprintf(fmt, *args)
     __sprintf(fmt.to_s, args)
   end

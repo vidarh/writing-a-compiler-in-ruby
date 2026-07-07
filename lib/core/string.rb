@@ -800,6 +800,15 @@ class String
     r
   end
 
+  # Parse a leading float, ignoring surrounding whitespace and trailing junk (MRI semantics):
+  # "3.14" -> 3.14, "2" -> 2.0, "1.5e3" -> 1500.0, "  .5xyz" -> 0.5, "abc" -> 0.0. Backed by C strtod
+  # (__str_to_f), which does exactly this leading-numeric-prefix parse and yields 0.0 for no digits.
+  def to_f
+    r = Float.new
+    %s(__str_to_f (callm self __get_raw) r)
+    r
+  end
+
   # Parse a leading rational literal into a Rational, ignoring surrounding whitespace and trailing
   # junk (MRI semantics): "1/2" -> (1/2), "3" -> (3/1), "0.75" -> (3/4), "-3/4" -> (-3/4). A string with
   # no leading number returns (0/1). self[i] yields a byte code in this runtime, so digits are '0'..'9'

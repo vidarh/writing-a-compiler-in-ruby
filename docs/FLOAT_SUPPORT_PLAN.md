@@ -161,6 +161,11 @@ runtime does the hard numeric work).
    `string/modulo`.
 9. **`Kernel#Float()` + `String#to_f`** — now implementable via C `strtod` (strict
    for `Float()`, lenient/leading-parse for `to_f`). Also `String#to_r` already exists.
+   **[DONE — this commit]** C helpers `__str_to_f` (lenient: strtod leading-prefix into
+   a fresh Float) and `__float_strict` (whole string modulo whitespace must parse, else
+   0). `String#to_f` and `Kernel#Float(arg)` (Integer/Float direct, String strict →
+   ArgumentError on junk, else TypeError). Verified vs MRI (lenient prefixes, strict
+   raises, whitespace). v1 omits MRI digit-group underscores and the `exception:` kwarg.
 10. **`Math` module** — `sqrt exp log log2 log10 sin cos tan atan atan2 pow hypot
     cbrt floor…` each a thin wrapper over the libc `math.h` function (a `%s` C call).
     `math/` ~369 assertions, almost entirely mechanical.

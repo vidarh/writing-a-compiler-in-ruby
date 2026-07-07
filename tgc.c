@@ -465,3 +465,25 @@ void __float_to_cstr(void *obj, char *buf) {
   }
   *o = 0;
 }
+
+/* String#to_f — lenient: strtod parses a leading numeric prefix and ignores trailing junk (returns
+ * 0.0 for no digits). Stores the double into the Float object `obj` at offset 4. */
+void __str_to_f(const char *s, void *obj) {
+  *(double *)((char *)obj + 4) = strtod(s, NULL);
+}
+
+/* Kernel#Float(str) — strict: the whole string, modulo surrounding whitespace, must be a single
+ * valid float. Returns 1 and stores the double into `obj` on success, 0 on failure (caller raises
+ * ArgumentError). Leading/trailing ASCII whitespace is allowed; empty / no-digits / trailing-junk
+ * all fail. (v1 does not accept MRI's digit-group underscores.) */
+int __float_strict(const char *s, void *obj) {
+  while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r' || *s == '\f' || *s == '\v') s++;
+  if (*s == 0) return 0;
+  char *end;
+  double d = strtod(s, &end);
+  if (end == s) return 0;
+  while (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r' || *end == '\f' || *end == '\v') end++;
+  if (*end != 0) return 0;
+  *(double *)((char *)obj + 4) = d;
+  return 1;
+}
