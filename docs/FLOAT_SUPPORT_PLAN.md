@@ -9,8 +9,10 @@ are a **known second-order effect**: a STUBBED Float method that returned a cons
 (`Float#>=`→false, `Float#==`→false, `Float#<=`) masked latent bugs in *non-float* code;
 making Float real flips those code paths and exposes the bug. Verified each in isolation
 (setarch -R) and at the pre-Float baseline (all merely FAILed there, no crash) — so they
-are genuine, my-change-exposed, not sweep flakes. (Two sweep entries — `integer/even`,
-`array/sample` TIMEOUT — DID prove to be 16-way-load flakes: they pass in isolation.)
+are genuine, my-change-exposed, not sweep flakes. (`integer/even` TIMEOUT was a 16-way-load flake — passes in isolation. `array/sample` is NOT a flake:
+it is a genuinely slow statistical fairness test — `measure_sample_fairness_large_sample_size(100,80,
+4000)` does ~320k sample ops — that exceeds the 20s spec timeout under the ~100x-slower self-hosted
+runtime. Not a code bug; can't be fixed short of a much faster runtime.)
 
 - **FIXED (commit a51bb36):** `array/repeated_permutation` FAIL→CRASH — `repeated_permutation(3.7)`
   never truncated the count, so the `length == n` base case never held → infinite recursion.
@@ -20,9 +22,13 @@ are genuine, my-change-exposed, not sweep flakes. (Two sweep entries — `intege
   spec-file crashes). Offset in the count by `language/alias_spec` improving CRASH→FAIL.
 - **`Integer#<=(Float)` returned false** (should coerce) — FIXED (commit 69544ef), plus the
   `bsearch` hang that fix exposed (commit ca95425).
-- **BLOCKED (timeout):** `numeric/step` FAIL→TIMEOUT. Root cause pinned: `Integer#step` runs away with
-  a GARBAGE denormal Float step (`2.1e-314`, a misread pointer) produced by the spec's keyword-arg
-  forms (`step(to:, by:)`). The proper fix (keyword support in `Integer#step`) is BLOCKED by a
+- **ROOT CAUSE of the `2.1e-314` garbage (FIXED, commit 7f0bcdb):** `Integer#+ - * / % remainder div`
+  returned a bare `Float.new` for Float operands, and `Float.new`'s stub initialize leaves the raw
+  double = `0x0000000100000001` = `2.1219957915e-314`. Every `int <op> float` produced that denormal
+  (seen across numeric/step and array/sample's chi-squared). Fixed by coercing (`self.to_f <op>
+  other`); also added `Float#% remainder ** ` (** = exponentiation by squaring). +13 sweep improvements.
+- **BLOCKED (timeout):** `numeric/step` FAIL→TIMEOUT. `Integer#step`'s keyword forms (`step(to:, by:)`)
+  still misbehave. The proper fix (keyword support in `Integer#step`) is BLOCKED by a
   compiler bug: **keyword args are misrouted into an optional positional param** — `def g(a = nil,
   to: nil); g(to: 5)` yields `[{:to=>5}, nil]` instead of `[nil, 5]` (the kwargs Hash is grabbed by
   `a`). Keyword params work ONLY when every positional before them is REQUIRED. See
