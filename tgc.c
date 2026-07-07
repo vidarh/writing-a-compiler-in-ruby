@@ -499,3 +499,27 @@ void __snprintf_float(void *obj, char *buf, int conv, int prec) {
   fmt[0] = '%'; fmt[1] = '.'; fmt[2] = '*'; fmt[3] = (char)conv; fmt[4] = 0;
   snprintf(buf, 64, fmt, prec, d);
 }
+
+/* pack/unpack Float directives (d D f F e E g G). The Float object holds its double at offset 4.
+ * __float_byte returns the i-th little-endian byte of the packed value (size=8 double, size=4 single
+ * via a narrowing cast). __unpack_float writes `size` little-endian bytes from buf into the Float
+ * object (widening a single to double). The caller handles count and big-endian byte reversal. */
+int __float_byte(void *obj, int size, int i) {
+  double d = *(double *)((char *)obj + 4);
+  if (size == 8) {
+    return ((unsigned char *)&d)[i];
+  } else {
+    float f = (float)d;
+    return ((unsigned char *)&f)[i];
+  }
+}
+
+void __unpack_float(char *buf, void *obj, int size) {
+  if (size == 8) {
+    memcpy((char *)obj + 4, buf, 8);
+  } else {
+    float f;
+    memcpy(&f, buf, 4);
+    *(double *)((char *)obj + 4) = (double)f;
+  }
+}

@@ -128,6 +128,53 @@ class __Pack
     nil
   end
 
+  # Float directives: d D E G are 8-byte doubles; f F e g are 4-byte singles. d D f F are native
+  # (little-endian on x86), e E little-endian, g G big-endian.
+  def self.float_size(d)
+    return 8 if d == 100 || d == 68 || d == 69 || d == 71   # d D E G
+    4                                                       # f F e g
+  end
+
+  def self.float_big?(d)
+    d == 103 || d == 71   # g G are big-endian; the rest native/little-endian on x86
+  end
+
+  # The i-th packed byte of `f` (little-endian native), as a 0..255 Integer.
+  def self.float_byte(f, size, i)
+    r = 0
+    %s(assign r (__int (__float_byte f (sar size) (sar i))))
+    r
+  end
+
+  # Append the `size`-byte packed representation of val (coerced to Float) to out, big-endian if `big`.
+  def self.emit_float(out, val, size, big)
+    f = val.to_f
+    k = 0
+    while k < size
+      idx = big ? (size - 1 - k) : k
+      out << float_byte(f, size, idx).chr
+      k += 1
+    end
+    nil
+  end
+
+  # Read a `size`-byte packed float at str[pos] into a Float (big-endian if `big`). nil if too few bytes.
+  # Assemble the bytes into a String in little-endian order (reversing for big-endian), then hand its
+  # raw buffer to __unpack_float. The runtime String is binary-safe, so embedded NUL bytes are fine.
+  def self.read_float(str, pos, size, big)
+    return nil if pos + size > str.length
+    buf = ""
+    k = 0
+    while k < size
+      idx = big ? (size - 1 - k) : k
+      buf << str[pos + idx].chr
+      k += 1
+    end
+    r = Float.new
+    %s(__unpack_float (callm buf __get_raw) r (sar size))
+    r
+  end
+
   # Read `size` bytes at str[pos] as an integer. Returns nil if not enough bytes.
   def self.read_int(str, pos, size, big, signed)
     return nil if pos + size > str.length
@@ -320,9 +367,20 @@ class __Pack
             k += 1
           end
         end
-      elsif d == 100 || d == 101 || d == 69 || d == 102 || d == 103 || d == 71
-        # d e E f g G: Float directives -- Float is not implemented yet
-        raise NotImplementedError, "pack: float directive '#{d.chr}' requires Float support"
+      elsif d == 100 || d == 68 || d == 101 || d == 69 || d == 102 || d == 70 || d == 103 || d == 71
+        # d D e E f F g G: Float directives -- IEEE-754 bytes of the (coerced) Float.
+        size = float_size(d)
+        bigflag = float_big?(d)
+        cnt = 1
+        cnt = count if count
+        cnt = arr.length - i if star
+        j = 0
+        while j < cnt
+          raise ArgumentError, "too few arguments" if i >= arr.length
+          emit_float(out, arr[i], size, bigflag)
+          i += 1
+          j += 1
+        end
       elsif d == 112 || d == 80   # 'p' 'P' pointers
         raise ArgumentError, "'#{d.chr}' is not allowed in this implementation"
       end
@@ -489,8 +547,27 @@ class __Pack
         target = blen if star
         raise ArgumentError, "@ outside of string" if target > blen
         pos = target
-      elsif d == 100 || d == 101 || d == 69 || d == 102 || d == 103 || d == 71
-        raise NotImplementedError, "unpack: float directive '#{d.chr}' requires Float support"
+      elsif d == 100 || d == 68 || d == 101 || d == 69 || d == 102 || d == 70 || d == 103 || d == 71
+        # d D e E f F g G: reconstruct Floats from IEEE-754 bytes.
+        size = float_size(d)
+        bigflag = float_big?(d)
+        if star
+          while pos + size <= blen
+            res << read_float(str, pos, size, bigflag)
+            pos += size
+          end
+        else
+          cnt = 1
+          cnt = count if count
+          j = 0
+          while j < cnt
+            v = read_float(str, pos, size, bigflag)
+            res << v
+            pos += size if v != nil
+            pos = blen if v.nil?
+            j += 1
+          end
+        end
       elsif d == 112 || d == 80
         raise ArgumentError, "'#{d.chr}' is not allowed in this implementation"
       end
