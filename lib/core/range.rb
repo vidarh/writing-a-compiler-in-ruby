@@ -186,6 +186,8 @@ class Range
     found = nil
     while lo < hi
       mid = (lo + hi) / 2
+      prev_lo = lo
+      prev_hi = hi
       r = block.call(mid)
       if r == true
         found = mid
@@ -199,6 +201,12 @@ class Range
       else
         hi = mid
       end
+      # Float ranges bisect a CONTINUOUS interval; when the midpoint can no longer advance (adjacent
+      # doubles, or an infinite bound where `mid + 1 == mid`), neither lo nor hi changes and the loop
+      # would spin forever. Integer ranges always make progress (mid+1 > lo, mid < hi), so this guard
+      # never fires for them. (v1: this only guarantees TERMINATION for Float ranges; exact MRI
+      # bit-level float bsearch results are a later refinement.)
+      break if lo == prev_lo && hi == prev_hi
     end
     found
   end
