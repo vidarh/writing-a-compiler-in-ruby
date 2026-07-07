@@ -105,14 +105,27 @@ The bar for "done": `1.5 + 2.5 == 4.0`, `10.0 / 4 == 2.5`, `(3.14 <=> 3.15) == -
 **Phase 1 is COMPLETE.** Real Float values flow end-to-end self-hosted: arithmetic,
 Int↔Float conversion, ordered comparison (+NaN), unary ops, predicates, real
 INFINITY/NAN/MAX/MIN/EPSILON. Gates held every commit (selftest / selftest-c Fails:0,
-crash battery clean — now 106 guards incl. float_arith/float_compare/float_unary).
-Still stubbed for later phases: `to_s` (prints "0.0"), `**`, `Float#coerce`, reverse
-coercion (`Integer + Float`), `Comparable` mixin, `%`/`divmod`/`floor(ndigits)`/`round`/
-`ceil`, and the two front-end limits above.
+crash battery clean — now 107 guards incl. float_arith/float_compare/float_unary/
+float_var_closure). Still stubbed for later phases: `to_s` (prints "0.0"), `**`,
+`Float#coerce`, reverse coercion (`Integer + Float`), `Comparable` mixin,
+`%`/`divmod`/`floor(ndigits)`/`round`/`ceil`, and the two front-end limits above.
 
-**Payoff of Phase 1:** the 4 float CRASH files stop crashing; `float/` arithmetic,
-comparison, and `integer/fdiv` largely convert; `Rational#to_f`/`Integer#fdiv` return
-real values.
+**Node-tag hazard (fixed, commit bb23de5).** Making float literals self-hosting gave
+them an AST node tag `:float` — which collides with the *very common* local variable
+name `float`. The closure env-var rewrite (`__rewrite_node_refs`) matches a captured
+local's name against a node's children and, without a guard, rewrote the literal's
+`:float` head into an `[:index,__env__,k]` read → the decimal was emitted as a raw
+String dispatched on as an object → SIGSEGV (turned `core/float/dup_spec` FAIL→CRASH).
+Fixed with a position-0 guard (gated on the `e[1]` String payload so a bare `float`
+argument is still rewritten). **Lesson: any NEW AST node tag must be added to the
+`__rewrite_node_refs` position-0 guards AND the `rewrite_strconst` skip — else it
+collides with a same-named captured variable.** See [[compiler_node_tag_var_collision]].
+
+**Payoff of Phase 1 (measured, local `core/float` sweep):** PASS 6→7, CRASH 4→3 after
+the node-tag fix; the 3 remaining crashers (`divide`/`inspect`/`to_s`) are all the
+pre-existing `to_s`-stub files and clear once Phase 2 item 6 lands. Net zero new float
+crashes vs baseline. `float/` arithmetic/comparison/conversion now return real values;
+the bulk of remaining FAILs are `to_s`-blocked value checks (Phase 2).
 
 ---
 
