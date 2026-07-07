@@ -92,6 +92,8 @@ if use_local
     "out/#{bname}.s", "out/tgc.o",
     File.join(lib32, "libc.so.6"),
     File.join(usr32, "libc_nonshared.a"),
+    # libm: Math calls libc math.h functions (sqrt/sin/exp/...) directly; glibc 2.28 keeps it separate.
+    File.join(lib32, "libm.so.6"),
     File.join(lib32, "libgcc_s.so.1"),
     crtend, crtn
   ].reject(&:empty?).join(" ")

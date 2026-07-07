@@ -503,10 +503,13 @@ class Object
   # Format a Float via C snprintf with the given conversion char (`conv` = the 'f'/'e'/'g'/'E'/'G'
   # code) and precision. Isolated in its own method so the %s buffer/C-call has a clean scope.
   def __float_conv(fv, conv, prec)
+    # Build "%.*<c>" (c = the f/e/g/E/G char) and call libc snprintf DIRECTLY: the double is passed as
+    # its two 32-bit halves and the int precision through the variadic `*`. No C wrapper.
+    fmt = "%.*" + conv.chr
     buf = ""
     %s(let (b)
       (assign b (__array 20))
-      (__snprintf_float fv b (sar conv) (sar prec))
+      (snprintf b 64 (callm fmt __get_raw) (sar prec) (index fv 1) (index fv 2))
       (callm buf __set_raw (b)))
     buf
   end
@@ -543,10 +546,20 @@ class Object
     return arg if arg.is_a?(Float)
     return arg.to_f if arg.is_a?(Integer)
     if arg.is_a?(String)
+      # Strict: the whole (whitespace-stripped) string must be one valid float. Call libc strtod
+      # directly with an endptr slot; strtod returns the double in st0 (-> fstresult) and writes the
+      # first-unconsumed pointer into endslot, so (endptr - start) must cover the whole stripped string.
+      s = arg.strip
+      raise ArgumentError, "invalid value for Float(): #{arg.inspect}" if s.empty?
       r = Float.new
-      ok = false
-      %s(if (__float_strict (callm arg __get_raw) r) (assign ok true))
-      raise ArgumentError, "invalid value for Float(): #{arg.inspect}" if !ok
+      consumed = 0
+      %s(let (raw endslot)
+        (assign raw (callm s __get_raw))
+        (assign endslot (__array 1))
+        (strtod raw endslot)
+        (fstresult r)
+        (assign consumed (__int (sub (index endslot 0) raw))))
+      raise ArgumentError, "invalid value for Float(): #{arg.inspect}" if consumed <= 0 || consumed != s.length
       return r
     end
     raise TypeError, "can't convert #{arg.class} into Float"

@@ -140,27 +140,36 @@ class __Pack
   end
 
   # The i-th packed byte of `f` (little-endian native), as a 0..255 Integer.
-  def self.float_byte(f, size, i)
+  # Read byte i (0..7) of the raw bytes previously stored in scratch buffer `buf` (an __array).
+  def self.__bufbyte(buf, i)
     r = 0
-    %s(assign r (__int (__float_byte f (sar size) (sar i))))
+    %s(assign r (__int (bindex buf (sar i))))
     r
   end
 
   # Append the `size`-byte packed representation of val (coerced to Float) to out, big-endian if `big`.
+  # x87 fstored/fstores writes the double / narrowed single into a scratch array; bindex reads its bytes.
   def self.emit_float(out, val, size, big)
     f = val.to_f
+    buf = 0
+    %s(assign buf (__array 2))
+    if size == 8
+      %s(fstored f buf)
+    else
+      %s(fstores f buf)
+    end
     k = 0
     while k < size
       idx = big ? (size - 1 - k) : k
-      out << float_byte(f, size, idx).chr
+      out << __bufbyte(buf, idx).chr
       k += 1
     end
     nil
   end
 
   # Read a `size`-byte packed float at str[pos] into a Float (big-endian if `big`). nil if too few bytes.
-  # Assemble the bytes into a String in little-endian order (reversing for big-endian), then hand its
-  # raw buffer to __unpack_float. The runtime String is binary-safe, so embedded NUL bytes are fine.
+  # Assemble the bytes into a binary-safe String in little-endian order, then x87 floadd/floads reads its
+  # buffer into the Float (flds widens a single to double).
   def self.read_float(str, pos, size, big)
     return nil if pos + size > str.length
     buf = ""
@@ -171,7 +180,11 @@ class __Pack
       k += 1
     end
     r = Float.new
-    %s(__unpack_float (callm buf __get_raw) r (sar size))
+    if size == 8
+      %s(floadd (callm buf __get_raw) r)
+    else
+      %s(floads (callm buf __get_raw) r)
+    end
     r
   end
 

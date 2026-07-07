@@ -17,16 +17,93 @@ class Float
     @value_high = 0
   end
 
+  # Format the double as "%.*e" (scientific, `prec+1` significant digits) via a DIRECT libc snprintf
+  # call: the double is passed as its two 32-bit halves ((index self 1/2) = the words at offsets 4/8)
+  # and the int precision through the variadic `*`. Returns e.g. "-1.234e+05".
+  def __fmt_e(prec)
+    buf = ""
+    %s(let (b)
+      (assign b (__array 20))
+      (snprintf b 40 "%.*e" (sar prec) (index self 1) (index self 2))
+      (callm buf __set_raw (b)))
+    buf
+  end
+
   def to_s
-    # The C helper __float_to_cstr (tgc.c) reads the raw double at offset 4 of self and writes a
-    # NUL-terminated decimal (shortest round-trip via %g/strtod, or Infinity/-Infinity/NaN) into a
-    # scratch buffer; __set_raw then wraps it into this String. `__array 16` = 64 bytes, ample.
+    return "NaN" if nan?
+    inf = infinite?
+    return "Infinity" if inf == 1
+    return "-Infinity" if inf == -1
+    # Shortest significant digits: the fewest %.*e that strtod-round-trips to this exact double.
+    prec = 0
     s = ""
-    %s(let (buf)
-      (assign buf (__array 16))
-      (__float_to_cstr self buf)
-      (callm s __set_raw (buf)))
-    s
+    while prec < 17
+      s = __fmt_e(prec)
+      break if s.to_f == self
+      prec = prec + 1
+    end
+    __e_to_mri(s)
+  end
+
+  # Reconstruct MRI's to_s from a "%e" string "[-]d.ddde[+-]NN": fixed notation when the decimal
+  # exponent is in [-4, 14] (decpt <= DBL_DIG), else "d.dddde[+-]NN" with a >=2-digit exponent.
+  def __e_to_mri(s)
+    neg = false
+    i = 0
+    if s[0, 1] == "-"
+      neg = true
+      i = 1
+    end
+    digits = s[i, 1]           # leading digit
+    i = i + 1
+    if s[i, 1] == "."          # "%.0e" has no decimal point (e.g. "1e+02"); skip it only if present
+      i = i + 1
+      while i < s.length && s[i, 1] != "e" && s[i, 1] != "E"
+        digits = digits + s[i, 1]
+        i = i + 1
+      end
+    end
+    exp = s[(i + 1)..-1].to_i   # signed exponent
+    nd = digits.length
+    out = neg ? "-" : ""
+    if exp >= -4 && exp <= 14
+      if exp < 0
+        out = out + "0."
+        k = 0
+        while k < (0 - exp - 1)
+          out = out + "0"
+          k = k + 1
+        end
+        out = out + digits
+      else
+        k = 0
+        while k <= exp
+          out = out + (k < nd ? digits[k, 1] : "0")
+          k = k + 1
+        end
+        out = out + "."
+        if exp + 1 < nd
+          out = out + digits[(exp + 1)..-1]
+        else
+          out = out + "0"
+        end
+      end
+    else
+      out = out + digits[0, 1] + "."
+      out = out + (nd > 1 ? digits[1..-1] : "0")
+      out = out + "e"
+      e2 = exp
+      if e2 < 0
+        out = out + "-"
+        e2 = 0 - e2
+      else
+        out = out + "+"
+      end
+      es = e2.to_s
+      es = "0" + es if es.length < 2
+      out = out + es
+    end
+    out
   end
 
   alias inspect to_s

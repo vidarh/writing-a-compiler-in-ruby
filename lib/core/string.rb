@@ -804,8 +804,12 @@ class String
   # "3.14" -> 3.14, "2" -> 2.0, "1.5e3" -> 1500.0, "  .5xyz" -> 0.5, "abc" -> 0.0. Backed by C strtod
   # (__str_to_f), which does exactly this leading-numeric-prefix parse and yields 0.0 for no digits.
   def to_f
+    # Lenient: call libc strtod directly (parses a leading numeric prefix, 0.0 if none). strtod
+    # returns the double in FPU st0, which fstresult stores into the result Float.
     r = Float.new
-    %s(__str_to_f (callm self __get_raw) r)
+    %s(do
+      (strtod (callm self __get_raw) 0)
+      (fstresult r))
     r
   end
 

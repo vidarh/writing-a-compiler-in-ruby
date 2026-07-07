@@ -69,7 +69,15 @@ class Compiler
                   # primitives) for use inside `(if ...)`. NaN is unordered: flt/fgt/feq all yield 0.
                   :flt, :fgt, :feq,
                   # x87 unary ops: `(fneg f r)` writes -*f into r (fchs); `(fabs f r)` writes |*f| (fabs).
-                  :fneg, :fabs
+                  :fneg, :fabs,
+                  # `(fstresult r)` stores the current FPU st0 into the Float object r (double at offset 4)
+                  # and pops. Used to capture the double RETURN (in st0) of a directly-called libc function
+                  # e.g. `(do (sqrt lo hi) (fstresult r))` or `(do (strtod s 0) (fstresult r))`.
+                  :fstresult,
+                  # pack/unpack float conversions via x87. `(fstored f buf)` writes f's 8 double bytes into
+                  # buf; `(fstores f buf)` writes the 4-byte single (fstps). `(floadd buf r)` / `(floads buf r)`
+                  # load 8/4 bytes from buf into the Float r (flds widens single->double). buf is a raw ptr.
+                  :fstored, :fstores, :floadd, :floads
                   ]
 
   Keywords = @@keywords
@@ -282,6 +290,48 @@ class Compiler
 
   def compile_fneg(scope, a, result); compile_funop(scope, :fchs, a, result); end
   def compile_fabs(scope, a, result); compile_funop(scope, :fabs, a, result); end
+
+  # Capture the double currently in FPU st0 (e.g. the return value of a directly-called libc function
+  # such as sqrt/strtod, which the cdecl/x87 ABI returns in st0) into the Float object `result`.
+  def compile_fstresult(scope, result)
+    @e.save_result(compile_eval_arg(scope, result))  # eax = ptr to the result Float
+    @e.fstpl("4(%eax)")                               # *result = st0 (and pop)
+    Value.new([:subexpr])
+  end
+
+  # pack: store f's double (fstored, 8 bytes) or narrowed single (fstores, 4 bytes) into the raw buffer buf.
+  def compile_fstored(scope, a, buf)
+    @e.save_result(compile_eval_arg(scope, a))
+    @e.fldl("4(%eax)")
+    @e.save_result(compile_eval_arg(scope, buf))
+    @e.fstpl("(%eax)")
+    Value.new([:subexpr])
+  end
+
+  def compile_fstores(scope, a, buf)
+    @e.save_result(compile_eval_arg(scope, a))
+    @e.fldl("4(%eax)")
+    @e.save_result(compile_eval_arg(scope, buf))
+    @e.emit(:fstps, "(%eax)")
+    Value.new([:subexpr])
+  end
+
+  # unpack: load 8 bytes (floadd) or a 4-byte single widened to double (floads) from buf into Float r.
+  def compile_floadd(scope, buf, result)
+    @e.save_result(compile_eval_arg(scope, buf))
+    @e.fldl("(%eax)")
+    @e.save_result(compile_eval_arg(scope, result))
+    @e.fstpl("4(%eax)")
+    Value.new([:subexpr])
+  end
+
+  def compile_floads(scope, buf, result)
+    @e.save_result(compile_eval_arg(scope, buf))
+    @e.emit(:flds, "(%eax)")
+    @e.save_result(compile_eval_arg(scope, result))
+    @e.fstpl("4(%eax)")
+    Value.new([:subexpr])
+  end
 
   # Returns an argument with its type identifier.
   #
