@@ -29,6 +29,11 @@ are genuine, my-change-exposed, not sweep flakes. (Two sweep entries — `intege
   [[compiler_kwargs_misrouted_to_optional_positional]]. Fixing that compiler bug (in
   rewrite_keyword_args / rewrite_default_args) would unblock this and likely many other keyword specs,
   but it is a hot compiler path — a dedicated, carefully-gated task.
+- **Found (not float, pre-existing):** string LITERALS with an embedded `\x00` truncate at the NUL
+  (`"abc\x00def".length` -> 3, not 7; a leading `\x00` -> length 0). Real binary data (e.g. from
+  `Array#pack`) is binary-safe and fine; only `\x00`-bearing *literals* are affected. Blocks the
+  unpack-from-literal `array/pack`+`string/unpack` float examples even though pack/unpack round-trips
+  work. Likely the literal is stored as a C string truncated at NUL.
 - **TODO (PASS→FAIL, not crashes):** `enumerator/lazy/filter_map`, `struct/eql` — uninvestigated.
 
 **Do NOT update the tracked `docs/spec_status.md` until these are resolved and a CLEAN full
