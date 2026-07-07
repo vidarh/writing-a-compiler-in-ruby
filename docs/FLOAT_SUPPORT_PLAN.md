@@ -1,5 +1,34 @@
 # Float support — prioritised implementation plan
 
+## Full-sweep regression triage (2026-07-07, after Phase 1 + Phase 2 items 6/9)
+
+A full local `rubyspec/language rubyspec/core` sweep (2158 files) vs the committed
+baseline: **PASS 376→394 (+18)**, FAIL 1752→1732, **CRASH 22→23 (+1)**, TIMEOUT 7→8 (+1).
+The +18 PASS is the Float payoff (Complex/Rational/Hash/Range/Float specs). The regressions
+are a **known second-order effect**: a STUBBED Float method that returned a constant
+(`Float#>=`→false, `Float#==`→false, `Float#<=`) masked latent bugs in *non-float* code;
+making Float real flips those code paths and exposes the bug. Verified each in isolation
+(setarch -R) and at the pre-Float baseline (all merely FAILed there, no crash) — so they
+are genuine, my-change-exposed, not sweep flakes. (Two sweep entries — `integer/even`,
+`array/sample` TIMEOUT — DID prove to be 16-way-load flakes: they pass in isolation.)
+
+- **FIXED (commit a51bb36):** `array/repeated_permutation` FAIL→CRASH — `repeated_permutation(3.7)`
+  never truncated the count, so the `length == n` base case never held → infinite recursion.
+  Fix: `n = n.to_int unless Integer`. Restores CRASH to baseline **22**.
+- **TODO (harness-layout crash, count-neutral):** `module/autoload` FAIL→CRASH — crashes inside
+  the harness `it` running an example (same layout/harness class as the `float/to_s`,`float/inspect`
+  spec-file crashes). Offset in the count by `language/alias_spec` improving CRASH→FAIL.
+- **TODO (timeout):** `numeric/step` FAIL→TIMEOUT — `Integer#step` with a Float/Infinity limit
+  misbehaves; found a real underlying bug: **`Integer#<=(Float)` returns false** (should coerce),
+  so `1.step(Float::INFINITY,42){}` yields nothing. The exact hanging example is still unpinned.
+- **TODO (PASS→FAIL, not crashes):** `enumerator/lazy/filter_map`, `struct/eql` — uninvestigated.
+
+**Do NOT update the tracked `docs/spec_status.md` until these are resolved and a CLEAN full
+re-sweep runs** (the current sweep shows CRASH 23 — committing it would record a regression).
+Lesson captured in memory: [[compiler_stub_masks_latent_bugs]].
+
+---
+
 **Goal:** real IEEE-754 `Float` in the self-hosting compiler. Unblocks ~2,300+
 assertions (float, math, complex, rational, kernel/Float, numeric/step, pack/unpack
 float dirs, sprintf) and turns 4 stub-driven CRASH files (`float/divide`,
