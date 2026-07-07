@@ -157,15 +157,19 @@ class String
     false
   end
 
-  # FIXME. This is wrong.
+  # Frozen strings are not supported yet. A bare `@frozen` ivar is unusable here: direct ivar
+  # access on a String reads a BROKEN slot (separate from the real ivar table -- instance_variable_get
+  # returns nil while a bare `@frozen` returns raw garbage), so `frozen?` on a never-frozen string
+  # returned a non-object that SIGSEGV'd any `.should`/`p`/`==` on the result. That single crash took
+  # out core/file/basename, core/file/extname, core/kernel/object_id, core/string/clone, and
+  # core/string/chilled_string (all do `<str>.frozen?`). Treat freeze as a no-op and report
+  # not-frozen (the correct answer for a mutable string; freeze_spec already FAILs, so no PASS is lost).
   def freeze
-    @frozen = true
     self
   end
 
-  # FIXME: We don't support frozen strings yet.
   def frozen?
-    @frozen
+    false
   end
 
   def encoding
