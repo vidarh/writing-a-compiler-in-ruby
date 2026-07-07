@@ -215,6 +215,16 @@ class Float
     other.coerce(self)
   end
 
+  # Coercion step for the ordered comparison operators (< > <= >=). Same as __coerce_pair, but a
+  # non-coercible operand is an ArgumentError ("comparison of Float with X failed"), matching MRI's
+  # relational-coerce path, rather than the TypeError arithmetic raises.
+  def __coerce_relop(other)
+    unless other.respond_to?(:coerce)
+      raise ArgumentError, "comparison of Float with #{other.class} failed"
+    end
+    other.coerce(self)
+  end
+
   # Arithmetic. A directly-numeric operand goes straight to the x87 primitive (result computed into a
   # freshly allocated Float; divide-by-zero / 0.0/0.0 yield IEEE Infinity/NaN for free). A non-numeric
   # operand follows MRI's coercion protocol: `other.coerce(self)` returns a [a, b] pair to which the
@@ -354,28 +364,44 @@ class Float
   end
 
   def < other
-    other = other.to_f unless other.is_a?(Float)
-    %s(if (flt self other) true false)
+    o = __as_float(other)
+    if o.nil?
+      a, b = __coerce_relop(other)
+      return a < b
+    end
+    %s(if (flt self o) true false)
   end
 
   def > other
-    other = other.to_f unless other.is_a?(Float)
-    %s(if (fgt self other) true false)
+    o = __as_float(other)
+    if o.nil?
+      a, b = __coerce_relop(other)
+      return a > b
+    end
+    %s(if (fgt self o) true false)
   end
 
   def <= other
-    other = other.to_f unless other.is_a?(Float)
+    o = __as_float(other)
+    if o.nil?
+      a, b = __coerce_relop(other)
+      return a <= b
+    end
     r = false
-    %s(if (flt self other) (assign r true))
-    %s(if (feq self other) (assign r true))
+    %s(if (flt self o) (assign r true))
+    %s(if (feq self o) (assign r true))
     r
   end
 
   def >= other
-    other = other.to_f unless other.is_a?(Float)
+    o = __as_float(other)
+    if o.nil?
+      a, b = __coerce_relop(other)
+      return a >= b
+    end
     r = false
-    %s(if (fgt self other) (assign r true))
-    %s(if (feq self other) (assign r true))
+    %s(if (fgt self o) (assign r true))
+    %s(if (feq self o) (assign r true))
     r
   end
 
