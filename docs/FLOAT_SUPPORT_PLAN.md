@@ -18,9 +18,17 @@ are genuine, my-change-exposed, not sweep flakes. (Two sweep entries — `intege
 - **TODO (harness-layout crash, count-neutral):** `module/autoload` FAIL→CRASH — crashes inside
   the harness `it` running an example (same layout/harness class as the `float/to_s`,`float/inspect`
   spec-file crashes). Offset in the count by `language/alias_spec` improving CRASH→FAIL.
-- **TODO (timeout):** `numeric/step` FAIL→TIMEOUT — `Integer#step` with a Float/Infinity limit
-  misbehaves; found a real underlying bug: **`Integer#<=(Float)` returns false** (should coerce),
-  so `1.step(Float::INFINITY,42){}` yields nothing. The exact hanging example is still unpinned.
+- **`Integer#<=(Float)` returned false** (should coerce) — FIXED (commit 69544ef), plus the
+  `bsearch` hang that fix exposed (commit ca95425).
+- **BLOCKED (timeout):** `numeric/step` FAIL→TIMEOUT. Root cause pinned: `Integer#step` runs away with
+  a GARBAGE denormal Float step (`2.1e-314`, a misread pointer) produced by the spec's keyword-arg
+  forms (`step(to:, by:)`). The proper fix (keyword support in `Integer#step`) is BLOCKED by a
+  compiler bug: **keyword args are misrouted into an optional positional param** — `def g(a = nil,
+  to: nil); g(to: 5)` yields `[{:to=>5}, nil]` instead of `[nil, 5]` (the kwargs Hash is grabbed by
+  `a`). Keyword params work ONLY when every positional before them is REQUIRED. See
+  [[compiler_kwargs_misrouted_to_optional_positional]]. Fixing that compiler bug (in
+  rewrite_keyword_args / rewrite_default_args) would unblock this and likely many other keyword specs,
+  but it is a hot compiler path — a dedicated, carefully-gated task.
 - **TODO (PASS→FAIL, not crashes):** `enumerator/lazy/filter_map`, `struct/eql` — uninvestigated.
 
 **Do NOT update the tracked `docs/spec_status.md` until these are resolved and a CLEAN full
