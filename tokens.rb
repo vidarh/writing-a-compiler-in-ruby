@@ -219,6 +219,9 @@ module Tokens
 
   class Number
     def self.expect(s, allow_negative = true)
+      # Capture a leading '-' BEFORE Int.expect consumes it: for "-0.5" Int.expect parses the integer
+      # part "-0" as the integer 0, discarding the sign, so the float string would wrongly become "0.5".
+      neg = allow_negative && s.peek == ?-
       i = Int.expect(s, allow_negative)
       return nil if i.nil?
 
@@ -243,6 +246,8 @@ module Tokens
             f << s.get
           end
           num = "#{i}.#{f}"
+          # Restore the sign lost when Int.expect turned "-0" into 0 (e.g. -0.5, -0.0).
+          num = "-#{num}" if neg && i == 0
 
           # Check for scientific notation exponent: e+19, e-10, E5, etc.
           if s.peek == ?e || s.peek == ?E
