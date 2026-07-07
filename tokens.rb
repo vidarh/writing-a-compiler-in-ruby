@@ -259,10 +259,14 @@ module Tokens
               num << s.get
             end
 
-            # Exponent digits
-            exp = Int.expect(s, false)
-            if exp
-              num << exp.to_s
+            # Exponent digits: read as a raw decimal string, exactly like the fractional part
+            # above. Int.expect would treat a leading zero as OCTAL, so "1.0e-08" parsed "0" as
+            # octal, stopped at the invalid octal digit "8", and left "8" in the stream -> the
+            # literal became "1.0e-0" followed by a stray integer 8, which then got mis-parsed as
+            # a call `(1.0e-0)(8)` and SIGSEGV'd through the float's tagged bits. Exponents are
+            # always decimal (e-08 == e-8), so read the digits directly.
+            while (?0..?9).member?(s.peek)
+              num << s.get
             end
           end
 
