@@ -159,6 +159,14 @@ runtime does the hard numeric work).
 8. **`sprintf`/`String#%` float conversions** (`%f %e %g %a`) — route to the same
    `snprintf` helper with width/precision/flags. Big chunk of `kernel/sprintf` +
    `string/modulo`.
+   IMPL NOTE (next code-tick): today `object.rb:__sprintf` routes `%f %e %g %E %G`
+   (types 102/101/103/69/71) ALL through `__format_float(val.to_f, prec)` — pure-Ruby
+   FIXED-decimal only, so `%e`/`%g`/`%E`/`%G` are wrong. Fix: add a C helper
+   `__snprintf_float(void* obj, char* buf, int conv, int prec)` that builds `"%.*<c>"`
+   (c = the conv char, e/E/f/g/G) and `snprintf`s the double at `obj+4`; `%f` may stay on
+   the existing `__format_float`. Requires a tgc.o rebuild (docker). Width/flags/`+`/` `/
+   `0`/`#` are applied by the surrounding `__sprintf` padding code that already handles
+   the integer conversions — reuse it, only the digit-body generation changes.
 9. **`Kernel#Float()` + `String#to_f`** — now implementable via C `strtod` (strict
    for `Float()`, lenient/leading-parse for `to_f`). Also `String#to_r` already exists.
    **[DONE — this commit]** C helpers `__str_to_f` (lenient: strtod leading-prefix into
@@ -174,6 +182,17 @@ runtime does the hard numeric work).
     dyadic rational from the mantissa/exponent — moderate), `Integer#fdiv` finalised.
 
 **Payoff of Phase 2:** the bulk of the ~2,300 assertions. Re-sweep to quantify.
+
+**Sweep-cadence note (ops).** A full local `rubyspec/language rubyspec/core` sweep (2158
+files) is compile-bound (~each spec recompiles the whole compiler+lib, ~25s) and
+saturates all cores — ~1–2 h wall, during which `lib/core`/`tgc.o` MUST NOT be edited or
+rebuilt (in-flight specs would read a half-written state → corrupt results). ax52 (the
+intended sweep host) is down. So: rely on the FAST per-commit gates (`make selftest` +
+`make selftest-c` + `tools/crash_battery.sh`) for regression safety on every commit, and
+run a full local sweep only at a CHECKPOINT (after a few items land), as a dedicated
+blocking action — not once per item. Pure-Ruby items (e.g. item 11 floor/ceil/round via
+existing Float primitives, no `tgc.o` touch) are the safest to land; C-helper items
+(8, 10) need a docker `tgc.o` rebuild and so can't overlap a running sweep.
 
 ---
 
