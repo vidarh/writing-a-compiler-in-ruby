@@ -45,6 +45,18 @@ class Float
     Float
   end
 
+  # Floats are immutable, so dup/clone return self. This ALSO avoids a crash: the generic
+  # Object#dup copies instance variables, but a Float's raw 8-byte double (at offset 4) overlaps
+  # the @value_low/@value_high ivar slots, so the default copy would treat the double's bytes as
+  # object references and dereference garbage.
+  def dup
+    self
+  end
+
+  def clone(*)
+    self
+  end
+
   # Arithmetic. Non-Float operands are coerced to Float first (Integer#to_f, etc.), then the x87
   # primitive computes result = self <op> other into a freshly allocated Float. Divide-by-zero and
   # 0.0/0.0 produce IEEE Infinity/NaN for free from the FPU.

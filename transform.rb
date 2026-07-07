@@ -1510,6 +1510,15 @@ class Compiler
         # as the :pair / :hash_splat guard above; surfaced via a spec with both a `def m(*foo)` literal and a
         # captured `array` local.)
         next if i == 0 && (ex == :array || ex == :hash || ex == :splat)
+        # The :float literal node tag ([:float, "<decimal>"]). A captured local named `float` (very
+        # common in float specs, e.g. `float = 2.4`) otherwise matches env.index at position 0 and
+        # rewrites the TAG into [:index,__env__,k] -- turning the literal into an env read, so the
+        # decimal string is emitted as a raw String whose address is dispatched on -> SIGSEGV. Same
+        # class of bug as the :array/:hash/:splat guard above; float literals gained a node tag when
+        # they became self-hosting, which introduced this collision. Guard on the String payload at
+        # e[1] so we only skip a real float LITERAL, NOT a bare variable reference `float` that lands
+        # at position 0 of a 1-element argument list `[:float]` (which MUST still be rewritten).
+        next if i == 0 && ex == :float && e[1].is_a?(String)
         # Skip constant names in :deref nodes - they're constant/module names, not variables
         # [:deref, parent, const_name] - only skip const_name (position 2), not parent (position 1)
         # The parent might be a variable like: a = Object; a::CONST
