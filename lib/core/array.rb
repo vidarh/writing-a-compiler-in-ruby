@@ -1588,6 +1588,9 @@ class Array
 
   # All n-length sequences drawn from self WITH repetition.
   def repeated_permutation(n, &block)
+    # Coerce the length to an Integer (MRI truncates Float args toward zero). Without this a Float n
+    # never satisfies the `current.length == n` base case -> infinite recursion / stack overflow.
+    n = n.to_int unless n.is_a?(Integer)
     result = []
     __repeated_perm_into(n, [], result) if n >= 0
     if block
