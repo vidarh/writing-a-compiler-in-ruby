@@ -3887,15 +3887,15 @@ class Integer < Numeric
       end
     end
 
-    # Handle negative exponents
+    # Handle negative exponents. self**-n is the exact reciprocal 1/self**n, i.e. a Rational (MRI
+    # returns a Rational here, NOT integer-divided 0). self == 0/1/-1 are already handled above.
     if other < 0
       # 0 ** negative raises ZeroDivisionError
       if self == 0
         raise ZeroDivisionError.new("divided by 0")
         return nil
       end
-      # For other integers, negative exponent returns 0 (integer division)
-      return 0
+      return Rational.new(1, self ** (-other))
     end
 
     # Check for excessively large exponents (Ruby < 3.4)
