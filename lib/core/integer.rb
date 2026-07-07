@@ -2365,6 +2365,11 @@ class Integer < Numeric
     # gives the CORRECT ordering, unlike a constant 0/nil, so it does not reintroduce the loop hazards
     # the blanket non-Integer nil below was guarding against.)
     if other.is_a?(Float)
+      # An infinite Float fixes the order regardless of self's magnitude: self is always finite, so
+      # it sorts opposite to other's infinity sign. Going through self.to_f would overflow a large
+      # bignum to +/-Infinity and collapse the comparison (e.g. -2*Float::MAX.to_i <=> -Infinity) to 0.
+      oi = other.infinite?
+      return (oi > 0 ? -1 : 1) unless oi.nil?
       return self.to_f <=> other
     end
     # Other non-Integer numeric types: nil (Returning 0 would mean "all Integers equal all Floats",

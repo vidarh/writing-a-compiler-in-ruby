@@ -464,9 +464,42 @@ class Float
   end
 
   def <=> other
-    other = other.to_f if other.is_a?(Integer)
-    return nil unless other.is_a?(Float)
-    r = nil          # unordered (NaN on either side) stays nil
+    return nil if nan?               # unordered: NaN is not comparable to anything
+    if other.is_a?(Integer)
+      # Every integer is finite, so an infinite self already fixes the order. Return its sign
+      # WITHOUT converting other to a Float: a bignum would overflow to +/-Infinity and collapse
+      # a strict comparison (e.g. +Inf <=> 2*Float::MAX.to_i) to a spurious 0.
+      s = infinite?
+      return s unless s.nil?
+      other = other.to_f
+    elsif !other.is_a?(Float)
+      # Non-numeric operand. MRI first consults other.infinite? when self is infinite: a finite
+      # other (infinite? -> nil) sorts purely by self's sign; two infinities compare by their signs.
+      si = infinite?
+      unless si.nil?
+        if other.respond_to?(:infinite?)
+          oi = other.infinite?
+          if oi.nil?
+            return si > 0 ? 1 : -1
+          end
+          if si > 0
+            return oi > 0 ? 0 : 1
+          else
+            return oi < 0 ? 0 : -1
+          end
+        end
+      end
+      # Otherwise follow the coerce protocol: other.coerce(self) must yield a 2-element [a, b]
+      # pair, and <=> is re-applied to it. A non-array / wrong-length return is a TypeError; an
+      # operand that does not respond to #coerce is simply incomparable -> nil (no exception).
+      return nil unless other.respond_to?(:coerce)
+      pair = other.coerce(self)
+      unless pair.is_a?(Array) && pair.length == 2
+        raise TypeError, "coerce must return [x, y]"
+      end
+      return pair[0] <=> pair[1]
+    end
+    r = nil          # unordered (NaN on the Float side) stays nil
     # -1/0/1 must be TAGGED fixnums: a bare int in %s() is a raw machine word (raw 0 is a null
     # pointer -> crash when the caller treats the result as an object).
     %s(if (flt self other) (assign r (__int -1)))
