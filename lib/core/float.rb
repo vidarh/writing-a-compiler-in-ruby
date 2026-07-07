@@ -115,30 +115,65 @@ class Float
 
   alias to_int to_i
 
-  # truncate (no ndigits) == to_i: toward zero.
-  alias truncate to_i
+  # truncate toward zero. No-arg / ndigits == 0 -> Integer (via the ftoi primitive in to_i);
+  # ndigits > 0 -> Float kept to that many decimals; ndigits < 0 -> Integer truncated to a power
+  # of ten. Scale by 10**ndigits, truncate the integer part, scale back (same shape as floor/ceil).
+  def truncate(ndigits = 0)
+    return to_i if ndigits == 0
+    if ndigits > 0
+      f = 10.0 ** ndigits
+      (self * f).truncate / f
+    else
+      f = 10 ** (-ndigits)
+      (self / f).truncate * f
+    end
+  end
 
   def to_f
     self
   end
 
-  # floor/ceil/round return an Integer (no-arg form). to_i truncates toward zero, so:
+  # floor/ceil/round: no-arg (ndigits == 0) return an Integer. to_i truncates toward zero, so:
   #   floor = t, or t-1 when self is negative and non-integer (self < t);
   #   ceil  = t, or t+1 when self is positive and non-integer (self > t).
   # round is half-away-from-zero: floor(self+0.5) for >=0, ceil(self-0.5) for <0.
-  # (ndigits forms and the NaN/Infinity FloatDomainError are Phase 3.)
-  def floor
-    t = to_i
-    self < t ? t - 1 : t
+  # ndigits > 0 keeps that many decimals (Float result); ndigits < 0 rounds to a power of ten
+  # (Integer). Both are done by scaling by 10**ndigits, applying the no-arg form, and scaling back.
+  # (The NaN/Infinity FloatDomainError and round-half-to-even are still Phase 3.)
+  def floor(ndigits = 0)
+    if ndigits > 0
+      f = 10.0 ** ndigits
+      (self * f).floor / f
+    elsif ndigits < 0
+      f = 10 ** (-ndigits)
+      (self / f).floor * f
+    else
+      t = to_i
+      self < t ? t - 1 : t
+    end
   end
 
-  def ceil
-    t = to_i
-    self > t ? t + 1 : t
+  def ceil(ndigits = 0)
+    if ndigits > 0
+      f = 10.0 ** ndigits
+      (self * f).ceil / f
+    elsif ndigits < 0
+      f = 10 ** (-ndigits)
+      (self / f).ceil * f
+    else
+      t = to_i
+      self > t ? t + 1 : t
+    end
   end
 
-  def round
-    if self < 0.0
+  def round(ndigits = 0)
+    if ndigits > 0
+      f = 10.0 ** ndigits
+      (self * f).round / f
+    elsif ndigits < 0
+      f = 10 ** (-ndigits)
+      (self / f).round * f
+    elsif self < 0.0
       (self - 0.5).ceil
     else
       (self + 0.5).floor
