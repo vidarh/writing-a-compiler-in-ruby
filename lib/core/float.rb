@@ -108,8 +108,34 @@ class Float
 
   alias inspect to_s
 
+  # Format an INTEGER-valued double as its exact decimal integer string via a direct libc snprintf
+  # ("%.0f"). The buffer is sized for the widest double (~309 integer digits + sign + NUL). Only
+  # meaningful when self has no fractional part (e.g. the result of libm trunc); used by to_i for
+  # magnitudes beyond the fixnum range, where the value must become a bignum.
+  def __fmt_f0
+    buf = ""
+    %s(let (b)
+      (assign b (__array 90))
+      (snprintf b 350 "%.0f" (index self 1) (index self 2))
+      (callm buf __set_raw (b)))
+    buf
+  end
+
   def to_i
-    # Truncate toward zero (the ftoi primitive sets x87 RC=truncate around the store).
+    # NaN and +/-Infinity have no integer value (MRI raises FloatDomainError).
+    raise FloatDomainError.new("NaN") if nan?
+    inf = infinite?
+    unless inf.nil?
+      raise FloatDomainError.new(inf == 1 ? "Infinity" : "-Infinity")
+    end
+    # Beyond the fixnum range the result is a bignum: truncate toward zero with libm trunc (avoids the
+    # floor/% recursion an in-Ruby truncation would cause) to an integer-valued double, then parse its
+    # exact decimal string. Within range the x87 ftoi primitive truncates directly.
+    if self >= 536870912.0 || self <= -536870912.0
+      t = Float.new
+      %s(do (trunc (index self 1) (index self 2)) (fstresult t))
+      return t.__fmt_f0.to_i
+    end
     %s(ftoi self)
   end
 
