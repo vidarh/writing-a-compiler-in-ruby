@@ -1273,12 +1273,12 @@ def infinity_value
 end
 
 def nan_value
-  # Ideally Float::NAN. Float is only partially implemented (literals collapse to 0.0), so a true NaN is
-  # not representable, but returning `nil` here was actively harmful: helpers build arrays like
-  # `[..., nan_value].map { |n| [n, -n] }` and `-nil` raises "nil can't be coerced into Integer", aborting
-  # the whole spec file. Return a Float so those constructions don't crash (NaN-specific assertions fail
-  # rather than take the file down).
-  0.0
+  # A real IEEE NaN. Float is now fully implemented (literals assemble to real IEEE doubles and
+  # 0.0/0.0 yields an actual NaN whose #nan? is true, #== is false against itself, and #-@ stays NaN),
+  # so the old `0.0` placeholder is obsolete -- it made every NaN-specific assertion (float/nan,
+  # float/finite, float/uminus, the math specs) silently wrong. `-nan_value` is still a valid Float, so
+  # the `[..., nan_value].map { |n| [n, -n] }` helper constructions remain safe.
+  0.0 / 0.0
 end
 
 def fixnum_max
