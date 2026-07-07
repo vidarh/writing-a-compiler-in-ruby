@@ -848,12 +848,24 @@ module Tokens
           while DIGITS.member?(@s.peek)
             num_str << @s.get
           end
-          # Skip whitespace and check for **
+          # Skip whitespace and check for ** (a following power operator flips precedence:
+          # -2**12 is -(2**12), so the sign must NOT fold into the literal there). The lookahead
+          # must consume at most one '*' and restore it in every branch -- consuming a lone '*'
+          # without ungetting it silently drops the multiply operator, so `-5 * x` mis-parses as
+          # a call `-5(x)` (the tagged literal -5 becomes a garbage call target -> SIGSEGV).
           @s.nolfws
-          followed_by_power = (@s.peek == ?* && (@s.get; @s.peek == ?*))
+          star_consumed = false
+          if @s.peek == ?*
+            @s.get
+            star_consumed = true
+          end
+          followed_by_power = star_consumed && @s.peek == ?*
 
           # Only create negative literal if NOT followed by **
           if !followed_by_power
+            # Restore the single '*' the lookahead consumed above, so it is re-tokenized as the
+            # multiply operator after the negative literal.
+            @s.unget("*") if star_consumed
             # Unget the number and use Number.expect to properly handle large integers
             @s.unget(num_str)
             @s.unget("-")
