@@ -116,16 +116,18 @@ class Float
   end
 
   def ** other
-    # Integer exponent: exact via repeated multiplication (negative -> reciprocal). A Float/Rational
-    # exponent needs libm pow, which isn't wired yet, so it stays a stub for those.
+    # Integer exponent: exponentiation by squaring (O(log n), so a huge exponent overflows fast to
+    # Infinity rather than looping). Negative -> reciprocal. A Float/Rational exponent needs libm pow,
+    # which isn't wired yet, so it stays a stub for those.
     if other.is_a?(Integer)
       return 1.0 if other == 0
       n = other < 0 ? -other : other
       r = 1.0
-      i = 0
-      while i < n
-        r = r * self
-        i = i + 1
+      b = self
+      while n > 0
+        r = r * b if n % 2 == 1
+        b = b * b
+        n = n / 2
       end
       return 1.0 / r if other < 0
       r
