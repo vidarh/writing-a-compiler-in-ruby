@@ -116,7 +116,35 @@ class Float
   end
 
   def ** other
-    self
+    # Integer exponent: exact via repeated multiplication (negative -> reciprocal). A Float/Rational
+    # exponent needs libm pow, which isn't wired yet, so it stays a stub for those.
+    if other.is_a?(Integer)
+      return 1.0 if other == 0
+      n = other < 0 ? -other : other
+      r = 1.0
+      i = 0
+      while i < n
+        r = r * self
+        i = i + 1
+      end
+      return 1.0 / r if other < 0
+      r
+    else
+      self
+    end
+  end
+
+  # Modulo (result takes the sign of the divisor) and remainder (sign of the dividend), per MRI.
+  def % other
+    other = other.to_f unless other.is_a?(Float)
+    self - (self / other).floor * other
+  end
+
+  alias modulo %
+
+  def remainder other
+    other = other.to_f unless other.is_a?(Float)
+    self - (self / other).truncate * other
   end
 
   # Comparisons via x87 ordered compare (flt/fgt/feq return 0/1). NaN is unordered, so all three

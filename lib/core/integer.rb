@@ -208,7 +208,7 @@ class Integer < Numeric
       end
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
-        return Float.new
+        return self.to_f + other
       elsif other.is_a?(Rational)
         # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
         return Rational.new(self, 1) + other
@@ -264,7 +264,7 @@ class Integer < Numeric
       end
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
-        return Float.new
+        return self.to_f - other
       elsif other.is_a?(Rational)
         # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
         return Rational.new(self, 1) - other
@@ -1646,7 +1646,7 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
-        return Float.new
+        return self.to_f % other
       elsif other.is_a?(Rational)
         # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
         return Rational.new(self, 1) % other
@@ -1704,7 +1704,7 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
-        return Float.new
+        return self.to_f.remainder(other)
       elsif other.is_a?(Rational)
         # Promote self to an exact Rational and let Rational#remainder do the work.
         return Rational.new(self, 1).remainder(other)
@@ -1728,7 +1728,7 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
-        return Float.new
+        return self.to_f * other
       elsif other.is_a?(Rational)
         # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
         return Rational.new(self, 1) * other
@@ -1899,7 +1899,7 @@ class Integer < Numeric
     if !other.is_a?(Integer)
       if other.is_a?(Float)
         # WORKAROUND: Float arithmetic not implemented, return stub Float
-        return Float.new
+        return self.to_f / other
       elsif other.is_a?(Rational)
         # Promote self to an exact Rational and dispatch the operator (see lib/core/rational.rb).
         return Rational.new(self, 1) / other
@@ -3759,7 +3759,7 @@ class Integer < Numeric
       if other.is_a?(Float)
         # div for Integer/Float should return Integer (floor division)
         # But since Float is not implemented, return stub Float
-        return Float.new
+        return (self.to_f / other).floor
       end
 
       if other.respond_to?(:to_int)
