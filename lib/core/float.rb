@@ -147,6 +147,53 @@ class Float
 
   alias to_int to_i
 
+  # Exact conversion to a Rational. A finite double is significand * 2**e with the significand an
+  # integer, so scale |self| into [2**52, 2**53) purely by multiplying/dividing by two (an exact
+  # operation on a binary float -- it only shifts the exponent), read the now integer-valued mantissa
+  # with to_i, and pair it with the tracked power of two. Rational.new reduces via gcd. NaN/Infinity
+  # have no rational value and raise (like MRI).
+  def to_r
+    raise FloatDomainError.new("NaN") if nan?
+    inf = infinite?
+    unless inf.nil?
+      raise FloatDomainError.new(inf == 1 ? "Infinity" : "-Infinity")
+    end
+    return Rational.new(0, 1) if self == 0.0    # +0.0 and -0.0
+    neg = self < 0.0
+    x = abs
+    e = 0
+    while x < 4503599627370496.0                 # 2**52
+      x = x * 2.0
+      e = e - 1
+    end
+    while x >= 9007199254740992.0                # 2**53
+      x = x / 2.0
+      e = e + 1
+    end
+    m = x.to_i
+    m = 0 - m if neg
+    if e >= 0
+      Rational.new(m * (2 ** e), 1)
+    else
+      Rational.new(m, 2 ** (-e))
+    end
+  end
+
+  # numerator/denominator are the parts of #to_r. NaN and Infinity have no rational form: MRI returns
+  # self for #numerator (so nan.numerator is NaN, (+inf).numerator is +Infinity) and 1 for
+  # #denominator.
+  def numerator
+    return self if nan?
+    return self unless infinite?.nil?
+    to_r.numerator
+  end
+
+  def denominator
+    return 1 if nan?
+    return 1 unless infinite?.nil?
+    to_r.denominator
+  end
+
   # truncate toward zero. No-arg / ndigits == 0 -> Integer (via the ftoi primitive in to_i);
   # ndigits > 0 -> Float kept to that many decimals; ndigits < 0 -> Integer truncated to a power
   # of ten. Scale by 10**ndigits, truncate the integer part, scale back (same shape as floor/ceil).

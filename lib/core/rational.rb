@@ -316,8 +316,8 @@ end
 # String#to_r, and a Rational argument (in either position) is combined by division, so
 # Rational("3/4") => (3/4), Rational("3", "4") => (3/4) and Rational(Rational(1,2), 3) => (1/6).
 def Rational(numerator, denominator = 1)
-  numerator = numerator.to_r if numerator.is_a?(String)
-  denominator = denominator.to_r if denominator.is_a?(String)
+  numerator = numerator.to_r if numerator.is_a?(String) || numerator.is_a?(Float)
+  denominator = denominator.to_r if denominator.is_a?(String) || denominator.is_a?(Float)
   if numerator.is_a?(Rational) || denominator.is_a?(Rational)
     return numerator / denominator
   end
