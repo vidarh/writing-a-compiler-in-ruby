@@ -3809,7 +3809,14 @@ class Integer < Numeric
   end
 
   def to_f
-    # (double)self into a fresh Float via the x87 fildl primitive.
+    # Tagged fixnum (bit 0 == 1): load directly with the x87 fildl primitive. A heap bignum (bit 0 == 0,
+    # an aligned pointer) would make fildl read the pointer as garbage, so convert it through its exact
+    # decimal string instead -- Integer#to_s is already correct for bignums and String#to_f is a real
+    # strtod, so the round-trip lands on the correctly-rounded double (e.g. (2**64).to_f ==
+    # 1.8446744073709552e+19 rather than the old garbage from fildl'ing the object pointer).
+    is_fixnum = false
+    %s(if (eq (bitand self 1) 1) (assign is_fixnum true))
+    return to_s.to_f unless is_fixnum
     r = Float.new
     %s(fint self r)
     r
