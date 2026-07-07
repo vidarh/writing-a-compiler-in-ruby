@@ -487,3 +487,15 @@ int __float_strict(const char *s, void *obj) {
   *(double *)((char *)obj + 4) = d;
   return 1;
 }
+
+/* sprintf %f/%e/%g/%E/%G for a Float. `obj` is a Float object (double at offset 4); `conv` is the
+ * conversion CHARACTER CODE ('f'=102, 'e'=101, 'g'=103, 'E'=69, 'G'=71); `prec` is the precision.
+ * Builds "%.*<c>" and snprintf's into buf (>=32 bytes). The caller (__sprintf) applies sign/width/
+ * padding, so this emits just the number (with a leading '-' for negatives, which the caller strips).
+ * v1 does not carry the '#'/'0'/'+' flags into the body -- those are handled by the Ruby padding code. */
+void __snprintf_float(void *obj, char *buf, int conv, int prec) {
+  double d = *(double *)((char *)obj + 4);
+  char fmt[8];
+  fmt[0] = '%'; fmt[1] = '.'; fmt[2] = '*'; fmt[3] = (char)conv; fmt[4] = 0;
+  snprintf(buf, 64, fmt, prec, d);
+}

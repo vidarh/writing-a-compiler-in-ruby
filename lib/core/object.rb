@@ -455,7 +455,9 @@ class Object
               body = s[0, 1].to_s
             end
           elsif type == 102 || type == 101 || type == 103 || type == 69 || type == 71   # f e g E G
-            body = __format_float(val.to_f, prec < 0 ? 6 : prec)
+            # Route to C snprintf with the actual conversion char so %e/%g/%E/%G get scientific/
+            # shortest form (not the fixed-decimal __format_float). `type` IS the conversion char code.
+            body = __float_conv(val.to_f, type, prec < 0 ? 6 : prec)
             numeric = true
             if body.length > 0 && body[0] == 45
               neg = true
@@ -498,6 +500,17 @@ class Object
   end
 
   # Format a Float with `decimals` places (rounded). Approximate but adequate for %f in the common cases.
+  # Format a Float via C snprintf with the given conversion char (`conv` = the 'f'/'e'/'g'/'E'/'G'
+  # code) and precision. Isolated in its own method so the %s buffer/C-call has a clean scope.
+  def __float_conv(fv, conv, prec)
+    buf = ""
+    %s(let (b)
+      (assign b (__array 20))
+      (__snprintf_float fv b (sar conv) (sar prec))
+      (callm buf __set_raw (b)))
+    buf
+  end
+
   def __format_float(f, decimals)
     neg = f < 0
     f = f * -1 if neg
