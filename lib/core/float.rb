@@ -179,6 +179,61 @@ class Float
     end
   end
 
+  # rationalize returns the SIMPLEST rational whose value falls within the tolerance of self, unlike
+  # to_r which is exact. With no argument the tolerance is self's own representable interval (built
+  # from the neighbouring doubles via prev_float/next_float); with one argument it is +/- that value.
+  # The simplest rational in the interval is found by the continued-fraction (Stern-Brocot) walk in
+  # __rationalize_interval. NaN/Infinity raise FloatDomainError.
+  def rationalize(*args)
+    if args.length > 1
+      raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0..1)"
+    end
+    raise FloatDomainError.new(infinite? == 1 ? "Infinity" : "-Infinity") unless infinite?.nil?
+    raise FloatDomainError.new("NaN") if nan?
+    zero = Rational.new(0, 1)
+    if args.length == 1
+      e = args[0].abs
+      e = e.to_r if e.is_a?(Float)
+      e = Rational.new(e, 1) if e.is_a?(Integer)
+      lo = to_r - e
+      hi = to_r + e
+    else
+      two = Rational.new(2, 1)
+      sr = to_r
+      lo = (sr + prev_float.to_r) / two
+      hi = (sr + next_float.to_r) / two
+    end
+    lo, hi = hi, lo if lo > hi
+    if lo <= zero && zero <= hi
+      zero
+    elsif hi < zero
+      zero - __rationalize_interval(zero - hi, zero - lo)
+    else
+      __rationalize_interval(lo, hi)
+    end
+  end
+
+  # Simplest rational p/q with a <= p/q <= b, for 0 < a <= b (MRI's nurat continued-fraction walk).
+  def __rationalize_interval(a, b)
+    one = Rational.new(1, 1)
+    zero = Rational.new(0, 1)
+    p0 = 0; p1 = 1
+    q0 = 1; q1 = 0
+    c = a.ceil
+    while (b - c) <= zero              # c >= b, kept in Rational arithmetic
+      k = c - 1
+      p2 = k * p1 + p0
+      q2 = k * q1 + q0
+      t = one / (b - k)
+      b = one / (a - k)
+      a = t
+      p0 = p1; q0 = q1
+      p1 = p2; q1 = q2
+      c = a.ceil
+    end
+    Rational.new(c * p1 + p0, c * q1 + q0)
+  end
+
   # numerator/denominator are the parts of #to_r. NaN and Infinity have no rational form: MRI returns
   # self for #numerator (so nan.numerator is NaN, (+inf).numerator is +Infinity) and 1 for
   # #denominator.
