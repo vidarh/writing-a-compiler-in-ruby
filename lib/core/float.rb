@@ -362,8 +362,15 @@ class Float
   # Integer floored division and [quotient, modulo]. div returns an Integer; divmod's remainder takes
   # the sign of the divisor (matching Float#%).
   def div other
-    other = other.to_f unless other.is_a?(Float)
-    (self / other).floor
+    o = __as_float(other)
+    if o.nil?
+      a, b = __coerce_pair(other)
+      return a.div(b)
+    end
+    # Zero divisor raises ZeroDivisionError (Integer 0 or Float 0.0). A NaN/Infinite self falls through
+    # to floor -> to_i, which raises FloatDomainError -- exactly what MRI's div/divmod do there.
+    raise ZeroDivisionError.new("divided by 0") if o == 0.0
+    (self / o).floor
   end
 
   def divmod other
