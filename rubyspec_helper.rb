@@ -714,6 +714,80 @@ class BeCloseMatcher < Matcher
   end
 end
 
+# Float predicate matchers (be_nan / be_positive_infinity / be_negative_infinity / be_positive_zero /
+# be_negative_zero). These lean on the now-real Float predicates: #nan?, #infinite? (1 / -1 / nil), and
+# signed-zero detection via 1.0/z (+Inf for +0.0, -Inf for -0.0). float/divide, float/abs and the shared
+# arithmetic specs use them.
+def be_nan
+  BeNaNMatcher.new
+end
+
+def be_positive_infinity
+  BeInfinityMatcher.new(1)
+end
+
+def be_negative_infinity
+  BeInfinityMatcher.new(-1)
+end
+
+def be_positive_zero
+  BeSignedZeroMatcher.new(1)
+end
+
+def be_negative_zero
+  BeSignedZeroMatcher.new(-1)
+end
+
+class BeNaNMatcher < Matcher
+  def initialize
+  end
+
+  def match?(actual)
+    actual.is_a?(Float) && actual.nan?
+  end
+
+  def failure_message(actual)
+    "Expected #{actual} to be NaN"
+  end
+end
+
+class BeInfinityMatcher < Matcher
+  def initialize(sign)
+    @sign = sign
+  end
+
+  def match?(actual)
+    actual.is_a?(Float) && actual.infinite? == @sign
+  end
+
+  def failure_message(actual)
+    dir = @sign > 0 ? "positive" : "negative"
+    "Expected #{actual} to be #{dir} infinity"
+  end
+end
+
+class BeSignedZeroMatcher < Matcher
+  def initialize(sign)
+    @sign = sign
+  end
+
+  def match?(actual)
+    return false unless actual.is_a?(Float)
+    return false unless actual == 0.0
+    inf = 1.0 / actual
+    if @sign > 0
+      inf == Float::INFINITY
+    else
+      inf == (0.0 - Float::INFINITY)
+    end
+  end
+
+  def failure_message(actual)
+    dir = @sign > 0 ? "positive" : "negative"
+    "Expected #{actual} to be #{dir} zero"
+  end
+end
+
 class IncludeMatcher < Matcher
   def match?(actual)
     if actual.respond_to?(:include?)
