@@ -38,14 +38,34 @@ class Float
 
   alias to_int to_i
 
+  # truncate (no ndigits) == to_i: toward zero.
+  alias truncate to_i
+
   def to_f
     self
   end
 
+  # floor/ceil/round return an Integer (no-arg form). to_i truncates toward zero, so:
+  #   floor = t, or t-1 when self is negative and non-integer (self < t);
+  #   ceil  = t, or t+1 when self is positive and non-integer (self > t).
+  # round is half-away-from-zero: floor(self+0.5) for >=0, ceil(self-0.5) for <0.
+  # (ndigits forms and the NaN/Infinity FloatDomainError are Phase 3.)
   def floor
-    # FIXME: Stub - proper floor not implemented
-    # Returns integer floor of float value
-    to_i
+    t = to_i
+    self < t ? t - 1 : t
+  end
+
+  def ceil
+    t = to_i
+    self > t ? t + 1 : t
+  end
+
+  def round
+    if self < 0.0
+      (self - 0.5).ceil
+    else
+      (self + 0.5).floor
+    end
   end
 
   def class
