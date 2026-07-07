@@ -2132,19 +2132,19 @@ class Integer < Numeric
     quotient = div_result[0]
     has_remainder = div_result[1]
 
-    # Apply sign
+    # Apply the sign to the magnitude quotient. The result is negative iff the operand signs differ.
     result_sign = my_sign
     if other_sign < 0
       result_sign = 0 - result_sign
     end
 
-    # Floor division adjustment: if remainder != 0 and signs differ, subtract 1
-    if has_remainder == 1 && my_sign != other_sign
-      quotient = quotient - 1
-    end
-
     if result_sign < 0
+      # Negate to the truncated (toward-zero) quotient first, THEN, for floor division, a nonzero
+      # remainder rounds one further step toward -infinity: floor(-m.frac) == -(m + 1). The old code
+      # subtracted 1 from the MAGNITUDE before negating, yielding -(m - 1) -- e.g. -2 for floor(-3.32)
+      # of a heap/heap division instead of -4.
       quotient = 0 - quotient
+      quotient = quotient - 1 if has_remainder == 1
     end
 
     quotient
