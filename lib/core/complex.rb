@@ -54,6 +54,22 @@ class Complex
     end
   end
 
+  # Division needs no square root: (a+bi)/(c+di) = (a+bi)(c-di) / (c**2 + d**2), and the denominator
+  # abs2 is a real number. Components are divided with #quo so integer components yield exact Rationals
+  # (matching MRI) while Float components stay Float.
+  def /(other)
+    if other.is_a?(Complex)
+      d = other.abs2
+      Complex.new((@real * other.real + @imag * other.imag).quo(d),
+                  (@imag * other.real - @real * other.imag).quo(d))
+    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+      Complex.new(@real.quo(other), @imag.quo(other))
+    else
+      __coerce_apply(other, :/)
+    end
+  end
+  alias quo /
+
   def -@
     Complex.new(-@real, -@imag)
   end

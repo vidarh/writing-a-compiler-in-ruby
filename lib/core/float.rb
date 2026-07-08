@@ -545,14 +545,17 @@ class Float
     [div(other), self % other]
   end
 
-  # quo/fdiv are exact float division; coerce implements the numeric coercion protocol.
+  # quo/fdiv are floating-point division. A real numeric operand (Integer, Rational) is taken through
+  # to_f; anything else (e.g. a Complex, which has no #to_f) is left for Float#/ to handle via the
+  # coercion protocol -- Complex#coerce promotes self to Complex and Complex#/ does the division. A
+  # genuinely non-numeric operand raises TypeError there.
   def quo other
-    other = other.to_f unless other.is_a?(Float)
+    other = other.to_f if !other.is_a?(Float) && other.respond_to?(:to_f)
     self / other
   end
 
   def fdiv other
-    other = other.to_f unless other.is_a?(Float)
+    other = other.to_f if !other.is_a?(Float) && other.respond_to?(:to_f)
     self / other
   end
 
