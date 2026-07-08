@@ -117,6 +117,9 @@ class Rational < Numeric
   alias quo /
 
   def %(other)
+    # A zero divisor -- Integer 0, Rational 0, or Float 0.0 -- is a ZeroDivisionError (MRI raises here
+    # rather than letting a Float 0.0 divisor flow through to an Infinity/NaN result).
+    raise ZeroDivisionError, "divided by 0" if other == 0
     q = (self / other).floor
     self - q * other
   end
@@ -128,6 +131,7 @@ class Rational < Numeric
   end
 
   def divmod(other)
+    raise ZeroDivisionError, "divided by 0" if other == 0
     q = (self / other).floor
     [q, self - q * other]
   end
