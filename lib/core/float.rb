@@ -570,8 +570,18 @@ class Float
   end
 
   def fdiv other
-    other = other.to_f if !other.is_a?(Float) && other.respond_to?(:to_f)
-    self / other
+    # A real numeric divisor (built-in Integer/Float/Rational or a custom Numeric) converts to Float and
+    # divides. Otherwise MRI applies the coercion protocol (`other.coerce(self)` -> [a, b]; a.fdiv(b)),
+    # and only a value that is neither numeric nor coercible (Array, Symbol, and String -- which HAS #to_f
+    # but is not Numeric) is a TypeError. This validation lives here (and in Integer#fdiv), so Complex#fdiv
+    # -- which divides each component through here -- inherits it.
+    return self / other if other.is_a?(Float)
+    return self / other.to_f if other.is_a?(Integer) || other.is_a?(Rational) || other.is_a?(Numeric)
+    if other.respond_to?(:coerce)
+      a, b = other.coerce(self)
+      return a.fdiv(b)
+    end
+    raise TypeError, "#{other.class} can't be coerced into Float"
   end
 
   def coerce other

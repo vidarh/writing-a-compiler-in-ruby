@@ -1971,11 +1971,15 @@ class Integer < Numeric
   # Float division - returns a Float
   # WORKAROUND: Float arithmetic not implemented, return stub Float object
   def fdiv(other)
-    # Float division: convert self to Float and delegate to Float#fdiv, which coerces the divisor via
-    # #to_f (so a non-Float that answers #to_f -- e.g. another Integer or a custom numeric -- works
-    # rather than raising "can't be coerced into Float"). The bare `Float.new` stub once returned the
-    # 2.1e-314 garbage denormal.
-    self.to_f.fdiv(other)
+    # Float division. A real numeric divisor converts to Float; a non-numeric that responds to #coerce
+    # follows the coercion protocol WITH SELF (the Integer), so `1.fdiv(obj)` calls obj.coerce(1) -- not
+    # obj.coerce(1.0) as delegating to Float#fdiv would -- matching MRI; anything else is a TypeError.
+    return self.to_f / other.to_f if other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational) || other.is_a?(Numeric)
+    if other.respond_to?(:coerce)
+      a, b = other.coerce(self)
+      return a.fdiv(b)
+    end
+    raise TypeError, "#{other.class} can't be coerced into Float"
   end
 
   # Divide fixnum by heap integer

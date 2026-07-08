@@ -72,6 +72,21 @@ class Complex
   end
   alias quo /
 
+  # Float division. Against a Complex divisor it is full complex division ((a+bi)/(c+di) via the
+  # conjugate over abs2) with the final component quotients taken as #fdiv, so the parts are Floats;
+  # this also breaks the coerce cycle where `Float#fdiv(Complex)` promotes the Float to Complex and calls
+  # back here. Against a real `other` it divides each component by it with the component's own #fdiv (so
+  # NaN/Infinity propagate per part and a non-numeric `other` raises TypeError from the component #fdiv).
+  def fdiv(other)
+    if other.is_a?(Complex)
+      d = other.abs2
+      Complex.new((@real * other.real + @imag * other.imag).fdiv(d),
+                  (@imag * other.real - @real * other.imag).fdiv(d))
+    else
+      Complex.new(@real.fdiv(other), @imag.fdiv(other))
+    end
+  end
+
   # Exponentiation. An Integer exponent is exact via repeated multiplication (negative -> reciprocal of
   # the positive power). A real (Float/Rational) exponent uses the polar form: z**w = |z|**w *
   # (cos(arg*w) + i*sin(arg*w)). A Complex exponent uses z**w = exp(w * log z), with log z = ln|z| +
