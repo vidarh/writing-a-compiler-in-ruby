@@ -179,6 +179,33 @@ class Complex
     nil
   end
 
+  def to_c
+    self
+  end
+
+  # A real conversion is only lossless when the imaginary part is an EXACT zero: an Integer or Rational
+  # 0 (a Float 0.0 does NOT count), or a custom part whose #== 0 is true. Otherwise it is a RangeError.
+  def __exact_zero_imag?
+    !@imag.is_a?(Float) && @imag == 0
+  end
+
+  def to_i
+    raise RangeError, "can't convert #{self} into Integer" unless __exact_zero_imag?
+    @real.to_i
+  end
+
+  def to_f
+    raise RangeError, "can't convert #{self} into Float" unless __exact_zero_imag?
+    @real.to_f
+  end
+
+  # to_r accepts ANY zero imaginary part (including Float 0.0), unlike to_i/to_f which require an exact
+  # zero -- Ruby 3.4 made Complex(x, 0.0).to_r return a Rational rather than raise.
+  def to_r
+    raise RangeError, "can't convert #{self} into Rational" unless @imag == 0
+    @real.to_r
+  end
+
   def hash
     [@real, @imag].hash
   end
