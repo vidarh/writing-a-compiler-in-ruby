@@ -162,6 +162,7 @@ class Rational < Numeric
   def abs
     Rational.new(@numerator.abs, @denominator)
   end
+  alias magnitude abs
 
   # --- rounding ---------------------------------------------------------------------------------------
 

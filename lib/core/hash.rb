@@ -199,6 +199,12 @@ class Hash
   # hit undefined-method dispatch (a crash) instead of raising; with KeyError now defined this also lets
   # the raise_error(KeyError, ...) matcher work.
   def fetch(key, *rest)
+    # fetch takes 1 (key) or 2 (key, default) args; 3+ is an ArgumentError (0 args is caught by the
+    # required `key` parameter). The optional default is only consulted when the key is absent AND no
+    # block is given.
+    if rest.length > 1
+      raise ArgumentError, "wrong number of arguments (given #{rest.length + 1}, expected 1..2)"
+    end
     return self[key] if member?(key)
     return yield(key) if block_given?
     return rest[0] if rest.length > 0
