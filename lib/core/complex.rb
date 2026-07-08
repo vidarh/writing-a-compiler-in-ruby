@@ -70,6 +70,38 @@ class Complex
   end
   alias quo /
 
+  # Exponentiation. An Integer exponent is exact via repeated multiplication (negative -> reciprocal of
+  # the positive power). A real (Float/Rational) exponent uses the polar form: z**w = |z|**w *
+  # (cos(arg*w) + i*sin(arg*w)). A Complex exponent uses z**w = exp(w * log z), with log z = ln|z| +
+  # i*arg z and exp(a+bi) = e**a * (cos b + i*sin b).
+  def **(other)
+    if other.is_a?(Integer)
+      return Complex.new(1, 0) if other == 0
+      if other > 0
+        r = self
+        n = other - 1
+        while n > 0
+          r = r * self
+          n = n - 1
+        end
+        r
+      else
+        Complex.new(1, 0) / (self ** (0 - other))
+      end
+    elsif other.is_a?(Float) || other.is_a?(Rational)
+      w = other.is_a?(Rational) ? other.to_f : other
+      mag = abs ** w
+      ang = arg * w
+      Complex.new(mag * Math.cos(ang), mag * Math.sin(ang))
+    elsif other.is_a?(Complex)
+      p = other * Complex.new(Math.log(abs), arg)
+      er = Math.exp(p.real)
+      Complex.new(er * Math.cos(p.imag), er * Math.sin(p.imag))
+    else
+      __coerce_apply(other, :**)
+    end
+  end
+
   def -@
     Complex.new(-@real, -@imag)
   end
