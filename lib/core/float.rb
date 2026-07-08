@@ -578,6 +578,20 @@ class Float
     [other.to_f, self]
   end
 
+  # A Float is a real number: it is its own real part, has a zero imaginary part, and #real? is true.
+  def real?
+    true
+  end
+
+  def real
+    self
+  end
+
+  def imaginary
+    0
+  end
+  alias imag imaginary
+
   def positive?
     self > 0.0
   end
