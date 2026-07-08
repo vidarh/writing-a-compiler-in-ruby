@@ -244,6 +244,15 @@ class Rational < Numeric
     end
   end
 
+  # eql? is type-strict, unlike ==: (1/2r).eql?(0.5) is false (Float is not a Rational) and
+  # (2/1r).eql?(2) is false (Integer), though both are ==. Without this, Rational inherits
+  # Object#eql? (delegates to ==) and wrongly treats those as eql?. Rationals are normalised, so
+  # value comparison of two Rationals via == is exact (1/2r eql? 2/4r is true).
+  def eql?(other)
+    return false if !other.is_a?(Rational)
+    self == other
+  end
+
   def <(other)
     __cmp(other) < 0
   end

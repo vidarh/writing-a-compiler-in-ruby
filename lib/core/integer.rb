@@ -3772,6 +3772,14 @@ class Integer < Numeric
     self
   end
 
+  # eql? is type-strict, unlike ==: 1.eql?(1.0) is false (Float is not an Integer) even though
+  # 1 == 1.0. Without this, Integer inherits Object#eql? (which delegates to ==) and wrongly reports
+  # 1.eql?(1.0) as true. Value comparison across fixnum/bignum is delegated to ==.
+  def eql?(other)
+    return false if !other.is_a?(Integer)
+    self == other
+  end
+
   def div other
     # Type check first to avoid crashes
     if !other.is_a?(Integer)

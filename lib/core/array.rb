@@ -1080,7 +1080,8 @@ class Array
     l = self.length
     while i < l
       # FIXME: Recursion
-      return false if self[i] != other_array[i]
+      # eql? is element-wise #eql?, NOT ==: [1].eql?([1.0]) is false even though [1] == [1.0].
+      return false if !self[i].eql?(other_array[i])
       i += 1
     end
 

@@ -415,8 +415,10 @@ class Matcher
 end
 
 class EqualMatcher < Matcher
+  # The `eql(x)` matcher tests #eql? (type-strict), NOT ==: 1.eql?(1.0) is false though 1 == 1.0.
+  # Identity is a separate matcher (`equal(x)` -> EqualObjectMatcher#equal?).
   def match?(actual)
-    actual == @expected
+    actual.eql?(@expected)
   end
 
 

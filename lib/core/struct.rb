@@ -344,7 +344,15 @@ class Struct
   end
 
   def eql?(other)
-    self == other
+    # Like ==, but corresponding elements must be #eql? (stricter): a Struct with a 1 is NOT eql?
+    # to one with 1.0, though they are ==. Delegates the element-wise eql? to Array#eql?.
+    return true if other.equal?(self)
+    return false if other.class != self.class
+    return true if @__comparing
+    @__comparing = true
+    result = other.to_a.eql?(@__struct_values)
+    @__comparing = false
+    result
   end
 
   def hash
