@@ -282,8 +282,11 @@ class Mock
     @name
   end
 
-  # FIXME: Stub - return 0 for integer conversion
+  # Honour an explicit should_receive(:to_i) expectation (routed through method_missing so array/raise
+  # returns work), otherwise fall back to 0. Previously this always returned 0, shadowing any stubbed
+  # value -- a mock set up with should_receive(:to_i).and_return(:x) still saw 0.
   def to_i
+    return method_missing(:to_i) if @expectations[:to_i]
     0
   end
 
