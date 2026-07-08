@@ -3738,11 +3738,12 @@ class Integer < Numeric
   # FIXME: Stub - should try to convert to Integer
   def self.try_convert(obj)
     return obj if obj.is_a?(Integer)
-    if obj.respond_to?(:to_int)
-      obj.to_int
-    else
-      nil
-    end
+    return nil unless obj.respond_to?(:to_int)
+    # #to_int is called WITHOUT rescuing (a raise propagates). Its result must be an Integer or nil;
+    # any other type is a TypeError naming both classes, matching MRI.
+    result = obj.to_int
+    return result if result.nil? || result.is_a?(Integer)
+    raise TypeError, "can't convert #{obj.class} to Integer (#{obj.class}#to_int gives #{result.class})"
   end
 
   # Check if this integer is a heap-allocated bignum (vs tagged fixnum)

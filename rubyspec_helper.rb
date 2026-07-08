@@ -155,7 +155,7 @@ def it(description, &block)
   end
 end
 
-class Mock
+class MockObject
   def initialize(name)
     @name = name
     @expectations = {}
@@ -335,7 +335,7 @@ class Mock
 end
 
 def mock(name)
-  Mock.new(name)
+  MockObject.new(name)
 end
 
 # A mock that reports itself as a Numeric. Real mspec's mock_numeric builds a mock whose
@@ -343,7 +343,7 @@ end
 # (Complex#==, Complex#coerce, numeric coercion, ...) takes the numeric path. A plain Mock returns false
 # for is_a?(Numeric) (it is not a Numeric subclass), which made those specs take the wrong branch. Only
 # Numeric is special-cased; every other class delegates to the normal Object#is_a?/kind_of?.
-class NumericMock < Mock
+class NumericMock < MockObject
   def is_a?(klass)
     return true if klass == Numeric
     super
