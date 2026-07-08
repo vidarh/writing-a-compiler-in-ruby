@@ -243,6 +243,27 @@ module Tokens
       out
     end
 
+    # Is c a character that continues an identifier (so an `i` before it is NOT an imaginary suffix,
+    # e.g. `5if` == `5 if`, `5in` == `5 in`)?
+    def self.ident_char?(c)
+      return false if c.nil?
+      (?a..?z).member?(c) || (?A..?Z).member?(c) || (?0..?9).member?(c) || c == ?_
+    end
+
+    # A trailing `i` immediately after a numeric literal is the imaginary suffix (5i, 3.2i, 0.0i ->
+    # Complex(0, n)) -- but only if it does not run into an identifier. Consume and return true when it
+    # is the suffix; otherwise leave the stream untouched.
+    def self.imaginary_suffix?(s)
+      return false unless s.peek == ?i
+      s.get
+      if ident_char?(s.peek)
+        s.unget("i")
+        false
+      else
+        true
+      end
+    end
+
     def self.expect(s, allow_negative = true)
       # Capture a leading '-' BEFORE Int.expect consumes it: for "-0.5" Int.expect parses the integer
       # part "-0" as the integer 0, discarding the sign, so the float string would wrongly become "0.5".
@@ -294,6 +315,7 @@ module Tokens
           # `.double <string>` into IEEE bytes at assemble time, so no compile-time float math /
           # String#to_f is needed. This is what makes float literals compile SELF-HOSTED (the
           # compiler's own String#to_f is stubbed). See compile_float / FLOAT_SUPPORT_PLAN.md.
+          return [:call, :Complex, [0, [:float, num]]] if Number.imaginary_suffix?(s)
           return [:float, num]
         end
       end
@@ -310,6 +332,7 @@ module Tokens
         if (?0..?9).member?(s.peek)
           num = "#{i}e#{esign}#{Number.read_digits(s)}"
           num = "-#{num}" if neg && i == 0   # restore sign lost when Int.expect turned "-0" into 0
+          return [:call, :Complex, [0, [:float, num]]] if Number.imaginary_suffix?(s)
           return [:float, num]
         else
           # Not an exponent -- put the consumed characters back (e/E first on re-read).
@@ -317,6 +340,9 @@ module Tokens
           s.unget(e_char)
         end
       end
+
+      # Imaginary integer literal: 5i -> Complex(0, 5).
+      return [:call, :Complex, [0, i]] if Number.imaginary_suffix?(s)
 
       # Check for Rational literal: <number>r or <number>/<number>r
       if s.peek == ?r
