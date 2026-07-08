@@ -172,6 +172,44 @@ module Math
     r
   end
 
+  # Coerce the exponent argument of ldexp to an Integer with Integer()-like strictness: an Integer is
+  # used as-is; a finite Float is truncated; a NaN/Infinity Float is a RangeError; anything without
+  # #to_int (a String, nil, ...) is a TypeError.
+  def self.__coerce_int(n)
+    return n if n.is_a?(Integer)
+    if n.is_a?(Float)
+      raise RangeError, "float #{n} out of range of integer" if n.nan? || !n.infinite?.nil?
+      return n.to_i
+    end
+    unless n.respond_to?(:to_int)
+      raise TypeError, "no implicit conversion of #{n.nil? ? "nil" : n.class} into Integer"
+    end
+    n.to_int
+  end
+
+  # ldexp(frac, n) = frac * 2**n. The exponent is passed to libc ldexp as a raw (untagged) int.
+  def self.ldexp(frac, n)
+    frac = __coerce(frac)
+    n = __coerce_int(n)
+    r = Float.new
+    %s(do (ldexp (index frac 1) (index frac 2) (sar n)) (fstresult r))
+    r
+  end
+
+  # frexp(x) -> [fraction, exponent] with x == fraction * 2**exponent and 0.5 <= |fraction| < 1 (or 0).
+  # libc frexp returns the fraction in st0 and writes the exponent through an int* -- a one-slot buffer
+  # is passed for it and read back.
+  def self.frexp(x)
+    x = __coerce(x)
+    e = 0
+    frac = Float.new
+    %s(let (buf)
+      (assign buf (__array 1))
+      (do (frexp (index x 1) (index x 2) buf) (fstresult frac))
+      (assign e (__int (index buf 0))))
+    [frac, e]
+  end
+
   # The error function and its complement -- defined for all reals (NaN maps to NaN), no domain errors.
   def self.erf(x)
     x = __coerce(x)
