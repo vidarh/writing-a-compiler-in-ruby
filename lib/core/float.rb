@@ -610,6 +610,12 @@ class Float
   end
   alias imag imaginary
 
+  # The Complex number 0 + self*i. Float is not a Numeric subclass here, so it needs its own copy of
+  # Numeric#i.
+  def i
+    Complex.new(0, self)
+  end
+
   def positive?
     self > 0.0
   end
