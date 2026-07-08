@@ -690,6 +690,15 @@ class Object
   # intercept real method dispatch, so these are best-effort: should_not_receive is not
   # enforced and should_receive does not stub the return value. They return a chainable
   # null-expectation so a spec's `.and_return`/`.with`/`.exactly` chain doesn't crash.
+  #
+  # NOTE: stubbing a real object properly needs to OVERRIDE an existing method (inspect/==/to_f/...) on
+  # the object's singleton class. define_singleton_method exists now, but it goes through define_method,
+  # which stores the body in a side table (__dm_classes/__dm_tables) consulted only on a normal-dispatch
+  # MISS -- so it can define a NEW method but cannot override a method the class already provides. Only
+  # `def obj.name` (a literal-name singleton) installs into the real vtable and overrides. Wiring
+  # should_receive to that requires define_method to install into the singleton vtable; until then this
+  # stays a no-op (a RealExpectation via define_singleton_method was tried and had no effect on the
+  # inspect/==/to_f stub cases -- reverted).
   def should_receive(method)
     MockExpectationStub.new
   end
