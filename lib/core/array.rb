@@ -189,9 +189,23 @@ class Array
   # this way -- a method that does `yield` inside an `each {}` block (min_by/group_by/each_with_object/
   # flat_map) currently segfaults on an Array (captured-yield-through-Array#each bug), though the same
   # code works on Set. So those are intentionally NOT added here yet.
+  # See Enumerable#sum: plain #+ accumulation until a Float appears, then Kahan compensated summation for
+  # MRI-precise float totals.
   def sum init = 0
     acc = init
-    each {|x| acc = acc + x }
+    comp = 0.0
+    each do |x|
+      if acc.is_a?(Float) || x.is_a?(Float)
+        xf = x.is_a?(Float) ? x : x.to_f
+        accf = acc.is_a?(Float) ? acc : acc.to_f
+        y = xf - comp
+        t = accf + y
+        comp = (t - accf) - y
+        acc = t
+      else
+        acc = acc + x
+      end
+    end
     acc
   end
 

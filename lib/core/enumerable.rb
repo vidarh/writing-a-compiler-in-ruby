@@ -501,9 +501,24 @@ module Enumerable
     result
   end
 
+  # Sum the elements starting from `init`. Non-float elements accumulate with plain #+; once a Float is
+  # involved the running total switches to Kahan compensated summation, so a sum of floats matches MRI's
+  # precise result (e.g. that dozen values sum to exactly 50.0, not 50.00000000000001).
   def sum init = 0
     acc = init
-    each {|x| acc = acc + x }
+    comp = 0.0
+    each do |x|
+      if acc.is_a?(Float) || x.is_a?(Float)
+        xf = x.is_a?(Float) ? x : x.to_f
+        accf = acc.is_a?(Float) ? acc : acc.to_f
+        y = xf - comp
+        t = accf + y
+        comp = (t - accf) - y
+        acc = t
+      else
+        acc = acc + x
+      end
+    end
     acc
   end
 

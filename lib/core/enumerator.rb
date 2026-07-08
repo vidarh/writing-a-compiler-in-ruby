@@ -152,10 +152,25 @@ class Enumerator
   end
   def inject(init = nil, &b); reduce(init, &b); end
 
+  # Kahan compensated summation once a Float is involved (see Enumerable#sum), so a float total is
+  # MRI-precise. An optional block maps each element before it is added.
   def sum(init = 0, &block)
-    s = init
-    each { |x| s = s + (block ? block.call(x) : x) }
-    s
+    acc = init
+    comp = 0.0
+    each do |x|
+      v = block ? block.call(x) : x
+      if acc.is_a?(Float) || v.is_a?(Float)
+        vf = v.is_a?(Float) ? v : v.to_f
+        accf = acc.is_a?(Float) ? acc : acc.to_f
+        y = vf - comp
+        t = accf + y
+        comp = (t - accf) - y
+        acc = t
+      else
+        acc = acc + v
+      end
+    end
+    acc
   end
 
   def filter_map(&block)
