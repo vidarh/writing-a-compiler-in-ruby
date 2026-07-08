@@ -22,10 +22,13 @@ class Random
     @state
   end
 
+  # No argument -> a Float in [0, 1). An Integer limit -> an Integer in [0, limit). A Float limit ->
+  # a Float in [0, limit). (_next yields a 31-bit value, so dividing by LCG_M lands in [0, 1).)
   def rand(limit = nil)
     if limit.nil?
-      # Should be a Float in [0,1); Float is unimplemented, so return the raw value.
-      _next
+      _next.to_f / LCG_M.to_f
+    elsif limit.is_a?(Float)
+      (_next.to_f / LCG_M.to_f) * limit
     else
       _next % limit
     end

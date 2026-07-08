@@ -1,5 +1,11 @@
 
 class Kernel
+  # Kernel#rand delegates to the default Random: no argument -> Float in [0, 1); an Integer/Float
+  # argument bounds the result (see Random#rand). A range argument is not handled here yet.
+  def rand(limit = nil)
+    Random.rand(limit)
+  end
+
   def puts *str
     na = str.length
     if na == 0
