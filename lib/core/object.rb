@@ -124,6 +124,19 @@ class Object
     nil
   end
 
+  # Define a method on this object alone, by defining it on the object's singleton (eigen) class. The
+  # body is a block or a Proc/Method/UnboundMethod given as the second argument (matching MRI); it closes
+  # over its defining scope. Without any body it is an ArgumentError, and a non-callable body a TypeError.
+  def define_singleton_method(name, callable = nil, &block)
+    pr = block ? block : callable
+    raise ArgumentError, "tried to create Proc object without a block" if pr.nil?
+    unless pr.is_a?(Proc) || pr.is_a?(Method) || pr.is_a?(UnboundMethod)
+      raise TypeError, "wrong argument type #{pr.class} (expected Proc/Method/UnboundMethod)"
+    end
+    sc = class << self; self; end
+    sc.send(:define_method, name, pr)
+  end
+
   def instance_variables
     []
   end
