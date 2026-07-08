@@ -314,18 +314,22 @@ class Complex
   end
 
   def to_s
-    "#{@real}#{__imag_str}"
+    "#{@real}#{__imag_str(@imag.to_s)}"
   end
 
+  # inspect renders each part with #inspect (not #to_s), so a custom part's #inspect is honoured.
   def inspect
-    "(#{@real}#{__imag_str})"
+    "(#{@real.inspect}#{__imag_str(@imag.inspect)})"
   end
 
   # The imaginary component with its leading sign and trailing i, matching MRI. The sign is taken from
   # the value's own string form, so -0.0 -> "-0.0i" (not "+-0.0i"); a non-finite value (Infinity/NaN)
   # is written with a "*i" separator ("+Infinity*i") since "Infinityi" would be ambiguous.
-  def __imag_str
-    s = @imag.to_s
+  # Format the imaginary component from its already-rendered string `s` (its #to_s for Complex#to_s, its
+  # #inspect for Complex#inspect). A leading "-" becomes the sign; otherwise "+". A "*" is inserted before
+  # the trailing "i" whenever the magnitude does NOT end in a digit -- Infinity/NaN ("...y"/"...N") or a
+  # bracketed custom rendering like "(2)" -- so "i" is never appended ambiguously to a letter or bracket.
+  def __imag_str(s)
     if s[0..0] == "-"
       sign = "-"
       mag = s[1..-1]
@@ -333,8 +337,13 @@ class Complex
       sign = "+"
       mag = s
     end
-    suffix = (@imag.is_a?(Float) && (@imag.nan? || !@imag.infinite?.nil?)) ? "*i" : "i"
+    last = mag[-1..-1]
+    suffix = __digit?(last) ? "i" : "*i"
     "#{sign}#{mag}#{suffix}"
+  end
+
+  def __digit?(c)
+    c >= "0" && c <= "9"
   end
 
   def __coerce_apply(other, op)
