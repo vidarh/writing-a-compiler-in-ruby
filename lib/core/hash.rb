@@ -657,6 +657,9 @@ class Hash
   def dig(key, *rest)
     v = self[key]
     return v if rest.empty? || v.nil?
+    # An intermediate element must itself respond to #dig to continue the traversal; MRI raises
+    # TypeError (not NoMethodError) when it does not, e.g. dig'ing past a leaf Integer/String.
+    raise TypeError, "#{v.class} does not have #dig method" if !v.respond_to?(:dig)
     v.dig(*rest)
   end
 

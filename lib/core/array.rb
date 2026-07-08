@@ -1516,6 +1516,9 @@ class Array
   def dig(key, *rest)
     v = self[key]
     return v if rest.empty? || v.nil?
+    # An intermediate element must respond to #dig to keep traversing; MRI raises TypeError (not
+    # NoMethodError) otherwise, e.g. dig'ing past a leaf Integer.
+    raise TypeError, "#{v.class} does not have #dig method" if !v.respond_to?(:dig)
     v.dig(*rest)
   end
 

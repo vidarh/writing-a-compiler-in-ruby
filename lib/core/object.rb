@@ -244,6 +244,11 @@ class Object
 
   # instance_of? is an EXACT class match (unlike is_a?, which walks the ancestry).
   def instance_of?(c)
+    # The argument must be a Class or Module, else TypeError -- mirrors MRI, which rejects e.g.
+    # instance_of?(5). NOTE: is_a?(Module) is unreliable here (Class is not wired as Module's
+    # subclass, and even Comparable.is_a?(Module) is false), so discriminate via respond_to?
+    # (:instance_methods), which is true for both classes and modules and false for ordinary objects.
+    raise TypeError, "class or module required" if !c.respond_to?(:instance_methods)
     self.class == c
   end
 
