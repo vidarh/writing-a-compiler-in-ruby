@@ -34,8 +34,13 @@ class Scope
     self
   end
 
+  # Cumulative local-variable stack offset of the enclosing scopes. Pass-through scopes (e.g.
+  # ControlScope, which wraps a loop body) must forward this to @next, exactly like get_arg above:
+  # a :let nested inside a loop body computes its variables' slots as index + @next.lvaroffset, so if a
+  # ControlScope reported 0 here the let-vars would alias the enclosing method's own locals. Scopes that
+  # intentionally cap the chain (FuncScope) override this.
   def lvaroffset
-    0
+    @next ? @next.lvaroffset : 0
   end
 
   def set_vtable_entry(name,realname,f)
