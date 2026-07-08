@@ -62,6 +62,12 @@ class Numeric
     to_r.denominator
   end
 
+  # Float division: convert self to a Float and delegate to Float#fdiv (which coerces the divisor via
+  # #to_f), so a custom numeric only needs #to_f. Integer/Float/Rational override with their own.
+  def fdiv(other)
+    to_f.fdiv(other)
+  end
+
   def rectangular
     [self, 0]
   end

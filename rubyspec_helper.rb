@@ -383,6 +383,11 @@ class NumericMock < Mock
     return method_missing(:denominator) if @expectations[:denominator]
     to_r.denominator
   end
+
+  def fdiv(other)
+    return method_missing(:fdiv, other) if @expectations[:fdiv]
+    to_f.fdiv(other)
+  end
 end
 
 def mock_numeric(name)
