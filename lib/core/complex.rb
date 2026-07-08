@@ -278,11 +278,17 @@ class Complex
   end
 
   def coerce(other)
-    if other.is_a?(Complex)
-      [other, self]
-    else
-      [Complex.new(other, 0), self]
+    return [other, self] if other.is_a?(Complex)
+    # The real numeric types wrap into Complex(other, 0). (Float is not a Numeric subclass in this
+    # runtime, so it is checked explicitly alongside Integer/Rational.)
+    if other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+      return [Complex.new(other, 0), self]
     end
+    # A custom Numeric coerces only if it is real; a non-real Numeric or a non-numeric is a TypeError.
+    if other.is_a?(Numeric) && other.real?
+      return [Complex.new(other, 0), self]
+    end
+    raise TypeError, "#{other.class} can't be coerced into Complex"
   end
 
   def to_s
