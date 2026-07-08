@@ -68,6 +68,14 @@ class Numeric
     to_f.fdiv(other)
   end
 
+  # Unary minus for a generic Numeric: coerce self against 0 and subtract (0 - self in the coerced
+  # types), so a custom numeric only needs #coerce and #-. Integer/Float/Rational override with their
+  # own direct negation.
+  def -@
+    a, b = coerce(0)
+    a - b
+  end
+
   def rectangular
     [self, 0]
   end

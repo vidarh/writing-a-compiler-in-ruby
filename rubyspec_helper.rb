@@ -388,6 +388,14 @@ class NumericMock < Mock
     return method_missing(:fdiv, other) if @expectations[:fdiv]
     to_f.fdiv(other)
   end
+
+  # Numeric#-@ default: coerce(0) then subtract (a - b). Honour a direct should_receive(:-@) first (e.g.
+  # complex/uminus stubs -@ on its part mocks) so the method does not shadow that stub.
+  def -@
+    return method_missing(:-@) if @expectations[:-@]
+    a, b = coerce(0)
+    a - b
+  end
 end
 
 def mock_numeric(name)
