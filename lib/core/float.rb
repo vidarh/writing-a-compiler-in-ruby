@@ -726,6 +726,13 @@ class Float
 
   alias magnitude abs
 
+  # The square of the absolute value: self*self. Float is not a Numeric subclass in this runtime, so it
+  # needs its own copy rather than inheriting Numeric#abs2. NaN*NaN is NaN and Infinity*Infinity is
+  # Infinity, matching MRI.
+  def abs2
+    self * self
+  end
+
   # The complex argument (phase angle) of a real Float: 0 for a positive value (including +0.0 and
   # +Infinity), Math::PI for a negative value (including -0.0 and -Infinity), and self (NaN) for NaN.
   # -0.0 must count as negative even though it compares == 0.0, so the sign of a zero is read from

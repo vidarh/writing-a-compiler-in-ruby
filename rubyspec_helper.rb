@@ -353,6 +353,13 @@ class NumericMock < Mock
     return true if klass == Numeric
     super
   end
+
+  # Derived Numeric methods that specs invoke on a numeric mock and that are defined purely in terms of
+  # the stubbed primitive operators (a real Numeric would inherit these). abs2 is self*self, so it drives
+  # the stubbed #*; the mock records the call and returns its stubbed value.
+  def abs2
+    self * self
+  end
 end
 
 def mock_numeric(name)

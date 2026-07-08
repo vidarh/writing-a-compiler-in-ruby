@@ -35,6 +35,12 @@ class Numeric
     Complex.new(self, 0)
   end
 
+  # The square of the absolute value. For a real number that is simply self*self (always >= 0 and
+  # correct for negatives), and it is defined via #* so a custom numeric only needs to implement #*.
+  def abs2
+    self * self
+  end
+
   def rectangular
     [self, 0]
   end
