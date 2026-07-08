@@ -1076,16 +1076,23 @@ class Array
     return false if !other_array.kind_of?(Array)
     return false if self.length != other_array.length
 
+    # Recursion guard for cyclic (self-referential) arrays, mirroring Array#==: without it, mutually
+    # recursive structures (a=[b]; b=[a]) descend forever -> stack overflow / SIGSEGV. Use a flag
+    # distinct from =='s @__comparing so the two never clobber each other. Accumulate into `result`
+    # and clear the flag at the end rather than early-returning, otherwise a false result would leave
+    # @__eql_comparing set for the next comparison.
+    return true if @__eql_comparing
+    @__eql_comparing = true
+    result = true
     i = 0
     l = self.length
     while i < l
-      # FIXME: Recursion
       # eql? is element-wise #eql?, NOT ==: [1].eql?([1.0]) is false even though [1] == [1.0].
-      return false if !self[i].eql?(other_array[i])
+      result = false if !self[i].eql?(other_array[i])
       i += 1
     end
-
-    return true
+    @__eql_comparing = false
+    result
   end
 
 
