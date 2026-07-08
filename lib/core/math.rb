@@ -43,12 +43,14 @@ module Math
     r
   end
 
-  def self.log(x, base = nil)
+  # log(x) is the natural log; log(x, base) divides by log(base). The base defaults to a sentinel so an
+  # EXPLICIT nil base (Math.log(10, nil)) coerces and raises TypeError, unlike the no-base call.
+  def self.log(x, base = :__nobase)
     x = __coerce(x)
     raise DomainError, "Numerical argument is out of domain - \"log\"" if x < 0.0
     r = Float.new
     %s(do (log (index x 1) (index x 2)) (fstresult r))
-    return r if base.nil?
+    return r if base == :__nobase
     r / log(base)
   end
 
