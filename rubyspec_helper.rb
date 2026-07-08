@@ -335,6 +335,27 @@ def mock(name)
   Mock.new(name)
 end
 
+# A mock that reports itself as a Numeric. Real mspec's mock_numeric builds a mock whose
+# is_a?(Numeric)/kind_of?(Numeric) answer true, so that library code branching on `kind_of?(Numeric)`
+# (Complex#==, Complex#coerce, numeric coercion, ...) takes the numeric path. A plain Mock returns false
+# for is_a?(Numeric) (it is not a Numeric subclass), which made those specs take the wrong branch. Only
+# Numeric is special-cased; every other class delegates to the normal Object#is_a?/kind_of?.
+class NumericMock < Mock
+  def is_a?(klass)
+    return true if klass == Numeric
+    super
+  end
+
+  def kind_of?(klass)
+    return true if klass == Numeric
+    super
+  end
+end
+
+def mock_numeric(name)
+  NumericMock.new(name)
+end
+
 
 # Matcher infrastructure
 class Matcher
@@ -1179,13 +1200,6 @@ end
 def new_fd(name, mode = "w")
   mode = "w" if !mode.is_a?(String)
   IO.sysopen(name, mode)
-end
-
-# mspec helper: mock_numeric(name) returns a mock that stands in for a Numeric (specs then add expectations
-# like should_receive(:coerce)/:to_r). The harness lacked it, so numeric coercion specs crashed at load with
-# "undefined method 'mock_numeric'". Back it with the existing mock framework.
-def mock_numeric(name)
-  mock(name)
 end
 
 def platform_is(*args)

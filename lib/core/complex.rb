@@ -110,14 +110,33 @@ class Complex
     self
   end
 
+  # Equality. Against another Complex, both components must be equal. Against a real numeric (a built-in
+  # Integer/Float/Rational or a custom Numeric that answers #real? with true), self is equal iff its
+  # imaginary part is zero and the real parts compare equal. Anything else -- a non-real Numeric or an
+  # arbitrary object -- is handled by reflection: `other == self`, so the other side gets a chance to
+  # define equality with a Complex.
   def ==(other)
     if other.is_a?(Complex)
       @real == other.real && @imag == other.imag
-    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+    elsif __real_numeric?(other)
       @imag == 0 && @real == other
     else
-      false
+      other == self
     end
+  end
+
+  def __real_numeric?(other)
+    return true if other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+    other.is_a?(Numeric) && other.real?
+  end
+
+  # eql? is stricter than ==: it never coerces, requires the other object to be a Complex, and requires
+  # the corresponding parts to be of the SAME class (so Complex(1).eql?(Complex(1.0)) is false) as well
+  # as == equal. It does not send #eql? to the parts -- class identity plus value equality suffice.
+  def eql?(other)
+    return false unless other.is_a?(Complex)
+    return false unless @real.class == other.real.class && @imag.class == other.imag.class
+    self == other
   end
 
   def conjugate
