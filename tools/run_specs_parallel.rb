@@ -96,6 +96,14 @@ def classify(out, exit_code)
   [outcome, p, f, s]
 end
 
+# Save the combined stdout+stderr of every CRASH-classified spec to tmp/crash_logs/, keyed on the
+# spec path (collision-safe). These flaky crashers only fault under the full parallel sweep, so this
+# is the only place their crash-time output (e.g. the __alloc calloc-failure diagnostic, or a libc
+# abort message) can be captured for post-mortem. Cheap: only written for the handful that crash.
+crash_dir = "tmp/crash_logs"
+Dir.mkdir("tmp") unless Dir.exist?("tmp")
+Dir.mkdir(crash_dir) unless Dir.exist?(crash_dir)
+
 queue = Queue.new
 specs.each { |s| queue << s }
 results = []
@@ -113,6 +121,10 @@ workers = jobs.times.map do
       begin
         out = `SPEC_TIMEOUT=#{spec_timeout} ./run_rubyspec #{spec} 2>&1`
         outcome, p, f, s = classify(out, $?.exitstatus)
+        if outcome == "CRASH"
+          logname = spec.sub(/\.rb$/, "").gsub(%r{[/.]}, "_")
+          File.write("#{crash_dir}/#{logname}.log", out) rescue nil
+        end
       rescue => e
         # one spec failing to process must never abort the whole run
         outcome = "ERROR"
