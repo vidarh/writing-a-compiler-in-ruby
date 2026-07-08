@@ -278,6 +278,29 @@ module Tokens
         end
       end
 
+      # Exponent-only float with no decimal point (10e15, 1E-9, 2e5). The exponent is e/E followed by an
+      # optional sign and at least one digit; only then is it a numeric suffix. Otherwise (e.g. `10end`)
+      # the consumed characters are restored so the identifier tokenizes normally.
+      if s.peek == ?e || s.peek == ?E
+        e_char = s.get
+        esign = ""
+        if s.peek == ?+ || s.peek == ?-
+          esign = s.get
+        end
+        if (?0..?9).member?(s.peek)
+          num = "#{i}e#{esign}"
+          while (?0..?9).member?(s.peek)
+            num << s.get
+          end
+          num = "-#{num}" if neg && i == 0   # restore sign lost when Int.expect turned "-0" into 0
+          return [:float, num]
+        else
+          # Not an exponent -- put the consumed characters back (e/E first on re-read).
+          s.unget(esign) if !esign.empty?
+          s.unget(e_char)
+        end
+      end
+
       # Check for Rational literal: <number>r or <number>/<number>r
       if s.peek == ?r
         # Simple rational: 5r = Rational(5, 1)
