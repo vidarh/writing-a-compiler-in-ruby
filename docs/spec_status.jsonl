@@ -65,7 +65,7 @@
 {"spec":"rubyspec/core/array/element_reference_spec.rb","outcome":"FAIL","passed":24,"failed":82,"skipped":0}
 {"spec":"rubyspec/core/array/element_set_spec.rb","outcome":"FAIL","passed":40,"failed":43,"skipped":0}
 {"spec":"rubyspec/core/array/empty_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/array/eql_spec.rb","outcome":"FAIL","passed":9,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/array/eql_spec.rb","outcome":"FAIL","passed":10,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/array/equal_value_spec.rb","outcome":"FAIL","passed":10,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/array/fetch_spec.rb","outcome":"FAIL","passed":6,"failed":3,"skipped":1}
 {"spec":"rubyspec/core/array/fetch_values_spec.rb","outcome":"FAIL","passed":0,"failed":13,"skipped":0}
@@ -806,7 +806,7 @@
 {"spec":"rubyspec/core/hash/element_reference_spec.rb","outcome":"FAIL","passed":10,"failed":4,"skipped":1}
 {"spec":"rubyspec/core/hash/element_set_spec.rb","outcome":"FAIL","passed":6,"failed":5,"skipped":1}
 {"spec":"rubyspec/core/hash/empty_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/hash/eql_spec.rb","outcome":"FAIL","passed":13,"failed":4,"skipped":0}
+{"spec":"rubyspec/core/hash/eql_spec.rb","outcome":"FAIL","passed":14,"failed":3,"skipped":0}
 {"spec":"rubyspec/core/hash/equal_value_spec.rb","outcome":"FAIL","passed":14,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/except_spec.rb","outcome":"PASS","passed":4,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/fetch_spec.rb","outcome":"FAIL","passed":16,"failed":1,"skipped":1}
@@ -1217,7 +1217,7 @@
 {"spec":"rubyspec/core/module/attr_reader_spec.rb","outcome":"FAIL","passed":0,"failed":7,"skipped":2}
 {"spec":"rubyspec/core/module/attr_spec.rb","outcome":"FAIL","passed":0,"failed":13,"skipped":3}
 {"spec":"rubyspec/core/module/attr_writer_spec.rb","outcome":"FAIL","passed":0,"failed":8,"skipped":2}
-{"spec":"rubyspec/core/module/autoload_spec.rb","outcome":"CRASH","passed":2,"failed":33,"skipped":0}
+{"spec":"rubyspec/core/module/autoload_spec.rb","outcome":"FAIL","passed":3,"failed":142,"skipped":0}
 {"spec":"rubyspec/core/module/case_compare_spec.rb","outcome":"FAIL","passed":1,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/module/class_eval_spec.rb","outcome":"FAIL","passed":5,"failed":27,"skipped":0}
 {"spec":"rubyspec/core/module/class_exec_spec.rb","outcome":"FAIL","passed":3,"failed":3,"skipped":0}
@@ -1573,7 +1573,7 @@
 {"spec":"rubyspec/core/rational/divide_spec.rb","outcome":"PASS","passed":8,"failed":0,"skipped":1}
 {"spec":"rubyspec/core/rational/divmod_spec.rb","outcome":"PASS","passed":7,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/rational/equal_value_spec.rb","outcome":"FAIL","passed":3,"failed":1,"skipped":0}
-{"spec":"rubyspec/core/rational/exponent_spec.rb","outcome":"FAIL","passed":16,"failed":12,"skipped":1}
+{"spec":"rubyspec/core/rational/exponent_spec.rb","outcome":"FAIL","passed":14,"failed":14,"skipped":1}
 {"spec":"rubyspec/core/rational/fdiv_spec.rb","outcome":"PASS","passed":0,"failed":0,"skipped":1}
 {"spec":"rubyspec/core/rational/floor_spec.rb","outcome":"PASS","passed":6,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/rational/hash_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
@@ -1851,7 +1851,7 @@
 {"spec":"rubyspec/core/struct/each_spec.rb","outcome":"FAIL","passed":3,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/struct/element_reference_spec.rb","outcome":"FAIL","passed":5,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/struct/element_set_spec.rb","outcome":"FAIL","passed":1,"failed":2,"skipped":0}
-{"spec":"rubyspec/core/struct/eql_spec.rb","outcome":"FAIL","passed":5,"failed":1,"skipped":0}
+{"spec":"rubyspec/core/struct/eql_spec.rb","outcome":"PASS","passed":6,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/struct/equal_value_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/struct/filter_spec.rb","outcome":"FAIL","passed":4,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/struct/hash_spec.rb","outcome":"FAIL","passed":3,"failed":5,"skipped":0}
