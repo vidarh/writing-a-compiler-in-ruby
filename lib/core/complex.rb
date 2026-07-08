@@ -109,6 +109,35 @@ class Complex
   end
   alias rect rectangular
 
+  # The argument (phase angle) measured from the positive real axis: atan2(imag, real).
+  def arg
+    Math.atan2(@imag, @real)
+  end
+  alias angle arg
+  alias phase arg
+
+  # Polar form: [magnitude, argument].
+  def polar
+    [abs, arg]
+  end
+
+  # Coerce a polar argument to a real Float: a real numeric converts; a Complex whose imaginary part is
+  # zero uses its real part; anything else (nil, String, a non-real Complex) is a TypeError.
+  def self.__polar_real(x)
+    return x.to_f if x.is_a?(Integer) || x.is_a?(Float) || x.is_a?(Rational)
+    if x.is_a?(Complex)
+      return x.real.to_f if x.imag == 0
+    end
+    raise TypeError, "not a real value: #{x.nil? ? "nil" : x.class}"
+  end
+
+  # Build a Complex from a magnitude and angle: r*cos(theta) + r*sin(theta)*i (theta defaults to 0).
+  def self.polar(r, theta = 0)
+    rr = __polar_real(r)
+    tt = __polar_real(theta)
+    Complex(rr * Math.cos(tt), rr * Math.sin(tt))
+  end
+
   # A Complex is never "real" in MRI, even when the imaginary part is zero.
   def real?
     false
