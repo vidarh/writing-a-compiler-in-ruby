@@ -218,6 +218,31 @@ module Tokens
   end
 
   class Number
+    # Read a run of decimal digits, allowing (and dropping) '_' separators that sit BETWEEN two digits
+    # (Ruby's numeric underscores, e.g. 3.14159_26535). A '_' not followed by a digit is not a
+    # separator, so it is put back and left in the stream. Used for a float's fractional and exponent
+    # digits (Int.expect already handles underscores in the integer part).
+    def self.read_digits(s)
+      out = ""
+      while true
+        c = s.peek
+        if (?0..?9).member?(c)
+          out << s.get
+        elsif c == ?_
+          s.get
+          if (?0..?9).member?(s.peek)
+            # separator between digits: dropped; the loop reads the following digit next
+          else
+            s.unget("_")
+            break
+          end
+        else
+          break
+        end
+      end
+      out
+    end
+
     def self.expect(s, allow_negative = true)
       # Capture a leading '-' BEFORE Int.expect consumes it: for "-0.5" Int.expect parses the integer
       # part "-0" as the integer 0, discarding the sign, so the float string would wrongly become "0.5".
@@ -241,10 +266,7 @@ module Tokens
           # Read the fractional digits as a raw decimal string: integer-literal parsing
           # (Int.expect) would treat a leading zero as octal, but fractional digits are
           # plain decimal (e.g. .090 is ninety-thousandths, and 9 is not a valid octal digit).
-          f = ""
-          while (?0..?9).member?(s.peek)
-            f << s.get
-          end
+          f = Number.read_digits(s)
           num = "#{i}.#{f}"
           # Restore the sign lost when Int.expect turned "-0" into 0 (e.g. -0.5, -0.0).
           num = "-#{num}" if neg && i == 0
@@ -264,10 +286,8 @@ module Tokens
             # octal, stopped at the invalid octal digit "8", and left "8" in the stream -> the
             # literal became "1.0e-0" followed by a stray integer 8, which then got mis-parsed as
             # a call `(1.0e-0)(8)` and SIGSEGV'd through the float's tagged bits. Exponents are
-            # always decimal (e-08 == e-8), so read the digits directly.
-            while (?0..?9).member?(s.peek)
-              num << s.get
-            end
+            # always decimal (e-08 == e-8), so read the digits directly (dropping '_' separators).
+            num << Number.read_digits(s)
           end
 
           # Carry the literal as its DECIMAL STRING (not `num.to_f`): the assembler turns
@@ -288,10 +308,7 @@ module Tokens
           esign = s.get
         end
         if (?0..?9).member?(s.peek)
-          num = "#{i}e#{esign}"
-          while (?0..?9).member?(s.peek)
-            num << s.get
-          end
+          num = "#{i}e#{esign}#{Number.read_digits(s)}"
           num = "-#{num}" if neg && i == 0   # restore sign lost when Int.expect turned "-0" into 0
           return [:float, num]
         else
