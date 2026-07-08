@@ -160,6 +160,25 @@ class Complex
     false
   end
 
+  def self.__part_finite?(x)
+    return x.finite? if x.is_a?(Float)
+    true   # Integer / Rational are always finite
+  end
+
+  def self.__part_infinite?(x)
+    x.is_a?(Float) && !x.infinite?.nil?
+  end
+
+  # Finite iff BOTH components are finite; infinite? returns 1 if EITHER component is infinite, else nil.
+  def finite?
+    Complex.__part_finite?(@real) && Complex.__part_finite?(@imag)
+  end
+
+  def infinite?
+    return 1 if Complex.__part_infinite?(@real) || Complex.__part_infinite?(@imag)
+    nil
+  end
+
   def hash
     [@real, @imag].hash
   end
