@@ -273,4 +273,34 @@ module Math
     return 1 if x == f                               # negative integer pole
     f.to_i % 2 == 0 ? 1 : -1
   end
+
+  # MRI's Math functions are also available as instance methods when a class does `include Math`
+  # (private, invoked via send in the specs). module_function is a no-op stub in this compiler, so
+  # provide the instance versions explicitly as thin delegates to the module methods above.
+  def sqrt(*a);  Math.sqrt(*a);  end
+  def cbrt(*a);  Math.cbrt(*a);  end
+  def exp(*a);   Math.exp(*a);   end
+  def log(*a);   Math.log(*a);   end
+  def log2(*a);  Math.log2(*a);  end
+  def log10(*a); Math.log10(*a); end
+  def sin(*a);   Math.sin(*a);   end
+  def cos(*a);   Math.cos(*a);   end
+  def tan(*a);   Math.tan(*a);   end
+  def asin(*a);  Math.asin(*a);  end
+  def acos(*a);  Math.acos(*a);  end
+  def atan(*a);  Math.atan(*a);  end
+  def sinh(*a);  Math.sinh(*a);  end
+  def cosh(*a);  Math.cosh(*a);  end
+  def tanh(*a);  Math.tanh(*a);  end
+  def asinh(*a); Math.asinh(*a); end
+  def acosh(*a); Math.acosh(*a); end
+  def atanh(*a); Math.atanh(*a); end
+  def atan2(*a); Math.atan2(*a); end
+  def hypot(*a); Math.hypot(*a); end
+  def erf(*a);   Math.erf(*a);   end
+  def erfc(*a);  Math.erfc(*a);  end
+  def gamma(*a); Math.gamma(*a); end
+  def lgamma(*a); Math.lgamma(*a); end
+  def ldexp(*a); Math.ldexp(*a); end
+  def frexp(*a); Math.frexp(*a); end
 end
