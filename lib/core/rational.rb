@@ -168,24 +168,34 @@ class Rational < Numeric
   # floor rounds toward -infinity; Integer#/ already floors so the ratio maps directly. With a non-zero
   # digit count MRI scales by 10**digits, applies the zero-arg rounding, and returns a Rational (positive
   # digits) or Integer (negative digits) -- see __scale_round.
+  # The digit-precision argument to floor/ceil/truncate/round must be an Integer; MRI raises TypeError
+  # "not an integer" for anything else (nil, a Float, a String, ...) and does NOT call #to_int on it.
+  def __check_digits(digits)
+    raise TypeError, "not an integer" unless digits.is_a?(Integer)
+  end
+
   def floor(digits = 0)
+    __check_digits(digits)
     return @numerator / @denominator if digits == 0
     __scale_round(digits, :floor)
   end
 
   # ceil rounds toward +infinity: ceil(n/d) == -floor(-n/d).
   def ceil(digits = 0)
+    __check_digits(digits)
     return -((-@numerator) / @denominator) if digits == 0
     __scale_round(digits, :ceil)
   end
 
   def truncate(digits = 0)
+    __check_digits(digits)
     return to_i if digits == 0
     __scale_round(digits, :truncate)
   end
 
   # round: nearest integer, halves away from zero (MRI default).
   def round(digits = 0)
+    __check_digits(digits)
     if digits == 0
       d2 = 2 * @denominator
       return @numerator < 0 ? -((-@numerator * 2 + @denominator) / d2) : (@numerator * 2 + @denominator) / d2
