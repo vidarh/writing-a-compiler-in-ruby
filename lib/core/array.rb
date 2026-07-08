@@ -2084,6 +2084,9 @@ class Array
   # Pushes the given object(s) on to the end of this array.
   # This expression returns the array itself, so several appends may be chained together.
   def push(*objects)
+    # Frozen check up front so even push() with no arguments raises, per MRI. Checked here rather
+    # than in the hot #<< path (every internal array append) since push raises before reaching it.
+    raise FrozenError.new("can't modify frozen Array: #{inspect}") if frozen?
     i = 0
     n = objects.length
     while i < n
@@ -2092,6 +2095,7 @@ class Array
     end
     self
   end
+  alias append push
 
 
   def quote
