@@ -179,7 +179,9 @@ class Exception
   end
 
   def message
-    @message
+    # MRI defines Exception#message as an alias of #to_s, so with no explicit message it returns the
+    # class name (e.g. Exception.new.message == "Exception") rather than nil.
+    to_s
   end
 
   def to_s
