@@ -6,7 +6,12 @@ class Numeric
 
   # Numbers are immediates (or value objects): clone/dup return self. Object#clone's slot copy would
   # dereference the tagged fixnum and SIGSEGV, so override here.
+  # Numbers are immutable value objects: clone returns self. They are always frozen, so an explicit
+  # `clone(freeze: false)` (a request to produce an unfrozen copy) is an ArgumentError, matching MRI.
   def clone(*args)
+    if args.length > 0 && args[-1].is_a?(Hash) && args[-1][:freeze] == false
+      raise ArgumentError, "can't unfreeze #{self.class}"
+    end
     self
   end
 
