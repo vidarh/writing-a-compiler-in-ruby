@@ -476,8 +476,7 @@ class Float
 
   def ** other
     # Integer exponent: exponentiation by squaring (O(log n), so a huge exponent overflows fast to
-    # Infinity rather than looping). Negative -> reciprocal. A Float/Rational exponent needs libm pow,
-    # which isn't wired yet, so it stays a stub for those.
+    # Infinity rather than looping). Negative -> reciprocal.
     if other.is_a?(Integer)
       return 1.0 if other == 0
       n = other < 0 ? -other : other
@@ -491,7 +490,23 @@ class Float
       return 1.0 / r if other < 0
       r
     else
-      self
+      # Float / Rational exponent. A negative base with a FRACTIONAL exponent has a Complex value:
+      # self**e = |self|**e * (cos(e*pi) + i*sin(e*pi)). Otherwise the result is real via libm pow
+      # (each double marshalled as its two 32-bit halves; the st0 result captured with fstresult).
+      o = other.is_a?(Rational) ? other.to_f : other
+      if o.is_a?(Float)
+        if self < 0.0 && o.floor != o
+          mag = (0.0 - self) ** o
+          ang = o * Math::PI
+          return Complex(mag * Math.cos(ang), mag * Math.sin(ang))
+        end
+        r = Float.new
+        %s(do (pow (index self 1) (index self 2) (index o 1) (index o 2)) (fstresult r))
+        return r
+      end
+      # Non-numeric exponent: defer to the coercion protocol.
+      a, b = __coerce_pair(other)
+      a ** b
     end
   end
 

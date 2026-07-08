@@ -93,10 +93,16 @@ class Complex
   end
   alias conj conjugate
 
-  # Squared magnitude a**2 + b**2 -- exact, unlike #abs which needs a square root.
+  # Squared magnitude a**2 + b**2 -- exact.
   def abs2
     @real * @real + @imag * @imag
   end
+
+  # Magnitude sqrt(a**2 + b**2).
+  def abs
+    Math.sqrt(abs2)
+  end
+  alias magnitude abs
 
   def rectangular
     [@real, @imag]

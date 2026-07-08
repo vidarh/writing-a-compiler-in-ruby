@@ -702,11 +702,9 @@ class BeCloseMatcher < Matcher
   end
 
   def match?(actual)
-    diff = actual - @expected
-    if diff < 0
-      diff = -diff
-    end
-    diff <= @tolerance
+    # Magnitude of the difference, via #abs -- matches mspec's BeCloseMatcher and works for a Complex
+    # difference too (Complex#abs), unlike a `< 0` / negate that assumes a real, ordered value.
+    (actual - @expected).abs <= @tolerance
   end
 
   def failure_message(actual)
