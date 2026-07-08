@@ -138,6 +138,23 @@ class Complex
     Complex(rr * Math.cos(tt), rr * Math.sin(tt))
   end
 
+  def self.__real?(x)
+    x.is_a?(Integer) || x.is_a?(Float) || x.is_a?(Rational)
+  end
+
+  # Build a Complex directly from its real and imaginary parts, which must be real numerics (a Complex,
+  # nil, or String argument is a TypeError, unlike Complex() which is more permissive).
+  def self.rectangular(real, imag = 0)
+    unless __real?(real) && __real?(imag)
+      raise TypeError, "not a real"
+    end
+    Complex.new(real, imag)
+  end
+
+  def self.rect(real, imag = 0)
+    rectangular(real, imag)
+  end
+
   # A Complex is never "real" in MRI, even when the imaginary part is zero.
   def real?
     false
@@ -177,6 +194,9 @@ class Complex
       raise TypeError.new("#{other.class} can't be coerced into Complex")
     end
   end
+
+  # The imaginary unit.
+  I = Complex.new(0, 1)
 end
 
 # Ruby: Complex(real, imaginary = 0) -- the imaginary part is optional, so a 1-arg call must not raise
