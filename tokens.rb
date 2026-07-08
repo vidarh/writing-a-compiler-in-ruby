@@ -841,6 +841,21 @@ module Tokens
           end
           return ["/", Operators["/"]]
         end
+      when ?+
+        @s.get
+        # A unary + directly before a numeric literal is a no-op on the value, so drop it and let the
+        # literal tokenize on its own. This mirrors the negative-literal handling for `-` below and,
+        # crucially, lets a following method call bind to the literal: +2.5.round parses as
+        # (+2.5).round, not +(2.5.round). (Only in prefix position -- an infix + after a value keeps
+        # normal operator handling. No `**` exception is needed: +2**2 == +(2**2) either way.)
+        if prev_lastop && DIGITS.member?(@s.peek)
+          return [Number.expect(@s, true), nil]
+        end
+        if @s.peek == ?=
+          @s.get
+          return ["+=", Operators["+="]]
+        end
+        return ["+", Operators["+"]]
       when ?-
         @s.get
         # Only parse as negative number if last token was an operator (not after ')' etc.)
