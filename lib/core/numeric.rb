@@ -41,6 +41,17 @@ class Numeric
     self * self
   end
 
+  # A generic real Numeric is finite by default (only Float overrides for its Infinity/NaN values).
+  def finite?
+    true
+  end
+
+  # Numeric#ceil converts self to a Float via #to_f and ceils that, so a custom numeric only needs
+  # #to_f. Integer/Float provide their own exact implementations; this is the fallback.
+  def ceil(ndigits = 0)
+    to_f.ceil(ndigits)
+  end
+
   def rectangular
     [self, 0]
   end

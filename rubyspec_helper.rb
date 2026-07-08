@@ -360,6 +360,16 @@ class NumericMock < Mock
   def abs2
     self * self
   end
+
+  # Numeric defaults a mock inherits in real mspec: finite? is true unless overridden, and ceil converts
+  # via the stubbed #to_f.
+  def finite?
+    true
+  end
+
+  def ceil(ndigits = 0)
+    to_f.ceil(ndigits)
+  end
 end
 
 def mock_numeric(name)
