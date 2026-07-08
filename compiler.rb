@@ -405,6 +405,27 @@ class Compiler
     return [[:sexp, [:call, :__get_string, lab.to_sym]]]
   end
 
+  # True when the decimal float-literal string is so large it overflows an IEEE double (-> Infinity in
+  # MRI, and un-assemblable by gas). Must be self-hostable: plain string ops only, no String#to_f (a
+  # stub in the self-hosted compiler) and no regex. Estimates the base-10 order of magnitude from the
+  # integer-part length plus any explicit exponent; a double tops out just under 10**309.
+  def __float_literal_overflows?(str)
+    s = str
+    s = s[1..-1] if s[0..0] == "-"
+    mant = s
+    exp = 0
+    ei = s.index("e")
+    ei = s.index("E") if ei.nil?
+    if ei
+      exp = s[(ei + 1)..-1].to_i
+      mant = s[0...ei]
+    end
+    di = mant.index(".")
+    intpart = di ? mant[0...di] : mant
+    order = exp + intpart.length - 1
+    order > 308
+  end
+
   # Outputs all constants used within the code generated so far.
   # Outputs them as string and global constants, respectively.
   def output_constants
@@ -412,7 +433,14 @@ class Compiler
       @string_constants.each { |c, l| @e.string(l, c) }
       @float_constants.each do |label, value|
         @e.emit(label + ":")
-        @e.emit(".double", value)
+        # gas cannot assemble a .double that overflows the IEEE double range (e.g. `1e1020` ->
+        # "Error: cannot create floating-point number"). MRI treats such a literal as +/-Infinity, so
+        # emit the Infinity bit pattern directly for a clearly-overflowing literal.
+        if __float_literal_overflows?(value)
+          @e.emit(".quad", (value[0..0] == "-") ? "0xfff0000000000000" : "0x7ff0000000000000")
+        else
+          @e.emit(".double", value)
+        end
       end
     end
 
