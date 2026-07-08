@@ -109,11 +109,11 @@ class Object
     [self]
   end
 
-  def to_enum(meth = :each, *args)
-    GenericEnumerator.new(self, meth, *args)
+  def to_enum(meth = :each, *args, &size_block)
+    GenericEnumerator.new(self, meth, *args, &size_block)
   end
-  def enum_for(meth = :each, *args)
-    GenericEnumerator.new(self, meth, *args)
+  def enum_for(meth = :each, *args, &size_block)
+    GenericEnumerator.new(self, meth, *args, &size_block)
   end
 
   # Ivar-by-name reflection stubs. Ivar slots are assigned STATICALLY by the compiler with no

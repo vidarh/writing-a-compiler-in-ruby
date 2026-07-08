@@ -1054,7 +1054,7 @@ class Array
   # Same as Array#each, but passes the index of the element
   # instead of the element itself.
   def each_index
-    return to_enum(:each_index) if !block_given?
+    return to_enum(:each_index) { self.size } if !block_given?
     i = 0
     while i < self.size
       yield(i)
@@ -1559,16 +1559,40 @@ class Array
   # and returns self; without a block returns the array of combinations (answers .to_a/.each like MRI's
   # Enumerator for the common use).
   def combination(n, &block)
+    return to_enum(:combination, n) { __combination_size(n) } if !block
     result = []
     if n >= 0 && n <= length
       __combination_into(n, 0, [], result)
     end
-    if block
-      result.each { |c| block.call(c) }
-      self
-    else
-      result
+    result.each { |c| block.call(c) }
+    self
+  end
+
+  # Binomial coefficient C(m, k), 0 when k is out of [0, m]. Uses the smaller of k / m-k for fewer
+  # iterations, and multiplies-before-dividing so every intermediate stays an exact integer.
+  def __binomial(m, k)
+    return 0 if k < 0 || k > m
+    k = m - k if k > m - k
+    r = 1
+    i = 0
+    while i < k
+      r = r * (m - i) / (i + 1)
+      i += 1
     end
+    r
+  end
+
+  # Number of n-combinations of self: C(length, n), or 0 when n is out of [0, length].
+  def __combination_size(n)
+    __binomial(length, n)
+  end
+
+  # Number of n-repeated-combinations of self: the multiset coefficient C(length + n - 1, n).
+  def __rep_comb_size(n)
+    return 0 if n < 0
+    return 1 if n == 0
+    return 0 if length == 0
+    __binomial(length + n - 1, n)
   end
 
   # All n-length permutations (n defaults to the array length). Block form yields each and returns self.
@@ -1642,14 +1666,11 @@ class Array
 
   # All n-length non-decreasing-index combinations drawn from self WITH repetition.
   def repeated_combination(n, &block)
+    return to_enum(:repeated_combination, n) { __rep_comb_size(n) } if !block
     result = []
     __repeated_comb_into(n, 0, [], result) if n >= 0
-    if block
-      result.each { |c| block.call(c) }
-      self
-    else
-      result
-    end
+    result.each { |c| block.call(c) }
+    self
   end
 
   def __repeated_comb_into(n, start, current, result)

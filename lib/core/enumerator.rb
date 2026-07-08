@@ -395,14 +395,19 @@ class RangeEnumerator < Enumerator
 end
 
 class GenericEnumerator < Enumerator
-  def initialize(receiver, gmethod = :each, *gargs)
+  def initialize(receiver, gmethod = :each, *gargs, &size_block)
     @receiver = receiver
     @gmethod = gmethod
     @gargs = gargs
+    # Optional lazy size, as MRI's enum_for(:m, *args) { size_expr }: nil (unknown) when absent.
+    @size_block = size_block
   end
   def each(&block)
     return self if !block
     @receiver.__send__(@gmethod, *@gargs, &block)
+  end
+  def size
+    @size_block ? @size_block.call : nil
   end
   def to_a
     r = []
