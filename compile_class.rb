@@ -604,13 +604,20 @@ class Compiler
     expr_super = !sscope && (superclass.is_a?(Array) || local_super)
     if sscope
       ssize = sscope.klass_size
-      class_alloc_size = cscope.klass_size
+      # Allocate the class object with the FINAL runtime __vtable_size, not the compile-time
+      # cscope.klass_size (which is @vtableoffsets.max evaluated mid-codegen and can be SMALLER than the
+      # link-time __vtable_size once later methods allocate higher offsets). __include_module and other
+      # code iterate a class object up to __vtable_size, so a klass_size-sized object gets read (and
+      # occasionally written) one-or-more slots PAST its end -- a heap OOB that crashes flakily under
+      # ASLR when the slot lands in an unmapped page. The extra slots [klass_size, __vtable_size) are
+      # filled with base_vtable method_missing thunks, so this only fixes the size; behaviour is unchanged.
+      class_alloc_size = :__vtable_size
     elsif runtime_super || expr_super
       ssize = :__vtable_size
       class_alloc_size = :__vtable_size
     else
       ssize = 0
-      class_alloc_size = cscope.klass_size
+      class_alloc_size = :__vtable_size
     end
 
     # Metaclass (slot 0). Share the superclass's metaclass so class methods are inherited: a known
