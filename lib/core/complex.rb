@@ -249,6 +249,30 @@ class Complex
     Complex(@real.numerator * (d / @real.denominator), @imag.numerator * (d / @imag.denominator))
   end
 
+  # Like to_r, but forwards to the real part's #rationalize (with the optional precision argument). The
+  # imaginary part must be an EXACT zero, else RangeError; more than one argument is an ArgumentError.
+  def rationalize(*args)
+    if args.length > 1
+      raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0..1)"
+    end
+    raise RangeError, "can't convert #{self} into Rational" unless __exact_zero_imag?
+    @real.rationalize(*args)
+  end
+
+  # Complex is ordered only when BOTH operands are real (imaginary part an exact zero): then it compares
+  # the real parts. Otherwise (an imaginary part on either side, or a non-numeric argument) it is nil.
+  def <=>(other)
+    return nil unless __exact_zero_imag?
+    if other.is_a?(Complex)
+      return nil unless other.__exact_zero_imag?
+      @real <=> other.real
+    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+      @real <=> other
+    else
+      nil
+    end
+  end
+
   def hash
     [@real, @imag].hash
   end
