@@ -2363,7 +2363,10 @@ class Integer < Numeric
   end
 
   # Spaceship operator for comparison (returns -1, 0, or 1)
-  def <=> other
+  # Private comparison core shared by <=> and the relational operators. Keeping the operators on this
+  # (rather than the public #<=>) means user code that overrides Integer#<=> does NOT break <, >, <=,
+  # >= -- matching MRI, where those are primitives independent of <=>. Returns -1/0/1, or nil.
+  def __compare_to(other)
     # Check if types are comparable (raises ArgumentError if not)
     __check_comparable(other)
 
@@ -2414,6 +2417,10 @@ class Integer < Numeric
             # both heap - dispatch to proper comparison
             (return (callm self __cmp_heap_heap other)))))
     )
+  end
+
+  def <=> other
+    __compare_to(other)
   end
 
   # Absolute value
@@ -3568,22 +3575,22 @@ class Integer < Numeric
   end
 
   def > other
-    cmp = self <=> other
+    cmp = __compare_to(other)
     cmp == 1
   end
 
   def >= other
-    cmp = self <=> other
+    cmp = __compare_to(other)
     cmp == 1 || cmp == 0
   end
 
   def < other
-    cmp = self <=> other
+    cmp = __compare_to(other)
     cmp == -1
   end
 
   def <= other
-    cmp = self <=> other
+    cmp = __compare_to(other)
     cmp == -1 || cmp == 0
   end
 
