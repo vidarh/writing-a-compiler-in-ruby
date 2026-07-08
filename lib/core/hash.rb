@@ -356,6 +356,15 @@ class Hash
 
   # Flatten to an array [k1, v1, k2, v2, ...]; level > 1 flattens nested array values further.
   def flatten(level = 1)
+    # The level must be an Integer (or #to_int-convertible); MRI raises TypeError otherwise, e.g. for
+    # flatten(Object.new). Coerce a to_int responder, reject anything else.
+    if !level.is_a?(Integer)
+      if level.respond_to?(:to_int)
+        level = level.to_int
+      else
+        raise TypeError, "no implicit conversion of #{level.class} into Integer"
+      end
+    end
     result = []
     each { |k, v| result << k; result << v }
     level > 1 ? result.flatten(level - 1) : result

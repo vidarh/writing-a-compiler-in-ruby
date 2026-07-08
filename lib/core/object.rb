@@ -53,6 +53,10 @@ class Object
   end
 
   def === other
+    # Case-equality falls back to == for ordinary objects, but like MRI's C-level rb_equal it first
+    # checks raw identity -- via object_id, which is not user-overridable the way #equal?/#== are --
+    # so `obj === obj` is true even for an object that overrides #== / #equal? to return false.
+    return true if self.object_id == other.object_id
     self.==(other)
   end
 
