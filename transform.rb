@@ -968,11 +968,14 @@ class Compiler
       next :skip if e[0] == :sexp
 
       if e[0].is_a?(Symbol) && OPER_METHOD.member?(e[0].to_s)
-        # Handle unary minus specially: [:-, operand] => [:callm, 0, :-, [operand]]
+        # Handle unary minus: [:-, operand] => [:callm, operand, :-@, []]. Dispatching to the operand's
+        # own #-@ (rather than lowering to `0 - operand`) honours a custom -@ on any object, matching MRI
+        # and mirroring the unary-plus (+@) handling below. Integer/Float/Rational/Complex/String all
+        # define -@; negative numeric LITERALS are folded by the lexer, so only -<expression> reaches here.
         if e[0] == :- && e.length == 2
-          e[3] = E[e[1]]  # args = [operand]
-          e[2] = :-       # method = :-
-          e[1] = E[:sexp, 1]  # object = 0 (tagged as fixnum: 0*2+1 = 1)
+          e[3] = E[]      # args = [] (unary negation takes no arguments)
+          e[2] = :-@      # method = :-@
+          e[1] = e[1]     # object = operand (unchanged)
           e[0] = :callm   # op = :callm
         # Handle unary plus: [:+, operand] => [:callm, operand, :+@, []]
         elsif e[0] == :+ && e.length == 2
