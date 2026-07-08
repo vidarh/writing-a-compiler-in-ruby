@@ -211,11 +211,13 @@ class Compiler
     # Find the enclosing ClassScope for method registration
     class_scope = find_class_scope(scope)
 
-    # Eigenclasses are Class objects, so they use Class's klass_size
-    # Get Class's ClassScope to determine the correct klass_size
-    # If Class hasn't been compiled yet, calculate directly from vtableoffsets
-    # klass_size is now in slots (not bytes), so no need to multiply by PTR_SIZE
-    eksize = @classes[:Class] ? @classes[:Class].klass_size : @vtableoffsets.max
+    # Eigenclasses are Class objects, so they must be sized to the FINAL runtime __vtable_size -- NOT a
+    # compile-time klass_size / @vtableoffsets.max snapshot (which is smaller once later methods allocate
+    # higher offsets). An under-sized eigenclass is read past its end by __include_module /
+    # instance_methods / __alias_method_runtime (they iterate to __vtable_size) -- a heap OOB that crashes
+    # flakily under ASLR. Use the link-time :__vtable_size symbol, matching Object#singleton_class and the
+    # compile_class allocation path.
+    eksize = :__vtable_size
 
     # Using nested let()'s for clean scope management
     # Outer let: evaluate expr and save to __eigenclass_obj
