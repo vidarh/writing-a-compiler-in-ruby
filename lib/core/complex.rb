@@ -192,7 +192,8 @@ class Complex
   end
 
   def self.__real?(x)
-    x.is_a?(Integer) || x.is_a?(Float) || x.is_a?(Rational)
+    return true if x.is_a?(Integer) || x.is_a?(Float) || x.is_a?(Rational)
+    x.is_a?(Numeric) && x.real?
   end
 
   # Build a Complex directly from its real and imaginary parts, which must be real numerics (a Complex,
