@@ -286,17 +286,27 @@ class Complex
   end
 
   def to_s
-    "#{@real}#{__imag_str}i"
+    "#{@real}#{__imag_str}"
   end
 
   def inspect
-    "(#{@real}#{__imag_str}i)"
+    "(#{@real}#{__imag_str})"
   end
 
-  # Imaginary component with its leading sign, matching MRI's "+4"/"-4" formatting. A negative value
-  # already carries its own "-", so only a non-negative one needs an explicit "+".
+  # The imaginary component with its leading sign and trailing i, matching MRI. The sign is taken from
+  # the value's own string form, so -0.0 -> "-0.0i" (not "+-0.0i"); a non-finite value (Infinity/NaN)
+  # is written with a "*i" separator ("+Infinity*i") since "Infinityi" would be ambiguous.
   def __imag_str
-    @imag < 0 ? @imag.to_s : "+#{@imag}"
+    s = @imag.to_s
+    if s[0..0] == "-"
+      sign = "-"
+      mag = s[1..-1]
+    else
+      sign = "+"
+      mag = s
+    end
+    suffix = (@imag.is_a?(Float) && (@imag.nan? || !@imag.infinite?.nil?)) ? "*i" : "i"
+    "#{sign}#{mag}#{suffix}"
   end
 
   def __coerce_apply(other, op)
