@@ -565,8 +565,16 @@ class Float
   # coercion protocol -- Complex#coerce promotes self to Complex and Complex#/ does the division. A
   # genuinely non-numeric operand raises TypeError there.
   def quo other
-    other = other.to_f if !other.is_a?(Float) && other.respond_to?(:to_f)
-    self / other
+    # Mirrors #fdiv's argument handling: a real numeric divisor converts to Float and divides; anything
+    # else that responds to #coerce uses the coercion protocol (so `float.quo(Complex)` divides via
+    # Complex#quo rather than raising on Complex#to_f); a non-numeric, non-coercible value is a TypeError.
+    return self / other if other.is_a?(Float)
+    return self / other.to_f if other.is_a?(Integer) || other.is_a?(Rational) || other.is_a?(Numeric)
+    if other.respond_to?(:coerce)
+      a, b = other.coerce(self)
+      return a.quo(b)
+    end
+    raise TypeError, "#{other.class} can't be coerced into Float"
   end
 
   def fdiv other
