@@ -728,6 +728,17 @@ class Float
     self
   end
 
+  # Float is not a Numeric subclass here, so it needs its own copies of these (never an Integer; its own
+  # complex conjugate).
+  def integer?
+    false
+  end
+
+  def conjugate
+    self
+  end
+  alias conj conjugate
+
   def abs
     r = Float.new
     %s(fabs self r)

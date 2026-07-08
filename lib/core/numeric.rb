@@ -46,6 +46,22 @@ class Numeric
     true
   end
 
+  # Unary plus is identity.
+  def +@
+    self
+  end
+
+  # A generic Numeric is not an Integer (Integer overrides with true).
+  def integer?
+    false
+  end
+
+  # The complex conjugate of a real number is itself.
+  def conjugate
+    self
+  end
+  alias conj conjugate
+
   # Numeric#ceil converts self to a Float via #to_f and ceils that, so a custom numeric only needs
   # #to_f. Integer/Float provide their own exact implementations; this is the fallback.
   def ceil(ndigits = 0)
