@@ -238,6 +238,17 @@ class Complex
     @real.to_r
   end
 
+  # denominator is the least common multiple of the two parts' denominators; numerator scales each
+  # part up to that common denominator (so Complex(3/4, 3/4).numerator == Complex(3, 3), denominator 4).
+  def denominator
+    @real.denominator.lcm(@imag.denominator)
+  end
+
+  def numerator
+    d = denominator
+    Complex(@real.numerator * (d / @real.denominator), @imag.numerator * (d / @imag.denominator))
+  end
+
   def hash
     [@real, @imag].hash
   end
