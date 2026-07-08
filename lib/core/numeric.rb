@@ -52,6 +52,16 @@ class Numeric
     to_f.ceil(ndigits)
   end
 
+  # numerator/denominator convert self to a Rational (via #to_r) and read its parts, so a custom
+  # numeric only needs #to_r. Integer/Float/Rational override with their own implementations.
+  def numerator
+    to_r.numerator
+  end
+
+  def denominator
+    to_r.denominator
+  end
+
   def rectangular
     [self, 0]
   end

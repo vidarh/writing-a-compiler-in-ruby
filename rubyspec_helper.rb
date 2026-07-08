@@ -354,21 +354,34 @@ class NumericMock < Mock
     super
   end
 
-  # Derived Numeric methods that specs invoke on a numeric mock and that are defined purely in terms of
-  # the stubbed primitive operators (a real Numeric would inherit these). abs2 is self*self, so it drives
-  # the stubbed #*; the mock records the call and returns its stubbed value.
+  # Derived Numeric methods that specs invoke on a numeric mock and that a real Numeric would inherit,
+  # defined in terms of the stubbed primitives (abs2 drives #*, ceil #to_f, numerator/denominator #to_r).
+  # Each first honours an explicit should_receive expectation for its own name -- otherwise defining the
+  # method here would SHADOW method_missing and defeat a direct stub (e.g. a mock standing in for the
+  # Rational that #to_r returns stubs #numerator itself).
   def abs2
+    return method_missing(:abs2) if @expectations[:abs2]
     self * self
   end
 
-  # Numeric defaults a mock inherits in real mspec: finite? is true unless overridden, and ceil converts
-  # via the stubbed #to_f.
   def finite?
+    return method_missing(:finite?) if @expectations[:finite?]
     true
   end
 
   def ceil(ndigits = 0)
+    return method_missing(:ceil, ndigits) if @expectations[:ceil]
     to_f.ceil(ndigits)
+  end
+
+  def numerator
+    return method_missing(:numerator) if @expectations[:numerator]
+    to_r.numerator
+  end
+
+  def denominator
+    return method_missing(:denominator) if @expectations[:denominator]
+    to_r.denominator
   end
 end
 
