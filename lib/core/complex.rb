@@ -25,7 +25,7 @@ class Complex
   def +(other)
     if other.is_a?(Complex)
       Complex.new(@real + other.real, @imag + other.imag)
-    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+    elsif __real_numeric?(other)
       Complex.new(@real + other, @imag)
     else
       __coerce_apply(other, :+)
@@ -35,7 +35,7 @@ class Complex
   def -(other)
     if other.is_a?(Complex)
       Complex.new(@real - other.real, @imag - other.imag)
-    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+    elsif __real_numeric?(other)
       Complex.new(@real - other, @imag)
     else
       __coerce_apply(other, :-)
@@ -47,7 +47,7 @@ class Complex
       # (a+bi)(c+di) = (ac - bd) + (ad + bc)i
       Complex.new(@real * other.real - @imag * other.imag,
                   @real * other.imag + @imag * other.real)
-    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+    elsif __real_numeric?(other)
       Complex.new(@real * other, @imag * other)
     else
       __coerce_apply(other, :*)
@@ -62,10 +62,12 @@ class Complex
       d = other.abs2
       Complex.new((@real * other.real + @imag * other.imag).quo(d),
                   (@imag * other.real - @real * other.imag).quo(d))
-    elsif other.is_a?(Integer) || other.is_a?(Float) || other.is_a?(Rational)
+    elsif __real_numeric?(other)
       Complex.new(@real.quo(other), @imag.quo(other))
     else
-      __coerce_apply(other, :/)
+      # MRI's Complex#/ (== #quo) coerces via :quo, not :/, so integer operands divide exactly to a
+      # Rational (5 / 2 -> (5/2)) rather than truncating.
+      __coerce_apply(other, :quo)
     end
   end
   alias quo /
