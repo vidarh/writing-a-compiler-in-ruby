@@ -214,6 +214,17 @@ class Complex
     false
   end
 
+  # A Complex is never an Integer, even with a zero imaginary part.
+  def integer?
+    false
+  end
+
+  # Marshal support: dump the two components as [real, imag]. (MRI marks marshal_dump private; `private`
+  # is a no-op here so it stays public, but #send reaches it either way. MRI defines no marshal_load.)
+  def marshal_dump
+    [@real, @imag]
+  end
+
   def self.__part_finite?(x)
     return x.finite? if x.is_a?(Float)
     true   # Integer / Rational are always finite
