@@ -159,6 +159,25 @@ class File < IO
     result
   end
 
+  # File.mtime(path) -> Time of last modification. st_mtim.tv_sec is at word [16] of the stat buffer
+  # (st_size[11], st_blksize[12], st_blocks[13], st_atim[14,15], st_mtim[16,17] in the i386 struct stat).
+  def self.mtime(path)
+    path = __coerce_path(path)
+    # Rebase by the same 2020 epoch Time uses internally: raw st_mtime (~1.78e9) overflows a 30-bit fixnum,
+    # but (st_mtime - 1577836800) fits. nil sentinel distinguishes stat-failure from a valid (possibly
+    # negative) rebased time. Time#to_i re-adds the epoch (bignum) to yield the true seconds.
+    result = nil
+    %s(let (rpath buf r)
+      (assign rpath (callm path __get_raw))
+      (assign buf (__array 40))
+      (assign r (stat rpath buf))
+      (if (eq r 0) (assign result (__int (sub (index buf 16) 1577836800)))))
+    raise Errno::ENOENT.new("No such file or directory - #{path}") if result.nil?
+    t = Time.new
+    t.__set_rebased(result)
+    t
+  end
+
   # File.link(old, new) -> 0. Creates a hard link. File.symlink(old, new) -> 0. Creates a symlink.
   def self.link(old, new)
     old = __coerce_path(old)

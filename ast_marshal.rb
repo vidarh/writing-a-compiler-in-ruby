@@ -137,51 +137,13 @@ module ASTMarshal
   # edit to any core source changes this key, and a mismatch falls back to a full parse.
   MASK = 0xFFFFF
 
+  # Staleness token: the mtime (epoch seconds) of the core source directory. ONE stat -- not a byte-by-byte
+  # content hash over every core file, which was pathologically slow self-hosted (millions of getbyte+mul
+  # iterations, dwarfing the compile it was meant to speed up). The directory mtime changes whenever a core
+  # file is added, removed, or rewritten (atomic-rename saves, the common editor path) -> a mismatch falls
+  # back to a full parse. It's a filesystem property, so MRI and self-hosted read the identical value.
   def core_key(dir)
-    key = 0
-    dirs = [dir]
-    di = 0
-    while di < dirs.length
-      d = dirs[di]
-      di += 1
-      ents = Dir.entries(d)
-      ei = 0
-      while ei < ents.length
-        name = ents[ei]
-        ei += 1
-        # skip ".", "..", and dotfiles (e.g. a dangling ".#foo.rb" editor lock) -- 46 == "."
-        if name.getbyte(0) != 46
-          path = d + "/" + name
-          if File.directory?(path)
-            dirs.push(path)
-          else
-            ln = name.length
-            if ln > 3 && name[ln - 3, 3] == ".rb"
-              key = (key + file_key(path, name)) & MASK
-            end
-          end
-        end
-      end
-    end
-    key
-  end
-
-  def file_key(path, name)
-    bytes = IO.binread(path)
-    n = bytes.bytesize
-    h = n & MASK
-    i = 0
-    while i < n
-      h = (h * 31 + bytes.getbyte(i)) & MASK
-      i += 1
-    end
-    j = 0
-    nl = name.length
-    while j < nl
-      h = (h * 31 + name.getbyte(j)) & MASK
-      j += 1
-    end
-    h
+    File.mtime(dir).to_i
   end
 
   # Read the cached AST from `path` iff it exists and its stored key matches the live core sources under
