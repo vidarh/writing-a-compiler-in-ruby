@@ -17,6 +17,14 @@ class Array
     ob = nil
     %s(assign ob (__array (index self 1)))
     %s(assign (index ob 0) self)
+    # Nil-init slots after the class pointer so a SUBCLASS's unset user ivar reads as nil, not the raw 0
+    # that __array (calloc) leaves -- a method call on such a raw-0 ivar segfaults. __initialize below
+    # then sets Array's own internal slots. (Done via a raw s-exp loop, NOT a `self != Array` guard: a
+    # method dispatch here breaks bootstrap, and the loop -- a few nil stores -- is cheap vs the alloc.)
+    %s(let (i sz)
+      (assign i 1)
+      (assign sz (index self 1))
+      (while (lt i sz) (do (assign (index ob i) nil) (assign i (add i 1)))))
     ob.__initialize
     ob
   end
