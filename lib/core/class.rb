@@ -202,6 +202,9 @@ class Class
   end
 
   def name
+    # An anonymous class/module (Class.new / Module.new not yet assigned to a constant) has slot 2 == 0;
+    # MRI returns nil for its name. Constant assignment (__const_set_global) fills this in.
+    %s(if (eq @name 0) (return nil))
     %s(__get_string @name)
   end
 

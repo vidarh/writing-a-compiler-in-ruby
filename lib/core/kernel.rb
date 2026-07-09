@@ -335,6 +335,13 @@ class Kernel
   # name/value arrays; __const_get_global consults it. The old raising stub ABORTED whole spec
   # files at load (language/class_spec: `ClassSpecsNumber = 12` -> NameError before any test).
   def __const_set_global(const_name, value)
+    # MRI names an anonymous class/module when it is first assigned to a constant (S = Struct.new(...) ->
+    # S.name == "S"; X = Class.new -> "X"). An unnamed class/module has slot 2 (@name) == 0, so fill it
+    # in with this constant's name. rubyspec top-level constants wrap into `def run_specs` and land here.
+    # NB: in this compiler Class is NOT a subclass of Module (stubs.rb FIXME), so test both.
+    if value.is_a?(Class) || value.is_a?(Module)
+      %s(if (eq (index value 2) 0) (assign (index value 2) (callm const_name __get_raw)))
+    end
     if !$__runtime_const_names
       $__runtime_const_names = []
       $__runtime_const_vals = []

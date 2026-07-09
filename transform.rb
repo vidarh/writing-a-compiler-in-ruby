@@ -2037,7 +2037,10 @@ class Compiler
         end
         inner << E[:sexp, E[:assign, :__tmpcls, E[:__new_class_object, :__vtable_size, :__sup, :__vtable_size, E[:index, :__sup, 0]]]]
         inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 1], E[:index, :__sup, 1]]]
-        inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 2], E[:index, :__sup, 2]]]
+        # slot 2 = @name: an anonymous Class.new/Module.new is UNNAMED (raw 0), NOT the superclass's name
+        # (MRI: Class.new(String).name is nil, not "String"). This gives constant assignment a clean
+        # "unnamed" signal to name it (see __const_set_global); Class#name maps raw 0 -> nil.
+        inner << E[:sexp, E[:assign, E[:index, :__tmpcls, 2], 0]]
         # Raise @instance_size (slot 1) to cover the block's ivars if the superclass's size is smaller, so
         # `new` allocates enough slots for the block-defined setters/ivars (see needed_slots above).
         if needed_slots > 0
