@@ -116,6 +116,10 @@ class MarshalWriter
     if cur.is_a?(Hash)
       return userclass(cur, Hash) + "{" + hash_body(cur)
     end
+    if cur.respond_to?(:_dump)
+      # Old-style custom serialization: klass#_dump(depth) -> a String, klass._load(str) reverses it.
+      return "u" + symbol(cur.class.name) + str(cur._dump(-1))
+    end
     if cur.respond_to?(:marshal_dump)
       return "U" + symbol(cur.class.name) + write(cur.marshal_dump)
     end
@@ -189,6 +193,7 @@ class MarshalReader
     return read_hash    if char == "{"
     return read_float   if char == "f"
     return read_object  if char == "o"
+    return read_load    if char == "u"
     return read_marshal_load if char == "U"
     return read_symbol_link  if char == ";"
     return read_object_link  if char == "@"
@@ -313,6 +318,15 @@ class MarshalReader
     @objects << obj
     data = read
     obj.marshal_load(data)
+    obj
+  end
+
+  # 'u' <class symbol> <String>: reconstruct via the class method klass._load(str).
+  def read_load
+    klass = marshal_const_get(read.to_s)
+    str = read_string
+    obj = klass._load(str)
+    @objects << obj
     obj
   end
 
