@@ -59,12 +59,25 @@ class Scanner
     # set filename if io is an actual file (instead of STDIN)
     # otherwhise, indicate it comes from a stream
     @filename = io.is_a?(File) && File.file?(io) ? File.expand_path(io.path) : "<stream>"
+
+    # Read the whole input into an in-memory char array ONCE so `fill` indexes it, instead of
+    # interleaving @io.getc with the @buf pushback-string churn on every scan. Semantics are
+    # unchanged (the "HybridScanner" from docs/scanner-analysis): @pos is the next unread SOURCE
+    # char; @buf still holds pushback for unget. Slurp via getc (the scanner's ONLY io contract --
+    # not read/seek; io is often STDIN, and the unit tests pass a getc-only MockIO). Char array,
+    # not String indexing, keeps @chars[@pos] O(1). Works identically MRI-hosted and self-hosted.
+    @chars = []
+    while c = io.getc
+      @chars << c.chr   # normalise to a 1-char String -- getc may return an Integer byte (as the
+    end                 # old `fill` did with `c.chr`); keeps @buf String-typed for @buf.empty?.
+    @pos = 0
   end
 
   def fill
     if @buf.empty?
-      if c = @io.getc
-        @buf = c.chr
+      if @pos < @chars.length
+        @buf = @chars[@pos]
+        @pos += 1
       end
     end
   end
