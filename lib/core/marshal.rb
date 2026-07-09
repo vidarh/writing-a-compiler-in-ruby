@@ -59,7 +59,11 @@ class MarshalWriter
   end
 
   def basic(ob)
-    return "f" + str("0") if ob.is_a?(Float) && ob == 0.0
+    if ob.is_a?(Float) && ob == 0.0
+      # MRI distinguishes -0.0 ("-0") from +0.0 ("0"); 1.0/-0.0 is -Infinity.
+      return "f" + str("-0") if (1.0 / ob) < 0.0
+      return "f" + str("0")
+    end
     return "0" if ob.nil?
     return "T" if ob == true
     return "F" if ob == false
