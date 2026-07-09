@@ -97,7 +97,7 @@ module Tokens
     def self.expect(s, allow_negative = true)
       tmp = ""
       # Only consume leading '-' if allowed (i.e., after an operator, not after ')')
-      tmp << s.get if allow_negative && s.peek == ?-
+      tmp << s.get_ch if allow_negative && s.peek == ?-
       c = s.peek
       if (c == nil) || (?0 .. ?9).member?(c) == false
         return nil
@@ -106,40 +106,40 @@ module Tokens
       # Check for hex (0x) or binary (0b) prefix
       radix = 10
       if s.peek == ?0
-        tmp << s.get
+        tmp << s.get_ch
         c = s.peek
         if c == ?x || c == ?X
           # Hexadecimal
           radix = 16
-          tmp << s.get
+          tmp << s.get_ch
           while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c) || (?a .. ?f).member?(c) || (?A .. ?F).member?(c))
-            tmp << s.get
+            tmp << s.get_ch
           end
         elsif c == ?b || c == ?B
           # Binary
           radix = 2
-          tmp << s.get
+          tmp << s.get_ch
           while (c = s.peek) && ((c == ?_) || c == ?0 || c == ?1)
-            tmp << s.get
+            tmp << s.get_ch
           end
         elsif c == ?o || c == ?O
           # Octal with explicit prefix (0o17 / 0O17)
           radix = 8
-          tmp << s.get
+          tmp << s.get_ch
           while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
-            tmp << s.get
+            tmp << s.get_ch
           end
         else
           # Octal number starting with 0 (implicit, e.g. 017)
           radix = 8
           while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
-            tmp << s.get
+            tmp << s.get_ch
           end
         end
       else
         # Regular decimal number
         while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
-          tmp << s.get
+          tmp << s.get_ch
         end
       end
       return nil if tmp == ""
@@ -227,7 +227,7 @@ module Tokens
       while true
         c = s.peek
         if (?0..?9).member?(c)
-          out << s.get
+          out << s.get_ch
         elsif c == ?_
           s.get
           if (?0..?9).member?(s.peek)
@@ -299,7 +299,7 @@ module Tokens
 
             # Optional sign
             if s.peek == ?+ || s.peek == ?-
-              num << s.get
+              num << s.get_ch
             end
 
             # Exponent digits: read as a raw decimal string, exactly like the fractional part
