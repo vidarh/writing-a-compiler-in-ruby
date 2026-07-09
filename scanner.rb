@@ -51,6 +51,7 @@ class Scanner
   def initialize(io)
     @io = io
     @buf = ""
+    @peeked = nil
     @lineno = 1
     @col = 1
     @last_ws_consumed_newline = false
@@ -84,7 +85,11 @@ class Scanner
 
   def peek
     fill
-    return @buf[-1]
+    # Cache the lookahead char: @buf[-1] allocates a fresh 1-char String every call, and peek is called
+    # ~twice per source char -- the single biggest compile allocator. The cache is invalidated (set nil)
+    # by every @buf mutation (get / get_ch / unget), so it re-allocates at most once per consumed char.
+    @peeked = @buf[-1] if @peeked.nil?
+    @peeked
   end
 
   LF="\n"
@@ -93,6 +98,7 @@ class Scanner
     fill
     pos = position
     ch = @buf.slice!(-1,1)
+    @peeked = nil
     @col += 1
     if ch == LF
       @lineno += 1
@@ -112,6 +118,7 @@ class Scanner
   def get_ch
     fill
     ch = @buf.slice!(-1,1)
+    @peeked = nil
     @col += 1
     if ch == LF
       @lineno += 1
@@ -123,6 +130,7 @@ class Scanner
 
   def unget(c)
     @buf << c.reverse
+    @peeked = nil
 
     if c.respond_to?(:position)
       pos = c.position

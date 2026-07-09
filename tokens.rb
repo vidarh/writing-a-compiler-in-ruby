@@ -93,13 +93,22 @@ module Tokens
 end
 
 module Tokens
+  # Allocation-free character-class tests. The old `(?0 .. ?9).member?(c)` idiom allocated a char Range
+  # AND ran Enumerable#member? (which walks the range via String#succ, allocating a String per step) on
+  # EVERY source character -- together the
+  # single largest compile allocator (~10% of all allocations). `c.ord` is the byte value on both hosts
+  # (String#ord / Integer#ord), so these behave identically MRI-hosted and self-hosted.
+  def self.digit?(c);    c && (b = c.ord) >= 48 && b <= 57; end                                   # 0-9
+  def self.octdigit?(c); c && (b = c.ord) >= 48 && b <= 55; end                                   # 0-7
+  def self.hexdigit?(c); c && (b = c.ord) >= 48 && (b <= 57 || (b >= 65 && b <= 70) || (b >= 97 && b <= 102)); end  # 0-9A-Fa-f
+
   class Int
     def self.expect(s, allow_negative = true)
       tmp = ""
       # Only consume leading '-' if allowed (i.e., after an operator, not after ')')
       tmp << s.get_ch if allow_negative && s.peek == ?-
       c = s.peek
-      if (c == nil) || (?0 .. ?9).member?(c) == false
+      if (c == nil) || Tokens.digit?(c) == false
         return nil
       end
 
@@ -112,7 +121,7 @@ module Tokens
           # Hexadecimal
           radix = 16
           tmp << s.get_ch
-          while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c) || (?a .. ?f).member?(c) || (?A .. ?F).member?(c))
+          while (c = s.peek) && ((c == ?_) || Tokens.hexdigit?(c))
             tmp << s.get_ch
           end
         elsif c == ?b || c == ?B
@@ -126,19 +135,19 @@ module Tokens
           # Octal with explicit prefix (0o17 / 0O17)
           radix = 8
           tmp << s.get_ch
-          while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
+          while (c = s.peek) && ((c == ?_) || Tokens.octdigit?(c))
             tmp << s.get_ch
           end
         else
           # Octal number starting with 0 (implicit, e.g. 017)
           radix = 8
-          while (c = s.peek) && ((c == ?_) || (?0 .. ?7).member?(c))
+          while (c = s.peek) && ((c == ?_) || Tokens.octdigit?(c))
             tmp << s.get_ch
           end
         end
       else
         # Regular decimal number
-        while (c = s.peek) && ((c == ?_) || (?0 .. ?9).member?(c))
+        while (c = s.peek) && ((c == ?_) || Tokens.digit?(c))
           tmp << s.get_ch
         end
       end
@@ -173,13 +182,13 @@ module Tokens
         else
           digit_value = nil
           if radix == 10
-            if (?0..?9).member?(s)
+            if Tokens.digit?(s)
               digit_value = s.ord - ?0.ord
             else
               break
             end
           elsif radix == 16
-            if (?0..?9).member?(s)
+            if Tokens.digit?(s)
               digit_value = s.ord - ?0.ord
             elsif (?a..?f).member?(s)
               digit_value = s.ord - ?a.ord + 10
@@ -197,7 +206,7 @@ module Tokens
               break
             end
           elsif radix == 8
-            if (?0..?7).member?(s)
+            if Tokens.octdigit?(s)
               digit_value = s.ord - ?0.ord
             else
               break
@@ -226,11 +235,11 @@ module Tokens
       out = ""
       while true
         c = s.peek
-        if (?0..?9).member?(c)
+        if Tokens.digit?(c)
           out << s.get_ch
         elsif c == ?_
           s.get
-          if (?0..?9).member?(s.peek)
+          if Tokens.digit?(s.peek)
             # separator between digits: dropped; the loop reads the following digit next
           else
             s.unget("_")
@@ -247,7 +256,8 @@ module Tokens
     # e.g. `5if` == `5 if`, `5in` == `5 in`)?
     def self.ident_char?(c)
       return false if c.nil?
-      (?a..?z).member?(c) || (?A..?Z).member?(c) || (?0..?9).member?(c) || c == ?_
+      b = c.ord
+      (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57) || b == 95
     end
 
     # A trailing `i` immediately after a numeric literal is the imaginary suffix (5i, 3.2i, 0.0i ->
@@ -279,7 +289,7 @@ module Tokens
       # Check for float FIRST
       if s.peek == ?.
         s.get  # consume '.'
-        if !(?0..?9).member?(s.peek)
+        if !Tokens.digit?(s.peek)
           s.unget(".")
           # Not a float, fall through to check for large integer
         else
@@ -329,7 +339,7 @@ module Tokens
         if s.peek == ?+ || s.peek == ?-
           esign = s.get
         end
-        if (?0..?9).member?(s.peek)
+        if Tokens.digit?(s.peek)
           num = "#{i}e#{esign}#{Number.read_digits(s)}"
           num = "-#{num}" if neg && i == 0   # restore sign lost when Int.expect turned "-0" into 0
           return [:call, :Complex, [0, [:float, num]]] if Number.imaginary_suffix?(s)
@@ -914,7 +924,7 @@ module Tokens
         # crucially, lets a following method call bind to the literal: +2.5.round parses as
         # (+2.5).round, not +(2.5.round). (Only in prefix position -- an infix + after a value keeps
         # normal operator handling. No `**` exception is needed: +2**2 == +(2**2) either way.)
-        if prev_lastop && DIGITS.member?(@s.peek)
+        if prev_lastop && Tokens.digit?(@s.peek)
           return [Number.expect(@s, true), nil]
         end
         if @s.peek == ?=
@@ -927,10 +937,10 @@ module Tokens
         # Only parse as negative number if last token was an operator (not after ')' etc.)
         # Special case: Don't create negative literal if followed by ** to fix precedence
         # e.g., -2**12 should parse as -(2**12) not (-2)**12
-        if prev_lastop && DIGITS.member?(@s.peek)
+        if prev_lastop && Tokens.digit?(@s.peek)
           # Look ahead: consume the number and check what follows
           num_str = ""
-          while DIGITS.member?(@s.peek)
+          while Tokens.digit?(@s.peek)
             num_str << @s.get
           end
           # Skip whitespace and check for ** (a following power operator flips precedence:
@@ -1105,7 +1115,7 @@ module Tokens
                 @s.get if @s.peek == quote_char  # consume closing quote
               else
                 # Unquoted identifier
-                while @s.peek && (ALPHA.member?(@s.peek) || DIGITS.member?(@s.peek) || @s.peek == ?_)
+                while @s.peek && (ALPHA.member?(@s.peek) || Tokens.digit?(@s.peek) || @s.peek == ?_)
                   marker << @s.get.chr
                 end
               end
