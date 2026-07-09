@@ -104,6 +104,23 @@ class Scanner
     return s
   end
 
+  # Allocation-free variant of #get: returns the bare next character (a plain 1-char String) rather than
+  # a ScannerString carrying a Position. For hot consume-and-discard loops (whitespace, comments) this
+  # skips the per-char Position + ScannerString allocation -- the headline allocation win for the simple
+  # GC (see docs/scanner-analysis). Same @col/@lineno bookkeeping as #get, so it interleaves safely with
+  # #get/#peek/#unget (unget of a bare char restores lineno/col by its length, no Position needed).
+  def get_ch
+    fill
+    ch = @buf.slice!(-1,1)
+    @col += 1
+    if ch == LF
+      @lineno += 1
+      @col = 1
+    end
+    return nil if !ch
+    ch
+  end
+
   def unget(c)
     @buf << c.reverse
 
@@ -163,9 +180,9 @@ class Scanner
     while (c = peek) && (WS.member?(c.ord) || c == "\\")
       if c == "\\"
         # Check if it's line continuation: backslash followed by newline
-        get
+        get_ch
         if peek == LF
-          get  # consume the newline
+          get_ch  # consume the newline
           @last_ws_consumed_newline = true
           @had_ws_before_token = true
         else
@@ -174,11 +191,11 @@ class Scanner
           break
         end
       else
-        get
+        get_ch
         @had_ws_before_token = true  # Track that whitespace was consumed
         @last_ws_consumed_newline = true if c.ord == 10  # Track newline consumption
         if c == C
-          while (c = get) && c != LF do; end
+          while (c = get_ch) && c != LF do; end
           @last_ws_consumed_newline = true  # Comments end with newline
         end
       end
@@ -192,27 +209,27 @@ class Scanner
     @had_ws_before_token = false
     had_any = false
     while (c = peek) && NOLFWS.member?(c.ord)
-      get
+      get_ch
       had_any = true
     end
     # Backslash line continuation: a "\" immediately followed by a newline joins the next line, so it
     # must be consumed here too (ws consumes it, but after a value the tokenizer uses nolfws). This is
     # lexical, not grammar -- the backslash+newline is simply not a token.
     if peek == "\\"
-      bs = get
+      bs = get_ch
       if peek == LF
-        get  # consume the newline
+        get_ch  # consume the newline
         had_any = true
         nolfws  # continue scanning whitespace on the joined line
         @had_ws_before_token = had_any
         return
       end
-      unget(bs)  # not a continuation -- put the backslash back
+      unget(bs)  # not a continuation -- put the backslash back (bare char; unget restores by length)
     end
     # Check if we stopped at a newline that's followed by . (method chaining)
     # If so, skip the newline and continue as if it were whitespace
     if peek == LF && peek_past_newline_is_dot?
-      get  # consume the newline
+      get_ch  # consume the newline
       had_any = true
       nolfws  # recursively skip more whitespace
     end
