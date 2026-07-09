@@ -5,17 +5,29 @@
 ## Test Status
 
 Current numbers live in the auto-generated **[spec_status.md](spec_status.md)**
-(do not copy them here — they rot). As of 2026-07-09: PASS 545 / ~10,900 tests, CRASH 7.
-Selftest: both gates (`make selftest` + `make selftest-c`) green, always (hard commit
-requirement).
+(do not copy them here — they rot). Selftest: both gates (`make selftest` + `make selftest-c`)
+green, always (hard commit requirement). The CRASH count includes a PRE-EXISTING flaky
+Class.new-with-ivars heap corruption (see [[compiler_class_new_ivars_heap_corruption]]) — the
+2026-07-09 reflection work shifted layout and flipped 3 specs FAIL→CRASH without a new defect.
 
-## Current top priority: COMPILE SPEED
+## Compile speed: COREMARSHAL — DONE (2026-07-09)
 
-Per [NEXT_STEPS.md](NEXT_STEPS.md), the binding constraint is now compile speed — lib/core is
-re-parsed/re-compiled on every spec (~11s contended / ~2s idle per compile; a sweep pays it 2158×).
-The keystone is **dynamic-ivar reflection**, which lands the COREMARSHAL ~42% compile speedup AND
-the `define_method`→vtable stub-override that unblocks the numeric/complex mock cluster. See
-NEXT_STEPS §A6 and [[compiler_mri_selfhost_never_diverge]].
+The binding constraint was compile speed (lib/core re-parsed on every spec compile). SOLVED:
+- **COREMARSHAL AST cache** — a reflection-free serializer caches lib/core's parsed AST; the parallel
+  sweep generates it once (`COREMARSHAL_DUMP`) and reuses it (`COREMARSHAL_AST`) for every compile.
+  ~50% faster per-spec compile, byte-identical output, default ON (`COREMARSHAL=0` disables).
+- **Dynamic-ivar reflection** — real `instance_variable_*` via a compiler-emitted `__ivar_table`; the
+  keystone that (with the const reflection table) also enabled full Marshal.
+- **Full Marshal** — dump/load byte-identical to MRI for nil/bool/int/string/symbol/array/hash/float +
+  custom objects + marshal_dump/_dump; the temporary custom serializer is to be replaced by it.
+This is a TEMPORARY stage until Marshal serializes lib/core's AST directly; see
+[[compiler_mri_selfhost_never_diverge]] and docs/MARSHAL_REFLECTION_PLAN.md.
+
+## Next
+- Fix the pre-existing Class.new-with-ivars heap corruption (canary hunt) — clears 3 crashers.
+- Marshal tail: bignum 'l' (blocked on 2**30/heap-multiply), Struct 'S' (blocked on naming a class
+  assigned to a constant), object-links, nested-constant const_get.
+- Scanner rewrite step 2 (−39% alloc / less GC pressure) — now SECONDARY since core parse is cached.
 
 ---
 
