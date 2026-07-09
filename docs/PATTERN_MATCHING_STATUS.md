@@ -188,11 +188,20 @@ Full Ruby 3.0+ pattern matching is a **major language feature** with extensive s
 
 ## Known Limitations
 
-1. Only basic pattern types implemented (3 of 10+)
-2. No support for pattern operators (`=>`, `|`, `^`)
-3. No array pattern matching
-4. Constant-qualified patterns limited to hash keyword shorthand
-5. No pattern guards or pin operators
+*(2026-07-09 note: this list understates current support — `core/language/pattern_matching_spec`
+is at P:7. Array patterns and `if`/`unless` guards partially work; the parts below are the accurate
+remaining gaps, plus a specific crash.)*
+
+1. Only basic pattern types implemented (several of 10+)
+2. Limited support for pattern operators (`=>`, `|`, `^`)
+3. Constant-qualified patterns limited to hash keyword shorthand
+4. **Guard-scope crash (deterministic):** a guard that references a variable BOUND by the pattern —
+   `case [0,1]; in [a, 1] if a >= 0` — SIGSEGVs (rc139 under the sweep; "undefined method 'a'" in
+   isolation). find_vars runs before rewrite_pattern_matching creates the binding, so the guard
+   compiles `a` as a method call. Also the parser mis-structures `in <pat> if <guard>`. Multi-layer
+   (parser + find_vars + transform); see [[compiler_crash_regression_watch]].
+5. Nested-closure pattern binding: a pattern-bound var used inside a nested `1.times { }` is likewise
+   not captured (documented in transform.rb ~1534).
 
 ## Future Work
 

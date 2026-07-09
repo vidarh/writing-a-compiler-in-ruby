@@ -1,13 +1,21 @@
 # Next Steps — Completing the Compiler
 
 *Created 2026-06-26 as a cross-cutting roadmap. The infrastructure workstreams (fast
-parallel/remote runner, failure classifier, machine-readable results) are BUILT, and
-the burndown itself has run (5,935 → 9,302 tests passing). The "Where things stand"
-figures below are the 2026-06-26 starting point — for current status use
-[spec_status.md](spec_status.md) + [review/ANALYSIS.md](review/ANALYSIS.md). What
-remains from this doc are the un-taken perf spikes (A6 `lib/core` Marshal precompile,
-GC re-enable). Each numbered item is intended to be promoted into a focused
+parallel/remote runner, failure classifier, machine-readable results) are BUILT, the parallel
+runner is the default (`-j14` on ax52), and the GC is enabled. The burndown has continued —
+**as of 2026-07-09 the ax52 sweep is PASS 545 / ~10,900 tests, CRASH 7**. The "Where things stand"
+table below is the 2026-06-26 STARTING point (several of its figures — sequential runner, GC
+disabled, 48 crashers — are historical, not current); for current status always use
+[spec_status.md](spec_status.md). Each numbered item is intended to be promoted into a focused
 `docs/plans/<CODE>` plan via the improvement planner.*
+
+> **TOP PRIORITY (2026-07-09): compile speed — the binding constraint.** A trivial program compiles
+> in ~11s (contended) / ~2s (idle), essentially all of it re-parsing/re-compiling lib/core. See the
+> **A6 (COREMARSHAL)** section below: caching lib/core's parse is re-confirmed ~42% faster and
+> byte-identical, but can only LAND once the self-hosted compiler can also run Marshal — which needs
+> **dynamic-ivar reflection** (the keystone feature; it also unblocks Marshal specs and the
+> `define_method`→vtable stub-override for the numeric/complex mock cluster). See
+> [[compiler_mri_selfhost_never_diverge]].
 
 > **The standing operating procedure lives in [`docs/COMPILER_WORKFLOW.md`](COMPILER_WORKFLOW.md)** —
 > read that first on a restart, then this file for the candidate backlog and detail.
@@ -94,7 +102,7 @@ the latter are exactly what Workstream 0 exists to confirm or refute.
 | Hardware ✓ | 16 local cores + idle remote box. Runner is **fully sequential** today. |
 | Harness ✓ | Custom `rubyspec_helper.rb` shim (not mspec) + stdout-grep in `run_rubyspec`; mspec present but not runnable by the compiler yet. |
 | Codegen ✓ | Crude: redundant `mov`s, no scaled addressing, push/pop spilling, over-allocated call frames, 6-rule peephole, no constant folding. `tools/asm_*` metric scripts already exist. |
-| GC ✓ | Conservative mark/sweep in C, **currently disabled** (`tgc_start` commented out → leaks). s-expr `__alloc/__realloc` abstraction already in place. |
+| GC ✓ | Conservative mark/sweep in C (`tgc.c`), **ENABLED** — `tgc_start` is emitted from `compiler.rb` (compile_main) before the first allocation. (The 2026-06-26 note that it was "disabled/commented out" is stale.) s-expr `__alloc/__realloc` abstraction in place. Long-term PURERB goal is to replace it with Ruby. |
 | Repo ✓ | Root holds 79 tracked + ~68 untracked files: dead 2014–2016 emacs lock symlinks, `debug_*.rb` scratch, temp specs, `.gitignore~`, `.s`. `docs/plans` bloated with timestamped snapshots. |
 | Planning ✓ | Mature system: 20 active plans, 6 goals (CODEGEN, COMPLANG, SELFHOST, PARSARCH, PURERB, MULTIARCH). No existing plan covers test speed/parallelization or a burndown-tooling pipeline. |
 
@@ -225,20 +233,34 @@ provides. The user maintains a **pure-Ruby Marshal** (`https://github.com/vidarh
 as a starting point — and pure-Ruby aligns with constraint 3 / the eventual self-hosted
 path where MRI's `Marshal` won't exist in compiled code.
 
-**Spike (do before any heavy investment):**
-1. After compiling `lib/core` under MRI, `Marshal.dump` the compiler's symbol/scope state;
-   for a spec, `Marshal.load` it and compile only the spec against it. **Use MRI's
-   built-in `Marshal` first** — it's the cheapest way to test the *hypothesis* (is the
-   state serializable at all — cycles/procs? and is load faster than recompiling core?).
-2. If the hypothesis holds, adopt **`pure_ruby_marshal`** for the pure-Ruby / self-hosted
-   path. If it fails (unserializable state, or load no faster than recompile), **shelve it**
-   and bank the parallelism/timeout wins instead.
-3. Timebox it. Per priority 2, if a faster-to-apply speedup (A1/A2) is still unbanked,
-   that comes first; this spike runs when it's the best available next step.
+**SPIKE DONE (branch `coremarshal-spike`, 2026-06-26; re-confirmed on master 2026-07-09).**
+Caching the *parsed* `core/core.rb` AST via Marshal is **correct** (byte-identical `.s` with vs
+without) and **valuable**: on current master a trivial compile went **~11.3s → ~6.6s (≈42% faster)**;
+`Marshal.load` of the 780 KB core AST is ~27 ms vs seconds to re-parse. The win has GROWN since the
+original spike (~40% / 300 KB) because lib/core is bigger now. The measurement patch is
+`tools/coremarshal_patch.rb` on the spike branch (opt-in `COREMARSHAL=<cache>`, loaded via `ruby -r`).
 
-> **Net intent of A:** turn a multi-minute, opaque, sequential run into a fast, parallel,
-> instrumented run that emits a compact, spec-faithful, machine-readable diff — with
-> per-spec compile cost driven down by A6 if the Marshal spike pays off.
+**Why it is DEFERRED — and the HARD constraint.** The optimization must run in the SELF-HOSTED
+compiler too, not just MRI: **it is never acceptable to land a code path that MRI executes but the
+self-compiled compiler does not** (see [[compiler_mri_selfhost_never_diverge]] — the MRI-only patch is
+fine only as a *throwaway spike*, never landed). Landing COREMARSHAL therefore requires the compiled
+compiler to run Marshal, which needs reflection that does not exist yet:
+- `pure_ruby_marshal` uses `instance_variable_get/set`, `instance_variables`, `const_get`, `allocate`,
+  `send`, `marshal_dump/load`; `lib/core` implements NONE of the first four, and the underlying **`ivar`
+  s-expression codegen directive (dynamic ivar access by symbol) is an unimplemented FIXME**
+  (`lib/core/class.rb:224`).
+
+So the real path is a prerequisite chain: **(1) implement the `ivar` codegen directive → (2) build
+`instance_variable_get/set` / `instance_variables` / `const_get` / `allocate` / `send` in lib/core →
+(3) port `pure_ruby_marshal` and make it self-compile → (4) move the cache into `parser.rb` with
+mtime/hash invalidation → (5) pass `selftest` + `selftest-c`.** This "dynamic-ivar reflection" keystone
+is worth its own plan: it unblocks COREMARSHAL (~42% compile speedup) AND the Marshal specs AND is the
+same machinery as the `define_method`→vtable stub-override that unblocks the numeric/complex mock
+cluster ([[compiler_stub_override_blocks_specs]]).
+
+**Meanwhile / cheaper, works-in-both alternatives:** more parallelism (already `-j14`), and the
+**scanner allocation rewrite** (branch `scanner-string-buffer-review`: ~7% faster, −39% allocation,
+byte-identical, no prerequisite — helps the self-hosted GC).
 
 ---
 

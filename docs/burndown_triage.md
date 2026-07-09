@@ -7,6 +7,23 @@ those are exhausted. Update as specs are assessed/fixed. Source: `docs/spec_stat
 Legend: **EASY** (localized, low-risk) · **FEATURE** (needs a missing feature) ·
 **DEEP** (deep/risky subsystem) · **BLOCKED** (depends on unsupported thing).
 
+## Update (2026-07-09) — a fresh WHOLE-SPEC-FAIL round mined many easy wins
+
+The 2026-06-26 "no easy wins left" finding below was for the F ≤ 2 near-passing specs in a few
+categories. Widening to **P:0 whole-spec-FAIL specs** (missing methods) + **core-iteration
+correctness** across core/array, hash, nil, enumerable, set, comparable produced a large batch of
+flips this session: Array#each (size-reread + return self, 3/10→11/0), all?/any?/none?, concat,
+replace, Enumerable#compact/chain/filter/collect_concat/reverse_each, NilClass#to_r/#to_c,
+Hash#to_hash/#values_at, Set#classify, Comparable#clamp, type-strict eql? across Integer/Rational/
+Array/Struct, and a cluster of TypeError-validation fixes (Hash#fetch/dig, Object#instance_of?,
+Hash#flatten). PASS 520→545 over the session.
+
+**That accessible vein is now (again) largely exhausted.** The remaining near-passing surface is
+dominated by: the should_receive-on-existing-method mock limitation ([[compiler_stub_override_blocks_specs]]
+— blocks most core/numeric + core/complex), the bignum heap-multiply bug, `ruby_version_is` running
+both version branches, and the deep codegen tails. Next real gains need a FEATURE (stub-override /
+dynamic-ivar reflection, or bignum), not one-line adds.
+
 ## Key finding (2026-06-26)
 
 Across the F ≤ 2 specs in **language + core/integer + core/string + core/regexp**, there are

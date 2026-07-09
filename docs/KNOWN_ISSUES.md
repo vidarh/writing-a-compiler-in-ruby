@@ -1,13 +1,13 @@
 # Known Issues
 
-**Last Updated**: 2026-07-04
+**Last Updated**: 2026-07-09
 
 ## Current State
 
 Current spec numbers live in the auto-generated **[spec_status.md](spec_status.md)**
 (refreshed by every sweep; do not copy numbers here — they rot). Snapshot at last
-update: PASS 342 / FAIL 1797 / CRASH 10 / COMPILE_FAIL 5 / TIMEOUT 4 files;
-5,935 individual tests passing.
+update: PASS 545 / FAIL 1597 / CRASH 7 / COMPILE_FAIL 1 / TIMEOUT 8 files;
+~10,900 individual tests passing.
 
 Selftest: `make selftest` and `make selftest-c` both green (hard commit gate).
 
@@ -76,8 +76,15 @@ Hash enumerator's `.map {|pair,i| }` mis-binds). Still compiler-level.
 
 When a method redefined at runtime via alias + def-in-block (e.g.
 `Integer#<=>` := raise) raises, the exception escapes the spec harness's
-it-rescue entirely and aborts the file. Behind core/array/sort_spec's abort and
-the pattern_matching crash above. 18-line repro: test/repros/st5.rb.
+it-rescue entirely and aborts the file. 18-line repro: test/repros/st5.rb.
+
+**core/array/sort_spec's abort is FIXED (commit a73038d, 2026-07-09)** — root cause was NOT a
+harness escape but that `Integer#<,>,<=,>=` were all implemented via the PUBLIC `Integer#<=>`, so
+the sort test's `Integer#<=> := raise` broke the operators too and the sort's `block.call(..) <= 0`
+hit the raising `<=>`. Fixed by routing the operators (and `<=>`) through a private `__compare_to`.
+array/sort now completes (26/15) instead of crashing → CRASH −1. (The pattern_matching crash is a
+SEPARATE bug — a pattern-bound variable not registered as a local in the guard scope; see
+[[compiler_crash_regression_watch]].)
 
 ### 3b. Forwarded `&nil` fools block_given?/yield (2026-07-04)
 
