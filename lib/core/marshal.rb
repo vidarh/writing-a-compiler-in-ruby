@@ -84,6 +84,23 @@ class MarshalWriter
     nil
   end
 
+  # Wrap a serialized Array/Hash payload in MRI's 'I' inline-ivars envelope when the object carries user
+  # instance variables (an Array/Hash subclass with @ivars, e.g. AST::Expr < Array with @position):
+  # I <payload> <ivar-count> <(:sym value)...>. A plain Array/Hash has no user ivars, so this is a no-op
+  # for them (instance_variables excludes the built-in raw internals).
+  def wrap_ivars(cur, body)
+    ivars = cur.instance_variables
+    return body if ivars.length == 0
+    out = "I" + body + fixnum(ivars.length)
+    i = 0
+    while i < ivars.length
+      nm = ivars[i]
+      out = out + symbol(nm) + write(cur.instance_variable_get(nm))
+      i += 1
+    end
+    out
+  end
+
   def userclass(cur, klass)
     return "C" + symbol(cur.class.name) if cur.class != klass
     ""
@@ -111,10 +128,10 @@ class MarshalWriter
         out = out + write(cur[i])
         i += 1
       end
-      return out
+      return wrap_ivars(cur, out)
     end
     if cur.is_a?(Hash)
-      return userclass(cur, Hash) + "{" + hash_body(cur)
+      return wrap_ivars(cur, userclass(cur, Hash) + "{" + hash_body(cur))
     end
     if cur.respond_to?(:_dump)
       # Old-style custom serialization: klass#_dump(depth) -> a String, klass._load(str) reverses it.
