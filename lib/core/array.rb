@@ -906,12 +906,20 @@ class Array
   end
 
   # Appends the elements in other_array to self.
-  def concat(other_array)
-    added = self
-    other_array.each do |item|
-      added << item
+  def concat(*others)
+    # Frozen arrays reject concat up front, even with no arguments / no modification (per MRI).
+    raise FrozenError.new("can't modify frozen Array: #{inspect}") if frozen?
+    # Appends the elements of each argument. If any argument is self (a.concat(a), a.concat(a, a)),
+    # snapshot the ORIGINAL self ONCE up front so every self-argument contributes the original elements
+    # (and iteration terminates -- #each now observes appends made during iteration).
+    snap = others.any? { |o| o.equal?(self) } ? self.dup : nil
+    others.each do |other_array|
+      src = other_array.equal?(self) ? snap : other_array
+      src.each do |item|
+        self << item
+      end
     end
-    return added
+    return self
   end
 
 
