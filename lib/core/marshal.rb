@@ -127,6 +127,10 @@ class MarshalWriter
     if cur.is_a?(Hash)
       return wrap_ivars(cur, userclass(cur, Hash) + "{" + hash_body(cur))
     end
+    if cur.is_a?(Struct)
+      # S <class symbol> <member=>value hash>. Needs the Struct's class to be named (see #26).
+      return "S" + symbol(cur.class.name) + hash_body(cur.to_h)
+    end
     if cur.is_a?(String)
       # A String SUBCLASS (exact String was handled in basic()): I C :Class "<bytes>" carrying the
       # encoding (:E true) AND the subclass's user ivars in one inline-ivar hash.
@@ -217,6 +221,7 @@ class MarshalReader
     return read_hash    if char == "{"
     return read_float   if char == "f"
     return read_object  if char == "o"
+    return read_struct  if char == "S"
     return read_userclass if char == "C"
     return read_load    if char == "u"
     return read_marshal_load if char == "U"
@@ -343,6 +348,22 @@ class MarshalReader
     @objects << obj
     data = read
     obj.marshal_load(data)
+    obj
+  end
+
+  # 'S' <class symbol> <member=>value hash>: reconstruct the Struct with values in member order.
+  def read_struct
+    klass = marshal_const_get(read.to_s)
+    attrs = read_hash
+    members = klass.members
+    values = []
+    i = 0
+    while i < members.length
+      values << attrs[members[i]]
+      i += 1
+    end
+    obj = klass.new(*values)
+    @objects << obj
     obj
   end
 
