@@ -387,3 +387,14 @@ Real remaining gaps:
 - **[bugs/RESOLVED_INVESTIGATIONS.md](bugs/RESOLVED_INVESTIGATIONS.md)** — archived fixed-bug investigations
 - **TODO.md** — prioritized task list
 - **DEBUGGING_GUIDE.md** — debugging techniques
+
+## Binary-unsafe string literals (embedded NUL truncates length)
+
+String LITERALS with an embedded `\x00` get the wrong length: `"\x00".length` -> 0,
+`"a\x00b".length` -> 1. The String class itself is binary-safe (stores raw `@length`),
+but the C-string constructor used for literals (`lib/core/string.rb` ~line 385,
+`%s(assign @length (strlen @buffer))`) computes length via `strlen`, which stops at
+the first NUL. Fix requires the emitter (`emitter.rb` `:strconst`, ~line 195) to pass
+each literal's compile-time-known byte count to a length-taking constructor instead of
+relying on strlen. Deep codegen change touching every string literal; low impact
+(only NUL-containing literals, e.g. core/string/empty_spec's `"\x00"`). Verified 2026-07-09.
