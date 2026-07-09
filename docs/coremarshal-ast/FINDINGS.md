@@ -25,8 +25,13 @@ during transforms, never in the parsed AST, so it is skipped.)
   `String#unpack`, `File.binread/binwrite`, `String#to_sym`, `String#[pos,n]`, `bytesize` all exist in
   lib/core. So the serializer is a realistic candidate to self-compile (unlike full `pure_ruby_marshal`).
 
-**This DECOUPLES the COREMARSHAL perf win from the dynamic-ivar reflection project.** Reflection is now
-only needed for the general Marshal SPECS, which is a separate, lower-priority track.
+**This custom serializer is a TEMPORARY / INTERIM STAGE only** (user directive 2026-07-09): it banks the
+perf win NOW to make all further tests/dev cheaper, but it does NOT replace the real goal. The ongoing job
+is **full Marshal** via `pure_ruby_marshal`, which needs the dynamic-ivar reflection
+(`instance_variable_get/set` / `instance_variables` / `const_get` / `send` + the `ivar` codegen support).
+Once that lands and `pure_ruby_marshal` is ported into lib/core, it REPLACES this serializer (and also
+passes the core/marshal specs). Dynamic-ivar reflection is therefore the PRIMARY ongoing track, not a
+lower-priority one — this bridge just runs first because it is cheap and unblocks nothing else.
 
 ## Productionisation plan (must work in BOTH MRI and self-hosted — no MRI-only landing)
 

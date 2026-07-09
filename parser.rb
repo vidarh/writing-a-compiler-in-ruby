@@ -3,6 +3,7 @@ require 'sexp'
 require 'utils'
 require 'shunting'
 require 'operators'
+require 'ast_marshal'
 
 class Parser < ParserBase
   @@requires = {}
@@ -1302,6 +1303,23 @@ class Parser < ParserBase
       return E[position, :required, E[position, :require_missing, q]]
     end
 
+    # COREMARSHAL (TEMPORARY perf bridge; see ast_marshal.rb). Re-parsing lib/core on every invocation
+    # dominates per-compile cost. When COREMARSHAL_AST points to a cache file we load the parsed core
+    # AST from it instead, iff the checksum still matches the live core sources (else a full parse).
+    # Env-gated + default OFF so the gates are byte-for-byte unchanged; both hosts run this identically
+    # (never-diverge). This is a stopgap until full Marshal (pure_ruby_marshal) replaces it.
+    if q == "core/core.rb"
+      rd = ENV["COREMARSHAL_AST"]
+      if rd
+        cached = ASTMarshal.read_cache(rd, File.dirname(fname))
+        if cached
+          f.close
+          @@requires[q] = cached
+          return cached
+        end
+      end
+    end
+
     # STDERR.puts "NOTICE: Statically requiring '#{q}' from #{fname}"
 
     # FIXME: This fails with
@@ -1319,6 +1337,14 @@ class Parser < ParserBase
     expr = parser.parse(false)
     e = E[pos,:required, expr]
     @@requires[q] = e
+
+    # COREMARSHAL one-shot dump: when COREMARSHAL_DUMP is set, persist the freshly-parsed core AST so
+    # subsequent COREMARSHAL_AST runs can load it. Single-process (run once to warm the cache), so no
+    # atomic-rename is required; the read path validates by checksum regardless.
+    if q == "core/core.rb"
+      wr = ENV["COREMARSHAL_DUMP"]
+      ASTMarshal.write_cache(wr, File.dirname(fname), e) if wr
+    end
 
     e
   end
