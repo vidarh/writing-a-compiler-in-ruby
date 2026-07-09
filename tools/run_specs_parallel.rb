@@ -70,6 +70,25 @@ unless File.exist?("out/tgc.o")
   system("gcc -Wall #{cflags} -c -m32 -o out/tgc.o tgc.c") or abort "tgc build failed"
 end
 
+# --- COREMARSHAL: cache lib/core's parsed AST ONCE, then reuse it for every per-spec compile. Each
+# compile otherwise re-parses all of lib/core (~30-50% of a spec's compile time). We generate the cache
+# here (single process, no race) with COREMARSHAL_DUMP, then export COREMARSHAL_AST so every worker's
+# `./run_rubyspec` -> `./compile` -> driver.rb reads it (backticks inherit ENV). The compiler validates
+# the cache's checksum against the live lib/core on each read, so a stale cache is NEVER used (it falls
+# back to a full parse) -- and we regenerate fresh here anyway. Output is byte-identical with/without.
+# Default ON; set COREMARSHAL=0 to disable. Same host writes and reads, so the key always matches.
+unless ENV["COREMARSHAL"] == "0"
+  core_cache = "out/core.ast"
+  File.delete(core_cache) if File.exist?(core_cache)
+  system("echo nil | COREMARSHAL_DUMP=#{core_cache} ruby -I. #{DIR}/driver.rb -I. -I lib/core > /dev/null 2>&1")
+  if File.exist?(core_cache) && File.size(core_cache) > 0
+    ENV["COREMARSHAL_AST"] = core_cache
+    puts "COREMARSHAL: reusing cached lib/core AST (#{core_cache}, #{File.size(core_cache)} bytes) for all compiles"
+  else
+    puts "COREMARSHAL: cache generation failed -- compiling without the cache"
+  end
+end
+
 # scrub: spec output can contain invalid UTF-8 bytes (binary garbage from a crash),
 # which would make gsub raise ArgumentError and kill the worker.
 def strip_ansi(s); s.scrub("").gsub(/\e\[[0-9;]*[A-Za-z]/, ""); end
