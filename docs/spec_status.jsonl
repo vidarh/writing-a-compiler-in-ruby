@@ -806,8 +806,8 @@
 {"spec":"rubyspec/core/hash/element_reference_spec.rb","outcome":"FAIL","passed":10,"failed":4,"skipped":1}
 {"spec":"rubyspec/core/hash/element_set_spec.rb","outcome":"FAIL","passed":6,"failed":5,"skipped":1}
 {"spec":"rubyspec/core/hash/empty_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/hash/eql_spec.rb","outcome":"FAIL","passed":13,"failed":4,"skipped":0}
-{"spec":"rubyspec/core/hash/equal_value_spec.rb","outcome":"FAIL","passed":13,"failed":5,"skipped":0}
+{"spec":"rubyspec/core/hash/eql_spec.rb","outcome":"FAIL","passed":14,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/hash/equal_value_spec.rb","outcome":"FAIL","passed":14,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/except_spec.rb","outcome":"PASS","passed":4,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/fetch_spec.rb","outcome":"PASS","passed":17,"failed":0,"skipped":1}
 {"spec":"rubyspec/core/hash/fetch_values_spec.rb","outcome":"PASS","passed":7,"failed":0,"skipped":0}
@@ -1125,12 +1125,12 @@
 {"spec":"rubyspec/core/main/ruby2_keywords_spec.rb","outcome":"FAIL","passed":0,"failed":2,"skipped":0}
 {"spec":"rubyspec/core/main/to_s_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/main/using_spec.rb","outcome":"FAIL","passed":0,"failed":15,"skipped":0}
-{"spec":"rubyspec/core/marshal/dump_spec.rb","outcome":"TIMEOUT","passed":8,"failed":16,"skipped":2}
+{"spec":"rubyspec/core/marshal/dump_spec.rb","outcome":"TIMEOUT","passed":8,"failed":18,"skipped":2}
 {"spec":"rubyspec/core/marshal/float_spec.rb","outcome":"FAIL","passed":15,"failed":3,"skipped":0}
-{"spec":"rubyspec/core/marshal/load_spec.rb","outcome":"TIMEOUT","passed":50,"failed":246,"skipped":4}
+{"spec":"rubyspec/core/marshal/load_spec.rb","outcome":"TIMEOUT","passed":54,"failed":244,"skipped":4}
 {"spec":"rubyspec/core/marshal/major_version_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/marshal/minor_version_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/marshal/restore_spec.rb","outcome":"TIMEOUT","passed":50,"failed":246,"skipped":4}
+{"spec":"rubyspec/core/marshal/restore_spec.rb","outcome":"TIMEOUT","passed":54,"failed":244,"skipped":4}
 {"spec":"rubyspec/core/matchdata/allocate_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/matchdata/begin_spec.rb","outcome":"FAIL","passed":6,"failed":12,"skipped":0}
 {"spec":"rubyspec/core/matchdata/byteoffset_spec.rb","outcome":"FAIL","passed":0,"failed":19,"skipped":0}
@@ -1858,7 +1858,7 @@
 {"spec":"rubyspec/core/struct/initialize_spec.rb","outcome":"FAIL","passed":3,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/struct/inspect_spec.rb","outcome":"FAIL","passed":2,"failed":6,"skipped":0}
 {"spec":"rubyspec/core/struct/instance_variable_get_spec.rb","outcome":"FAIL","passed":1,"failed":1,"skipped":0}
-{"spec":"rubyspec/core/struct/instance_variables_spec.rb","outcome":"FAIL","passed":0,"failed":2,"skipped":0}
+{"spec":"rubyspec/core/struct/instance_variables_spec.rb","outcome":"FAIL","passed":1,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/struct/keyword_init_spec.rb","outcome":"PASS","passed":5,"failed":0,"skipped":1}
 {"spec":"rubyspec/core/struct/length_spec.rb","outcome":"FAIL","passed":1,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/struct/members_spec.rb","outcome":"FAIL","passed":2,"failed":1,"skipped":1}
@@ -2086,7 +2086,7 @@
 {"spec":"rubyspec/language/block_spec.rb","outcome":"FAIL","passed":87,"failed":82,"skipped":12}
 {"spec":"rubyspec/language/break_spec.rb","outcome":"FAIL","passed":15,"failed":27,"skipped":3}
 {"spec":"rubyspec/language/case_spec.rb","outcome":"FAIL","passed":42,"failed":5,"skipped":2}
-{"spec":"rubyspec/language/class_spec.rb","outcome":"FAIL","passed":15,"failed":35,"skipped":0}
+{"spec":"rubyspec/language/class_spec.rb","outcome":"CRASH","passed":null,"failed":null,"skipped":null}
 {"spec":"rubyspec/language/class_variable_spec.rb","outcome":"FAIL","passed":5,"failed":15,"skipped":0}
 {"spec":"rubyspec/language/comment_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/language/constants_spec.rb","outcome":"FAIL","passed":19,"failed":119,"skipped":8}
