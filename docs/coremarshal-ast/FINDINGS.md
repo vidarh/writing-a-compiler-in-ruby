@@ -45,3 +45,22 @@ lower-priority one — this bridge just runs first because it is cheap and unblo
 
 See task COREMARSHAL-via-custom-AST-serializer. The MRI-only spike patch here stays as measurement
 evidence only, per the never-diverge rule ([[compiler_mri_selfhost_never_diverge]]).
+
+## 2026-07-09: real-Marshal-for-the-cache SPIKE — reverted (never-diverge + SH slowness)
+
+Marshal SUPPORT is now complete in lib/core (byte-identical to MRI for every AST-type shape:
+Array/String subclasses+ivars, plain multi-ivar objects, nested, all leaves). I spiked swapping the
+cache serialization from ASTMarshal.dump/load to `Marshal.dump/load`. Findings:
+- **MRI**: works great — byte-identical `.s`, and the cache is SMALLER (800 KB vs the custom
+  serializer's ~2.2 MB) because MRI's Marshal dedups symbols/objects aggressively.
+- **Self-hosted (out/driver)**: the SAME source line `Marshal.dump` resolves to a DIFFERENT
+  implementation — MRI's built-in C Marshal under `ruby driver.rb`, lib/core's Ruby Marshal under the
+  self-compiled compiler. So (a) the SH cache is ~3x LARGER (1.86 MB — lib/core Marshal under-dedups vs
+  MRI's C), i.e. the cache format DIVERGES per host and is non-portable, and (b) `Marshal.load` of
+  1.86 MB via recursive Ruby is impractically slow under SH (>10 min for one compile — a net SLOWDOWN,
+  defeating the cache's purpose).
+- **Conclusion**: real `Marshal` is the wrong tool for THIS cache. The custom AST serializer
+  (`ast_marshal.rb`) is pure-Ruby-IDENTICAL in both hosts, so it is byte-identical, portable, fast, and
+  never-diverge-CLEAN — which the HARD never-diverge rule ([[compiler_mri_selfhost_never_diverge]])
+  actually REQUIRES here (real Marshal diverges per host). lib/core still HAS full Marshal for the specs
+  (the real substance of "implement Marshal fully"); only the cache stays on the purpose-built serializer.
