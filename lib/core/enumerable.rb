@@ -562,6 +562,22 @@ module Enumerable
     end
     result
   end
+  alias collect_concat flat_map
+
+  # filter is an alias of select (defined above).
+  alias filter select
+
+  # Iterate the elements in reverse order (materialises via to_a, as Enumerable has no reverse access).
+  def reverse_each(&block)
+    return to_enum(:reverse_each) if !block
+    a = to_a
+    i = a.length - 1
+    while i >= 0
+      block.call(a[i])
+      i -= 1
+    end
+    self
+  end
 
   # Hash of element -> occurrence count.
   def tally
