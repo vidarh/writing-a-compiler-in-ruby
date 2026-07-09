@@ -100,8 +100,16 @@ class MarshalWriter
   end
 
   def userclass(cur, klass)
-    return "C" + symbol(cur.class.name) if cur.class != klass
+    return "C" + class_sym(cur) if cur.class != klass
     ""
+  end
+
+  # Symbol for cur's class name, or a TypeError if the class is anonymous (name nil -- an anonymous
+  # Class/Module/Struct or a singleton class). MRI refuses to marshal these; matching that here.
+  def class_sym(cur)
+    n = cur.class.name
+    raise TypeError, "can't dump anonymous class" if n.nil?
+    symbol(n)
   end
 
   def write(cur)
@@ -114,9 +122,11 @@ class MarshalWriter
     @ocache[key] = @ocache.length
 
     if cur.is_a?(Class)
+      raise TypeError, "can't dump anonymous class" if cur.name.nil?
       return "c" + str(cur.name)
     end
     if cur.is_a?(Module)
+      raise TypeError, "can't dump anonymous module" if cur.name.nil?
       return "m" + str(cur.name)
     end
     if cur.is_a?(Array)
@@ -134,7 +144,7 @@ class MarshalWriter
     if cur.is_a?(Struct) || cur.is_a?(Data)
       # S <class symbol> <member=>value hash>. MRI uses 'S' for both Struct and Data. Needs the class
       # to be named (see #26).
-      return "S" + symbol(cur.class.name) + hash_body(cur.to_h)
+      return "S" + class_sym(cur) + hash_body(cur.to_h)
     end
     if cur.is_a?(String)
       # A String SUBCLASS (exact String was handled in basic()): I C :Class "<bytes>" carrying the
@@ -151,14 +161,14 @@ class MarshalWriter
     end
     if cur.respond_to?(:_dump)
       # Old-style custom serialization: klass#_dump(depth) -> a String, klass._load(str) reverses it.
-      return "u" + symbol(cur.class.name) + str(cur._dump(-1))
+      return "u" + class_sym(cur) + str(cur._dump(-1))
     end
     if cur.respond_to?(:marshal_dump)
-      return "U" + symbol(cur.class.name) + write(cur.marshal_dump)
+      return "U" + class_sym(cur) + write(cur.marshal_dump)
     end
     # generic object: 'o' <class symbol> <ivar hash>
     ivars = cur.instance_variables
-    out = "o" + symbol(cur.class.name) + fixnum(ivars.length)
+    out = "o" + class_sym(cur) + fixnum(ivars.length)
     i = 0
     while i < ivars.length
       nm = ivars[i]
@@ -236,6 +246,7 @@ class MarshalReader
     return false if char == "F"
     return read_integer if char == "i"
     return read_bignum  if char == "l"
+    return read_module_ref if char == "c" || char == "m"   # 'c' Class / 'm' Module reference
     return read_symbol  if char == ":"
     return read_string  if char == '"'
     return read_ivar_tagged if char == "I"   # object with inline ivars (e.g. a String's encoding)
@@ -290,6 +301,21 @@ class MarshalReader
       i += 1
     end
     sign == "+" ? result : (0 - result)
+  end
+
+  # 'c' / 'm' <raw string name>: a reference to the named Class or Module (const_get). Registered in the
+  # object table (MRI links repeated class references).
+  def read_module_ref
+    n = read_integer
+    s = ""
+    i = 0
+    while i < n
+      s = s + read_char
+      i += 1
+    end
+    klass = marshal_const_get(s)
+    @objects << klass
+    klass
   end
 
   def read_symbol
