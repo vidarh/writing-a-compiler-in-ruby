@@ -806,7 +806,7 @@
 {"spec":"rubyspec/core/hash/element_reference_spec.rb","outcome":"FAIL","passed":10,"failed":4,"skipped":1}
 {"spec":"rubyspec/core/hash/element_set_spec.rb","outcome":"FAIL","passed":6,"failed":5,"skipped":1}
 {"spec":"rubyspec/core/hash/empty_spec.rb","outcome":"PASS","passed":2,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/hash/eql_spec.rb","outcome":"FAIL","passed":14,"failed":3,"skipped":0}
+{"spec":"rubyspec/core/hash/eql_spec.rb","outcome":"FAIL","passed":13,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/equal_value_spec.rb","outcome":"FAIL","passed":14,"failed":4,"skipped":0}
 {"spec":"rubyspec/core/hash/except_spec.rb","outcome":"PASS","passed":4,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/hash/fetch_spec.rb","outcome":"PASS","passed":17,"failed":0,"skipped":1}
@@ -1127,10 +1127,10 @@
 {"spec":"rubyspec/core/main/using_spec.rb","outcome":"FAIL","passed":0,"failed":15,"skipped":0}
 {"spec":"rubyspec/core/marshal/dump_spec.rb","outcome":"TIMEOUT","passed":8,"failed":18,"skipped":2}
 {"spec":"rubyspec/core/marshal/float_spec.rb","outcome":"FAIL","passed":15,"failed":3,"skipped":0}
-{"spec":"rubyspec/core/marshal/load_spec.rb","outcome":"TIMEOUT","passed":54,"failed":244,"skipped":4}
+{"spec":"rubyspec/core/marshal/load_spec.rb","outcome":"TIMEOUT","passed":54,"failed":241,"skipped":6}
 {"spec":"rubyspec/core/marshal/major_version_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
 {"spec":"rubyspec/core/marshal/minor_version_spec.rb","outcome":"PASS","passed":1,"failed":0,"skipped":0}
-{"spec":"rubyspec/core/marshal/restore_spec.rb","outcome":"TIMEOUT","passed":54,"failed":244,"skipped":4}
+{"spec":"rubyspec/core/marshal/restore_spec.rb","outcome":"TIMEOUT","passed":54,"failed":241,"skipped":6}
 {"spec":"rubyspec/core/matchdata/allocate_spec.rb","outcome":"FAIL","passed":0,"failed":1,"skipped":0}
 {"spec":"rubyspec/core/matchdata/begin_spec.rb","outcome":"FAIL","passed":6,"failed":12,"skipped":0}
 {"spec":"rubyspec/core/matchdata/byteoffset_spec.rb","outcome":"FAIL","passed":0,"failed":19,"skipped":0}
