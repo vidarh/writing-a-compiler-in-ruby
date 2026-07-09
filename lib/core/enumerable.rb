@@ -150,6 +150,11 @@ module Enumerable
     result
   end
 
+  # Returns an Enumerator::Chain that iterates self followed by each of the given enumerables.
+  def chain(*others)
+    Enumerator::Chain.new(self, *others)
+  end
+
   # [min, max].
   def minmax(&block)
     [min(&block), max(&block)]

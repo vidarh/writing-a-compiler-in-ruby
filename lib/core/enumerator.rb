@@ -449,6 +449,19 @@ class LazyBreak < StandardError
 end
 
 class Enumerator
+  # Enumerator::Chain iterates several enumerables in sequence (the object returned by
+  # Enumerable#chain / Enumerator#+). #each runs each source's #each in order.
+  class Chain < Enumerator
+    def initialize(*enums)
+      @enums = enums
+    end
+    def each(&block)
+      return self if !block
+      @enums.each { |e| e.each { |x| block.call(x) } }
+      self
+    end
+  end
+
   class Lazy < Enumerator
     def initialize(source, ops = nil)
       @src = source
