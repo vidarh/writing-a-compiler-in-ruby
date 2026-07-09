@@ -143,6 +143,13 @@ module Enumerable
     result
   end
 
+  # Returns an array of the enumerated elements with nil removed (Ruby 3.1+).
+  def compact
+    result = []
+    each { |x| result << x if !x.nil? }
+    result
+  end
+
   # [min, max].
   def minmax(&block)
     [min(&block), max(&block)]

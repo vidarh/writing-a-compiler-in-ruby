@@ -1024,18 +1024,19 @@ class Array
     return ArrayEnumerator.new(self) if !block_given?
     i = 0
     a = block.arity
-    s = self.size
-
+    # Re-read self.size on every iteration (not a cached snapshot): MRI's Array#each observes elements
+    # appended to the array DURING iteration, and stops early if it shrinks. A cached length missed
+    # both (array/{all,none,count,each,...} "tolerates increasing an array size during iteration").
     if a == 1
-      while i < s
+      while i < self.size
         el = self[i]
         yield(el)
         i += 1
       end
-      return nil
+      return self
     end
 
-    while i < s
+    while i < self.size
       el = self[i]
       if el.is_a?(Array)
         yield(*el)
@@ -1044,7 +1045,7 @@ class Array
       end
       i += 1
     end
-    return nil
+    self
   end
 
 
