@@ -64,6 +64,10 @@ class MarshalWriter
     return "T" if ob == true
     return "F" if ob == false
     if ob.is_a?(Integer)
+      # 'i' fixnum varint only covers ~+/-2**30; larger integers use the 'l' bignum form.
+      if ob >= 1073741824 || ob <= -1073741824
+        return "l" + bignum(ob)
+      end
       return "i" + fixnum(ob)
     end
     if ob.is_a?(Symbol)
@@ -164,6 +168,22 @@ class MarshalWriter
     out
   end
 
+  # 'l' bignum: sign byte, then a fixnum count of 2-byte words, then the magnitude little-endian
+  # (padded to an even byte count). Needs working bignum &/>>/abs.
+  def bignum(n)
+    sign = n >= 0 ? "+" : "-"
+    n = n.abs
+    bytes = ""
+    while n > 0
+      bytes = bytes + (n & 255).chr
+      n = n >> 8
+    end
+    bytes = bytes + 0.chr if bytes.length == 0
+    bytes = bytes + 0.chr if (bytes.length & 1) != 0   # pad to an even (2-byte-word) length
+    words = bytes.length / 2
+    sign + fixnum(words) + bytes
+  end
+
   # Marshal variable-length signed integer encoding.
   def fixnum(n)
     return 0.chr if n == 0
@@ -215,6 +235,7 @@ class MarshalReader
     return true  if char == "T"
     return false if char == "F"
     return read_integer if char == "i"
+    return read_bignum  if char == "l"
     return read_symbol  if char == ":"
     return read_string  if char == '"'
     return read_ivar_tagged if char == "I"   # object with inline ivars (e.g. a String's encoding)
@@ -256,6 +277,19 @@ class MarshalReader
       i += 1
     end
     result
+  end
+
+  # 'l' bignum: sign, fixnum word-count (2-byte words), then little-endian magnitude bytes.
+  def read_bignum
+    sign = read_char
+    len = read_integer * 2
+    result = 0
+    i = 0
+    while i < len
+      result = result + (read_byte * (2 ** (i * 8)))
+      i += 1
+    end
+    sign == "+" ? result : (0 - result)
   end
 
   def read_symbol
