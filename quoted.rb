@@ -234,17 +234,17 @@ module Tokens
         if prefix == "$" && s.peek
           next_char = s.peek
           if next_char == ?! || next_char == ?@ || next_char == ?$ || (?0..?9).member?(next_char)
-            var_name << s.get
+            var_name << s.get_ch
           else
             while s.peek && ((?a..?z).member?(s.peek) || (?A..?Z).member?(s.peek) ||
                             (?0..?9).member?(s.peek) || s.peek == ?_)
-              var_name << s.get
+              var_name << s.get_ch
             end
           end
         else
           while s.peek && ((?a..?z).member?(s.peek) || (?A..?Z).member?(s.peek) ||
                           (?0..?9).member?(s.peek) || s.peek == ?_)
-            var_name << s.get
+            var_name << s.get_ch
           end
         end
 
@@ -623,7 +623,7 @@ module Tokens
             s.get  # consume {
             buf = ""
             while s.peek && s.peek != ?}
-              buf << s.get
+              buf << s.get_ch   # %s{} body content only; not ungotten -> allocation-free
             end
             s.get if s.peek == ?}  # consume }
             return ":#{buf}".to_sym
