@@ -66,13 +66,6 @@ class MarshalWriter
     if ob.is_a?(Integer)
       return "i" + fixnum(ob)
     end
-    if ob.class == String
-      # MRI tags a String with its encoding as an inline ivar: I "<bytes>" <1 ivar> :E true.
-      # (:E => true means UTF-8.) The :E symbol is symbol-cached like any other, so a second string
-      # emits ";<n>" for it. pure_ruby_marshal drops this for mruby; we keep it to match MRI's format.
-      # EXACT String only -- a String SUBCLASS (with user ivars) is handled in write() via userclass.
-      return "I" + '"' + str(ob) + fixnum(1) + symbol("E") + "T"
-    end
     if ob.is_a?(Symbol)
       return symbol(ob)
     end
