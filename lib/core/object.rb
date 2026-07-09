@@ -182,18 +182,31 @@ class Object
   # runtime table for rows whose class fq-name matches self.class.name. (Cannot distinguish an ivar
   # explicitly set to nil from an unset one -- slots always exist -- so a nil-valued ivar is omitted;
   # acceptable for marshal, which only serialises set ivars.)
+  # True iff row `i` (a tagged index) of __ivar_table belongs to self's class. Compares self's class-name
+  # cstr (class slot 2) to the row's class cstr, guarding self==0 (nil-as-0), tagged immediates, a null
+  # class pointer, and an UNNAMED class (slot 2 == 0, e.g. Class.new) -- doing this via self.class.name
+  # instead segfaults through __get_string(0) on an anonymous class.
+  def __ivar_row_matches_self(i)
+    %s(let (cls)
+      (if (eq self 0) (return false))
+      (if (ne (bitand self 1) 0) (return false))
+      (assign cls (index self 0))
+      (if (eq cls 0) (return false))
+      (assign cls (index cls 2))
+      (if (eq cls 0) (return false))
+      (if (eq (strcmp cls (index __ivar_table (mul (sar i) 3))) 0) (return true))
+      false)
+  end
+
   def instance_variables
     out = []
-    cn = self.class.name
     n = 0
     %s(assign n (__int (index __ivar_table_count 0)))
     i = 0
     while i < n
-      rc = nil
-      rn = nil
-      %s(assign rc (__get_string (index __ivar_table (mul (sar i) 3))))
-      %s(assign rn (__get_string (index __ivar_table (add (mul (sar i) 3) 1))))
-      if rc == cn
+      if __ivar_row_matches_self(i)
+        rn = nil
+        %s(assign rn (__get_string (index __ivar_table (add (mul (sar i) 3) 1))))
         out << rn.to_sym if !instance_variable_get(rn).nil?
       end
       i += 1
