@@ -109,6 +109,22 @@ now REAL (done here). ALL other prerequisites CONFIRMED PRESENT in lib/core (202
 straight copy of the two buffers + a `Marshal` module wrapper (`Marshal.dump`/`.load` + MAJOR/MINOR).
 Watch: pure_ruby_marshal deliberately drops encodings/Regexp (mruby target) — fine here.
 
+## Port probe results (2026-07-09) — compiler idiom support for the port
+
+Verified working in the compiler: `unpack("C*")`, `Integer#times.map`, `inject`, `tap`, `object_id`
+(stable), `Hash#values_at`, `String#<<`, `Integer#chr`, `Array#shift`, `Float::INFINITY`, `nan?`.
+Two gaps to work around in marshal.rb:
+- **`"\b"` string escape is NOT backspace** (yields literal 'b' = 98, not 8). Build the `"\x04\b"`
+  Marshal header via `4.chr + 8.chr`, never the escape literal.
+- **`2**30` is a broken bignum boundary** (`(2**30).class` returns the value, not Integer; bignum path
+  is fragile — see [[compiler_bignum_heap_multiply_bug]]). Handle fixnum-range integers correctly and
+  STUB bignum (`'l'` type) initially; most marshal specs use small ints. Don't compute `2**30` at
+  runtime for the fixnum/bignum boundary; use a fixnum-safe test.
+
+Port increment plan: write path (dump) for nil/bool/int(fixnum)/string/symbol/array/hash/float/
+object-with-ivars first, round-trip-tested against MRI `Marshal.dump`; then read path (load); then
+edge cases (bignum, Regexp, _dump/marshal_dump, object/symbol link caches). Commit + gate each slice.
+
 ## Gates (every step)
 `make selftest` + `make selftest-c` Fails:0; `bash tools/crash_battery.sh` on ax52; then a full
 ax52 sweep to confirm no CRASH/COMPILE_FAIL regression. Reflection touches object.rb (a foundational
