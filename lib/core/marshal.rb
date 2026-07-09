@@ -66,10 +66,11 @@ class MarshalWriter
     if ob.is_a?(Integer)
       return "i" + fixnum(ob)
     end
-    if ob.is_a?(String)
+    if ob.class == String
       # MRI tags a String with its encoding as an inline ivar: I "<bytes>" <1 ivar> :E true.
       # (:E => true means UTF-8.) The :E symbol is symbol-cached like any other, so a second string
       # emits ";<n>" for it. pure_ruby_marshal drops this for mruby; we keep it to match MRI's format.
+      # EXACT String only -- a String SUBCLASS (with user ivars) is handled in write() via userclass.
       return "I" + '"' + str(ob) + fixnum(1) + symbol("E") + "T"
     end
     if ob.is_a?(Symbol)
@@ -132,6 +133,19 @@ class MarshalWriter
     end
     if cur.is_a?(Hash)
       return wrap_ivars(cur, userclass(cur, Hash) + "{" + hash_body(cur))
+    end
+    if cur.is_a?(String)
+      # A String SUBCLASS (exact String was handled in basic()): I C :Class "<bytes>" carrying the
+      # encoding (:E true) AND the subclass's user ivars in one inline-ivar hash.
+      uivars = cur.instance_variables
+      out = "I" + userclass(cur, String) + '"' + str(cur) + fixnum(1 + uivars.length) + symbol("E") + "T"
+      i = 0
+      while i < uivars.length
+        nm = uivars[i]
+        out = out + symbol(nm) + write(cur.instance_variable_get(nm))
+        i += 1
+      end
+      return out
     end
     if cur.respond_to?(:_dump)
       # Old-style custom serialization: klass#_dump(depth) -> a String, klass._load(str) reverses it.
