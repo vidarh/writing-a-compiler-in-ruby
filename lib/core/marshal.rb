@@ -225,7 +225,7 @@ end
 # ---- reader (load) ---------------------------------------------------------------------------------
 class MarshalReader
   def initialize(data)
-    @data = data.unpack("C*")
+    @data = data   # raw string; byte values via getbyte, substrings via 2-arg slice (both host-portable)
     @pos = 0
     @major = read_byte
     @minor = read_byte
@@ -234,7 +234,7 @@ class MarshalReader
   end
 
   def read_byte
-    b = @data[@pos]
+    b = @data.getbyte(@pos)
     @pos += 1
     b
   end
@@ -243,28 +243,41 @@ class MarshalReader
     read_byte.chr
   end
 
+  # Read n raw bytes as a String in a SINGLE slice. The char-at-a-time `s = s + read_byte.chr` loops were
+  # O(n^2) (a fresh String every char) and the dominant load allocator; a 2-arg String slice is O(n) with
+  # one allocation. `String#[pos,len]` returns a substring identically MRI/self-hosted (ast_marshal relies
+  # on the same), so this stays non-divergent.
+  def read_bytes(n)
+    s = @data[@pos, n]
+    @pos += n
+    s
+  end
+
+  # Dispatch on the raw tag BYTE (integer), not a 1-char String. `read` runs once per node -- millions of
+  # times for a large AST -- and `read_byte.chr` was allocating a throwaway String every call, a big slice
+  # of load-time GC. Integer compares are allocation-free and behave identically MRI/self-hosted.
   def read
-    char = read_char
-    return nil   if char == "0"
-    return true  if char == "T"
-    return false if char == "F"
-    return read_integer if char == "i"
-    return read_bignum  if char == "l"
-    return read_module_ref if char == "c" || char == "m"   # 'c' Class / 'm' Module reference
-    return read_symbol  if char == ":"
-    return read_string  if char == '"'
-    return read_ivar_tagged if char == "I"   # object with inline ivars (e.g. a String's encoding)
-    return read_array   if char == "["
-    return read_hash    if char == "{"
-    return read_float   if char == "f"
-    return read_object  if char == "o"
-    return read_struct  if char == "S"
-    return read_userclass if char == "C"
-    return read_load    if char == "u"
-    return read_marshal_load if char == "U"
-    return read_symbol_link  if char == ";"
-    return read_object_link  if char == "@"
-    raise "Marshal: unsupported type #{char.inspect}"
+    c = read_byte
+    return nil   if c == 48    # "0"
+    return true  if c == 84    # "T"
+    return false if c == 70    # "F"
+    return read_integer     if c == 105  # "i"
+    return read_bignum      if c == 108  # "l"
+    return read_module_ref  if c == 99 || c == 109  # "c" Class / "m" Module reference
+    return read_symbol      if c == 58   # ":"
+    return read_string      if c == 34   # '"'
+    return read_ivar_tagged if c == 73   # "I" -- object with inline ivars (e.g. a String's encoding)
+    return read_array       if c == 91   # "["
+    return read_hash        if c == 123  # "{"
+    return read_float       if c == 102  # "f"
+    return read_object      if c == 111  # "o"
+    return read_struct      if c == 83   # "S"
+    return read_userclass   if c == 67   # "C"
+    return read_load        if c == 117  # "u"
+    return read_marshal_load if c == 85  # "U"
+    return read_symbol_link if c == 59   # ";"
+    return read_object_link if c == 64   # "@"
+    raise "Marshal: unsupported type #{c.chr.inspect}"
   end
 
   def read_integer
@@ -310,39 +323,19 @@ class MarshalReader
   # 'c' / 'm' <raw string name>: a reference to the named Class or Module (const_get). Registered in the
   # object table (MRI links repeated class references).
   def read_module_ref
-    n = read_integer
-    s = ""
-    i = 0
-    while i < n
-      s = s + read_char
-      i += 1
-    end
-    klass = marshal_const_get(s)
+    klass = marshal_const_get(read_bytes(read_integer))
     @objects << klass
     klass
   end
 
   def read_symbol
-    n = read_integer
-    s = ""
-    i = 0
-    while i < n
-      s = s + read_char
-      i += 1
-    end
-    sym = s.to_sym
+    sym = read_bytes(read_integer).to_sym
     @symbols << sym
     sym
   end
 
   def read_string
-    n = read_integer
-    s = ""
-    i = 0
-    while i < n
-      s = s + read_char
-      i += 1
-    end
+    s = read_bytes(read_integer)
     @objects << s
     s
   end
@@ -374,13 +367,7 @@ class MarshalReader
   end
 
   def read_float
-    n = read_integer
-    s = ""
-    i = 0
-    while i < n
-      s = s + read_char
-      i += 1
-    end
+    s = read_bytes(read_integer)
     @objects << s
     return Float::INFINITY if s == "inf"
     return (0.0 - Float::INFINITY) if s == "-inf"
@@ -438,6 +425,11 @@ class MarshalReader
   def read_userclass
     klass = marshal_const_get(read.to_s)
     data = read
+    # NOTE: MRI reconstructs an Array/String subclass by allocate + copying the payload directly (never
+    # calling the subclass's initialize). Doing that here is blocked on the subclass-allocate undersizing
+    # bug (task #30: `klass.allocate` on an Array subclass with added ivars under-sizes the object ->
+    # heap corruption). Until that lands we keep klass.new(data); a custom initialize(*elements) can
+    # mis-nest a single-Array payload, but that is contained to such subclasses.
     obj = data.is_a?(Hash) ? klass[data] : klass.new(data)
     @objects << obj
     obj
@@ -453,8 +445,10 @@ class MarshalReader
   end
 
   # 'I' <object> <ivar-count> <(:sym value)...>. Read the object, then apply/consume its inline ivars.
-  # For a String these are the encoding markers (:E / :encoding), which are not real ivar slots here, so
-  # instance_variable_set is a harmless no-op -- the point is to CONSUME them so the stream stays aligned.
+  # For a String these are the encoding markers (:E / :encoding), which are NOT real ivar slots -- their
+  # names don't start with '@'. We must consume them to stay aligned, but only genuine '@name' ivars get
+  # set (MRI's instance_variable_set raises on a non-'@' name like :E, which would also diverge from the
+  # self-hosted runtime -- both hosts must run this identically).
   def read_ivar_tagged
     obj = read
     n = read_integer
@@ -462,7 +456,12 @@ class MarshalReader
     while i < n
       name = read
       value = read
-      obj.instance_variable_set(name, value) if obj.respond_to?(:instance_variable_set)
+      # NB: `s[0]` returns an Integer byte on the self-hosted runtime but a 1-char String under MRI, so
+      # `s[0] == "@"` would DIVERGE (and silently drop every ivar self-hosted). `s[0..0]` is a String slice
+      # on both hosts -- use it so the '@' guard behaves identically MRI-hosted and self-hosted.
+      if name.to_s[0..0] == "@" && obj.respond_to?(:instance_variable_set)
+        obj.instance_variable_set(name, value)
+      end
       i += 1
     end
     obj
