@@ -1868,8 +1868,11 @@ class Compiler
     seen = {}
     @global_constants.to_a.each do |c|
       cs = c.to_s
-      next if cs.include?("__")
       next if cs.empty?
+      # Register nested constants under their flattened "Parent__Child" name too (was skipped): that is
+      # exactly the name a class carries in slot 2 / returns from #name, so `Object.const_get("AST__Expr")`
+      # resolves it -- needed for Marshal.load of nested classes (AST::Expr, Scanner::Position, ...). The
+      # spec-facing "Parent::Child" form resolves stepwise via const_get's "::" split (separate concern).
       # getbyte, not cs[0]: the self-hosted String#[] returns an Integer byte (not a 1-char String), so a
       # `>= "A"` char comparison raises "comparison of Integer with String" under selftest-c. 65/90 = A/Z.
       first = cs.getbyte(0)
