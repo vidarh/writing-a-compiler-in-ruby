@@ -193,6 +193,7 @@ class MarshalReader
     return read_hash    if char == "{"
     return read_float   if char == "f"
     return read_object  if char == "o"
+    return read_userclass if char == "C"
     return read_load    if char == "u"
     return read_marshal_load if char == "U"
     return read_symbol_link  if char == ";"
@@ -318,6 +319,17 @@ class MarshalReader
     @objects << obj
     data = read
     obj.marshal_load(data)
+    obj
+  end
+
+  # 'C' <class symbol> <object>: a user SUBCLASS of a built-in (Array/String/Hash). Rebuild the built-in
+  # payload, then re-wrap as an instance of the subclass. klass.new(data) copies an Array/String;
+  # klass[data] rebuilds a Hash subclass. (Any user ivars on the subclass ride an enclosing 'I'.)
+  def read_userclass
+    klass = marshal_const_get(read.to_s)
+    data = read
+    obj = data.is_a?(Hash) ? klass[data] : klass.new(data)
+    @objects << obj
     obj
   end
 
