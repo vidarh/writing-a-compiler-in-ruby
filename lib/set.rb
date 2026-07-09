@@ -52,6 +52,18 @@ class Set
     end
   end
 
+  # Groups the elements by the block's return value into a Hash of value => Set of elements.
+  def classify(&block)
+    return to_enum(:classify) if !block
+    h = {}
+    each do |o|
+      k = block.call(o)
+      h[k] = self.class.new if !h.key?(k)
+      h[k] << o
+    end
+    h
+  end
+
   def << k
     @set[k]=1
     self
