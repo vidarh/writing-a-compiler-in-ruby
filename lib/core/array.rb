@@ -1461,38 +1461,43 @@ class Array
     to_a
   end
 
-  # Returns true if any element matches the given block (or is truthy if no block given)
-  def any?
-    i = 0
-    s = self.size
-    while i < s
-      el = self[i]
-      return true if yield(el)
-      i += 1
+  # true if any element matches: a pattern (=== , block ignored), the block, or is truthy (no block).
+  # Iterates via #each so appends during iteration are observed (Array can't include Enumerable here,
+  # so these mirror Enumerable's forms directly).
+  def any?(*pattern, &block)
+    if pattern.length > 0
+      pat = pattern[0]
+      each { |el| return true if pat === el }
+    elsif block
+      each { |el| return true if block.call(el) }
+    else
+      each { |el| return true if el }
     end
     false
   end
 
-  # Returns true if all elements match the given block (or are truthy if no block given)
-  def all?
-    i = 0
-    s = self.size
-    while i < s
-      el = self[i]
-      return false if !yield(el)
-      i += 1
+  # true if ALL elements match a pattern / the block / are truthy.
+  def all?(*pattern, &block)
+    if pattern.length > 0
+      pat = pattern[0]
+      each { |el| return false if !(pat === el) }
+    elsif block
+      each { |el| return false if !block.call(el) }
+    else
+      each { |el| return false if !el }
     end
     true
   end
 
-  # Returns true if no elements match the given block (or are truthy if no block given)
-  def none?
-    i = 0
-    s = self.size
-    while i < s
-      el = self[i]
-      return false if yield(el)
-      i += 1
+  # true if NO element matches a pattern / the block / is truthy.
+  def none?(*pattern, &block)
+    if pattern.length > 0
+      pat = pattern[0]
+      each { |el| return false if pat === el }
+    elsif block
+      each { |el| return false if block.call(el) }
+    else
+      each { |el| return false if el }
     end
     true
   end
