@@ -66,6 +66,17 @@ module Tokens
           return TAB
         when 'n'
           return LF
+        when 'a'
+          return 7.chr    # bell / alert
+        when 'b'
+          return 8.chr    # backspace  (was falling through to literal 'b' -- broke Marshal specs'
+                          # "\x04\b" header and any \b use)
+        when 'f'
+          return 12.chr   # form feed
+        when 'v'
+          return 11.chr   # vertical tab
+        when 's'
+          return 32.chr   # space
         when 'M'
           # Meta escape: \M-x or \M-\C-x or \M-\c-x
           if s.peek == ?-
