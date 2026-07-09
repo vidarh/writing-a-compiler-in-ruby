@@ -331,7 +331,11 @@ void tgc_start(void *stk, void * bot, void * top) {
   gc.stack_bottom = stk;
   gc.minptr = UINTPTR_MAX;
   gc.loadfactor = 0.4;
-  gc.sweepfactor = 2;
+  /* sweepfactor governs how much the live set may grow before the next mark+sweep (mitems =
+     nitems*(1+sweepfactor)). The compiler is a batch process building a large mostly-live AST, so
+     frequent collection is nearly pure waste -- each cycle rescans the whole (deep) stack via a
+     per-word hashtable lookup and re-marks the growing live set. Collect far less often. */
+  gc.sweepfactor = 16;
 }
 
 void tgc_stop() {
