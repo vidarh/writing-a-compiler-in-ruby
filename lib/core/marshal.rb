@@ -127,8 +127,9 @@ class MarshalWriter
     if cur.is_a?(Hash)
       return wrap_ivars(cur, userclass(cur, Hash) + "{" + hash_body(cur))
     end
-    if cur.is_a?(Struct)
-      # S <class symbol> <member=>value hash>. Needs the Struct's class to be named (see #26).
+    if cur.is_a?(Struct) || cur.is_a?(Data)
+      # S <class symbol> <member=>value hash>. MRI uses 'S' for both Struct and Data. Needs the class
+      # to be named (see #26).
       return "S" + symbol(cur.class.name) + hash_body(cur.to_h)
     end
     if cur.is_a?(String)
