@@ -1821,6 +1821,15 @@ class Compiler
   # to that class's slot 2, so a duplicate-key alias just yields harmless never-matched rows). Machinery
   # ivars (@__class__) are excluded. The lookup is __ivar_offset in lib/core/object.rb. Always emitted
   # (even with 0 rows) so lib/core's references to __ivar_table/__ivar_table_count link.
+  # Built-in classes store RAW (untagged) machine values in these ivars (Array's element pointer/length,
+  # String's byte buffer, Hash's table, class metadata, ...). MRI hides such internals; here they must be
+  # kept OUT of the reflection table, or instance_variables/instance_variable_get would hand a raw pointer
+  # back to Ruby and the first method call on it (e.g. the .nil? filter in Object#instance_variables) would
+  # dereference a non-object and SIGSEGV. Reflection then matches MRI: these names read back as absent.
+  # (lib/core's own code accesses them by static slot offset, not through this table, so it is unaffected.)
+  IVAR_TABLE_EXCLUDE = [:@__class__, :@ptr, :@len, :@capacity, :@buffer, :@flags, :@length,
+                        :@data, :@first, :@last, :@deleted, :@instance_size]
+
   def output_ivar_table
     seen = {}
     rows = []
@@ -1828,7 +1837,8 @@ class Compiler
       next unless cscope.respond_to?(:all_ivar_offsets)
       fqn = key.to_s
       cscope.all_ivar_offsets.each do |ivar, off|
-        next if ivar == :@__class__
+        # Skip machinery: @__class__, @__-prefixed internals, and the built-in raw-storage ivars above.
+        next if IVAR_TABLE_EXCLUDE.include?(ivar) || ivar.to_s.start_with?("@__")
         dedup = fqn + "\0" + ivar.to_s
         next if seen[dedup]
         seen[dedup] = true
