@@ -116,16 +116,53 @@ class Object
     GenericEnumerator.new(self, meth, *args, &size_block)
   end
 
-  # Ivar-by-name reflection stubs. Ivar slots are assigned STATICALLY by the compiler with no
-  # runtime name->slot table, so set is a lossy no-op (returns the value) and get reports nil.
-  # Wrong for real reflection, but fixtures calling these at load (marshal's set ivars on
-  # literals) aborted whole spec files on the missing methods.
+  # Ivar-by-name reflection. Ivar slots are assigned STATICALLY by the compiler, but it also emits a
+  # runtime name->offset table (__ivar_table, keyed by the class fq-name in slot 2 -- see
+  # Compiler#output_ivar_table and docs/MARSHAL_REFLECTION_PLAN.md) that these consult. This makes the
+  # instance_variable_* family real (they were lossy stubs), which pure_ruby_marshal needs.
+
+  # RAW slot offset for ivar `name` ("@x" String or :@x Symbol) on self, or -1 when this class declares
+  # no such ivar. Returns a RAW machine int (usable directly by `(index self off)`); call ONLY from
+  # s-exp. Guards tagged immediates (Fixnum &c have no slots) and objects with a null class pointer.
+  def __ivar_offset(name)
+    nm = name.to_s
+    %s(let (cnt i cls nr)
+      (if (ne (bitand self 1) 0) (return -1))
+      (assign cls (index self 0))
+      (if (eq cls 0) (return -1))
+      (assign cls (index cls 2))
+      # A runtime-allocated / not-yet-named class has slot 2 == raw 0; strcmp(0,..) would segfault.
+      # Such a class has no static __ivar_table rows anyway, so treat it as "no ivar slot".
+      (if (eq cls 0) (return -1))
+      (assign nr (callm nm __get_raw))
+      (assign cnt (index __ivar_table_count 0))
+      (assign i 0)
+      (while (lt i cnt)
+        (do
+          (if (eq (strcmp cls (index __ivar_table (mul i 3))) 0)
+            (if (eq (strcmp nr (index __ivar_table (add (mul i 3) 1))) 0)
+              (return (index __ivar_table (add (mul i 3) 2)))))
+          (assign i (add i 1))))
+      (return -1))
+  end
+
   def instance_variable_set(name, value)
+    %s(let (off)
+      (assign off (callm self __ivar_offset (name)))
+      (if (ge off 0) (assign (index self off) value)))
     value
   end
 
   def instance_variable_get(name)
-    nil
+    %s(let (off v)
+      (assign off (callm self __ivar_offset (name)))
+      (if (lt off 0) (return nil))
+      (assign v (index self off))
+      # Object slots come from calloc (raw 0) and are only overwritten when the ivar is assigned; a
+      # declared-but-unset ivar therefore reads as raw 0, which is not a valid object for .nil?/dispatch.
+      # A real value is never raw 0 (nil/false/0 all have non-zero reps), so coerce raw 0 -> nil.
+      (if (eq v 0) (return nil))
+      v)
   end
 
   # Define a method on this object alone, by defining it on the object's singleton (eigen) class. The
@@ -141,12 +178,34 @@ class Object
     sc.send(:define_method, name, pr)
   end
 
+  # Declared ivars of self's class that are currently SET (slot non-nil), as :@sym names. Walks the
+  # runtime table for rows whose class fq-name matches self.class.name. (Cannot distinguish an ivar
+  # explicitly set to nil from an unset one -- slots always exist -- so a nil-valued ivar is omitted;
+  # acceptable for marshal, which only serialises set ivars.)
   def instance_variables
-    []
+    out = []
+    cn = self.class.name
+    n = 0
+    %s(assign n (__int (index __ivar_table_count 0)))
+    i = 0
+    while i < n
+      rc = nil
+      rn = nil
+      %s(assign rc (__get_string (index __ivar_table (mul (sar i) 3))))
+      %s(assign rn (__get_string (index __ivar_table (add (mul (sar i) 3) 1))))
+      if rc == cn
+        out << rn.to_sym if !instance_variable_get(rn).nil?
+      end
+      i += 1
+    end
+    out
   end
 
   def instance_variable_defined?(name)
-    false
+    off = 0
+    %s(assign off (__int (callm self __ivar_offset (name))))
+    return false if off < 0
+    !instance_variable_get(name).nil?
   end
 
   def == other

@@ -114,6 +114,20 @@ class ModuleScope < Scope
     end
   end
 
+  # Full name->absolute-slot-offset map for this class INCLUDING inherited ivars (superclass first, so
+  # this class's own entries win on any name clash). Used to emit the runtime ivar reflection table
+  # (see Compiler#output_ivar_table) that backs instance_variable_get/set. Absolute offsets: an own
+  # ivar is at @ivaroff + its index in @instance_vars, exactly as find_ivar_offset computes.
+  def all_ivar_offsets
+    h = @superclass ? @superclass.all_ivar_offsets : {}
+    i = 0
+    while i < @instance_vars.length
+      h[@instance_vars[i]] = @ivaroff + i
+      i += 1
+    end
+    h
+  end
+
   def add_constant(c, v = true)
     @constants[c] = v
   end

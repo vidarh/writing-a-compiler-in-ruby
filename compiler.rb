@@ -1813,6 +1813,39 @@ class Compiler
     @e.comment("")
   end
 
+  # Emit the runtime ivar reflection table that backs instance_variable_get/set/instance_variables.
+  # Ivar slots are assigned statically (classcope.rb) with no runtime name->slot map; this table is
+  # that map, keyed by the class fq-name cstr held in each class object's slot 2 (compile_class.rb:745).
+  # Layout: a flat array of rows, each 3 longs -- (fqname_cstr, ivar_name_cstr, RAW slot offset) -- plus
+  # a count cell. Emitted for EVERY class in @classes (each @classes key.to_s equals the string written
+  # to that class's slot 2, so a duplicate-key alias just yields harmless never-matched rows). Machinery
+  # ivars (@__class__) are excluded. The lookup is __ivar_offset in lib/core/object.rb. Always emitted
+  # (even with 0 rows) so lib/core's references to __ivar_table/__ivar_table_count link.
+  def output_ivar_table
+    seen = {}
+    rows = []
+    @classes.each do |key, cscope|
+      next unless cscope.respond_to?(:all_ivar_offsets)
+      fqn = key.to_s
+      cscope.all_ivar_offsets.each do |ivar, off|
+        next if ivar == :@__class__
+        dedup = fqn + "\0" + ivar.to_s
+        next if seen[dedup]
+        seen[dedup] = true
+        rows << [fqn, ivar.to_s, off]
+      end
+    end
+    @e.label("__ivar_table")
+    rows.each do |fqn, ivar, off|
+      @e.emit(".long", strconst(fqn).last)
+      @e.emit(".long", strconst(ivar).last)
+      @e.long(off)
+    end
+    @e.label("__ivar_table_count")
+    @e.long(rows.length)
+    @e.comment("")
+  end
+
   # Output function to initialize global variables to nil if still uninitialized (0)
   def output_global_init
     @e.export("__init_globals", "function")
@@ -1990,6 +2023,7 @@ class Compiler
     output_global_init
     output_vtable_thunks
     output_vtable_names
+    output_ivar_table
     output_constants
     @e.flush
   end
