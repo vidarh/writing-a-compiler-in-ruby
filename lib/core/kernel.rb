@@ -271,12 +271,28 @@ class Kernel
   # legitimately holding nil is indistinguishable -- acceptable for this table's uses).
   def __runtime_const_lookup(key)
     n = $__runtime_const_names
-    return nil if !n
-    i = 0
-    while i < n.length
-      return $__runtime_const_vals[i] if n[i] == key
-      i += 1
+    if n
+      i = 0
+      while i < n.length
+        return $__runtime_const_vals[i] if n[i] == key
+        i += 1
+      end
     end
+    # Fall back to the compiler-emitted static constant table (see Compiler#output_const_table): resolves
+    # statically-compiled top-level constants (classes/modules/CONST=...). Each row is (name_cstr, &cell);
+    # the value lives in the cell. A raw-0 cell means the constant exists but is unset -> treat as missing.
+    nm = key.to_s
+    %s(let (cnt i kr v)
+      (assign kr (callm nm __get_raw))
+      (assign cnt (index __const_table_count 0))
+      (assign i 0)
+      (while (lt i cnt)
+        (do
+          (if (eq (strcmp kr (index __const_table (mul i 2))) 0)
+            (do
+              (assign v (index (index __const_table (add (mul i 2) 1)) 0))
+              (if (ne v 0) (return v))))
+          (assign i (add i 1)))))
     nil
   end
 

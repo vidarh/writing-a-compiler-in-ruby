@@ -1846,6 +1846,38 @@ class Compiler
     @e.comment("")
   end
 
+  # Emit a runtime constant reflection table so Object.const_get / const_defined? / __const_get_global
+  # can resolve STATICALLY-compiled top-level constants (classes, modules, CONST=...) -- previously they
+  # found only runtime-registered constants (__const_set_global), so const_get("String")/("Foo") raised.
+  # Each row is 2 longs: (name_cstr, &global_cell). The value lives IN the cell (a class object pointer or
+  # a tagged immediate), populated at program init, so the lookup (kernel.rb __runtime_const_lookup)
+  # dereferences the cell. Only bare top-level names are registered here (nested "Foo::Bar" resolution is
+  # a follow-up; "__"-qualified names are skipped to avoid the __ vs :: convention mismatch).
+  def output_const_table
+    rows = []
+    seen = {}
+    @global_constants.to_a.each do |c|
+      cs = c.to_s
+      next if cs.include?("__")
+      next if cs.empty?
+      # getbyte, not cs[0]: the self-hosted String#[] returns an Integer byte (not a 1-char String), so a
+      # `>= "A"` char comparison raises "comparison of Integer with String" under selftest-c. 65/90 = A/Z.
+      first = cs.getbyte(0)
+      next unless first >= 65 && first <= 90   # a constant name (A-Z)
+      next if seen[cs]
+      seen[cs] = true
+      rows << cs
+    end
+    @e.label("__const_table")
+    rows.each do |cs|
+      @e.emit(".long", strconst(cs).last)   # constant name cstr
+      @e.emit(".long", cs)                   # address of the global cell holding the value
+    end
+    @e.label("__const_table_count")
+    @e.long(rows.length)
+    @e.comment("")
+  end
+
   # Output function to initialize global variables to nil if still uninitialized (0)
   def output_global_init
     @e.export("__init_globals", "function")
@@ -2024,6 +2056,7 @@ class Compiler
     output_vtable_thunks
     output_vtable_names
     output_ivar_table
+    output_const_table
     output_constants
     @e.flush
   end
