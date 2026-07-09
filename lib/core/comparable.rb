@@ -3,6 +3,7 @@ module Comparable
   # A Range argument may have a nil begin/end (open on that side).
   def clamp(min, max = nil)
     if max.nil? && min.is_a?(Range)
+      raise ArgumentError, "cannot clamp with an exclusive range" if min.exclude_end?
       lo = min.begin
       hi = min.end
     else
