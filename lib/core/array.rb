@@ -1890,13 +1890,14 @@ class Array
   # Replaces the contents of self with the contents of other_array,
   # truncating or expanding if necessary.
   def replace(other_array)
-    # FIXME: Initial, crude, slow version.
-
-    # Truncate current version, without resetting capacity.
+    raise FrozenError.new("can't modify frozen Array: #{inspect}") if frozen?
+    # Snapshot in case other_array is self (a.replace(a) must keep the original contents, not empty out
+    # after the truncate below).
+    src = other_array.equal?(self) ? other_array.dup : other_array
+    # Truncate current contents, without resetting capacity.
     %s(assign @len 0)
-
-    # Copy other_array.
-    other_array.each {|item| self << item }
+    src.each {|item| self << item }
+    self
   end
 
 
