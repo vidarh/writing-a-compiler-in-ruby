@@ -775,9 +775,13 @@ class Integer < Numeric
         # Add carry to low word
         (assign sum_low (add low carry_raw))
 
-        # Check for 32-bit overflow
+        # Check for 32-bit overflow of low+carry (i.e. carry into bit 32 -> sum_high + 1).
+        # Must be an UNSIGNED compare (sum_low < low means it wrapped): the old signed `(lt sum_low low)`
+        # MISSED the wrap whenever low had bit 31 set, leaving sum_high short by 1 and the carry short by
+        # 4 -- the heap*heap multiply bug. Flip both sign bits (^0x80000000) so signed `lt` orders them
+        # as unsigned.
         (assign sum_high high)
-        (if (lt sum_low low)
+        (if (lt (bitxor sum_low 2147483648) (bitxor low 2147483648))
           (assign sum_high (add high 1))
           (assign sum_high high))
 
@@ -1497,8 +1501,9 @@ class Integer < Numeric
         # Add limb_raw to low word
         (assign sum_low (add low limb_raw))
 
-        # Check for unsigned overflow (sum_low < low means carry occurred)
-        (if (lt sum_low low)
+        # Check for unsigned overflow (sum_low < low means carry occurred). Signed `lt` misses the wrap
+        # when low has bit 31 set; flip both sign bits (^0x80000000) so signed lt orders them unsigned.
+        (if (lt (bitxor sum_low 2147483648) (bitxor low 2147483648))
           (assign high (add high 1)))
 
         # Divide 64-bit value (high:sum_low) by divisor_raw
