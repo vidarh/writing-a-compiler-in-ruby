@@ -141,6 +141,10 @@ class RegisterAllocator
     @order = {}
 
     @allocators = []
+    # `caller` (a full backtrace) on every with_register is ~6-7% of codegen time; it only feeds the
+    # fatal "REGISTER ALLOCATION FAILED" diagnostic, which shouldn't fire. Capture it only when
+    # REGALLOC_DEBUG is set; otherwise push a cheap nil to keep the push/pop stack balanced.
+    @regalloc_debug = !ENV["REGALLOC_DEBUG"].nil?
   end
 
   # Order to prioritise variables in for register access
@@ -355,7 +359,7 @@ class RegisterAllocator
     # was attempted from in case we run out of registers
     # (which we shouldn't)
     @allocators ||= []
-    @allocators << caller
+    @allocators << (@regalloc_debug ? caller : nil)
 
     # Mark the register as allocated, to prevent it from
     # being reused.
