@@ -30,6 +30,17 @@ class Rational < Numeric
     @denominator
   end
 
+  # Marshal dumps a Rational as 'U' (marshal_dump) carrying [numerator, denominator]; load allocates a
+  # bare instance and marshal_load restores the pair directly (values are already reduced).
+  def marshal_dump
+    [@numerator, @denominator]
+  end
+
+  def marshal_load(ary)
+    @numerator = ary[0]
+    @denominator = ary[1]
+  end
+
   def to_s
     "#{@numerator}/#{@denominator}"
   end

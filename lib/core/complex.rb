@@ -22,6 +22,16 @@ class Complex
   end
   alias imaginary imag
 
+  # Marshal dumps a Complex as 'U' (marshal_dump) carrying [real, imag].
+  def marshal_dump
+    [@real, @imag]
+  end
+
+  def marshal_load(ary)
+    @real = ary[0]
+    @imag = ary[1]
+  end
+
   def +(other)
     if other.is_a?(Complex)
       Complex.new(@real + other.real, @imag + other.imag)
