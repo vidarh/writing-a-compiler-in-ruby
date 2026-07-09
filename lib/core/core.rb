@@ -106,6 +106,7 @@ require 'core/math'
 require 'core/binding'
 require 'core/pack'        # Shared Array#pack / String#unpack byte codec
 require 'core/glob'        # File.fnmatch + Dir.glob engine
+require 'core/marshal'     # Marshal.dump/.load (ported from pure_ruby_marshal; needs pack + ivar reflection)
 
 #
 # Other support

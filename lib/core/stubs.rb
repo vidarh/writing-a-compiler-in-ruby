@@ -232,25 +232,7 @@ module Signal
   end
 end
 
-# Marshal stub: binary serialization is unimplemented. The methods raise (rescued per-test by
-# the spec harness); the CONSTANT must exist because specs reference `Marshal` in describe
-# arguments -- evaluated before any rescue -- which aborted whole files at load.
-module Marshal
-  MAJOR_VERSION = 4
-  MINOR_VERSION = 8
-
-  def self.dump(obj, io = nil, limit = nil)
-    raise NotImplementedError.new("Marshal.dump not implemented")
-  end
-
-  def self.load(source, proc = nil)
-    raise NotImplementedError.new("Marshal.load not implemented")
-  end
-
-  def self.restore(source, proc = nil)
-    raise NotImplementedError.new("Marshal.restore not implemented")
-  end
-end
+# (Marshal is now implemented for real in lib/core/marshal.rb -- the old raising stub was removed.)
 
 # Stub for Module class
 # FIXME: Module should be a superclass of Class, but that requires
