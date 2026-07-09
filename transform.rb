@@ -2008,6 +2008,13 @@ class Compiler
           block.depth_first do |bx|
             bx.each do |n|
               next if !(n.is_a?(Symbol) && n.to_s[0] == ?@ && n.to_s[1] != ?@)
+              # Ensure EVERY ivar mentioned in the block has a slot, not just attr_* ones
+              # (register_dynamic_block_ivars only registers attr ivars). A `def initialize; @a=1;
+              # @b=2; @c=3; end` assigns ivars directly; without registering them here find_ivar_offset
+              # returned nil, needed_slots undercounted, and the anon class's @instance_size was too
+              # small -> the 3rd ivar write ran off the object end (free(): invalid next size). add_ivar
+              # is idempotent + append-only, so the slot matches what get_instance_var uses at compile.
+              obj.add_ivar(n.to_sym)
               off = obj.find_ivar_offset(n.to_sym)
               needed_slots = off + 1 if off && off + 1 > needed_slots
             end
