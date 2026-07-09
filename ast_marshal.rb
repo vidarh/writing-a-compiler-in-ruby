@@ -53,29 +53,39 @@ module ASTMarshal
 
   # load: read one tagged value from `str` at [pos]; return [obj, newpos]. `while` loops (not the
   # block form) so `pos` is a plain local, not captured/mutated through a closure.
+  # Read a 4-byte big-endian unsigned int without allocating. `str[pos,4].unpack("N")` allocated a
+  # substring AND a 1-element array on EVERY length read (millions across the core AST) -- a big load
+  # allocator. getbyte is also the portable byte accessor (str[i] returns a byte Integer self-hosted).
+  def read4(str, pos)
+    (str.getbyte(pos) << 24) | (str.getbyte(pos + 1) << 16) | (str.getbyte(pos + 2) << 8) | str.getbyte(pos + 3)
+  end
+
   def load(str, pos)
-    tag = str[pos]
+    # Dispatch on the raw tag BYTE. `str[pos]` returns a 1-char String under MRI but an Integer byte on
+    # the self-hosted runtime, so the old `tag == "0"` compares NEVER matched self-hosted -> the cache
+    # silently failed to load and always fell back to a full parse. getbyte is identical on both hosts.
+    tag = str.getbyte(pos)
     pos += 1
-    if tag == "0"
+    if tag == 48              # "0"
       return nil, pos
-    elsif tag == "T"
+    elsif tag == 84           # "T"
       return true, pos
-    elsif tag == "F"
+    elsif tag == 70           # "F"
       return false, pos
-    elsif tag == "i"
-      n = str[pos, 4].unpack("N")[0]
+    elsif tag == 105          # "i"
+      n = read4(str, pos)
       pos += 4
       return str[pos, n].to_i, pos + n
-    elsif tag == "y"
-      n = str[pos, 4].unpack("N")[0]
+    elsif tag == 121          # "y"
+      n = read4(str, pos)
       pos += 4
       return str[pos, n].to_sym, pos + n
-    elsif tag == "s"
-      n = str[pos, 4].unpack("N")[0]
+    elsif tag == 115          # "s"
+      n = read4(str, pos)
       pos += 4
       return str[pos, n], pos + n
-    elsif tag == "S"
-      n = str[pos, 4].unpack("N")[0]
+    elsif tag == 83           # "S"
+      n = read4(str, pos)
       pos += 4
       body = str[pos, n]
       pos += n
@@ -83,13 +93,13 @@ module ASTMarshal
       ss = Scanner::ScannerString.new(body)
       ss.position = p
       return ss, pos
-    elsif tag == "p"
+    elsif tag == 112          # "p"
       f, pos = load(str, pos)
       l, pos = load(str, pos)
       c, pos = load(str, pos)
       return Scanner::Position.new(f, l, c), pos
-    elsif tag == "e"
-      n = str[pos, 4].unpack("N")[0]
+    elsif tag == 101          # "e"
+      n = read4(str, pos)
       pos += 4
       e = AST::Expr.new
       i = 0
@@ -101,8 +111,8 @@ module ASTMarshal
       p, pos = load(str, pos)
       e.position = p
       return e, pos
-    elsif tag == "a"
-      n = str[pos, 4].unpack("N")[0]
+    elsif tag == 97           # "a"
+      n = read4(str, pos)
       pos += 4
       arr = []
       i = 0
@@ -113,7 +123,7 @@ module ASTMarshal
       end
       return arr, pos
     else
-      raise "ASTMarshal: bad tag #{tag.inspect} at #{pos - 1}"
+      raise "ASTMarshal: bad tag #{tag} at #{pos - 1}"
     end
   end
 
