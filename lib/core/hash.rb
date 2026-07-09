@@ -803,6 +803,17 @@ class Hash
     h
   end
 
+  # The implicit hash-conversion protocol: a Hash returns itself.
+  def to_hash
+    self
+  end
+
+  # An array of the values for the given keys, in order; a missing key yields the hash's default
+  # (self[k] applies it), matching MRI.
+  def values_at(*keys)
+    keys.map { |k| self[k] }
+  end
+
   def self.try_convert(obj)
     return obj if obj.is_a?(Hash)
     if obj.respond_to?(:to_hash)

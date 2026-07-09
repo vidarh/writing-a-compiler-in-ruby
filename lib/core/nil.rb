@@ -69,6 +69,15 @@ class NilClass
     {}
   end
 
+  # nil converts to the exact zero of each numeric type.
+  def to_r
+    Rational.new(0, 1)
+  end
+
+  def to_c
+    Complex.new(0, 0)
+  end
+
   # nil.rationalize -> (0/1). An optional precision argument is accepted and ignored;
   # more than one argument is an ArgumentError (matching MRI). The empty stub returned
   # a raw 0 (not even nil), so `nil.rationalize.should ...` dereferenced null and crashed.
