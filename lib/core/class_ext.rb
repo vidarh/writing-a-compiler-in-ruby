@@ -63,7 +63,7 @@ end
    (div 1 0)
 ))
 
-(defun __minarg (name minargs actual)
+(defun __minarg (minargs actual)
   (let (__argbuf __argmsg __argexc) (do
     (assign __argbuf (__alloc_leaf 200))
     (snprintf __argbuf 200 "wrong number of arguments (given %d, expected %d+)"
@@ -75,7 +75,7 @@ end
 )
 
 
-(defun __maxarg (name maxargs actual)
+(defun __maxarg (maxargs actual)
   (let (__argbuf __argmsg __argexc) (do
     (assign __argbuf (__alloc_leaf 200))
     (snprintf __argbuf 200 "wrong number of arguments (given %d, expected 0..%d)"
@@ -86,7 +86,7 @@ end
   ))
 )
 
- (defun __eqarg (name eqargs actual)
+ (defun __eqarg (eqargs actual)
   (let (__argbuf __argmsg __argexc) (do
     (assign __argbuf (__alloc_leaf 200))
     (snprintf __argbuf 200 "wrong number of arguments (given %d, expected %d)"

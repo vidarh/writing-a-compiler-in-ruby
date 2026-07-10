@@ -20,17 +20,17 @@ class Compiler
       @e.cmpl(minargs, :ebx)
       @e.je(l)
       compile_eval_arg(fscope,
-        [:sexp,[:call, :__eqarg, [name, minargs - 2, :numargs]]])
+        [:sexp,[:call, :__eqarg, [minargs - 2, :numargs]]])
     else
       @e.cmpl(minargs, :ebx)
       @e.jge(l)
       compile_eval_arg(fscope,
-        [:sexp,[:call, :__minarg, [name, minargs - 2, :numargs]]])
+        [:sexp,[:call, :__minarg, [minargs - 2, :numargs]]])
       if !func.rest?
         @e.cmpl(maxargs, :ebx)
         @e.jle(l)
         compile_eval_arg(fscope,
-                        [:sexp,[:call, :__maxarg, [name, maxargs - 2, :numargs]]])
+                        [:sexp,[:call, :__maxarg, [maxargs - 2, :numargs]]])
       end
     end
     @e.label(l)
