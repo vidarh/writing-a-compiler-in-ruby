@@ -93,6 +93,9 @@ typedef struct {
 
 static tgc_t gc;
 
+/* Lightweight instrumentation (reported at exit when TGC_STATS is set). */
+static size_t g_nallocs = 0, g_ncollects = 0;
+
 /* --- header accessors (obj points at the DATA; header is the 8 bytes before) --- */
 static inline uint32_t *hdr_of(void *obj) { return (uint32_t*)((char*)obj - HDR); }
 static inline int    obj_marked(void *obj) { return *hdr_of(obj) & 1u; }
@@ -170,6 +173,7 @@ void *tgc_alloc(size_t size, int leaf) {
   *hdr_of(obj) = SZF_MAKE(size, leaf);            /* size + leaf, mark = 0 */
   memset(obj, 0, size);                           /* calloc semantics for the requested bytes */
   gc.nitems++;
+  g_nallocs++;
 
   if (gc.nitems > gc.mitems) { tgc_collect(); }   /* obj is a live local -> conservatively kept on the stack */
   return obj;
@@ -248,6 +252,7 @@ static void tgc_sweep(void) {
 }
 
 static void tgc_collect(void) {
+  g_ncollects++;
   tgc_mark();
   tgc_sweep();
   gc.mitems = gc.nitems + (size_t)(gc.nitems * gc.sweepfactor) + 1;
@@ -262,11 +267,17 @@ void tgc_start(void *stk, void *bot, void *top) {
   gc.maxptr = 0;
   /* sweepfactor governs how much the live set may grow before the next mark+sweep
      (mitems = nitems*(1+sweepfactor)). The compiler is a batch process building a large mostly-live AST,
-     so frequent collection is nearly pure waste. Collect far less often. */
+     so frequent collection is nearly pure waste. Collect far less often. Env override for tuning. */
   gc.sweepfactor = 16;
+  { const char *s = getenv("TGC_SWEEP"); if (s && *s) { gc.sweepfactor = atof(s); } }
 }
 
 void tgc_stop(void) {
+  if (getenv("TGC_STATS")) {
+    size_t narenas = 0; for (arena_t *x = gc.arenas; x; x = x->next) { narenas++; }
+    fprintf(stderr, "TGC: allocs=%zu collects=%zu live=%zu arenas=%zu sweepfactor=%g\n",
+            g_nallocs, g_ncollects, gc.nitems, narenas, gc.sweepfactor);
+  }
   arena_t *a = gc.arenas;
   while (a) {
     arena_t *n = a->next;
