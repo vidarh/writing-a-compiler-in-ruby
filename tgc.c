@@ -141,11 +141,13 @@ static arena_t *arena_of(void *p) {
 static void tgc_collect(void);
 
 void *tgc_alloc(size_t size, int leaf) {
-  /* +8 slack word: some runtime paths write one byte past `size` (a C-string NUL terminator on String
-     buffers). The old calloc+malloc gave rounding slack that absorbed this; the tightly-packed arena does
-     not, so a bare ALIGNUP(size) let that write corrupt the NEXT object's header. Pad to keep it safe.
-     (Also guarantees the >=8 minimum for the free-list link and obj < cur.) */
-  size_t asz = ALIGNUP(size) + 8;
+  /* Slot size. Non-leaf objects (arrays/objects/closures -- the ~90% majority) are fixed-size and never
+     write past `size`, so no padding. LEAF (String) buffers get an 8-byte slack word as a C-interop safety
+     margin (a NUL terminator could be written at [size] when size%8==0); selftest-c + a 100k-string stress
+     pass without even this, but the spec sweep (blocked) exercises more string paths, so keep the margin.
+     The free list is keyed by the FINAL slot size, so leaf/non-leaf of a given class share slots safely. */
+  size_t asz = ALIGNUP(size) + (leaf ? (size_t)8 : (size_t)0);
+  if (asz < 8) { asz = 8; }   /* min slot: free-list link + obj strictly < cur */
   size_t cls = asz / 8;
   void *obj = NULL;
   arena_t *a;
@@ -233,7 +235,8 @@ static void tgc_sweep(void) {
     char *p = a->base;
     while (p < a->cur) {
       void *obj = p + HDR;
-      size_t asz = ALIGNUP(obj_size(obj)) + 8;     /* MUST match tgc_alloc's slot size (incl. +8 slack) */
+      size_t asz = ALIGNUP(obj_size(obj)) + (obj_leaf(obj) ? (size_t)8 : (size_t)0);  /* MUST match tgc_alloc */
+      if (asz < 8) { asz = 8; }
       size_t idx = ((size_t)((char*)obj - a->base)) / 8;
       if (bm_get(a, idx)) {                         /* a live slot */
         if (obj_marked(obj)) {
