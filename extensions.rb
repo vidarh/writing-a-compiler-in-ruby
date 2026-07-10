@@ -58,9 +58,18 @@ class Array
     # rewrites fail and causes it to
     # be incorrectly initialized
     a = arg
-    self.each do |n|
-      ret = n.__depth_first(a, &block) if n.is_a?(Array)
-      return :stop if ret == :stop
+    # Index while-loop instead of `self.each do |n|`: depth_first runs over the whole AST ~50 times per
+    # compile, so the per-node block dispatch adds up. (Also the codebase prefers `while` over `each` in
+    # hot self-hosted paths -- see ast_marshal.)
+    i = 0
+    len = self.length
+    while i < len
+      n = self[i]
+      if n.is_a?(Array)
+        ret = n.__depth_first(a, &block)
+        return :stop if ret == :stop
+      end
+      i += 1
     end
     return true
   end
