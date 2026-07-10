@@ -121,13 +121,14 @@ class Peephole
       return
     end
 
-    # subl $0, reg
-    if match([:subl, 0, Symbol], args)
+    # subl $0, reg  (inlined: peephole runs per instruction, so `match([:subl,0,Symbol], args)` allocated
+    # a fresh 3-element pattern Array every emit)
+    if args.length == 3 && args[0] == :subl && args[1] == 0 && args[2].is_a?(Symbol)
       @prev.pop
       return
     end
 
-    if [:movl, :movb].include?(args[0]) && args[1] == args[2]
+    if (args[0] == :movl || args[0] == :movb) && args[1] == args[2]
       @prev.pop
       return
     end
@@ -191,8 +192,12 @@ class Peephole
     false
   end
 
+  MINUS4_EBP = "-4(%ebp)".freeze
+
   def handle_push_pop_patterns(last, args)
-    if last == [:pushl, :ebx] && args == [:movl, "-4(%ebp)", :eax]
+    # inlined equality (the two Array literals + the string literal allocated every emit)
+    if last.length == 2 && last[0] == :pushl && last[1] == :ebx &&
+       args.length == 3 && args[0] == :movl && args[1] == MINUS4_EBP && args[2] == :eax
       @prev.pop
       @prev << [:movl, :ebx, :eax]
       return true
