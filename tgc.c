@@ -310,9 +310,13 @@ void tgc_start(void *stk, void *bot, void *top) {
   gc.minptr = UINTPTR_MAX;
   gc.maxptr = 0;
   /* sweepfactor governs how much the live set may grow before the next mark+sweep
-     (mitems = nitems*(1+sweepfactor)). The compiler is a batch process building a large mostly-live AST,
-     so frequent collection is nearly pure waste. Collect far less often. Env override for tuning. */
-  gc.sweepfactor = 16;
+     (mitems = nitems*(1+sweepfactor)). MEASURED (2026-07-10, self-hosted compile of test/selftest.rb):
+     the old "batch process -> collect rarely" assumption was WRONG -- there is a lot of TRANSIENT garbage
+     (temporaries) between collections, and the sweep walks the whole heap, so a bigger heap makes each
+     sweep costlier AND balloons RSS. Lower factor -> smaller heap -> cheaper sweeps + far less RSS:
+     sf=16 was 507MB, sf=8 is 360MB (-29%) with equal-or-better wall-clock (sf=4 turns over on collect
+     overhead). 8 is the sweet spot. Env override (TGC_SWEEP) for tuning. */
+  gc.sweepfactor = 8;
   { const char *s = getenv("TGC_SWEEP"); if (s && *s) { gc.sweepfactor = atof(s); } }
 }
 
