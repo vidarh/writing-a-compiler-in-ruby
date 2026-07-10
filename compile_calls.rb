@@ -437,7 +437,7 @@ class Compiler
     method ||= :__unknown__
 
     @e.comment(Emitter::COMMENTS && "super #{method.inspect}")
-    trace(nil,"=> super #{method.inspect}\n")
+    trace(nil, @trace && "=> super #{method.inspect}\n")
     # Pass the defining class name so we look up the right superclass
     # (not self.class.superclass which would be wrong for deep hierarchies)
     # For eigenclasses, fall back to runtime lookup since they don't have globals
@@ -463,7 +463,7 @@ class Compiler
       defining_class = cs.name
     end
     ret = compile_callm(scope, :self, method, args, block, defining_class)
-    trace(nil,"<= super #{method.inspect}\n")
+    trace(nil, @trace && "<= super #{method.inspect}\n")
     ret
   end
 
@@ -495,7 +495,7 @@ class Compiler
     end
 
     @e.comment(Emitter::COMMENTS && "callm #{ob.inspect}.#{method.inspect}")
-    trace(nil,"=> callm #{ob.inspect}.#{method.inspect}\n")
+    trace(nil, @trace && "=> callm #{ob.inspect}.#{method.inspect}\n")
 
     stackfence do
       args ||= []
@@ -593,7 +593,7 @@ class Compiler
     end
 
     @e.comment(Emitter::COMMENTS && "callm #{ob.to_s}.#{method.to_s} END")
-    trace(nil,"<= callm #{ob.to_s}.#{method.to_s}\n")
+    trace(nil, @trace && "<= callm #{ob.to_s}.#{method.to_s}\n")
 
     return Value.new([:subexpr], :object)
   end
