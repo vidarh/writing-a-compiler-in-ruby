@@ -190,6 +190,18 @@ class String
   end
 
   def [] index, len = nil
+    # Fast path for the hot single-index str[i] with a non-negative fixnum in bounds (ubiquitous in the
+    # scanner): read the byte directly, matching the slow-path tail below (untag, bindex, __int). Skips the
+    # len.nil?/is_a?(Range)/is_a?(Integer)/__to_fixnum_if_possible/nil? dispatch chain. The 2-arg form, Range,
+    # non-fixnum, negative and out-of-bounds indices all fall through (no return) to the unchanged code.
+    %s(if (eq len nil)
+        (if (ne (bitand index 1) 0)
+          (let (raw)
+            (assign raw (sar index))
+            (if (ge raw 0)
+              (if (lt raw @length)
+                (return (__int (bindex @buffer raw))))))))
+
     # Two-argument form: str[start, length] -- same selection as #slice.
     if !len.nil?
       return slice(index, len)
