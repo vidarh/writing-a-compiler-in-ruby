@@ -25,19 +25,19 @@
 
 %s(defun __alloc (size opt)
   (let (ptr)
-    (assign ptr (calloc size 1))
+    # tgc_alloc bump-allocates size bytes (zeroed) from a GC arena and returns the object (0 on OOM).
+    # This replaces the old calloc + tgc_add (per-object hashtable insert) path.
+    (assign ptr (tgc_alloc size opt))
     # Diagnostic probe (purely additive; still returns 0 as before): on a 32-bit target the
     # per-process address space is ~3-4GB regardless of system RAM, so a heavy/runaway-allocating
-    # spec can exhaust it and calloc returns NULL. Callers that don't check the 0 then wild-write
-    # near address 0 -> SIGSEGV (classified CRASH, not TIMEOUT). Emitting the size here means any
-    # such event shows up verbatim in the sweep's captured spec output, so we can CONFIRM or REFUTE
-    # allocation-failure as the mechanism behind the flaky sweep-only crashers instead of reasoning
-    # about it. Guard on fd 2 only; dprintf uses a static buffer and needs no heap.
+    # spec can exhaust it and tgc_alloc returns NULL. Callers that don't check the 0 then wild-write
+    # near address 0 -> SIGSEGV. Emitting the size here means any such event shows up verbatim in the
+    # sweep's captured spec output. Guard on fd 2 only; dprintf uses a static buffer and needs no heap.
     (if (eq ptr 0) (do
-      (dprintf 2 "__alloc: FATAL calloc failed for %ld bytes (32-bit address space exhausted?)\n" size)
+      (dprintf 2 "__alloc: FATAL tgc_alloc failed for %ld bytes (32-bit address space exhausted?)\n" size)
       (return 0)
     ))
-    (return (tgc_add ptr size opt))
+    (return ptr)
   )
 )
 

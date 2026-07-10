@@ -2,7 +2,7 @@
 Licensed Under BSD
 
 Copyright (c) 2013, Daniel Holden
-Modifications 2019 by Vidar Hokstad
+Modifications 2019-2026 by Vidar Hokstad
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,366 +37,257 @@ either expressed or implied, of the FreeBSD Project.
 #include <setjmp.h>
 #include <signal.h>
 
-/* Ignore SIGPIPE process-wide (as MRI does). A write() to a pipe/socket whose read
-   end is closed otherwise delivers SIGPIPE and kills the process; with SIG_IGN the
-   write instead returns -1/EPIPE, which IO#write can surface as Errno::EPIPE rather
-   than crashing the whole program. Runs before main via the constructor attribute. */
+/* Ignore SIGPIPE process-wide (as MRI does). */
 __attribute__((constructor))
 static void __rt_ignore_sigpipe(void) {
   signal(SIGPIPE, SIG_IGN);
 }
 
-/* 8-byte table entry (was 16): the per-object pointer table dominated peak memory (2.5x over-allocated
-   slots x 16 bytes ~= 1GB when a memory-heavy phase runs). `hash` is dropped -- it stored the ideal slot,
-   which is recomputable from `ptr` (tgc_hash(ptr) % nslots) against the CURRENT nslots, exactly what the
-   stored value tracked. size + the leaf/mark flags pack into one 32-bit word: size in the top 30 bits
-   (objects are always < 1GB here), leaf in bit 1, mark in bit 0. Empty slot is ptr == NULL. */
-typedef struct {
-  void *ptr;        /* NULL == empty slot */
-  uint32_t szf;     /* (size << 2) | (leaf << 1) | mark */
-} tgc_ptr_t;
+/* ---------------------------------------------------------------------------
+   ARENA-BASED conservative mark-sweep GC.
+
+   Objects are bump-allocated from large arenas instead of individually
+   malloc'd + tracked in a per-object pointer HASHTABLE. GC membership ("is
+   this candidate word a managed object pointer?") is a range-check against the
+   arenas + an object-start bitmap, replacing the hashtable that cost a
+   hash+Robin-Hood insert on EVERY allocation and ~2.5x its live size in slots.
+
+   Each object is preceded by an 8-byte header holding
+     szf = (size << 2) | (leaf << 1) | mark
+   (size in the top 30 bits -- objects are < 1GB; leaf in bit 1; mark in bit 0).
+   The Ruby-visible pointer points at the data AFTER the header, 8-byte aligned.
+
+   Per arena: an object-start bitmap, 1 bit per 8 bytes, set at each LIVE
+   object's word index. Dead objects are swept onto per-size-class free lists
+   (their object-start bit cleared so a stray pointer can't resurrect them) and
+   reused before bumping. The header (hence size) is preserved for freed slots
+   so the linear sweep walk can always step slot-to-slot.
+   --------------------------------------------------------------------------- */
+
+#define HDR         ((size_t)8)                         /* header bytes before each object (keeps 8-byte align) */
+#define ALIGNUP(n)  (((n) + (size_t)7) & ~((size_t)7))
+#define ARENA_BYTES ((size_t)256 * 1024 * 1024)         /* 256MB arenas: keep the arena count (hence the
+                                                            membership scan) tiny; calloc is lazily paged so an
+                                                            unused arena costs ~no real memory. */
+#define MAXCLASS    ((size_t)16384)                      /* exact-fit free lists for objects up to 128KB */
 
 #define SZF_SIZE(x)        ((size_t)((x) >> 2))
 #define SZF_MAKE(sz, leaf) ((uint32_t)(((uint32_t)(sz) << 2) | ((leaf) ? 2u : 0u)))
 
+typedef struct arena {
+  struct arena *next;
+  char    *base;      /* start of the object region */
+  char    *cur;       /* bump pointer (== end of allocated region) */
+  char    *end;       /* end of the buffer */
+  uint8_t *objstart;  /* 1 bit per 8 bytes: set at each live object's word index */
+} arena_t;
+
 typedef struct {
-  void *stack_bottom;
-  void *roots_start;
-  void *roots_end;
+  void *stack_bottom, *roots_start, *roots_end;
   uintptr_t minptr, maxptr;
-  tgc_ptr_t *items, *frees;
-  double loadfactor, sweepfactor;
-  size_t nitems, nslots, mitems, nfrees;
+  arena_t *arenas;
+  void *freelist[MAXCLASS];
+  double sweepfactor;
+  size_t nitems, mitems;
 } tgc_t;
 
-tgc_t gc;
+static tgc_t gc;
 
-static size_t tgc_hash(void *ptr) { return ((uintptr_t)ptr) >> 3; }
-static unsigned short is_marked(size_t i) { return gc.items[i].szf & 1u; }
-static unsigned short is_leaf(size_t i)   { return (gc.items[i].szf >> 1) & 1u; }
-static void clear_mark(size_t i) { gc.items[i].szf &= ~1u; }
-static void set_mark(size_t i)   { gc.items[i].szf |= 1u; }
+/* --- header accessors (obj points at the DATA; header is the 8 bytes before) --- */
+static inline uint32_t *hdr_of(void *obj) { return (uint32_t*)((char*)obj - HDR); }
+static inline int    obj_marked(void *obj) { return *hdr_of(obj) & 1u; }
+static inline void   obj_setmark(void *obj) { *hdr_of(obj) |= 1u; }
+static inline void   obj_clrmark(void *obj) { *hdr_of(obj) &= ~1u; }
+static inline int    obj_leaf(void *obj)   { return (*hdr_of(obj) >> 1) & 1u; }
+static inline size_t obj_size(void *obj)   { return SZF_SIZE(*hdr_of(obj)); }
 
-/* Probe distance of the entry currently in slot i: (i - ideal_slot) mod nslots, where ideal_slot is
-   recomputed from the stored ptr. Only valid for an occupied slot (ptr != NULL). */
-static size_t tgc_probe(size_t i) {
-  size_t ideal = tgc_hash(gc.items[i].ptr) % gc.nslots;
-  long v = (long)i - (long)ideal;
-  if (v < 0) { v = gc.nslots + v; }
-  return v;
+/* --- object-start bitmap, indexed by (obj - arena->base) / 8 --- */
+static inline void bm_set(arena_t *a, size_t i) { a->objstart[i>>3] |= (uint8_t)(1u << (i&7)); }
+static inline void bm_clr(arena_t *a, size_t i) { a->objstart[i>>3] &= (uint8_t)~(1u << (i&7)); }
+static inline int  bm_get(arena_t *a, size_t i) { return (a->objstart[i>>3] >> (i&7)) & 1; }
+
+static arena_t *arena_new(size_t need) {
+  size_t bytes = ARENA_BYTES;
+  if (HDR + ALIGNUP(need) > bytes) { bytes = ALIGNUP(HDR + ALIGNUP(need)); } /* oversized single object */
+
+  arena_t *a = (arena_t*)calloc(1, sizeof(arena_t));
+  if (!a) { return NULL; }
+  a->base = (char*)calloc(1, bytes);
+  if (!a->base) { free(a); return NULL; }
+  a->objstart = (uint8_t*)calloc(1, (bytes / 8) / 8 + 1);
+  if (!a->objstart) { free(a->base); free(a); return NULL; }
+  a->cur = a->base;
+  a->end = a->base + bytes;
+  a->next = gc.arenas;
+  gc.arenas = a;
+
+  if ((uintptr_t)a->base < gc.minptr) { gc.minptr = (uintptr_t)a->base; }
+  if ((uintptr_t)a->end  > gc.maxptr) { gc.maxptr = (uintptr_t)a->end; }
+  return a;
 }
 
-static tgc_ptr_t *tgc_get_ptr(void *ptr) {
-  size_t i, j;
-  i = tgc_hash(ptr) % gc.nslots; j = 0;
-  while (1) {
-    if (gc.items[i].ptr == NULL || j > tgc_probe(i)) { return NULL; }
-    if (gc.items[i].ptr == ptr) { return &gc.items[i]; }
-    i = (i+1) % gc.nslots; j++;
+/* Arena whose allocated region contains data pointer p, or NULL. */
+static arena_t *arena_of(void *p) {
+  if ((uintptr_t)p < gc.minptr || (uintptr_t)p >= gc.maxptr) { return NULL; }
+  for (arena_t *a = gc.arenas; a; a = a->next) {
+    if ((char*)p >= a->base && (char*)p < a->cur) { return a; }
   }
   return NULL;
 }
 
-static void tgc_add_ptr(void *ptr, size_t size, int leaf) {
+static void tgc_collect(void);
 
-  tgc_ptr_t item;
-  size_t i = tgc_hash(ptr) % gc.nslots;
-  size_t j = 0;
+void *tgc_alloc(size_t size, int leaf) {
+  /* +8 slack word: some runtime paths write one byte past `size` (a C-string NUL terminator on String
+     buffers). The old calloc+malloc gave rounding slack that absorbed this; the tightly-packed arena does
+     not, so a bare ALIGNUP(size) let that write corrupt the NEXT object's header. Pad to keep it safe.
+     (Also guarantees the >=8 minimum for the free-list link and obj < cur.) */
+  size_t asz = ALIGNUP(size) + 8;
+  size_t cls = asz / 8;
+  void *obj = NULL;
+  arena_t *a;
 
-  item.ptr = ptr;
-  item.szf = SZF_MAKE(size, leaf);
-
-  while (1) {
-    if (gc.items[i].ptr == NULL) { gc.items[i] = item; return; }
-    if (gc.items[i].ptr == item.ptr) { return; }
-    size_t p = tgc_probe(i);
-    if (j >= p) {
-      tgc_ptr_t tmp = gc.items[i];
-      gc.items[i] = item;
-      item = tmp;
-      j = p;
+  if (cls < MAXCLASS && gc.freelist[cls]) {
+    /* reuse a freed slot of the exact class */
+    obj = gc.freelist[cls];
+    gc.freelist[cls] = *(void**)obj;              /* pop (link stored in the object's first word) */
+    a = arena_of(obj);
+    bm_set(a, ((size_t)((char*)obj - a->base)) / 8);
+  } else {
+    /* bump-allocate */
+    a = gc.arenas;
+    size_t total = HDR + asz;
+    if (!a || (size_t)(a->end - a->cur) < total) {
+      a = arena_new(size);
+      if (!a) { return NULL; }
     }
-    i = (i+1) % gc.nslots; j++;
+    char *slot = a->cur;
+    a->cur += total;
+    obj = slot + HDR;
+    bm_set(a, ((size_t)((char*)obj - a->base)) / 8);
   }
+
+  *hdr_of(obj) = SZF_MAKE(size, leaf);            /* size + leaf, mark = 0 */
+  memset(obj, 0, size);                           /* calloc semantics for the requested bytes */
+  gc.nitems++;
+
+  if (gc.nitems > gc.mitems) { tgc_collect(); }   /* obj is a live local -> conservatively kept on the stack */
+  return obj;
 }
 
-static void tgc_rem_ptr(void *ptr) {
-  if (gc.nitems == 0) { return; }
-
-  size_t i, j, nj;
-  for (i = 0; i < gc.nfrees; i++) {
-    if (gc.frees[i].ptr == ptr) { gc.frees[i].ptr = NULL; }
-  }
-
-  i = tgc_hash(ptr) % gc.nslots; j = 0;
-
-  while (1) {
-    if (gc.items[i].ptr == NULL || j > tgc_probe(i)) { return; }
-    if (gc.items[i].ptr == ptr) {
-      memset(&gc.items[i], 0, sizeof(tgc_ptr_t));
-      j = i;
-      while (1) {
-        nj = (j+1) % gc.nslots;
-        if (gc.items[nj].ptr != NULL && tgc_probe(nj) > 0) {
-          memcpy(&gc.items[ j], &gc.items[nj], sizeof(tgc_ptr_t));
-          memset(&gc.items[nj],              0, sizeof(tgc_ptr_t));
-          j = nj;
-        } else {
-          break;
-        }
-      }
-      gc.nitems--;
-      return;
-    }
-    i = (i+1) % gc.nslots; j++;
-  }
+/* --- marking --- */
+static void tgc_mark_ptr(void *p) {
+  /* Every managed object is 8-byte aligned (arena base is >=8-aligned; slots are multiples of 8). Reject
+     any misaligned candidate (tagged fixnums, interior/garbage words) FIRST: otherwise (p-base)/8 would
+     TRUNCATE a misaligned address onto some real object's bitmap index, a false positive that then reads a
+     garbage header and walks off the end. (The old hashtable matched pointers exactly, so it was immune.) */
+  if ((uintptr_t)p & 7u) { return; }
+  arena_t *a = arena_of(p);
+  if (!a) { return; }
+  size_t i = ((size_t)((char*)p - a->base)) / 8;
+  if (!bm_get(a, i)) { return; }                  /* not an object start */
+  if (obj_marked(p)) { return; }
+  obj_setmark(p);
+  if (obj_leaf(p)) { return; }
+  size_t words = obj_size(p) / sizeof(void*);
+  void **fields = (void**)p;
+  for (size_t k = 0; k < words; k++) { tgc_mark_ptr(fields[k]); }
 }
 
-
-enum {
-  TGC_PRIMES_COUNT = 24
-};
-
-static const size_t tgc_primes[TGC_PRIMES_COUNT] = {
-  0,       1,       5,       11,
-  23,      53,      101,     197,
-  389,     683,     1259,    2417,
-  4733,    9371,    18617,   37097,
-  74093,   148073,  296099,  592019,
-  1100009, 2200013, 4400021, 8800019
-};
-
-static size_t tgc_ideal_size(size_t size) {
-  size_t i, last;
-  size = (size_t)((double)(size+1) / gc.loadfactor);
-  for (i = 0; i < TGC_PRIMES_COUNT; i++) {
-    if (tgc_primes[i] >= size) { return tgc_primes[i]; }
-  }
-  last = tgc_primes[TGC_PRIMES_COUNT-1];
-  for (i = 0;; i++) {
-    if (last * i >= size) { return last * i; }
-  }
-  return 0;
-}
-
-static int tgc_rehash(size_t new_size) {
-
-  size_t i;
-  tgc_ptr_t *old_items = gc.items;
-  size_t old_size = gc.nslots;
-
-  gc.nslots = new_size;
-  gc.items = calloc(gc.nslots, sizeof(tgc_ptr_t));
-
-  if (gc.items == NULL) {
-    gc.nslots = old_size;
-    gc.items = old_items;
-    return 0;
-  }
-
-  for (i = 0; i < old_size; i++) {
-    if (old_items[i].ptr != NULL) {
-      tgc_add_ptr(
-        old_items[i].ptr, SZF_SIZE(old_items[i].szf),
-        (old_items[i].szf >> 1) & 1u);
-    }
-  }
-
-  free(old_items);
-  return 1;
-}
-
-static int tgc_resize_more() {
-  size_t new_size = tgc_ideal_size(gc.nitems);
-  size_t old_size = gc.nslots;
-  return (new_size > old_size) ? tgc_rehash(new_size) : 1;
-}
-
-static int tgc_resize_less() {
-  size_t new_size = tgc_ideal_size(gc.nitems);
-  size_t old_size = gc.nslots;
-  return (new_size < old_size) ? tgc_rehash(new_size) : 1;
-}
-
-static void tgc_mark_ptr(void *ptr) {
-
-  size_t i, j;
-
-  if ((uintptr_t)ptr < gc.minptr
-  ||  (uintptr_t)ptr > gc.maxptr) { return; }
-
-  i = tgc_hash(ptr) % gc.nslots; j = 0;
-
-  while (1) {
-    if (gc.items[i].ptr == NULL || j > tgc_probe(i)) { return; }
-    if (ptr == gc.items[i].ptr) {
-      if (is_marked(i)) { return; }
-      set_mark(i);
-      if (is_leaf(i)) { return; }
-      size_t sz = SZF_SIZE(gc.items[i].szf);
-      for (size_t k = 0; k < sz/sizeof(void*); k++) {
-        tgc_mark_ptr(((void**)gc.items[i].ptr)[k]);
-      }
-      return;
-    }
-    i = (i+1) % gc.nslots; j++;
-  }
-}
-
-static void tgc_mark_static_roots() {
+static void tgc_mark_static_roots(void) {
   void *bot, *top, *p;
   bot = gc.roots_start; top = gc.roots_end;
-
-  if (bot == 0) return;
-
+  if (bot == 0) { return; }
   for (p = top; p >= bot; p = ((char*)p) - sizeof(void*)) {
     tgc_mark_ptr(*((void**)p));
   }
 }
 
-static void tgc_mark_stack() {
-  void * bot = gc.stack_bottom;
-  void * top = &bot;
-  for (void * p = top; p <= bot; p = ((char*)p) + sizeof(void*)) {
+static void tgc_mark_stack(void) {
+  void *bot = gc.stack_bottom;
+  void *top = &bot;
+  for (void *p = top; p <= bot; p = ((char*)p) + sizeof(void*)) {
     tgc_mark_ptr(*((void**)p));
   }
 }
 
-static void tgc_mark() {
+static void tgc_mark(void) {
   jmp_buf env;
-  void (*volatile mark_stack)() = tgc_mark_stack;
+  void (*volatile mark_stack)(void) = tgc_mark_stack;
   if (gc.nitems == 0) { return; }
-
   tgc_mark_static_roots();
-
   memset(&env, 0, sizeof(jmp_buf));
   setjmp(env);
-  mark_stack(gc);
+  mark_stack();
 }
 
-static void tgc_sweep() {
-  size_t i, j, k, nj;
-  if (gc.nitems == 0) { return; }
-
-  gc.nfrees = 0;
-  for (i = 0; i < gc.nslots; i++) {
-    if (gc.items[i].ptr == NULL) { continue; }
-    if (is_marked(i))      { continue; }
-    gc.nfrees++;
-  }
-
-  gc.frees = realloc(gc.frees, sizeof(tgc_ptr_t) * gc.nfrees);
-  if (gc.frees == NULL) { return; }
-
-  i = 0; k = 0;
-  while (i < gc.nslots) {
-    if (gc.items[i].ptr == NULL) { i++; continue; }
-    if (is_marked(i))      { i++; continue; }
-    gc.frees[k] = gc.items[i]; k++;
-    memset(&gc.items[i], 0, sizeof(tgc_ptr_t));
-
-    j = i;
-    while (1) {
-      nj = (j+1) % gc.nslots;
-      if (gc.items[nj].ptr != NULL && tgc_probe(nj) > 0) {
-        memcpy(&gc.items[ j], &gc.items[nj], sizeof(tgc_ptr_t));
-        memset(&gc.items[nj],             0, sizeof(tgc_ptr_t));
-        j = nj;
-      } else {
-        break;
+/* --- sweep: walk every arena slot-by-slot; free unmarked, clear marks --- */
+static void tgc_sweep(void) {
+  for (arena_t *a = gc.arenas; a; a = a->next) {
+    char *p = a->base;
+    while (p < a->cur) {
+      void *obj = p + HDR;
+      size_t asz = ALIGNUP(obj_size(obj)) + 8;     /* MUST match tgc_alloc's slot size (incl. +8 slack) */
+      size_t idx = ((size_t)((char*)obj - a->base)) / 8;
+      if (bm_get(a, idx)) {                         /* a live slot */
+        if (obj_marked(obj)) {
+          obj_clrmark(obj);                         /* survives; reset for next cycle */
+        } else {
+          bm_clr(a, idx);                           /* dead: unlink from membership... */
+          size_t cls = asz / 8;
+          if (cls < MAXCLASS) {                     /* ...and onto its size-class free list */
+            *(void**)obj = gc.freelist[cls];
+            gc.freelist[cls] = obj;
+          }
+          gc.nitems--;
+        }
       }
+      p += HDR + asz;
     }
-    gc.nitems--;
   }
-
-  for (i = 0; i < gc.nslots; i++) {
-    if (gc.items[i].ptr == NULL) { continue; }
-    clear_mark(i);
-  }
-  tgc_resize_less(gc);
-  gc.mitems = gc.nitems + (size_t)(gc.nitems * gc.sweepfactor) + 1;
-
-  for (i = 0; i < gc.nfrees; i++) {
-    if (gc.frees[i].ptr) free(gc.frees[i].ptr);
-  }
-
-  free(gc.frees);
-  gc.frees = NULL;
-  gc.nfrees = 0;
 }
 
-void tgc_start(void *stk, void * bot, void * top) {
+static void tgc_collect(void) {
+  tgc_mark();
+  tgc_sweep();
+  gc.mitems = gc.nitems + (size_t)(gc.nitems * gc.sweepfactor) + 1;
+}
+
+void tgc_start(void *stk, void *bot, void *top) {
   memset(&gc, 0, sizeof(tgc_t));
   gc.roots_start = bot;
   gc.roots_end = top;
   gc.stack_bottom = stk;
   gc.minptr = UINTPTR_MAX;
-  gc.loadfactor = 0.4;
-  /* sweepfactor governs how much the live set may grow before the next mark+sweep (mitems =
-     nitems*(1+sweepfactor)). The compiler is a batch process building a large mostly-live AST, so
-     frequent collection is nearly pure waste -- each cycle rescans the whole (deep) stack via a
-     per-word hashtable lookup and re-marks the growing live set. Collect far less often. */
+  gc.maxptr = 0;
+  /* sweepfactor governs how much the live set may grow before the next mark+sweep
+     (mitems = nitems*(1+sweepfactor)). The compiler is a batch process building a large mostly-live AST,
+     so frequent collection is nearly pure waste. Collect far less often. */
   gc.sweepfactor = 16;
 }
 
-void tgc_stop() {
-  tgc_sweep();
-  free(gc.items);
-  free(gc.frees);
-}
-
-void *tgc_add(void *ptr, size_t size, int leaf) {
-  gc.nitems++;
-  gc.maxptr = ((uintptr_t)ptr) + size > gc.maxptr ?
-    ((uintptr_t)ptr) + size : gc.maxptr;
-  gc.minptr = ((uintptr_t)ptr)        < gc.minptr ?
-    ((uintptr_t)ptr)        : gc.minptr;
-
-  if (tgc_resize_more()) {
-    tgc_add_ptr(ptr, size, leaf);
-    if (gc.nitems > gc.mitems) {
-      tgc_mark();
-      tgc_sweep();
-    }
-    return ptr;
-  } else {
-    gc.nitems--;
-    free(ptr);
-    return NULL;
+void tgc_stop(void) {
+  arena_t *a = gc.arenas;
+  while (a) {
+    arena_t *n = a->next;
+    free(a->objstart);
+    free(a->base);
+    free(a);
+    a = n;
   }
+  gc.arenas = NULL;
 }
 
-static void tgc_rem(void *ptr) {
-  tgc_rem_ptr(ptr);
-  tgc_resize_less();
-}
-
+/* Grow (or first-allocate) a buffer. Returns a NEW object; the old one becomes unreachable and is swept.
+   The old pointer stays live across the possible collection in tgc_alloc because the caller holds it on
+   its own stack/regs (and tgc_realloc's own `ptr` local is on the scanned C stack). */
 void *tgc_realloc(void *ptr, size_t size) {
-  void *qtr = realloc(ptr, size);
+  if (ptr == NULL) { return tgc_alloc(size, 0); }
 
-  if (qtr == NULL) {
-    tgc_rem(ptr);
-    return qtr;
-  }
-
-  if (ptr == NULL) {
-    tgc_add(qtr, size, 0);
-    return qtr;
-  }
-
-  tgc_ptr_t *p  = tgc_get_ptr(ptr);
-
-  if (p && qtr == ptr) {
-    p->szf = SZF_MAKE(size, (p->szf >> 1) & 1u) | (p->szf & 1u);   /* update size, keep leaf+mark */
-    return qtr;
-  }
-
-  if (p && qtr != ptr) {
-    unsigned short leaf = (p->szf >> 1) & 1u;
-    tgc_rem(ptr);
-    tgc_add(qtr, size, leaf);
-    return qtr;
-  }
-
-  return NULL;
+  size_t old = obj_size(ptr);
+  int leaf = obj_leaf(ptr);
+  void *n = tgc_alloc(size, leaf);
+  if (n == NULL) { return NULL; }
+  memcpy(n, ptr, old < size ? old : size);
+  return n;
 }
