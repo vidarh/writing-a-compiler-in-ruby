@@ -41,6 +41,26 @@ class SimpleDelegator
     @ob.respond_to?(m)
   end
 
+  # ==/!=/eql?/hash are defined on Object, so method_missing never fires for them -- without explicit
+  # delegation they fall back to identity, so `SimpleDelegator.new(x) == x` was FALSE self-hosted while
+  # MRI's stdlib SimpleDelegator (used MRI-hosted) delegates and returns TRUE. That divergence made the
+  # emitter's `movl src,dest if src != dest` self-move guard skip on MRI but not self-hosted. Delegate them.
+  def ==(o)
+    @ob == o
+  end
+
+  def !=(o)
+    @ob != o
+  end
+
+  def eql?(o)
+    @ob.eql?(o)
+  end
+
+  def hash
+    @ob.hash
+  end
+
   def method_missing *args
     @ob.send(*args)
   end
