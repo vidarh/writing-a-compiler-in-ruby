@@ -325,6 +325,17 @@ class Object
   #
   # FIXME: This will not handle eigenclasses correctly.
   def is_a?(c)
+    # Fixnum fast path: a tagged fixnum's ancestry is fixed and shallow -- Integer < Numeric < Object.
+    # (Comparable is a MODULE, and this is_a? walks superclasses only, so the slow path never matches it
+    # either -- so returning false for anything outside {Integer,Numeric,Object} is consistent.) This avoids
+    # the class dispatch + up to three superclass dispatches that the general walk would do just to conclude
+    # e.g. is_a?(Array) is false -- and fixnums are ubiquitous operands (AST literals, indices, counters).
+    %s(if (ne (bitand self 1) 0)
+        (do
+          (if (eq c Integer) (return true))
+          (if (eq c Numeric) (return true))
+          (if (eq c Object) (return true))
+          (return false)))
     %s(assign k (callm self class))
     %s(while (and (ne k c) (ne k Object)) (do
       (assign k (callm k superclass))
