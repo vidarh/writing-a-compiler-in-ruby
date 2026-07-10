@@ -57,10 +57,10 @@ module Tokens
       # for e.g. :'' it returns :":" whose to_s is just ":", so the unget below would lose the quoted
       # part and corrupt the stream (leaving a bare ":" operator). Bail out before consuming.
       return nil if s.peek == ?:
-      a = Atom.expect(s)
-      return a if (a == match)
-      s.unget(a.to_s) if a
-      return nil
+      a = s.peek_atom
+      return nil if a != match
+      Atom.expect(s)
+      return a
     end
   end
 end

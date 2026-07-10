@@ -59,6 +59,7 @@ class Scanner
     @buf = ""
     @peeked = nil
     @pos_cache = nil
+    @atom_off = nil
     @lineno = 1
     @col = 1
     @last_ws_consumed_newline = false
@@ -141,6 +142,7 @@ class Scanner
     # reverse allocates a copy; a single-char unget (the common case -- bare-char pushback) needs no reverse.
     @buf << (c.length == 1 ? c : c.reverse)
     @peeked = nil
+    @atom_off = nil
 
     if c.respond_to?(:position)
       pos = c.position
@@ -160,6 +162,19 @@ class Scanner
     else
       @col -= 1
     end
+  end
+
+  # Peek the atom at the current position WITHOUT permanently consuming it, memoized by stream offset.
+  # (Bisect experiment: single-return form; the reverted version used `return @atom_val if ...`.)
+  def peek_atom
+    off = @pos - @buf.length
+    if @atom_off != off
+      a = Tokens::Atom.expect(self)
+      unget(a.to_s) if a
+      @atom_off = off
+      @atom_val = a
+    end
+    @atom_val
   end
 
   # If &block is passed, it is a callback to parse an expression
