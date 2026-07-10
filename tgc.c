@@ -156,8 +156,11 @@ void *tgc_alloc(size_t size, int leaf) {
     gc.freelist[cls] = *(void**)obj;              /* pop (link stored in the object's first word) */
     a = arena_of(obj);
     bm_set(a, ((size_t)((char*)obj - a->base)) / 8);
+    memset(obj, 0, size);                          /* reused: slot holds stale data + the free-list link */
   } else {
-    /* bump-allocate */
+    /* bump-allocate. Fresh arena memory is already zero (the arena is calloc'd and bump only moves
+       FORWARD into never-touched bytes), so skip the memset here -- it was ~8GB of redundant zeroing
+       across the ~200M allocations of a self-compile. */
     a = gc.arenas;
     size_t total = HDR + asz;
     if (!a || (size_t)(a->end - a->cur) < total) {
@@ -171,7 +174,6 @@ void *tgc_alloc(size_t size, int leaf) {
   }
 
   *hdr_of(obj) = SZF_MAKE(size, leaf);            /* size + leaf, mark = 0 */
-  memset(obj, 0, size);                           /* calloc semantics for the requested bytes */
   gc.nitems++;
   g_nallocs++;
 
