@@ -118,10 +118,12 @@ class GlobalScope < Scope
     return [:arg, 1] if a == :__argv
     return [:arg, 0] if a == :__argc
 
+    as = a && a.to_s   # compute once: Symbol#to_s is a per-lookup allocator on both hosts
+
     # Auto-register global variables (starting with $)
     # Strip $ prefix to make assembly-safe
-    if a && a.to_s[0] == ?$
-      clean_name = a.to_s[1..-1]
+    if as && as[0] == ?$
+      clean_name = as[1..-1]
       # $1..$9 (regex capture globals) and any $<digit...> strip to a numeric name like "1", which would
       # be emitted as the assembly label `1` -- `movl 1, %eax` then dereferences address 1 and SIGSEGVs
       # during global nil-init. Map a name whose first char is a digit to a safe identifier. (char-code
@@ -138,15 +140,15 @@ class GlobalScope < Scope
     # Handle instance variables (starting with @) at global scope
     # Strip @ prefix to make assembly-safe
     # At global scope, instance variables are essentially globals
-    if a && a.to_s[0] == ?@
-      clean_name = a.to_s[1..-1]
+    if as && as[0] == ?@
+      clean_name = as[1..-1]
       @globals[clean_name.to_sym] = true
       @user_globals[clean_name.to_sym] = true
       return [:global, clean_name]
     end
 
     return [:global, a] if @globals.member?(a)
-    return [:possible_callm, a] if a && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
+    return [:possible_callm, a] if as && !(?A..?Z).member?(as[0]) # Hacky way of excluding constants
 
     # For constants (uppercase):
     # - If being assigned (save is truthy), always return [:addr, a] so assignment works

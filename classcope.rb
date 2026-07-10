@@ -220,7 +220,7 @@ class ModuleScope < Scope
 
     return get_constant(a, save)  if (?A..?Z).member?(as[0])
     return get_class_var(a) if as[0..1] == "@@" or @class_vars.include?(a)
-    return get_instance_var(a) if a.to_s[0] == ?@ or @instance_vars.include?(a)
+    return get_instance_var(a) if as[0] == ?@ or @instance_vars.include?(a)
 
     # First check the local scope (for variables from enclosing methods/blocks)
     if @local_scope
@@ -236,7 +236,7 @@ class ModuleScope < Scope
     # Compiler-internal machinery names (__env__, __closure__, __tmp_proc, ...) must resolve to
     # whatever the outer chain found (an eigenclass compiled inside a block legitimately reads
     # the block's closure locals); only USER names get the class-body scope-gate treatment below.
-    return n if n && a.to_s.start_with?("__")
+    return n if n && as.start_with?("__")
     # Wrap the NAME, not n[1]: n is the outer scope's resolution, and when an enclosing
     # block/method has a same-named LOCAL, n is [:lvar, index] -- n[1] is the raw slot INDEX.
     # That index flowed into compile_callm as the "method", emitting a dispatch through a
@@ -244,7 +244,7 @@ class ModuleScope < Scope
     # `constants = class << obj; constants; end` jumped to address 4 (language/metaclass_spec)
     # or into the class-name string. Ruby scoping agrees: a class/eigenclass body does not see
     # outer locals, so the bare name is a self-call on the class -- by NAME.
-    return [:possible_callm, a] if n && !(?A..?Z).member?(a.to_s[0]) # Hacky way of excluding constants
+    return [:possible_callm, a] if n && !(?A..?Z).member?(as[0]) # Hacky way of excluding constants
     return n if n
 
     # if none works up to here, it must be an adress.
