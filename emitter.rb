@@ -432,54 +432,54 @@ class Emitter
 
   # Avoid method_missing...
 
-  def movl src, dest; emit(:movl, src, dest); end
-  def addl src, dest; emit(:addl, src, dest); end
-  def subl src, dest; emit(:subl, src, dest); end
-  def cmpl src, dest; emit(:cmpl, src, dest); end
-  def testl src,dest; emit(:testl, src, dest); end
-  def movzbl src,dest; emit(:movzbl, src, dest); end
-  def andl src, dest; emit(:andl, src, dest); end
-  def orl src, dest; emit(:orl, src, dest); end
-  def xorl src, dest; emit(:xorl, src, dest); end
-  def jmp arg;   emit(:jmp,arg); end
-  def popl arg;  emit(:popl, arg); end
-  def pushl arg; emit(:pushl, arg); end
-  def je arg;    emit(:je, arg); end
-  def jz arg;    emit(:jz, arg); end
-  def jne arg;   emit(:jne, arg); end
+  def movl src, dest; @out.emit_row([:movl, src, dest]); end
+  def addl src, dest; @out.emit_row([:addl, src, dest]); end
+  def subl src, dest; @out.emit_row([:subl, src, dest]); end
+  def cmpl src, dest; @out.emit_row([:cmpl, src, dest]); end
+  def testl src,dest; @out.emit_row([:testl, src, dest]); end
+  def movzbl src,dest; @out.emit_row([:movzbl, src, dest]); end
+  def andl src, dest; @out.emit_row([:andl, src, dest]); end
+  def orl src, dest; @out.emit_row([:orl, src, dest]); end
+  def xorl src, dest; @out.emit_row([:xorl, src, dest]); end
+  def jmp arg;   @out.emit_row([:jmp,arg]); end
+  def popl arg;  @out.emit_row([:popl, arg]); end
+  def pushl arg; @out.emit_row([:pushl, arg]); end
+  def je arg;    @out.emit_row([:je, arg]); end
+  def jz arg;    @out.emit_row([:jz, arg]); end
+  def jne arg;   @out.emit_row([:jne, arg]); end
 
-  def ret; emit(:ret); end
-  def leave; emit(:leave); end
+  def ret; @out.emit_row([:ret]); end
+  def leave; @out.emit_row([:leave]); end
 
   # Floating point instructions (x87). fldl pushes a double onto st0; the binary ops take a memory
   # operand and compute `st0 = st0 <op> mem` in place; fstpl stores st0 to memory and pops. A
   # balanced `fldl; f<op>l; fstpl` sequence leaves the FPU stack as it found it.
-  def fldl src; emit(:fldl, src); end       # Load double onto FPU stack
-  def fstpl dest; emit(:fstpl, dest); end   # Store double from FPU stack and pop
-  def faddl src; emit(:faddl, src); end     # st0 += double at src
-  def fsubl src; emit(:fsubl, src); end     # st0 -= double at src
-  def fmull src; emit(:fmull, src); end     # st0 *= double at src
-  def fdivl src; emit(:fdivl, src); end     # st0 /= double at src
-  def fcompp; emit(:fcompp); end            # compare st0 with st1, pop both
-  def fnstsw_ax; emit(:fnstsw, "%ax"); end  # FPU status word -> ax (for comparison branches)
+  def fldl src; @out.emit_row([:fldl, src]); end       # Load double onto FPU stack
+  def fstpl dest; @out.emit_row([:fstpl, dest]); end   # Store double from FPU stack and pop
+  def faddl src; @out.emit_row([:faddl, src]); end     # st0 += double at src
+  def fsubl src; @out.emit_row([:fsubl, src]); end     # st0 -= double at src
+  def fmull src; @out.emit_row([:fmull, src]); end     # st0 *= double at src
+  def fdivl src; @out.emit_row([:fdivl, src]); end     # st0 /= double at src
+  def fcompp; @out.emit_row([:fcompp]); end            # compare st0 with st1, pop both
+  def fnstsw_ax; @out.emit_row([:fnstsw, "%ax"]); end  # FPU status word -> ax (for comparison branches)
 
   def sall *args
-    emit(:sall, *args)
+    @out.emit_row([:sall, *args])
   end
   def sarl *args
-    emit(:sarl, *args)
+    @out.emit_row([:sarl, *args])
   end
   def idivl *args
-    emit(:idivl, *args)
+    @out.emit_row([:idivl, *args])
   end
   def divl *args
-    emit(:divl, *args)
+    @out.emit_row([:divl, *args])
   end
   def imull *args
-    emit(:imull, *args)
+    @out.emit_row([:imull, *args])
   end
   def leal *args
-    emit(:leal, *args)
+    @out.emit_row([:leal, *args])
   end
 
   # Makes it easy to use the emitter to emit any kind of assembly calls, that are needed.

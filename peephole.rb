@@ -139,7 +139,14 @@ class Peephole
   end
 
   def emit(*args)
-    @prev << args
+    emit_row(args)
+  end
+
+  # Takes the already-built [op, *args] instruction row directly. The Emitter one-liner helpers build the
+  # row inline (`@out.emit_row([:movl, s, d])`) and call this, avoiding Emitter#emit's throwaway *args Array
+  # AND emit's own *args re-collect -- one Array per instruction instead of two, on both hosts.
+  def emit_row(row)
+    @prev << row
     l = @prev.length
     while l > 0
       peephole
