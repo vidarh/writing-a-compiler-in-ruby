@@ -1606,7 +1606,10 @@ class Compiler
   # top-level/main scope. Mutates e2 in place (the rest-param marker) like the original, and RETURNS the
   # new body. The recursive rewrite_let_env on the result stays with the caller.
   def process_scope_env(e2, body_in, epos)
-    args   = Set[*e2.collect{|a| a.kind_of?(Array) ? a[0] : a}]
+    # Build the Set directly instead of Set[*e2.collect{...}] -- the collect built a throwaway Array (then
+    # splatted) on both hosts.
+    args = Set.new
+    e2.each {|a| args << (a.kind_of?(Array) ? a[0] : a) }
 
       # Count number of "regular" arguments (non "rest", non "block")
       # FIXME: There are cleaner ways, but in the interest of

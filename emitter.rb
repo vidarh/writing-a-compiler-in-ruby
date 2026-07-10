@@ -518,9 +518,14 @@ class Emitter
       @allocator.free!(r)
     end
     yield
-    to_push.reverse.each do |r|
-      self.popl(r) 
+    # Pop in reverse push order via an index loop -- to_push.reverse allocated a throwaway Array on every
+    # caller_save (i.e. around every call), on both hosts.
+    i = to_push.length - 1
+    while i >= 0
+      r = to_push[i]
+      self.popl(r)
       @allocator.alloc!(r)
+      i -= 1
     end
   end
 

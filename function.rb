@@ -64,7 +64,9 @@ class Function
     end
 
     @args = args.collect do |a|
-      arg = Arg.new(*[a].flatten(1))
+      # a is either a bare param (Symbol) or a structured one (Array). [a].flatten(1) built one/two
+      # throwaway Arrays per arg to normalise; splat the Array directly (or wrap a scalar) instead.
+      arg = Arg.new(*(a.is_a?(Array) ? a : [a]))
       if arg.default
         arg.lvar = @defaultvars
         @defaultvars += 1
