@@ -202,6 +202,8 @@ class Emitter
       return addr_value(aparam)
     when :argaddr
       return load_arg_address(aparam)
+    when :lvaraddr
+      return load_local_var_address(aparam)
     when :addr
       return load_address(aparam)
     when :indirect
@@ -251,6 +253,12 @@ class Emitter
   def load_local_var(aparam, reg = result_value)
     movl(local_var(aparam), reg)
     return reg
+  end
+
+  # Loads a local variable's ADDRESS into %eax (mirror of load_arg_address for locals).
+  def load_local_var_address(aparam)
+    leal(local_var(aparam), result_value)
+    return result_value
   end
 
   def load_instance_var(ob, aparam)

@@ -45,7 +45,7 @@ class Compiler
                    :hash, :return,:sexp, :module, :rescue, :rescues, :raise, :incr, :decr, :block,
                    :required, :add, :sub, :mul, :div, :shl, :sar, :sarl, :sall, :eq, :ne,
                    :lt, :le, :gt, :ge,:saveregs, :and, :or,
-                   :preturn, :stackframe, :caller_stackframe, :stackpointer, :deref, :include, :addr,
+                   :preturn, :stackframe, :caller_stackframe, :stackpointer, :deref, :include, :addr, :lvaraddr,
                    :protected, :array, :splat, :mod, :or_assign, :and_assign, :break, :next, :alias, :undef,
                    :mul_assign, :div_assign, :mod_assign, :pow_assign,
                    :and_bitwise_assign, :or_bitwise_assign, :xor_assign,
@@ -939,6 +939,23 @@ class Compiler
   def compile_stackpointer(scope)
     @e.comment(Emitter::COMMENTS && "Stack pointer")
     Value.new([:reg,:esp])
+  end
+
+  # Address of a local variable or argument slot: (lvaraddr name) -> &name (a raw %ebp-relative pointer).
+  # Mirrors :argaddr but for any local/arg. Used to build a call-scoped struct (e.g. a block descriptor)
+  # in the current frame and pass its address, avoiding a heap allocation. The pointer is valid only for
+  # the current frame's lifetime -- fine for a value consumed within a call made from this frame.
+  def compile_lvaraddr(scope, name)
+    a = scope.get_arg(name)
+    @e.comment(Emitter::COMMENTS && "lvaraddr #{name}")
+    if a[0] == :arg
+      @e.load(:argaddr, a[1])
+    elsif a[0] == :lvar
+      @e.load(:lvaraddr, a[1])
+    else
+      raise "lvaraddr: #{name.inspect} resolved to #{a.inspect}, not a local/arg"
+    end
+    Value.new([:reg, :eax])
   end
 
   # Get address of a label
