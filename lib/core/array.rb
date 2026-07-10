@@ -700,6 +700,21 @@ class Array
   # other Ruby code, to e.g. use Symbol's or similar, is likely to fail.
   #
   def [](idx, len = nil)
+    # Fast path for the overwhelmingly common single-index a[i] with a non-negative fixnum in bounds:
+    # skips the len.nil? and idx.is_a?(Range) dispatches and the __offset_to_pos call (which itself
+    # dispatches __get_raw). Negative indices, Range, out-of-bounds and the 2-arg form all fall through
+    # (no return) to the general code below, which is unchanged.
+    %s(if (eq len nil)
+        (if (ne (bitand idx 1) 0)
+          (let (raw tmp)
+            (assign raw (sar idx))
+            (if (ge raw 0)
+              (if (ne @ptr 0)
+                (if (lt raw @len)
+                  (do
+                    (assign tmp (callm self __get (raw)))
+                    (if (eq tmp 0) (return nil) (return tmp)))))))))
+
     # a[start, length] -> a subarray of at most `length` elements starting at `start`.
     if !len.nil?
       n = length
