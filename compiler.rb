@@ -104,6 +104,7 @@ class Compiler
     @lastpos = nil
     @linelabel = 0
     @section = 0
+    @clean_method_cache = {}
   end
 
 
@@ -471,6 +472,19 @@ class Compiler
     "~"  => "__tilde"}.freeze
 
   def clean_method_name(name)
+    # The same method names are cleaned on every call site that uses them (a program calls to_s/push/<<...
+    # thousands of times), and the char-scan below rebuilds an `out` String each time. Memoize by name --
+    # the cleaned label is a pure function of the name. Both hosts. (Explicit []=, not ||=: the op-assign
+    # index form `@cache[name] ||= ...` returns nil self-hosted -> caller does `nil + ...`.)
+    out = @clean_method_cache[name]
+    if !out
+      out = build_clean_method_name(name)
+      @clean_method_cache[name] = out
+    end
+    out
+  end
+
+  def build_clean_method_name(name)
     dict = CLEAN_METHOD_DICT
 
     pos = 0
