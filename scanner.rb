@@ -36,9 +36,15 @@ class Scanner
     attr_accessor :position
   end
 
-  # Return the current position of the parser in one convenient object...
+  # Return the current position of the parser in one convenient object. Cached: position() is queried
+  # repeatedly at the same spot (peek/get/parser all ask), and Position is an immutable snapshot, so the
+  # same object can be shared until line/col/file actually change.
   def position
-    Position.new(@filename,@lineno,@col)
+    if @pos_cache && @pos_col == @col && @pos_lineno == @lineno && @pos_fn == @filename
+      return @pos_cache
+    end
+    @pos_col = @col; @pos_lineno = @lineno; @pos_fn = @filename
+    @pos_cache = Position.new(@filename, @lineno, @col)
   end
 
   # Set the parser position from a Position object (for backtracking)
@@ -52,6 +58,7 @@ class Scanner
     @io = io
     @buf = ""
     @peeked = nil
+    @pos_cache = nil
     @lineno = 1
     @col = 1
     @last_ws_consumed_newline = false
