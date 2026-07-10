@@ -346,6 +346,63 @@ reported to corrupt variables. Not re-verified against the current compiler —
 re-test before investing; may be long fixed (several parser/regalloc fixes have
 landed since).
 
+### 11. `&block` params are eagerly boxed into a closure on EVERY call — COMPILER PERF BUG (2026-07-10)
+
+A method that declares a `&block` parameter (or is passed a literal block) allocates a closure
+object on **every** call, even when the block is only `yield`ed or forwarded as `&block`. MRI
+avoids this via lazy block passing (a block never materialised into a Proc costs nothing). This
+makes block-taking methods a major self-hosted-only allocation/GC cost — a large part of why
+self-hosted compilation is ~2-3x slower than MRI-hosted.
+
+**Measured impact**: `Array#depth_first` (the ~50-pass AST traversal workhorse) re-passed
+`&block` + `yield` at every recursive node, boxing ~N closures per pass × ~50 passes. Threading
+the block as a REGULAR Proc argument (materialise once, `block.call`) instead of `&block`/`yield`
+cut the self-hosted compile of test/selftest.rb from **4:09.75 → 1:36.24 wall (2.6x)**, MRI
+neutral (commit 1abfcf8).
+
+**Current workarounds in tree** (all keep MRI==self-hosted behaviour): hot RECURSIVE block
+forwarders thread the block as a regular Proc arg (`block.call`, not `yield`); hot leaf
+`each`/`each_with_index`/`collect{}` are rewritten as index `while` loops. See the perf commits
+around 2026-07-10.
+
+**These workarounds are a STOPGAP and are explicitly TECHNICAL DEBT.** They make the compiler's
+own source markedly less idiomatic and harder to read — index `while` loops in place of `each`/
+`collect`, a Proc threaded by hand instead of `&block`/`yield`. That was acceptable only because
+the compiler was so slow; it is not the desired end state.
+
+**The real fix (eventual)**: make codegen lazy about `&block` so that **idiomatic Ruby is fast
+without hand-optimisation** — a block that is only `yield`ed or forwarded must not allocate a
+closure per call (match MRI's lazy Proc materialisation). Once that lands, the `while`/Proc-arg
+workarounds above should be REVERTED back to idiomatic `each`/`collect`/`&block`. This is plausibly
+the single biggest remaining self-hosted compile-speed lever. See docs/CLOSURES.md.
+
+### 12. Early `return <ivar> if <cond>` can miscompile to a hang in a larger method body (2026-07-10, context-specific, NOT minimally reproduced)
+
+While adding a memoised `Scanner#peek_atom`, the natural shape
+`return @atom_val if @atom_off == off` (early return of an ivar, with a fall-through
+`@atom_val = a`) produced a **native self-hosted binary that hung** parsing any keyword — while
+the MRI-hosted compiler ran the same source correctly. Rewriting to a single-return shape
+(`if @atom_off != off; …; end; @atom_val`) compiles + runs correctly (commit 92e2f88).
+
+A minimal standalone method with the same early-return-of-ivar shape compiles + runs CORRECTLY, so
+this is NOT a general early-return bug — it is a subtle context-specific codegen interaction in
+peek_atom's fuller body (register/layout around the Atom.expect + unget calls). Not yet minimally
+reproduced. **When touching such a method, prefer the single-return shape.** Likely in the same
+layout-sensitive family as the oversized-function / loop-carried-local miscompiles (3c).
+
+### 13. `@hash[key] ||= value` evaluates to nil (not the value) self-hosted (2026-07-10) — COMPILER BUG
+
+An op-assign on a hash index used as an EXPRESSION VALUE returns nil under the self-hosted compiler
+(MRI returns the value). So `x = (@cache[k] ||= v)` / `return @cache[k] ||= v` yields nil, and a
+caller then hits e.g. `undefined method '+' for nil`. Hit while memoising `clean_method_name`
+(commit 0f71a65); worked around with an explicit read/build/store
+(`out = @cache[k]; if !out; out = build; @cache[k] = out; end; out`).
+
+Distinct from the earlier op-assign index-SPLAT compile failure (`@b[*k] ||= v`, fixed bf16134):
+this is the plain-index form and a wrong-VALUE, not a compile error. Root likely in how the
+op-assign-index setter path leaves (or fails to leave) the value in the result register. When
+memoising on the self-hosted compiler, avoid `@h[k] ||= v` as a value; use the explicit form.
+
 ---
 
 ## Known Limitations (architectural / project-scale)
