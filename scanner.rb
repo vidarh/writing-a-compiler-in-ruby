@@ -259,7 +259,7 @@ class Scanner
     consumed << get  # consume newline
 
     # Skip horizontal whitespace only
-    while (c = peek) && [9, 32].member?(c.ord)
+    while (c = peek) && ((o = c.ord) == 9 || o == 32)   # [9,32].member? allocated an Array per char
       consumed << get
     end
 

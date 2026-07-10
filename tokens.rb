@@ -995,7 +995,7 @@ module Tokens
         if first == "*" && (@first || prev_lastop)
           # Peek ahead through whitespace to check for = or )
           ws_chars = ""
-          while @s.peek && [" ", "\t", "\r", "\n"].member?(@s.peek)
+          while (wc = @s.peek) && ((wo = wc.ord) == 32 || wo == 9 || wo == 13 || wo == 10)
             ws_chars << @s.get
           end
 
@@ -1024,7 +1024,7 @@ module Tokens
         end
 
         if second = @s.get
-          if first == "?" and !([32, 10, 9, 13].member?(second[0].chr.ord))
+          if first == "?" and (so = second[0].chr.ord) != 32 && so != 10 && so != 9 && so != 13
             # FIXME: This changed in Ruby 1.9 to return a string, which is just plain idiotic.
             if second == "\\"
               third = @s.get
