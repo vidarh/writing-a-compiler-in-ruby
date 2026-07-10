@@ -53,10 +53,12 @@ class Object
   end
 
   def === other
-    # Case-equality falls back to == for ordinary objects, but like MRI's C-level rb_equal it first
-    # checks raw identity -- via object_id, which is not user-overridable the way #equal?/#== are --
-    # so `obj === obj` is true even for an object that overrides #== / #equal? to return false.
-    return true if self.object_id == other.object_id
+    # Case-equality falls back to == for ordinary objects, but like MRI's C-level rb_equal it first checks
+    # raw identity (not user-overridable) so `obj === obj` is true even if #== / #equal? are overridden.
+    # A raw (eq self other) IS that identity test -- object_id is unique per object -- and avoids the two
+    # object_id dispatches + Integer#== the old form paid on EVERY `when` clause (case dispatch on node tags
+    # via `sym === node[0]` is one of the hottest patterns in the compiler; see compile_case_test).
+    %s(if (eq self other) (return true))
     self.==(other)
   end
 
