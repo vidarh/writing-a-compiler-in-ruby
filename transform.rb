@@ -1009,7 +1009,16 @@ class Compiler
   # 4. If this is the outermost node, __env__ should be added to the let.
 
   def in_scopes(scopes, n)
-    scopes.reverse.collect {|s| s.member?(n) ? s : nil}.compact
+    # Build the result in one pass (reverse order) instead of reverse + collect + compact -- that was
+    # THREE throwaway Arrays per call on both hosts, and in_scopes runs throughout scope/env analysis.
+    result = []
+    i = scopes.length - 1
+    while i >= 0
+      s = scopes[i]
+      result << s if s.member?(n)
+      i -= 1
+    end
+    result
   end
 
   def is_special_name?(v)
