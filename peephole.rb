@@ -133,6 +133,17 @@ class Peephole
       return
     end
 
+    # movl A, B ; movl B, A  ->  drop the second. After `movl A,B`, B holds A's value and A is unchanged,
+    # so `movl B,A` is a no-op (reloads what A already has / stores back what B already holds). Covers both
+    # compile_assign's store-then-reload (`movl %eax,mem; movl mem,%eax`) and load-then-store-back. At least
+    # one of A/B is a register (x86 has no mem->mem movl), so this is always safe. `==` (not .class) so it
+    # sees through Value-wrapped operands.
+    if args[0] == :movl && last && last[0] == :movl &&
+       last[1] == args[2] && last[2] == args[1] && last[1] != last[2]
+      @prev.pop
+      return
+    end
+
     handle_simple_patterns(last, args)
 
     handle_mov_chain(args, last, @prev[-3])
