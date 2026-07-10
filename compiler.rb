@@ -1030,13 +1030,16 @@ class Compiler
   # Compiles and evaluates a given argument within a given scope.
   def compile_eval_arg(scope, arg)
     if arg.respond_to?(:position) && arg.position != nil
-      pos = arg.position.inspect
-      if pos != @lastpos
-        if arg[0] != :defm
-          @e.lineno(arg.position)
-        end
+      # Compare position FIELDS instead of building arg.position.inspect (a fresh String) on every
+      # expression just to detect a line/col change. This is the hottest codegen method, so that
+      # per-expression inspect String was pure allocation + CPU on both hosts. @lastpos now holds the
+      # last Position object itself.
+      p  = arg.position
+      lp = @lastpos
+      if lp.nil? || p.lineno != lp.lineno || p.col != lp.col || p.filename != lp.filename
+        @e.lineno(p) if arg[0] != :defm
+        @lastpos = p
       end
-      @lastpos = pos
     end
     args = get_arg(scope,arg)
     error("Unable to find '#{arg.inspect}'") if !args
