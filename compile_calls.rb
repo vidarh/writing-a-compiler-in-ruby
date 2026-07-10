@@ -379,14 +379,14 @@ class Compiler
   # compiler for the first time.
   #
   def load_class(scope)
-    @e.testl(1, :esi)
-    l1 = @e.get_local
-    l2 = @e.get_local
-    @e.jz(l1)
+    # On EVERY method dispatch. Default %eax to Fixnum, then overwrite with the object's class pointer
+    # only when the receiver is NOT a tagged fixnum (bit 0 clear). Saves the extra jmp + one label vs the
+    # branch-both-ways form (4 instrs + 1 label instead of 5 + 2), on every call.
     @e.load(:global, :Fixnum)
-    @e.jmp(l2)
-    @e.label(l1)
-    @e.load_indirect(:esi, :eax)
+    @e.testl(1, :esi)
+    l2 = @e.get_local
+    @e.jne(l2)                   # fixnum (bit 0 set) -> keep Fixnum
+    @e.load_indirect(:esi, :eax) # else class = *(%esi)
     @e.label(l2)
   end
 
