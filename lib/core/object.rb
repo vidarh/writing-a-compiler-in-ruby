@@ -336,7 +336,10 @@ class Object
           (if (eq c Numeric) (return true))
           (if (eq c Object) (return true))
           (return false)))
-    %s(assign k (callm self class))
+    # self is now known to be a heap object -- read its class pointer (slot 0 = @__class__) directly rather
+    # than dispatching #class, then walk the superclass chain as before. Safe only AFTER the fixnum guard
+    # above: (index self 0) on a tagged fixnum would deref garbage.
+    %s(assign k (index self 0))
     %s(while (and (ne k c) (ne k Object)) (do
       (assign k (callm k superclass))
      ))
