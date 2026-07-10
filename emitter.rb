@@ -445,7 +445,10 @@ class Emitter
 
   # Avoid method_missing...
 
-  def movl src, dest; @out.emit_row([:movl, src, dest]); end
+  # Skip register-to-itself moves: `movl %r,%r` is a pure no-op (movl sets no flags). Codegen routinely
+  # asks to move a result into a register it already occupies; ~10% of all emitted lines were such identical
+  # moves. Guarding at the emission point (not the peephole) keeps them out of the generated code entirely.
+  def movl src, dest; @out.emit_row([:movl, src, dest]) if src != dest; end
   def addl src, dest; @out.emit_row([:addl, src, dest]); end
   def subl src, dest; @out.emit_row([:subl, src, dest]); end
   def cmpl src, dest; @out.emit_row([:cmpl, src, dest]); end
