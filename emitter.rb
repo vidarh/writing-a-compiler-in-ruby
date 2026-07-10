@@ -375,8 +375,7 @@ class Emitter
   end
 
   def evict_regs_for(vars)
-    evicted = @allocator.evict(vars)
-    #comment("RA: Evicted #{evicted.join(",")}") if !evicted.empty?
+    @allocator.evict(vars)
   end
 
   def with_register(required_reg = nil, &block)

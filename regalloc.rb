@@ -187,9 +187,12 @@ class RegisterAllocator
   # if this is safe or not.
   #
   def evict vars
-    Array(vars).collect do |v|
+    # evict is called for its side effects (spill + uncache); the collected list of evicted vars was
+    # never used by any caller (see Emitter#evict_regs_for), so a plain each avoids the collect + compact
+    # Arrays this built on every eviction -- a hot both-hosts allocator during codegen.
+    Array(vars).each do |v|
       evict_by_cache(@cached[v.to_sym])
-    end.compact
+    end
   end
   
   def evict_all
