@@ -183,23 +183,62 @@ void *tgc_alloc(size_t size, int leaf) {
   return obj;
 }
 
-/* --- marking --- */
-static void tgc_mark_ptr(void *p) {
-  /* Every managed object is 8-byte aligned (arena base is >=8-aligned; slots are multiples of 8). Reject
-     any misaligned candidate (tagged fixnums, interior/garbage words) FIRST: otherwise (p-base)/8 would
-     TRUNCATE a misaligned address onto some real object's bitmap index, a false positive that then reads a
-     garbage header and walks off the end. (The old hashtable matched pointers exactly, so it was immune.) */
-  if ((uintptr_t)p & 7u) { return; }
+/* --- marking (iterative, explicit gray stack) ---
+   The mark must NOT recurse per field: a deep object graph (a long linked list, deeply-nested arrays)
+   would overflow the C stack and SIGSEGV. An explicit gray stack keeps the depth on the heap. */
+static void **g_gray = NULL;
+static size_t g_gray_cap = 0, g_gray_top = 0;
+
+/* Is p an unmarked managed object start? (8-aligned in an arena with its object-start bit set.)
+   The 8-byte ALIGNMENT guard is mandatory: (p-base)/8 would truncate a misaligned candidate (tagged
+   fixnum / interior / garbage word) onto some real object's bitmap index -> false positive -> garbage
+   header -> OOB. The old exact-match hashtable was immune; the bitmap is not. */
+static inline int obj_is_unmarked(void *p) {
+  if ((uintptr_t)p & 7u) { return 0; }
   arena_t *a = arena_of(p);
-  if (!a) { return; }
+  if (!a) { return 0; }
   size_t i = ((size_t)((char*)p - a->base)) / 8;
-  if (!bm_get(a, i)) { return; }                  /* not an object start */
-  if (obj_marked(p)) { return; }
+  return bm_get(a, i) && !obj_marked(p);
+}
+
+/* Recursive fallback used ONLY when the gray stack can't grow (OOM) -- correctness over stack-safety in
+   an already-failing scenario. */
+static void tgc_mark_recursive(void *p) {
+  if (!obj_is_unmarked(p)) { return; }
   obj_setmark(p);
   if (obj_leaf(p)) { return; }
   size_t words = obj_size(p) / sizeof(void*);
-  void **fields = (void**)p;
-  for (size_t k = 0; k < words; k++) { tgc_mark_ptr(fields[k]); }
+  void **f = (void**)p;
+  for (size_t k = 0; k < words; k++) { tgc_mark_recursive(f[k]); }
+}
+
+/* Mark p; push it (if non-leaf) for later field scanning. */
+static void gray_push(void *p) {
+  if (!obj_is_unmarked(p)) { return; }
+  obj_setmark(p);
+  if (obj_leaf(p)) { return; }
+  if (g_gray_top >= g_gray_cap) {
+    size_t ncap = g_gray_cap ? g_gray_cap * 2 : 8192;
+    void **n = (void**)realloc(g_gray, ncap * sizeof(void*));
+    if (!n) {                                       /* OOM: scan p's fields recursively (rare, terminal) */
+      size_t words = obj_size(p) / sizeof(void*);
+      void **f = (void**)p;
+      for (size_t k = 0; k < words; k++) { tgc_mark_recursive(f[k]); }
+      return;
+    }
+    g_gray = n; g_gray_cap = ncap;
+  }
+  g_gray[g_gray_top++] = p;
+}
+
+static void tgc_mark_ptr(void *p) {
+  gray_push(p);
+  while (g_gray_top > 0) {
+    void *o = g_gray[--g_gray_top];
+    size_t words = obj_size(o) / sizeof(void*);
+    void **f = (void**)o;
+    for (size_t k = 0; k < words; k++) { gray_push(f[k]); }
+  }
 }
 
 static void tgc_mark_static_roots(void) {
@@ -292,6 +331,7 @@ void tgc_stop(void) {
     a = n;
   }
   gc.arenas = NULL;
+  free(g_gray); g_gray = NULL; g_gray_cap = 0; g_gray_top = 0;
 }
 
 /* Grow (or first-allocate) a buffer. Returns a NEW object; the old one becomes unreachable and is swept.
