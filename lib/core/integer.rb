@@ -2425,6 +2425,12 @@ class Integer < Numeric
   end
 
   def <=> other
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (do
+            (if (lt self other) (return (__int -1)))
+            (if (gt self other) (return (__int 1)))
+            (return (__int 0)))))
     __compare_to(other)
   end
 
@@ -3580,11 +3586,17 @@ class Integer < Numeric
   end
 
   def > other
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (if (gt self other) (return true) (return false))))
     cmp = __compare_to(other)
     cmp == 1
   end
 
   def >= other
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (if (ge self other) (return true) (return false))))
     cmp = __compare_to(other)
     cmp == 1 || cmp == 0
   end
@@ -3601,6 +3613,9 @@ class Integer < Numeric
   end
 
   def <= other
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (if (le self other) (return true) (return false))))
     cmp = __compare_to(other)
     cmp == -1 || cmp == 0
   end
@@ -3608,6 +3623,11 @@ class Integer < Numeric
   # Equality comparison - handles both tagged fixnums and heap integers
   # Uses direct s-expression comparison to avoid circular dependency with <=>
   def == other
+    # Fixnum fast path FIRST: both tagged fixnums -> raw equality, skipping the nil?/is_a? dispatches below
+    # (the common case). Non-fixnum `other` falls through to the full coercion path.
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (if (eq self other) (return true) (return false))))
     # Handle nil and non-Integer types
     if other.nil?
       return false
