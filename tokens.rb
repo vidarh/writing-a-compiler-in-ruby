@@ -98,6 +98,7 @@ module Tokens
   # EVERY source character -- together the
   # single largest compile allocator (~10% of all allocations). `c.ord` is the byte value on both hosts
   # (String#ord / Integer#ord), so these behave identically MRI-hosted and self-hosted.
+  def self.alpha?(c);    c && (b = c.ord) >= 65 && (b <= 90 || (b >= 97 && b <= 122)); end          # A-Za-z
   def self.digit?(c);    c && (b = c.ord) >= 48 && b <= 57; end                                   # 0-9
   def self.octdigit?(c); c && (b = c.ord) >= 48 && b <= 55; end                                   # 0-7
   def self.hexdigit?(c); c && (b = c.ord) >= 48 && (b <= 57 || (b >= 65 && b <= 70) || (b >= 97 && b <= 102)); end  # 0-9A-Fa-f
