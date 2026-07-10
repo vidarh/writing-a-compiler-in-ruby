@@ -458,16 +458,20 @@ class Compiler
   # Need to clean up the name to be able to use it in the assembler.
   # Strictly speaking we don't *need* to use a sensible name at all,
   # but it makes me a lot happier when debugging the asm.
+  # Operator-char -> mangled-name lookup. A constant (was a Hash literal rebuilt on every call, i.e. per
+  # compiled method -- 15 entries + ~30 String literals each time).
+  CLEAN_METHOD_DICT = {
+    "?" => "__Q",     "!"  => "__X",
+    "[]" => "__NDX",  "==" => "__eq",
+    ">=" => "__ge",   "<=" => "__le",
+    "<"  => "__lt",   ">"  => "__gt",
+    "/"  => "__div",  "*"  => "__mul",
+    "+"  => "__plus", "-"  => "__minus",
+    "-@" => "__uminus", "+@" => "__uplus",
+    "~"  => "__tilde"}.freeze
+
   def clean_method_name(name)
-    dict = {
-      "?" => "__Q",     "!"  => "__X",
-      "[]" => "__NDX",  "==" => "__eq",
-      ">=" => "__ge",   "<=" => "__le",
-      "<"  => "__lt",   ">"  => "__gt",
-      "/"  => "__div",  "*"  => "__mul",
-      "+"  => "__plus", "-"  => "__minus",
-      "-@" => "__uminus", "+@" => "__uplus",
-      "~"  => "__tilde"}
+    dict = CLEAN_METHOD_DICT
 
     pos = 0
     # FIXME: this is necessary because we
