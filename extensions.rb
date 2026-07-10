@@ -46,7 +46,9 @@ class Array
     # Need to ensure that all variables
     # gets initialized before use.
     ret = nil
-    if arg.size == 0 || arg.member?(self[0])
+    # filter is almost always 0 or 1 symbols; avoid Enumerable#member?'s iteration in those cases
+    al = arg.length
+    if al == 0 || (al == 1 ? arg[0] == self[0] : arg.member?(self[0]))
       ret = yield(self)
     end
     return :stop if ret == :stop

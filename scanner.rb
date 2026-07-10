@@ -185,7 +185,7 @@ class Scanner
   def ws
     @last_ws_consumed_newline = false
     @had_ws_before_token = false
-    while (c = peek) && (WS.member?(c.ord) || c == "\\")
+    while (c = peek) && ((o = c.ord) == 9 || o == 10 || o == 13 || o == 32 || o == 35 || o == 92)  # WS + '\\'
       if c == "\\"
         # Check if it's line continuation: backslash followed by newline
         get_ch
@@ -216,7 +216,7 @@ class Scanner
   def nolfws
     @had_ws_before_token = false
     had_any = false
-    while (c = peek) && NOLFWS.member?(c.ord)
+    while (c = peek) && ((o = c.ord) == 9 || o == 13 || o == 32)   # NOLFWS
       get_ch
       had_any = true
     end
