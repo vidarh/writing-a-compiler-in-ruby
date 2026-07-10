@@ -109,11 +109,15 @@ class Function
   # For arguments with defaults only, return the [:lvar, arg.lvar] value
   def get_lvar_arg(a)
     a = a.to_s[1..-1].to_sym if a[0] == ?#
-    args.each_with_index do |arg,i|
+    i = 0
+    len = args.length
+    while i < len
+      arg = args[i]
       if arg.default && (arg.name == a)
         raise "Expected to have a lvar assigned for #{arg.name}" if !arg.lvar
         return [:lvar, arg.lvar]
       end
+      i += 1
     end
     nil
   end
@@ -133,8 +137,12 @@ class Function
     raise "Expected lvar - #{a} / #{args.inspect}" if a[0] == ?#
 
     a = :__closure__ if a == @blockarg
-    args.each_with_index do |arg,i|
+    i = 0
+    len = args.length
+    while i < len
+      arg = args[i]
       return [arg.type, i] if arg.name == a
+      i += 1
     end
 
     return @scope.get_arg(a)

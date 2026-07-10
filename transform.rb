@@ -938,23 +938,30 @@ class Compiler
     exp.depth_first do |e|
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
-      # FIXME: e seems to get aliased by v
+      # Index while-loop instead of each_with_index: this runs for every element of every AST node,
+      # so the per-element block dispatch is a hot allocator on both hosts (also sidesteps the old
+      # "e aliased by v" block workaround).
       ex = e
-      e.each_with_index do |v,i|
-        next unless v.is_a?(Symbol)
-        name = v.to_s
-        if name[0] == ?:
-          if !@symbols.member?(v)
-            @symbols << name[1..-1]
-          end
-          ex[i] = E[:sexp, symbol_name(name[1..-1])]
+      i = 0
+      len = e.length
+      while i < len
+        v = e[i]
+        if v.is_a?(Symbol)
+          name = v.to_s
+          if name[0] == ?:
+            if !@symbols.member?(v)
+              @symbols << name[1..-1]
+            end
+            ex[i] = E[:sexp, symbol_name(name[1..-1])]
 
-          # FIXME: This is a horrible workaround to deal with a parser
-          # inconsistency that leaves calls with a single argument with
-          # the argument "bare" if it's not an array, which breaks with
-          # this rewrite.
-          ex[i] = E[ex[i]] if is_call && i > 1
+            # FIXME: This is a horrible workaround to deal with a parser
+            # inconsistency that leaves calls with a single argument with
+            # the argument "bare" if it's not an array, which breaks with
+            # this rewrite.
+            ex[i] = E[ex[i]] if is_call && i > 1
+          end
         end
+        i += 1
       end
     end
   end
