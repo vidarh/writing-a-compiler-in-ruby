@@ -139,7 +139,11 @@ end
 
 %s(defun __new_proc (addr env self arity closure)
 (let (p)
-   (assign p (callm Proc new))
+   # allocate + __set_raw, NOT Proc.new: Proc.new(no block) is allocate + initialize, and initialize sets
+   # the five ivars to nil -- which __set_raw immediately overwrites. So the initialize call (and Proc.new's
+   # block-check indirection) is pure waste on this hot path (~24.6M/self-compile). allocate gives a blank
+   # Proc with slot 0 = the class; __set_raw fills @addr/@env/@s/@arity/@closure. Identical result.
+   (assign p (callm Proc allocate))
    (callm p __set_raw (addr env self (__int arity) closure))
    p
 ))
