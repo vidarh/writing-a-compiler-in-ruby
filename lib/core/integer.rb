@@ -199,6 +199,11 @@ class Integer < Numeric
 
   # Addition - handles both tagged fixnums and heap integers
   def + other
+    # Early fixnum fast path: both tagged fixnums -> untag + overflow-checked add, skipping the is_a?
+    # dispatch below (the common case). __add_with_overflow promotes to bignum on overflow, so this is exact.
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (return (__add_with_overflow (sar self) (sar other)))))
     # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
       # SAFETY: Check if other is nil to prevent crashes
@@ -255,6 +260,11 @@ class Integer < Numeric
   # Subtraction - handles both tagged fixnums and heap integers
   # Uses a - b = a + (-b) to leverage existing addition infrastructure
   def - other
+    # Early fixnum fast path: both tagged fixnums -> untag + overflow-checked subtract, skipping the is_a?
+    # dispatch below (the common case). __add_with_overflow promotes to bignum on overflow, so this is exact.
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (return (__add_with_overflow (sub (sar self) (sar other)) 0))))
     # Handle non-Integer types by returning stub objects of correct type
     if !other.is_a?(Integer)
       # SAFETY: Check if other is nil to prevent crashes
