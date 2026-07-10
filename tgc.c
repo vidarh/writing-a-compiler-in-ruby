@@ -46,12 +46,18 @@ static void __rt_ignore_sigpipe(void) {
   signal(SIGPIPE, SIG_IGN);
 }
 
+/* 8-byte table entry (was 16): the per-object pointer table dominated peak memory (2.5x over-allocated
+   slots x 16 bytes ~= 1GB when a memory-heavy phase runs). `hash` is dropped -- it stored the ideal slot,
+   which is recomputable from `ptr` (tgc_hash(ptr) % nslots) against the CURRENT nslots, exactly what the
+   stored value tracked. size + the leaf/mark flags pack into one 32-bit word: size in the top 30 bits
+   (objects are always < 1GB here), leaf in bit 1, mark in bit 0. Empty slot is ptr == NULL. */
 typedef struct {
-  void *ptr;
-  size_t size, hash;
-  unsigned char leaf : 1;
-  unsigned char mark : 1;
+  void *ptr;        /* NULL == empty slot */
+  uint32_t szf;     /* (size << 2) | (leaf << 1) | mark */
 } tgc_ptr_t;
+
+#define SZF_SIZE(x)        ((size_t)((x) >> 2))
+#define SZF_MAKE(sz, leaf) ((uint32_t)(((uint32_t)(sz) << 2) | ((leaf) ? 2u : 0u)))
 
 typedef struct {
   void *stack_bottom;
@@ -66,23 +72,25 @@ typedef struct {
 tgc_t gc;
 
 static size_t tgc_hash(void *ptr) { return ((uintptr_t)ptr) >> 3; }
-static unsigned short is_marked(size_t i) { return gc.items[i].mark; }
-static unsigned short is_leaf(size_t i)   { return gc.items[i].leaf; }
-static void clear_mark(size_t i) { gc.items[i].mark = 0; }
-static void set_mark(size_t i)   { gc.items[i].mark = 1; }
+static unsigned short is_marked(size_t i) { return gc.items[i].szf & 1u; }
+static unsigned short is_leaf(size_t i)   { return (gc.items[i].szf >> 1) & 1u; }
+static void clear_mark(size_t i) { gc.items[i].szf &= ~1u; }
+static void set_mark(size_t i)   { gc.items[i].szf |= 1u; }
 
-static size_t tgc_probe(size_t i, size_t h) {
-  long v = i - (h-1);
+/* Probe distance of the entry currently in slot i: (i - ideal_slot) mod nslots, where ideal_slot is
+   recomputed from the stored ptr. Only valid for an occupied slot (ptr != NULL). */
+static size_t tgc_probe(size_t i) {
+  size_t ideal = tgc_hash(gc.items[i].ptr) % gc.nslots;
+  long v = (long)i - (long)ideal;
   if (v < 0) { v = gc.nslots + v; }
   return v;
 }
 
 static tgc_ptr_t *tgc_get_ptr(void *ptr) {
-  size_t i, j, h;
+  size_t i, j;
   i = tgc_hash(ptr) % gc.nslots; j = 0;
   while (1) {
-    h = gc.items[i].hash;
-    if (h == 0 || j > tgc_probe(i, h)) { return NULL; }
+    if (gc.items[i].ptr == NULL || j > tgc_probe(i)) { return NULL; }
     if (gc.items[i].ptr == ptr) { return &gc.items[i]; }
     i = (i+1) % gc.nslots; j++;
   }
@@ -96,16 +104,12 @@ static void tgc_add_ptr(void *ptr, size_t size, int leaf) {
   size_t j = 0;
 
   item.ptr = ptr;
-  item.leaf = leaf;
-  item.mark = 0;
-  item.size = size;
-  item.hash = i+1;
+  item.szf = SZF_MAKE(size, leaf);
 
   while (1) {
-    size_t h = gc.items[i].hash;
-    if (h == 0) { gc.items[i] = item; return; }
+    if (gc.items[i].ptr == NULL) { gc.items[i] = item; return; }
     if (gc.items[i].ptr == item.ptr) { return; }
-    size_t p = tgc_probe(i, h);
+    size_t p = tgc_probe(i);
     if (j >= p) {
       tgc_ptr_t tmp = gc.items[i];
       gc.items[i] = item;
@@ -119,7 +123,7 @@ static void tgc_add_ptr(void *ptr, size_t size, int leaf) {
 static void tgc_rem_ptr(void *ptr) {
   if (gc.nitems == 0) { return; }
 
-  size_t i, j, h, nj, nh;
+  size_t i, j, nj;
   for (i = 0; i < gc.nfrees; i++) {
     if (gc.frees[i].ptr == ptr) { gc.frees[i].ptr = NULL; }
   }
@@ -127,15 +131,13 @@ static void tgc_rem_ptr(void *ptr) {
   i = tgc_hash(ptr) % gc.nslots; j = 0;
 
   while (1) {
-    h = gc.items[i].hash;
-    if (h == 0 || j > tgc_probe(i, h)) { return; }
+    if (gc.items[i].ptr == NULL || j > tgc_probe(i)) { return; }
     if (gc.items[i].ptr == ptr) {
       memset(&gc.items[i], 0, sizeof(tgc_ptr_t));
       j = i;
       while (1) {
         nj = (j+1) % gc.nslots;
-        nh = gc.items[nj].hash;
-        if (nh != 0 && tgc_probe(nj, nh) > 0) {
+        if (gc.items[nj].ptr != NULL && tgc_probe(nj) > 0) {
           memcpy(&gc.items[ j], &gc.items[nj], sizeof(tgc_ptr_t));
           memset(&gc.items[nj],              0, sizeof(tgc_ptr_t));
           j = nj;
@@ -193,10 +195,10 @@ static int tgc_rehash(size_t new_size) {
   }
 
   for (i = 0; i < old_size; i++) {
-    if (old_items[i].hash != 0) {
+    if (old_items[i].ptr != NULL) {
       tgc_add_ptr(
-        old_items[i].ptr,   old_items[i].size, 
-        old_items[i].leaf);
+        old_items[i].ptr, SZF_SIZE(old_items[i].szf),
+        (old_items[i].szf >> 1) & 1u);
     }
   }
 
@@ -218,7 +220,7 @@ static int tgc_resize_less() {
 
 static void tgc_mark_ptr(void *ptr) {
 
-  size_t i, j, h;
+  size_t i, j;
 
   if ((uintptr_t)ptr < gc.minptr
   ||  (uintptr_t)ptr > gc.maxptr) { return; }
@@ -226,13 +228,13 @@ static void tgc_mark_ptr(void *ptr) {
   i = tgc_hash(ptr) % gc.nslots; j = 0;
 
   while (1) {
-    h = gc.items[i].hash;
-    if (h == 0 || j > tgc_probe(i, h)) { return; }
+    if (gc.items[i].ptr == NULL || j > tgc_probe(i)) { return; }
     if (ptr == gc.items[i].ptr) {
       if (is_marked(i)) { return; }
       set_mark(i);
       if (is_leaf(i)) { return; }
-      for (size_t k = 0; k < gc.items[i].size/sizeof(void*); k++) {
+      size_t sz = SZF_SIZE(gc.items[i].szf);
+      for (size_t k = 0; k < sz/sizeof(void*); k++) {
         tgc_mark_ptr(((void**)gc.items[i].ptr)[k]);
       }
       return;
@@ -273,12 +275,12 @@ static void tgc_mark() {
 }
 
 static void tgc_sweep() {
-  size_t i, j, k, nj, nh;
+  size_t i, j, k, nj;
   if (gc.nitems == 0) { return; }
 
   gc.nfrees = 0;
   for (i = 0; i < gc.nslots; i++) {
-    if (gc.items[i].hash == 0) { continue; }
+    if (gc.items[i].ptr == NULL) { continue; }
     if (is_marked(i))      { continue; }
     gc.nfrees++;
   }
@@ -288,7 +290,7 @@ static void tgc_sweep() {
 
   i = 0; k = 0;
   while (i < gc.nslots) {
-    if (gc.items[i].hash == 0) { i++; continue; }
+    if (gc.items[i].ptr == NULL) { i++; continue; }
     if (is_marked(i))      { i++; continue; }
     gc.frees[k] = gc.items[i]; k++;
     memset(&gc.items[i], 0, sizeof(tgc_ptr_t));
@@ -296,8 +298,7 @@ static void tgc_sweep() {
     j = i;
     while (1) {
       nj = (j+1) % gc.nslots;
-      nh = gc.items[nj].hash;
-      if (nh != 0 && tgc_probe(nj, nh) > 0) {
+      if (gc.items[nj].ptr != NULL && tgc_probe(nj) > 0) {
         memcpy(&gc.items[ j], &gc.items[nj], sizeof(tgc_ptr_t));
         memset(&gc.items[nj],             0, sizeof(tgc_ptr_t));
         j = nj;
@@ -309,7 +310,7 @@ static void tgc_sweep() {
   }
 
   for (i = 0; i < gc.nslots; i++) {
-    if (gc.items[i].hash == 0) { continue; }
+    if (gc.items[i].ptr == NULL) { continue; }
     clear_mark(i);
   }
   tgc_resize_less(gc);
@@ -386,12 +387,12 @@ void *tgc_realloc(void *ptr, size_t size) {
   tgc_ptr_t *p  = tgc_get_ptr(ptr);
 
   if (p && qtr == ptr) {
-    p->size = size;
+    p->szf = SZF_MAKE(size, (p->szf >> 1) & 1u) | (p->szf & 1u);   /* update size, keep leaf+mark */
     return qtr;
   }
 
   if (p && qtr != ptr) {
-    unsigned short leaf = p->leaf;
+    unsigned short leaf = (p->szf >> 1) & 1u;
     tgc_rem(ptr);
     tgc_add(qtr, size, leaf);
     return qtr;
