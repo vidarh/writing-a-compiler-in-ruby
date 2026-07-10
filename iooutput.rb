@@ -35,7 +35,9 @@ class IOOutput
     len = row.length
     while i < len
       s << SEP if i > 1
-      s << to_operand_value(row[i]).to_s
+      # to_operand_value already returns a String (int_value / "%sym" / src.to_s), so the extra .to_s was
+      # a redundant dispatch on every operand of every emitted asm line (~1M lines/compile).
+      s << to_operand_value(row[i])
       i += 1
     end
     puts "\t#{op}\t#{s}"
