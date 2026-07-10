@@ -2,6 +2,11 @@
 
 
 class Hash
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@data, :@first, :@last, :@deleted, :@capacity, :@length, :@defproc, :@defval, :@__comparing, :@__inspecting]
+  end
+
 
   class Deleted
     def eql? other

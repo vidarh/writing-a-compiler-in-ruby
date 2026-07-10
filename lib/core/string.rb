@@ -6,6 +6,11 @@
 # At least #concat needs to be implemented for our needed
 # use in #attr_writer.
 class String
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@buffer, :@capacity, :@flags, :@length]
+  end
+
   # NOTE
   # Changing this to '= ""' is likely to fail, as it
   # gets translated into '__get_string("")', which

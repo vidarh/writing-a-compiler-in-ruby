@@ -198,8 +198,20 @@ class Object
       false)
   end
 
+  # Instance variables that are INTERNAL implementation state of self's class and must be excluded from
+  # reflection (instance_variables) and therefore Marshal. This is decided PER CLASS by the class itself:
+  # the default is to hide NOTHING (every declared ivar is reflected), and only a class that stores raw or
+  # private runtime state in ivars overrides this -- via `super + [...]` -- to hide ITS OWN ivars. Because
+  # the decision is per-class, a *different* class that happens to use the same ivar name still reflects it
+  # (e.g. a user class with its own @addr is unaffected by Proc hiding Proc#@addr), and a user ivar like
+  # @__foo is always reflected unless some class on self's ancestry explicitly hides that exact name.
+  def __hidden_ivars
+    [:@__class__, :@__singleton_registry]
+  end
+
   def instance_variables
     out = []
+    hidden = __hidden_ivars
     n = 0
     %s(assign n (__int (index __ivar_table_count 0)))
     i = 0
@@ -207,7 +219,12 @@ class Object
       if __ivar_row_matches_self(i)
         rn = nil
         %s(assign rn (__get_string (index __ivar_table (add (mul (sar i) 3) 1))))
-        out << rn.to_sym if !instance_variable_get(rn).nil?
+        sym = rn.to_sym
+        # Skip class-declared hidden ivars BEFORE reading the slot: a hidden ivar may hold a raw
+        # non-object value (e.g. Proc#@addr is a code pointer) that would crash on the .nil? dispatch.
+        if !hidden.include?(sym)
+          out << sym if !instance_variable_get(rn).nil?
+        end
       end
       i += 1
     end

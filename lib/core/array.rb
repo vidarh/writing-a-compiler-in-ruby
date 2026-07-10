@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
 class Array
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@ptr, :@len, :@capacity, :@frozen, :@__comparing, :@__eql_comparing, :@__flattening, :@__hashing, :@__inspecting]
+  end
+
   # FIXME: still need to make including modules work
   # include Enumerable
 

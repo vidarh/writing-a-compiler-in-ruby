@@ -3,6 +3,11 @@
 # Members are held in a registry keyed by the class's object_id -- an anonymous class (Class.new) has no
 # name, so a name-based __classivar__ store is not available.
 class Data
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@__data, :@__data_registry, :@__comparing, :@__inspecting]
+  end
+
   def self.__data_registry
     @@__data_registry ||= {}
     @@__data_registry

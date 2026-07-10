@@ -9,6 +9,11 @@
 # The single method `Struct.new` is overloaded: called ON Struct itself it builds a subclass; called on
 # a Struct subclass it builds an instance (mirroring Class#new). That is how MRI models it too.
 class Struct
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@__struct_values, :@__struct_registry, :@__struct_kwinit, :@__comparing, :@__hashing, :@__inspecting]
+  end
+
 
   def self.__struct_registry
     @@__struct_registry ||= {}

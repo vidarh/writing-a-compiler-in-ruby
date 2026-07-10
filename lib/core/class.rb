@@ -135,6 +135,11 @@
 # from Object at this stage.
 #
 class Class
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@instance_size, :@name]
+  end
+
 
   # A bare `def` whose self is a class installs an instance method directly on the class (no singleton).
   def __def_target

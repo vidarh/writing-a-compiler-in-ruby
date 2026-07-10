@@ -6,6 +6,11 @@
 
 
 class Enumerator
+  # Internal implementation ivars, hidden from reflection/Marshal per-class (see Object#__hidden_ivars).
+  def __hidden_ivars
+    super + [:@__buf, :@__pos]
+  end
+
   # Enumerator.new { |yielder| ... } stores the generator block; #each runs it with a Yielder that
   # forwards emitted values (y << v / y.yield v) to the each block. (Subclasses like ArrayEnumerator
   # override initialize/each and never call this.)
