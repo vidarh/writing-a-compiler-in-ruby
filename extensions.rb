@@ -34,10 +34,15 @@ class Array
   # fact two) throwaway Arrays just to pass `arg` down -- one of the largest compile allocators/CPU costs
   # (Array#depth_first ~9% CPU). Threading the array directly does it once for the whole traversal.
   def depth_first(*arg, &block)
-    __depth_first(arg, &block)
+    # Materialise the block into a Proc ONCE here and thread it as a REGULAR argument through the
+    # recursion, rather than re-passing `&block` (and calling `yield`) at every node. The self-hosted
+    # compiler boxes a `&block` method parameter into a closure on EVERY call, so with N AST nodes the old
+    # form allocated ~N closures per pass (x ~50 passes) -- a large self-hosted GC cost that MRI avoids via
+    # lazy block passing. Passing the Proc as a value allocates it once and reuses it.
+    __depth_first(arg, block)
   end
 
-  def __depth_first(arg, &block)
+  def __depth_first(arg, block)
     # FIXME: Temporary workaround: If
     # "ret" is used in the if statements
     # further down, but only initialized
@@ -49,7 +54,7 @@ class Array
     # filter is almost always 0 or 1 symbols; avoid Enumerable#member?'s iteration in those cases
     al = arg.length
     if al == 0 || (al == 1 ? arg[0] == self[0] : arg.member?(self[0]))
-      ret = yield(self)
+      ret = block.call(self)
     end
     return :stop if ret == :stop
     return true if ret == :skip
@@ -68,7 +73,7 @@ class Array
     while i < len
       n = self[i]
       if n.is_a?(Array)
-        ret = n.__depth_first(a, &block)
+        ret = n.__depth_first(a, block)
         return :stop if ret == :stop
       end
       i += 1
