@@ -1488,7 +1488,9 @@ class Compiler
       # We need to expand "yield" before we rewrite.
       # yield becomes __closure__.call(args...)
       if e.is_a?(Array) && e[0] == :call && e[1] == :yield
-        seen = true
+        # NB: do NOT force seen=true here. A direct method-level yield uses __closure__ as the plain ABI
+        # argument and needs no env. When __closure__ IS captured (a nested block reads it), it is in the
+        # env and the __rewrite_node_refs call below rewrites this __closure__ to env[2] and sets seen.
         args = e[2] || []
         args = args.is_a?(Array) ? args : [args]
         e[0] = :if
@@ -1605,6 +1607,37 @@ class Compiler
   # verbatim from the :defm handler so the SAME machinery can serve both real methods and (later) the
   # top-level/main scope. Mutates e2 in place (the rest-param marker) like the original, and RETURNS the
   # new body. The recursive rewrite_let_env on the result stays with the caller.
+  # A real block-literal node (proc/lambda). e[1] is nil, :block, or an array; a :let variable list whose
+  # first var is named proc/lambda has a bare Symbol at e[1] and is NOT a block literal.
+  def __block_literal_node?(n)
+    n.is_a?(Array) && (n[0] == :proc || n[0] == :lambda) &&
+      (n[1].nil? || n[1] == :block || n[1].is_a?(Array))
+  end
+
+  # True if a block literal in `n` references the DEFINING METHOD's block -- via __closure__ (block_given?
+  # is rewritten to `__closure__ != 0` before this pass) or a `yield` (rewritten later, so still a
+  # [:call, :yield, ...] here). Only then must __closure__ be boxed into the env so the nested block can
+  # reach it; otherwise __closure__ can stay a plain method argument and the method needs no env for it --
+  # so a pure direct-`yield` method (each/map/times) allocates nothing.
+  def __closure_ref_in_block?(n, inside)
+    return false if !n.is_a?(Array)
+    return false if n[0] == :defm    # nested method has its own closure
+    nowinside = inside || __block_literal_node?(n)
+    i = 0
+    while i < n.length
+      c = n[i]
+      if nowinside && (c == :__closure__ || c == :yield)
+        return true
+      end
+      if c.is_a?(Array)
+        return true if nowinside && c[0] == :call && c[1] == :yield
+        return true if __closure_ref_in_block?(c, nowinside)
+      end
+      i += 1
+    end
+    false
+  end
+
   def process_scope_env(e2, body_in, epos)
     # Build the Set directly instead of Set[*e2.collect{...}] -- the collect built a throwaway Array (then
     # splatted) on both hosts.
@@ -1667,7 +1700,10 @@ class Compiler
       end
       vars,env= find_vars(fv_body,scopes,s, freq)
 
-      env << :__closure__
+      # Box the method's block (__closure__) into the env ONLY when a nested block reads it (yield /
+      # block_given? inside a block). A direct method-level yield uses __closure__ as the plain ABI
+      # argument, so a pure-yield method (the hot iterators: each/map/times) needs no env at all.
+      env << :__closure__ if __closure_ref_in_block?(body_in, false)
 
       # Env layout (uniform for this root env and, later, per-activation wrapper envs of nested
       # block-creating lambdas): slot 0 = __stackframe__ (frame of the activation that ALLOCATED

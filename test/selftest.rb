@@ -718,10 +718,11 @@ def test_compiler
   end
 ')
   c.preprocess(prog)
-  # env layout: [0]=__stackframe__, [1]=__envparent__ (0 for a root env), [2]=__closure__, ...
-  # yield is now guarded so that a yield with no block raises LocalJumpError (MRI) instead of calling
-  # a null __closure__: if __closure__ != 0 then __closure__.call(...) else raise LocalJumpError.
-  expect_eq(prog[1][3].inspect, "[:let, [:__env__, :__tmp_proc], [:sexp, [:assign, :__env__, [:call, :__alloc_env, 3]]], [:assign, [:index, :__env__, 2], :__closure__], [:if, [:ne, [:index, :__env__, 2], 0], [:callm, [:index, :__env__, 2], :call, []], [:call, :__raise_no_block, []]]]",
+  # A direct method-level `yield` uses __closure__ as the plain ABI argument -- NO env is allocated
+  # (the env is only boxed when a nested block reads __closure__). yield is guarded so a yield with no
+  # block raises (MRI LocalJumpError) instead of calling a null __closure__: if __closure__ != 0 then
+  # __closure__.call(...) else raise. (Previously this method needlessly allocated a 3-slot env.)
+  expect_eq(prog[1][3].inspect, "[:do, [:if, [:ne, :__closure__, 0], [:callm, :__closure__, :call, []], [:call, :__raise_no_block, []]]]",
     "yield triggers a rewrite even with no arguments")
 
 end
