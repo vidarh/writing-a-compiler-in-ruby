@@ -239,7 +239,11 @@ class Object
   end
 
   def == other
-    object_id == other.object_id
+    # Object identity: true iff self and other are the very same object. object_id is unique per object,
+    # so `object_id == other.object_id` is exactly a raw identity compare -- do it directly, saving two
+    # object_id dispatches and an Integer#== on every fallback (Symbol, plain object) comparison. Subclasses
+    # that define value equality (Integer, String, Array, ...) override this and are unaffected.
+    %s(if (eq self other) (return true) (return false))
   end
 
   def !
