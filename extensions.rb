@@ -29,7 +29,15 @@ class Array
   # FIXME: This should be moved to AST::Expr
   # when the parser is cleaned up to never
   # create "raw" arrays
+  # Public entry: normalise the filter symbols to a single Array ONCE, then recurse without re-splatting.
+  # The old code did `*arg` on entry AND `*a` on every recursive call, so each AST node allocated one (in
+  # fact two) throwaway Arrays just to pass `arg` down -- one of the largest compile allocators/CPU costs
+  # (Array#depth_first ~9% CPU). Threading the array directly does it once for the whole traversal.
   def depth_first(*arg, &block)
+    __depth_first(arg, &block)
+  end
+
+  def __depth_first(arg, &block)
     # FIXME: Temporary workaround: If
     # "ret" is used in the if statements
     # further down, but only initialized
@@ -39,7 +47,7 @@ class Array
     # gets initialized before use.
     ret = nil
     if arg.size == 0 || arg.member?(self[0])
-      ret = yield(self) 
+      ret = yield(self)
     end
     return :stop if ret == :stop
     return true if ret == :skip
@@ -51,7 +59,7 @@ class Array
     # be incorrectly initialized
     a = arg
     self.each do |n|
-      ret = n.depth_first(*a, &block) if n.is_a?(Array)
+      ret = n.__depth_first(a, &block) if n.is_a?(Array)
       return :stop if ret == :stop
     end
     return true
