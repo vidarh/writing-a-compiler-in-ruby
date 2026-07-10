@@ -20,6 +20,10 @@ class ArrayOutput
     @output << args
   end
 
+  def emit_row(row)
+    @output << row
+  end
+
   def export label,type = nil
     @output << [:export,label,type]
   end

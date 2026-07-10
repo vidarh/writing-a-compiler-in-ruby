@@ -150,7 +150,7 @@ class Peephole
 
   def flush
     @prev.each do |row|
-      @out.emit(*row)
+      @out.emit_row(row)
     end
     @prev = []
   end
