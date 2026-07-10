@@ -76,8 +76,10 @@ class Scanner
     # not String indexing, keeps @chars[@pos] O(1). Works identically MRI-hosted and self-hosted.
     @chars = []
     while c = io.getc
-      @chars << c.chr   # normalise to a 1-char String -- getc may return an Integer byte (as the
-    end                 # old `fill` did with `c.chr`); keeps @buf String-typed for @buf.empty?.
+      # getc returns a fresh 1-char String for real IO -- store it directly (c.chr would copy it again).
+      # Only a byte Integer (binary IO / getc-only MockIO) needs .chr to normalise to a 1-char String.
+      @chars << (c.is_a?(String) ? c : c.chr)
+    end
     @pos = 0
   end
 
@@ -136,7 +138,8 @@ class Scanner
   end
 
   def unget(c)
-    @buf << c.reverse
+    # reverse allocates a copy; a single-char unget (the common case -- bare-char pushback) needs no reverse.
+    @buf << (c.length == 1 ? c : c.reverse)
     @peeked = nil
 
     if c.respond_to?(:position)
