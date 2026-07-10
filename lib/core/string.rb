@@ -2197,8 +2197,13 @@ end
 # Another alternative is to implement
 #
 # pragma compiler-only
+# allocate + __set_raw, NOT String.new: this is the string-LITERAL entry point and one of the hottest
+# functions in the compiler. String.new is Class#new = allocate + initialize; initialize just sets
+# @flags=0 (= the calloc default from allocate), @length=0, @buffer="", @capacity=0 -- and __set_raw
+# immediately overwrites @buffer/@length/@capacity while @flags stays 0 either way. So the initialize call
+# (+ Class#new indirection) is pure waste here. Identical result.
 %s(defun __get_string (str) (let (s)
-  (assign s (callm String new))
+  (assign s (callm String allocate))
   (callm s __set_raw (str))
   s
 ))
