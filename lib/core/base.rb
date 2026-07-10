@@ -46,12 +46,14 @@
 %s(defun __realloc (ptr size) (tgc_realloc ptr size))
 
 # FIXME: 32-bit assumption
-%s(defun __array (size)      (__alloc_mem  (mul size 4)))
-%s(defun __array_leaf (size) (__alloc_leaf (mul size 4)))
+# Call __alloc directly instead of routing through __alloc_mem/__alloc_leaf/__array: these are among the
+# HOTTEST functions (~167M allocs per self-compile) and the wrappers are NOT inlined, so each level was a
+# real call/prologue/ret. __alloc keeps the single OOM diagnostic. Arrays/objects: 3 calls -> 2; envs
+# (__alloc_env): 4 calls -> 2. Pure call-count reduction, identical behaviour.
+%s(defun __array (size)      (__alloc (mul size 4) 0))
+%s(defun __array_leaf (size) (__alloc (mul size 4) 1))
 
-%s(defun __alloc_env (size)  (do
-  (__array size)
-))
+%s(defun __alloc_env (size)  (__alloc (mul size 4) 0))
 
 # We'll use this for various instrumentation
 %s(assign __cnt 0)
