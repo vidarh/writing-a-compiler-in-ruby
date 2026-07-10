@@ -869,8 +869,8 @@ class Compiler
 
       body = exp[2] # body to be executed, if compare_exp === test_value
 
-      @e.comment("test_value: #{test_values.inspect}")
-      @e.comment("body: #{body.inspect}")
+      @e.comment(Emitter::COMMENTS && "test_value: #{test_values.inspect}")
+      @e.comment(Emitter::COMMENTS && "body: #{body.inspect}")
 
       xrest = whens.slice(1..-1)
       if xrest.empty?
@@ -891,10 +891,10 @@ class Compiler
     # method call relative to the contents of the `rest` variable,
     # which needless to say is a total disaster.
 
-    @e.comment("compiling case expression")
+    @e.comment(Emitter::COMMENTS && "compiling case expression")
     compare_exp = args.first
 
-    @e.comment("compare_exp: #{compare_exp}")
+    @e.comment(Emitter::COMMENTS && "compare_exp: #{compare_exp}")
 
     xrest = args.rest
     exprs = xrest[0]
@@ -909,20 +909,20 @@ class Compiler
   end
 
   def compile_stackframe(scope)
-    @e.comment("Stack frame")
+    @e.comment(Emitter::COMMENTS && "Stack frame")
     Value.new([:reg,:ebp])
   end
 
   # Returns the caller's stack frame pointer (saved %ebp on stack)
   # Used by Proc#call to capture the yielder's frame for break support
   def compile_caller_stackframe(scope)
-    @e.comment("Caller's stack frame")
+    @e.comment(Emitter::COMMENTS && "Caller's stack frame")
     @e.movl("(%ebp)", :eax)
     Value.new([:reg, :eax])
   end
 
   def compile_stackpointer(scope)
-    @e.comment("Stack pointer")
+    @e.comment(Emitter::COMMENTS && "Stack pointer")
     Value.new([:reg,:esp])
   end
 
@@ -930,7 +930,7 @@ class Compiler
   # Similar to how Proc stores function addresses
   # Used for exception handling to save rescue handler address
   def compile_addr(scope, label)
-    @e.comment("Get address of label #{label}")
+    @e.comment(Emitter::COMMENTS && "Get address of label #{label}")
     @e.movl("$#{label}", :eax)
     Value.new([:reg, :eax])
   end
@@ -938,7 +938,7 @@ class Compiler
   # "Special" return for `proc` and bare blocks
   # to exit past Proc#call.
   def compile_preturn(scope, arg = nil)
-    @e.comment("preturn")
+    @e.comment(Emitter::COMMENTS && "preturn")
 
     @e.save_result(compile_eval_arg(scope, arg)) if arg
     @e.pushl(:eax)
@@ -997,7 +997,7 @@ class Compiler
   # Stack unwinding for exceptions (like preturn but for exception handlers)
   # Takes a handler object with saved_ebp, saved_esp, and handler_addr fields
   def compile_unwind(scope, handler_expr)
-    @e.comment("raise - unwind to exception handler")
+    @e.comment(Emitter::COMMENTS && "raise - unwind to exception handler")
 
     # Evaluate handler expression to get the handler object
     handler = compile_eval_arg(scope, handler_expr)
@@ -1817,7 +1817,7 @@ class Compiler
       @e.emit(".long", sc.last)
     end
 
-    @e.comment("")
+    @e.comment(Emitter::COMMENTS && "")
   end
 
   # Emit the runtime ivar reflection table that backs instance_variable_get/set/instance_variables.
@@ -1860,7 +1860,7 @@ class Compiler
     end
     @e.label("__ivar_table_count")
     @e.long(rows.length)
-    @e.comment("")
+    @e.comment(Emitter::COMMENTS && "")
   end
 
   # Emit a runtime constant reflection table so Object.const_get / const_defined? / __const_get_global
@@ -1895,7 +1895,7 @@ class Compiler
     end
     @e.label("__const_table_count")
     @e.long(rows.length)
-    @e.comment("")
+    @e.comment(Emitter::COMMENTS && "")
   end
 
   # Output function to initialize global variables to nil if still uninitialized (0)

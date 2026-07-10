@@ -32,7 +32,7 @@ class Compiler
       # (as opposed to C-library calls) due to potential of hitting a
       # method_missing thunk or anything else that might mess around with the
       # argument list before returning from the call.
-      @e.comment("Static adj: #{adj}")
+      @e.comment(Emitter::COMMENTS && "Static adj: #{adj}")
       @e.addl(4, :ebx) # Need to correspond to the extra space used when assigning "adj" above.
       @e.sall(2, :ebx) 
       @e.addl(:ebx, :esp)
@@ -88,13 +88,13 @@ class Compiler
   def compile_args_copysplat(scope, a, indir)
     @e.with_register do |splatcnt|
       if a[1] == :__copysplat
-        @e.comment("SPLAT COPY")
+        @e.comment(Emitter::COMMENTS && "SPLAT COPY")
         param = @e.save_to_reg(compile_eval_arg(scope, [:sub, :numargs, copysplat_fixed_count(scope)]))
         @e.movl(param, splatcnt)
         param = compile_eval_arg(scope, a[1])
         copy_splat_loop(splatcnt, indir)
       else
-        @e.comment("SPLAT ARRAY")
+        @e.comment(Emitter::COMMENTS && "SPLAT ARRAY")
         param = compile_eval_arg(scope, a[1])
         @e.addl(4,param)
         @e.load_indirect(param, splatcnt)
@@ -167,31 +167,31 @@ class Compiler
       expr = [:add, e, expr]
     end
 
-    @e.comment("BEGIN Calculating argument count for splat")
+    @e.comment(Emitter::COMMENTS && "BEGIN Calculating argument count for splat")
     ret = compile_eval_arg(scope, expr)
     @e.movl(@e.result, @e.scratch)
-    @e.comment("END Calculating argument count for splat; numargs is now in #{@e.scratch.to_s}")
+    @e.comment(Emitter::COMMENTS && "END Calculating argument count for splat; numargs is now in #{@e.scratch.to_s}")
 
-    @e.comment("Moving stack pointer to start of argument array:")
+    @e.comment(Emitter::COMMENTS && "Moving stack pointer to start of argument array:")
     @e.imull(4,@e.result)
 
     # esp now points to the start of the arguments; ebx holds numargs,
     # and end_of_arguments(%esp) also holds numargs
     @e.subl(@e.result, :esp)
 
-    @e.comment("BEGIN Pushing arguments:")
+    @e.comment(Emitter::COMMENTS && "BEGIN Pushing arguments:")
     @e.with_register do |indir|
       # We'll use indir to put arguments onto the stack without clobbering esp:
       @e.movl(:esp, indir)
       @e.pushl(@e.scratch)
-      @e.comment("BEGIN args.each do |a|")
+      @e.comment(Emitter::COMMENTS && "BEGIN args.each do |a|")
       compile_args_splat_loop(scope, args, indir)
-      @e.comment("END args.each")
+      @e.comment(Emitter::COMMENTS && "END args.each")
       @e.popl(@e.scratch)
     end
-    @e.comment("END Pushing arguments")
+    @e.comment(Emitter::COMMENTS && "END Pushing arguments")
     yield
-    @e.comment("Re-adjusting stack post-call:")
+    @e.comment(Emitter::COMMENTS && "Re-adjusting stack post-call:")
     @e.imull(4,@e.scratch)
     @e.addl(@e.scratch, :esp)
   end
@@ -415,7 +415,7 @@ class Compiler
   #
   # Yield to the supplied block
   def compile_yield(scope, args, block)
-    @e.comment("yield")
+    @e.comment(Emitter::COMMENTS && "yield")
     args ||= []
     compile_callm(scope, :__closure__, :call, args, block)
   end
@@ -436,7 +436,7 @@ class Compiler
     end
     method ||= :__unknown__
 
-    @e.comment("super #{method.inspect}")
+    @e.comment(Emitter::COMMENTS && "super #{method.inspect}")
     trace(nil,"=> super #{method.inspect}\n")
     # Pass the defining class name so we look up the right superclass
     # (not self.class.superclass which would be wrong for deep hierarchies)
@@ -479,7 +479,7 @@ class Compiler
 
     # Special handling for defined?() - don't evaluate arguments, just stub to nil
     if method == :defined? && ob == :self
-      @e.comment("defined?() - stubbed to nil")
+      @e.comment(Emitter::COMMENTS && "defined?() - stubbed to nil")
       return compile_exp(scope, :nil)
     end
 
@@ -488,13 +488,13 @@ class Compiler
     # This handles the case where the call is to self (e.g., "module_function" in module body)
     if ob == :self && scope.is_a?(ModuleScope)
       if [:private, :protected, :public, :attr, :attr_reader, :attr_writer, :attr_accessor, :module_function].include?(method)
-        @e.comment("Compile-time: #{method} in class/module body - no-op")
+        @e.comment(Emitter::COMMENTS && "Compile-time: #{method} in class/module body - no-op")
         @e.movl("nil", :eax)
         return Value.new([:subexpr])
       end
     end
 
-    @e.comment("callm #{ob.inspect}.#{method.inspect}")
+    @e.comment(Emitter::COMMENTS && "callm #{ob.inspect}.#{method.inspect}")
     trace(nil,"=> callm #{ob.inspect}.#{method.inspect}\n")
 
     stackfence do
@@ -551,7 +551,7 @@ class Compiler
         if ob != :self
           @e.load_indirect(@e.sp, :esi)
         else
-          @e.comment("Reload self?")
+          @e.comment(Emitter::COMMENTS && "Reload self?")
           reload_self(scope)
         end
 
@@ -559,7 +559,7 @@ class Compiler
           # do_load_super is the defining class name - load its superclass directly
           # This fixes super in deep hierarchies (A < B < C) where self.class.superclass
           # would return the wrong class
-          @e.comment("Load defining class #{do_load_super} for super")
+          @e.comment(Emitter::COMMENTS && "Load defining class #{do_load_super} for super")
           @e.load(:global, do_load_super.to_sym)
           load_super(scope) # Load superclass from %eax
         elsif do_load_super == :runtime
@@ -586,13 +586,13 @@ class Compiler
         # solves some register invalidation problems,
         # so commenting out for now.
 #        if ob != :self
-          @e.comment("Evicting self")
+          @e.comment(Emitter::COMMENTS && "Evicting self")
           @e.evict_regs_for(:self)
 #        end
       end
     end
 
-    @e.comment("callm #{ob.to_s}.#{method.to_s} END")
+    @e.comment(Emitter::COMMENTS && "callm #{ob.to_s}.#{method.to_s} END")
     trace(nil,"<= callm #{ob.to_s}.#{method.to_s}\n")
 
     return Value.new([:subexpr], :object)
@@ -613,7 +613,7 @@ class Compiler
       method = method[1]
     end
 
-    @e.comment("safe_callm #{ob.to_s}&.#{method.to_s} START")
+    @e.comment(Emitter::COMMENTS && "safe_callm #{ob.to_s}&.#{method.to_s} START")
 
     # Generate labels
     end_label = @e.get_local
@@ -636,7 +636,7 @@ class Compiler
     @e.movl("nil", :eax)
 
     @e.local(end_label)
-    @e.comment("safe_callm #{ob.to_s}&.#{method.to_s} END")
+    @e.comment(Emitter::COMMENTS && "safe_callm #{ob.to_s}&.#{method.to_s} END")
 
     return Value.new([:subexpr], :object)
   end

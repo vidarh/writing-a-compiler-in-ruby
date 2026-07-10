@@ -28,6 +28,12 @@ require 'peephole'
 class Emitter
   PTR_SIZE = 4 # Point size in bytes.  We are evil and assume 32bit arch. for now
 
+  # Assembly comments are currently discarded (Peephole#comment is a no-op), but the interpolated comment
+  # strings were still being BUILT on every call/expression -- wasted allocation + CPU on both hosts. Call
+  # sites now guard the string with `COMMENTS && "..."`, so it short-circuits (nothing built) while this is
+  # false. Flip to true (and re-enable Peephole#comment) to get the annotated asm back for debugging.
+  COMMENTS = false
+
   attr_accessor :seq
 
   attr_accessor :basic_main
