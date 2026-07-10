@@ -557,19 +557,32 @@ class Compiler
         # method frame with the intermediate (soon-dead) block frame -- when such a block is saved
         # and invoked later (e.g. `outer{ inner{ add{ return } } }; @saved.call`), preturn then
         # jumps to a dead frame and segfaults. Guarding on 0 keeps env[0] pinned to the method.
-        e.replace(
-          E[:do,
-            [:if, [:eq, [:index, :__env__,0], 0],
-              [:assign, [:index, :__env__,0], [:stackframe]]],
-            [:assign, :__tmp_proc,
-              [:defun, "__lambda_#{@e.get_local[1..-1]}",
-                full_params,
-                body
-              ]
-            ],
-            [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, len, :__closure__]]]
-          ]
-        )
+        if @method_no_env
+          # Envless block: no captures and no non-local exit, so the block never reads __env__ or
+          # __env__[0]. Pass a null env to __new_proc and omit the stackframe guard (there is no env slot
+          # to set). The method allocates no env at all.
+          e.replace(
+            E[:do,
+              [:assign, :__tmp_proc,
+                [:defun, "__lambda_#{@e.get_local[1..-1]}", full_params, body]],
+              [:sexp, [:call, :__new_proc, [:__tmp_proc, 0, :self, len, :__closure__]]]
+            ]
+          )
+        else
+          e.replace(
+            E[:do,
+              [:if, [:eq, [:index, :__env__,0], 0],
+                [:assign, [:index, :__env__,0], [:stackframe]]],
+              [:assign, :__tmp_proc,
+                [:defun, "__lambda_#{@e.get_local[1..-1]}",
+                  full_params,
+                  body
+                ]
+              ],
+              [:sexp, [:call, :__new_proc, [:__tmp_proc, :__env__, :self, len, :__closure__]]]
+            ]
+          )
+        end
       end
     end
     __nest_proc_envs(exp) if seen
@@ -1638,6 +1651,43 @@ class Compiler
     false
   end
 
+  # Recursion for __blocks_envless_safe?. `inside` = within a block literal. Disqualifies (sets the ivar
+  # false) if a block literal contains a nested block literal (its __env__ would be needed to build the
+  # nested proc) or a non-local exit (break/return/preturn/next/redo/retry -- these read __env__[0], the
+  # unwind target). Method-level break/return (inside==false) are ordinary and don't disqualify.
+  def __scan_envless(n, inside)
+    return if !n.is_a?(Array) || !@__envless_ok
+    return if n[0] == :defm
+    if __block_literal_node?(n)
+      @__envless_ok = false if inside
+      i = 0
+      while i < n.length
+        __scan_envless(n[i], true)
+        i += 1
+      end
+      return
+    end
+    if inside && (n[0] == :break || n[0] == :return || n[0] == :preturn ||
+                  n[0] == :next || n[0] == :redo || n[0] == :retry)
+      @__envless_ok = false
+      return
+    end
+    i = 0
+    while i < n.length
+      __scan_envless(n[i], inside)
+      i += 1
+    end
+  end
+
+  # True if every block literal in `body` is flat (no nested block) and free of non-local exits. Combined
+  # with "the method captures nothing" (env empty), such a method's blocks never read __env__ at all, so
+  # the method can pass __env__=0 to __new_proc and allocate no env.
+  def __blocks_envless_safe?(body)
+    @__envless_ok = true
+    __scan_envless(body, false)
+    @__envless_ok
+  end
+
   def process_scope_env(e2, body_in, epos)
     # Build the Set directly instead of Set[*e2.collect{...}] -- the collect built a throwaway Array (then
     # splatted) on both hosts.
@@ -1704,6 +1754,13 @@ class Compiler
       # block_given? inside a block). A direct method-level yield uses __closure__ as the plain ABI
       # argument, so a pure-yield method (the hot iterators: each/map/times) needs no env at all.
       env << :__closure__ if __closure_ref_in_block?(body_in, false)
+
+      # A method that captures NOTHING (env empty here -- no closure capture, no vars boxed by a nested
+      # block) and whose blocks are flat + non-local-exit-free needs no env at all: its blocks never read
+      # __env__ (no captures) or __env__[0] (no break/return target). rewrite_lambda then passes __env__=0
+      # to __new_proc and omits the stackframe guard, and no __alloc_env is emitted. This drops the 2-slot
+      # env still allocated per call for idiomatic simple blocks (arr.each { |x| x + 1 }).
+      @method_no_env = env.empty? && __blocks_envless_safe?(body_in)
 
       # Env layout (uniform for this root env and, later, per-activation wrapper envs of nested
       # block-creating lambdas): slot 0 = __stackframe__ (frame of the activation that ALLOCATED
@@ -1798,7 +1855,7 @@ class Compiler
         b3.concat(rest_func)
       end
 
-      if seen && prologue # seen && prologue
+      if seen && prologue && !@method_no_env
         b3.concat(prologue)
       end
 
@@ -1867,6 +1924,7 @@ class Compiler
         rewrite_env_vars(exp, [:__stackframe__, :__envparent__] + te.to_a)
       end
     end
+    @method_no_env = false   # top-level blocks use the top-level env; never envless
     if rewrite_lambda(exp)
       # If we found any procs at top level, we need to set up the environment
       # Look for the first :do or :let that wraps top-level code and add __env__ and __tmp_proc
