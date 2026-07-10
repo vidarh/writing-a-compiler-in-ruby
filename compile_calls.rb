@@ -12,13 +12,18 @@ class Compiler
     # %ebx. Need to determine exactly what to do about this size - it needs to
     # be bigger than args.length for some reason, but unsure exactly why and
     # how much.
-    adj = Emitter::PTR_SIZE * (args.length+4)
+    len = args.length
+    adj = Emitter::PTR_SIZE * (len+4)
     @e.subl(adj, :esp)
-    args.each_with_index do |a, i|
-      param = compile_eval_arg(scope, a)
+    # Index while-loop instead of each_with_index: this compiles the args of EVERY call, and
+    # each_with_index's block/enumerator dispatch is a hot allocator on both hosts.
+    i = 0
+    while i < len
+      param = compile_eval_arg(scope, args[i])
       @e.save_to_stack(param, i)
+      i += 1
     end
-    @e.movl(args.length, :ebx)
+    @e.movl(len, :ebx)
 
     yield
 
