@@ -198,7 +198,18 @@ class Compiler
 
   def compile_args(scope, ob, args, dynamic_adjust=false, &block)
     @e.caller_save do
-      splat = args.detect {|a| a.is_a?(Array) && a.first == :splat }
+      # Index scan, not args.detect: this runs for every method call, and the block boxed a closure per
+      # call on the self-hosted compiler.
+      splat = nil
+      si = 0
+      while si < args.length
+        a = args[si]
+        if a.is_a?(Array) && a.first == :splat
+          splat = a
+          break
+        end
+        si += 1
+      end
 
       #FIXME Mentioned here to lift vars
       scope

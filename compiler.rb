@@ -105,6 +105,7 @@ class Compiler
     @linelabel = 0
     @section = 0
     @clean_method_cache = {}
+    @compile_names = {}
   end
 
 
@@ -1249,10 +1250,15 @@ class Compiler
     if exp.length == 0
       exp = [:nil]
     end
+    # Index loop, not exp.each: compile_do runs for every method/block/do body, and the block boxed a
+    # closure per call on the self-hosted compiler (see the depth_first block-boxing finding).
     source = nil
-    exp.each do |e|
-      source=compile_eval_arg(scope, e)
+    i = 0
+    len = exp.length
+    while i < len
+      source = compile_eval_arg(scope, exp[i])
       @e.save_result(source)
+      i += 1
     end
 
     return Value.new([:subexpr])
@@ -1673,7 +1679,14 @@ class Compiler
     # (lifting the variable before the dynamic send); do not remove.
     exp
     if(@@keywords.include?(exp[0]))
-      return self.send("compile_#{exp[0].to_s}", scope, *exp.rest)
+      # Cache the "compile_<kw>" dispatch name per node type (~30 keywords): it was rebuilt as a fresh
+      # String on every keyword node. Explicit []=, not ||= (the op-assign index form returns nil self-hosted).
+      mname = @compile_names[exp[0]]
+      if !mname
+        mname = "compile_#{exp[0].to_s}"
+        @compile_names[exp[0]] = mname
+      end
+      return self.send(mname, scope, *exp.rest)
     elsif @@oper_methods.member?(exp[0])
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
