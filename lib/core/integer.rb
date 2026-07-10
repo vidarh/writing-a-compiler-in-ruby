@@ -3590,6 +3590,12 @@ class Integer < Numeric
   end
 
   def < other
+    # Fixnum fast path: both operands are tagged fixnums (bit 0 set). Tagging (2*v+1) preserves signed
+    # order, so a raw tagged compare gives the right answer -- avoiding the __compare_to + `== -1` dispatches
+    # (3 dispatches -> 0 for the common case). Bignums / other types fall through to the slow path.
+    %s(if (ne (bitand self 1) 0)
+        (if (ne (bitand other 1) 0)
+          (if (lt self other) (return true) (return false))))
     cmp = __compare_to(other)
     cmp == -1
   end
