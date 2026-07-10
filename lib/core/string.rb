@@ -422,8 +422,9 @@ class String
   end
 
   def empty?
-    # FIXME: horribly inefficient while length is calculated with strlen...
-    length == 0
+    # @length is the stored raw byte length (see #length), so check it directly rather than dispatching
+    # #length + Integer#==. empty? is a very common guard.
+    %s(if (eq @length 0) (return true) (return false))
   end
 
 
@@ -1172,9 +1173,8 @@ class String
     %s(__int @length)
   end
 
-  def size
-    length
-  end
+  # Real alias (was `def size; length; end`, a pre-alias-support workaround that doubled the dispatch).
+  alias size length
 
   # Shared character-set parsing for count/delete/squeeze arguments: returns [negated, chars] where chars
   # is the expanded character list (ranges via __tr_expand) and negated is set when the spec begins with

@@ -1102,7 +1102,9 @@ class Array
 
   # Returns true if self array contains no elements.
   def empty?
-    return self.size == 0
+    # Direct raw-length check: empty? is a very common guard (`while !a.empty?`, `return if a.empty?`),
+    # and @len is the raw length -- no need to dispatch #size and Integer#==.
+    %s(if (eq @len 0) (return true) (return false))
   end
 
 
@@ -2247,9 +2249,10 @@ class Array
 
 
   # Alias for length
-  def size
-    return self.length
-  end
+  # size was `def size; self.length; end` (a workaround from before alias was supported), which doubled the
+  # dispatch count on a hot call (loop bounds like `while i < self.size` re-evaluate it every iteration).
+  # A real alias binds size to the same compiled method as length -- one dispatch, no duplication.
+  alias size length
 
   # FIXME: This belongs in Enumberable once "include" works.
   def partition &block
