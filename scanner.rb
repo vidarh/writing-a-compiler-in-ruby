@@ -81,12 +81,15 @@ class Scanner
       # Only a byte Integer (binary IO / getc-only MockIO) needs .chr to normalise to a 1-char String.
       @chars << (c.is_a?(String) ? c : c.chr)
     end
+    # @chars is fully slurped here and never mutated afterwards, so cache its length once. fill (below)
+    # runs once per source char and previously dispatched @chars.length every time.
+    @nchars = @chars.length
     @pos = 0
   end
 
   def fill
     if @buf.empty?
-      if @pos < @chars.length
+      if @pos < @nchars
         @buf = @chars[@pos]
         @pos += 1
       end
