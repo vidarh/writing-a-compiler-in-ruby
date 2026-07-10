@@ -39,10 +39,10 @@ class Array
     # compiler boxes a `&block` method parameter into a closure on EVERY call, so with N AST nodes the old
     # form allocated ~N closures per pass (x ~50 passes) -- a large self-hosted GC cost that MRI avoids via
     # lazy block passing. Passing the Proc as a value allocates it once and reuses it.
-    __depth_first(arg, block)
+    __depth_first(arg, arg.length, block)
   end
 
-  def __depth_first(arg, block)
+  def __depth_first(arg, al, block)
     # FIXME: Temporary workaround: If
     # "ret" is used in the if statements
     # further down, but only initialized
@@ -51,8 +51,9 @@ class Array
     # Need to ensure that all variables
     # gets initialized before use.
     ret = nil
-    # filter is almost always 0 or 1 symbols; avoid Enumerable#member?'s iteration in those cases
-    al = arg.length
+    # filter is almost always 0 or 1 symbols; avoid Enumerable#member?'s iteration in those cases. `al`
+    # (arg.length) is threaded from the public entry: arg is the SAME filter array for the entire traversal,
+    # so computing its length once instead of per visited node saves a dispatch on the hottest method.
     if al == 0 || (al == 1 ? arg[0] == self[0] : arg.member?(self[0]))
       ret = block.call(self)
     end
@@ -73,7 +74,7 @@ class Array
     while i < len
       n = self[i]
       if n.is_a?(Array)
-        ret = n.__depth_first(a, block)
+        ret = n.__depth_first(a, al, block)
         return :stop if ret == :stop
       end
       i += 1
