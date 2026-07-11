@@ -110,16 +110,18 @@ class Compiler
   # (testl; je) -- a flags->al->eax->flags round-trip. Emit a single conditional branch on the INVERSE
   # condition instead. Jump to else when the condition is FALSE: lt(a<b) false => a>=b => jge, etc. Signed
   # (matches the existing setl; correct for tagged fixnums, which preserve signed order).
-  # NOTE: :ne is deliberately EXCLUDED. Enabling it (:ne => :je) segfaults startup (Float#__as_float takes
-  # the wrong coerce path); bisected to :ne specifically, though the emitted `cmpl; je` looks correct in
-  # isolation -- a subtle interaction needing dedicated debugging. The other 5 ops are verified correct.
-  CMP_JMP_INVERSE = { :lt => :jge, :le => :jg, :gt => :jle, :ge => :jl, :eq => :jne }
+  CMP_JMP_INVERSE = { :lt => :jge, :le => :jg, :gt => :jle, :ge => :jl, :eq => :jne, :ne => :je }
 
   def compile_if(scope, cond, if_arm, else_arm = nil)
     @e.comment("if: #{cond.inspect}")
 
     l_else_arm = @e.get_local + "_else"
-    if cond.is_a?(Array) && cond.length == 3 && (jcc = CMP_JMP_INVERSE[cond[0]])
+    # The comparison fast path is ONLY sound when there is a real else_arm. With no else, compile_if must
+    # leave the CONDITION's value in %eax on the false path -- `compile_and(A,B)` == `compile_if(A,B,nil)`
+    # and relies on that so `A && B` yields A when A is falsy (e.g. is_a?'s `(and (ne k c) (ne k Object))`).
+    # The fast path branches on flags without materialising the 0/1, so it would leak a garbage %eax on the
+    # false path. With an else_arm, BOTH arms define %eax, so nothing leaks.
+    if else_arm && cond.is_a?(Array) && cond.length == 3 && (jcc = CMP_JMP_INVERSE[cond[0]])
       # compile_2 evaluates left->reg, right->%eax via the allocator (which may spill+restore around its
       # own block -- so we must NOT jump out of that block, or the restoring popl is skipped -> stack
       # imbalance). Do the cmpl inside; emit the branch AFTER compile_2 returns. Nothing between the cmpl and
