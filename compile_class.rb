@@ -222,7 +222,7 @@ class Compiler
     # Using nested let()'s for clean scope management
     # Outer let: evaluate expr and save to __eigenclass_obj
     unique_id = @e.get_local[2..-1]
-    @e.comment("Eigenclass #{unique_id}")
+    @e.comment(Emitter::COMMENTS && "Eigenclass #{unique_id}")
 
     # The metaclass (the eigenclass's def-time `self`) is stored in a UNIQUE GLOBAL, not a local.
     # A local named :self is forced into %esi (the self-register) by the register allocator; %esi is
@@ -541,7 +541,7 @@ class Compiler
       end
     end
 
-    @e.comment("=== class #{cscope.name} ===")
+    @e.comment(Emitter::COMMENTS && "=== class #{cscope.name} ===")
 
 
     @e.evict_regs_for(:self)
@@ -791,7 +791,7 @@ class Compiler
       end
     end
 
-    @e.comment("=== end class #{fq_name} ===")
+    @e.comment(Emitter::COMMENTS && "=== end class #{fq_name} ===")
     return Value.new([:global, fq_name], :object)
   end
 

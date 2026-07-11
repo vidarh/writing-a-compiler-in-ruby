@@ -68,8 +68,8 @@ class Compiler
 
   def output_default_args(fscope, func)
     func.process_defaults do |arg, xindex|
-      @e.comment("Default argument for #{arg.name.to_s} at position #{2 + xindex}")
-      @e.comment(arg.default.inspect)
+      @e.comment(Emitter::COMMENTS && "Default argument for #{arg.name.to_s} at position #{2 + xindex}")
+      @e.comment(Emitter::COMMENTS && arg.default.inspect)
       compile_if(fscope, [:lt, :numargs, 1 + xindex],
         [:assign, ("#"+arg.name.to_s).to_sym, arg.default],
         [:assign, ("#"+arg.name.to_s).to_sym, arg.name]

@@ -21,7 +21,7 @@ class Compiler
 
     # FIXME: This is just a disaster waiting to happen
     # (needs proper register allocation)
-    @e.comment("*#{arglist.last.last.to_s}")
+    @e.comment(Emitter::COMMENTS && "*#{arglist.last.last.to_s}")
     reg = compile_eval_arg(scope,:numargs)
 
     # "reg" is set to numargs - (number of non-splat arguments to the *method we're in*)
@@ -58,7 +58,7 @@ class Compiler
         @e.subl(@e.sp,dest)
         @e.sarl(2,dest)
         @e.movl(dest,@e.scratch)
-        @e.comment("*#{arglist.last.last.to_s} end")
+        @e.comment(Emitter::COMMENTS && "*#{arglist.last.last.to_s} end")
 
         arglist.pop
       end

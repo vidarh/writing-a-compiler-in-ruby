@@ -60,7 +60,7 @@ class Compiler
   # if the "true" / if-then part of the the if condition should remain
   # 
   def compile_or scope, left, right
-    @e.comment("compile_or: #{left.inspect} || #{right.inspect}")
+    @e.comment(Emitter::COMMENTS && "compile_or: #{left.inspect} || #{right.inspect}")
 
     ret = compile_eval_arg(scope,left)
     l_or = @e.get_local + "_or"
@@ -82,7 +82,7 @@ class Compiler
 
   # or_assign is "x ||= y", which translates to x = y if !x
   def compile_or_assign scope, left, right
-    @e.comment("compile_or_assign: #{left.inspect} ||= #{right.inspect}")
+    @e.comment(Emitter::COMMENTS && "compile_or_assign: #{left.inspect} ||= #{right.inspect}")
 
     ret = compile_eval_arg(scope,left)
     l_or = @e.get_local + "_or"
@@ -113,7 +113,7 @@ class Compiler
   CMP_JMP_INVERSE = { :lt => :jge, :le => :jg, :gt => :jle, :ge => :jl, :eq => :jne, :ne => :je }
 
   def compile_if(scope, cond, if_arm, else_arm = nil)
-    @e.comment("if: #{cond.inspect}")
+    @e.comment(Emitter::COMMENTS && "if: #{cond.inspect}")
 
     l_else_arm = @e.get_local + "_else"
     # The comparison fast path is ONLY sound when there is a real else_arm. With no else, compile_if must
@@ -136,14 +136,14 @@ class Compiler
       compile_jmp_on_false(scope, res, l_else_arm)
     end
 
-    @e.comment("then: #{if_arm.inspect}")
+    @e.comment(Emitter::COMMENTS && "then: #{if_arm.inspect}")
     ifret = compile_eval_arg(scope, if_arm)
     @e.save_result(ifret)  # Save then-branch result to %eax
 
     l_end_if_arm = @e.get_local + "_endif"
     @e.evict_all
     @e.jmp(l_end_if_arm) if else_arm
-    @e.comment("else: #{else_arm.inspect}")
+    @e.comment(Emitter::COMMENTS && "else: #{else_arm.inspect}")
     @e.local(l_else_arm)
     @e.evict_all
     # FIXME: Workaround for missing initialisation of local vars
