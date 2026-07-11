@@ -254,19 +254,22 @@ class Peephole
     return unless last2
     return unless last2[0] == :movl && last2[2] == :eax
 
-    # movl reg, %eax; movl %eax, dest; movl ???, %eax -> movl reg, dest; movl ???, %eax
-    if last2[1].class == Symbol
+    # movl src, %eax; movl %eax, dest; movl ???, %eax -> movl src, dest; movl ???, %eax
+    # The third movl overwrites %eax, so the value the first put there is dead: the round-trip through %eax
+    # can be dropped as long as `movl src, dest` is itself a legal mov -- i.e. src OR dest is a register
+    # (x86 forbids only memory->memory; here a register operand is a Symbol, memory/immediate/label a
+    # String). Originally only a register SRC was folded; a register DEST (e.g. movl -4(%ebp),%eax; movl
+    # %eax,%edx; movl ?,%eax  ->  movl -4(%ebp),%edx; movl ?,%eax) is equally safe and far more common.
+    if last && last[0] == :movl && last[1] == :eax && args[0] == :movl && args[2] == :eax
       src = last2[1]
-      if last && last[0] == :movl && last[1] == :eax
-        dest = last[2]
-        if args[0] == :movl && args[2] == :eax
-          @prev.pop
-          @prev.pop
-          @prev.pop
-          @prev << [:movl, src, dest]
-          @prev << args
-          return
-        end
+      dest = last[2]
+      if src.is_a?(Symbol) || dest.is_a?(Symbol)
+        @prev.pop
+        @prev.pop
+        @prev.pop
+        @prev << [:movl, src, dest]
+        @prev << args
+        return
       end
     end
 
