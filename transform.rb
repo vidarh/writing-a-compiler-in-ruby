@@ -895,7 +895,12 @@ class Compiler
       # for the "Unable to open" build error / runtime LoadError message.
       next :skip if e[0] == :require_missing
       is_call = e[0] == :call || e[0] == :callm
-      e.each_with_index do |s,i|
+      # Index while-loop instead of each_with_index (per-element block/enumerator alloc on both hosts,
+      # like rewrite_symbol_constant below); runs for every element of every AST node.
+      i = 0
+      len = e.length
+      while i < len
+        s = e[i]
         if s.is_a?(String)
           lab = @string_constants[s]
           if !lab
@@ -910,6 +915,7 @@ class Compiler
           # this rewrite.
           e[i] = E[e[i]] if is_call && i > 1
         end
+        i += 1
       end
     end
   end
@@ -928,8 +934,12 @@ class Compiler
       next :skip if e[0] == :sexp
       is_call = e[0] == :call || e[0] == :callm
       # FIXME: e seems to get aliased by v
+      # Index while-loop instead of each_with_index (per-element block/enumerator alloc on both hosts).
       ex = e
-      e.each_with_index do |v,i|
+      i = 0
+      len = e.length
+      while i < len
+        v = e[i]
         if v.is_a?(Integer)
           ex[i] = E[:sexp, v*2+1]
 
@@ -940,6 +950,7 @@ class Compiler
           # this rewrite.
           ex[i] = E[ex[i]] if is_call && i > 1
         end
+        i += 1
       end
     end
   end
