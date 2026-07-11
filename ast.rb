@@ -71,19 +71,24 @@ module AST
       if args.size > 0 and args.first.is_a?(Scanner::Position) || args.first.nil?
         pos = args.shift
       end
-      e = super(*args)
-      if pos
-        e.position = pos
-      else
-        e.update_position
+      # Build the node with a direct push loop instead of `super(*args)`. `super(*args)` re-splatted `args`
+      # into Array.[]'s own `*elements` param -- a throwaway copy of the array -- then went through the
+      # variadic self.new+concat. Every E[...] node (the hottest AST-construction path) paid for that extra
+      # array + concat overhead. Pushing args' elements straight into a fresh Expr does it once.
+      e = self.new
+      i = 0
+      n = args.length
+      while i < n
+        e << args[i]
+        i += 1
       end
+      e.position = pos if pos   # update_position is now a no-op (see below), so the old else is dropped
       e
     end
 
     def concat(other)
       super(other)
-      update_position
-      return self
+      return self   # update_position dropped -- it was a no-op (see below)
     end
 
     def extra
