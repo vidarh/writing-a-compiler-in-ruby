@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require 'parserbase'
 require 'sexp'
 require 'utils'

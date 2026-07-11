@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require 'register'
 require 'regalloc'
 
@@ -580,7 +581,7 @@ class Emitter
     local(l)
     if str # nil here is bizarre and probably a bug - it means get_arg() was called with nil
       # FIXME: Should rewrite a lot more thoroughly here...
-      buf = ""
+      buf = String.new   # mutable accumulator (String.new, not "") so this file can enable frozen_string_literal
       str.each_byte do |b|
         if b < 32 || b == 92
           buf << @csi

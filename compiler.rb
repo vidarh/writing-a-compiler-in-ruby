@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 #!/bin/env ruby
 
 require 'set'
@@ -498,7 +499,7 @@ class Compiler
     # currently don't define Symbol#[]
     name = name.to_s
     len = name.length
-    out = ""
+    out = String.new   # mutable accumulator (String.new, not "") so this file can enable frozen_string_literal
 
     while (pos < len)
       c  = name[pos].chr
