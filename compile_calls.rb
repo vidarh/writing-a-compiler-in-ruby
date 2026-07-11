@@ -394,6 +394,15 @@ class Compiler
     cs.is_a?(ClassScope) && !FIXNUM_SELF_CLASSES.include?(cs.local_name.to_s)
   end
 
+  # True when the receiver is a class/module CONSTANT (e.g. `Integer.foo`, `Array.new`): `ob` is a bare
+  # constant Symbol registered in @classes. The receiver is then the class/module OBJECT -- always a heap
+  # object, never a tagged Fixnum -- so the Fixnum tag test is redundant regardless of WHICH class it is
+  # (even Integer/Fixnum: the class OBJECT isn't an instance). A value constant (FOO = 5) is not in @classes,
+  # so it keeps the check. Same @classes lookup (bare + Object__ prefix) as Compiler#get_constant.
+  def receiver_is_class_object?(ob)
+    ob.is_a?(Symbol) && (@classes[ob] || @classes["Object__#{ob}".to_sym]) ? true : false
+  end
+
   def load_class(scope, known_object = false)
     # `known_object`: the receiver is provably a heap object (not a tagged Fixnum) -- e.g. a `self` dispatch
     # in a non-numeric class body. Skip the tag test entirely and just deref the object's vtable.
@@ -601,8 +610,10 @@ class Compiler
           load_class(scope) # Load self.class into %eax
           load_super(scope) # Load superclass from %eax
         else
-          # A `self` dispatch in a non-numeric class body can't have a Fixnum receiver, so skip the tag test.
-          load_class(scope, ob == :self && self_never_fixnum?(scope)) # Load self.class into %eax
+          # Skip the Fixnum tag test when the receiver provably isn't a tagged Fixnum: a `self` dispatch in a
+          # non-numeric class body, or a class/module-constant receiver (the class OBJECT is never a Fixnum).
+          known_object = (ob == :self && self_never_fixnum?(scope)) || receiver_is_class_object?(ob)
+          load_class(scope, known_object) # Load self.class into %eax
         end
 
         if off
