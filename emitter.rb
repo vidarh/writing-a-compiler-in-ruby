@@ -1,13 +1,26 @@
 require 'register'
 require 'regalloc'
 
+# Pre-built "%reg" strings for the fixed register set -- avoids the `"%#{src}"` concat allocation on every
+# operand (to_operand_value runs ~1M+ times per compile; register operands dominate the Symbol case).
+REG_OPERAND = {
+  :eax => "%eax", :ebx => "%ebx", :ecx => "%ecx", :edx => "%edx",
+  :esi => "%esi", :edi => "%edi", :esp => "%esp", :ebp => "%ebp",
+  :al => "%al", :ax => "%ax", :cl => "%cl", :bl => "%bl", :dl => "%dl",
+}.freeze
+
 # Returns the operand-value for a given element.
 # If an integer (Fixnum) is given, returns a assembly constant (e.g. 42 -> $42)
 # If a Symbol is given, it should be a register (e.g. :eax -> %eax)
 # Otherwise, returns its string value.
 def to_operand_value(src,flags = nil)
   return int_value(src) if src.is_a?(Integer)
-  return "%#{src.to_s}" if src.is_a?(Symbol) || src.is_a?(Register)
+  if src.is_a?(Symbol)
+    r = REG_OPERAND[src]
+    return r if r
+    return "%#{src.to_s}"
+  end
+  return "%#{src.to_s}" if src.is_a?(Register)
   src = src.to_s
   return src[1..-1] if flags == :stripdollar && src[0] == ?$
   return src.to_s
