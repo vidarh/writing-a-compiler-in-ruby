@@ -380,19 +380,6 @@ class Compiler
   # will do as it makes self-compilation viable for this
   # compiler for the first time.
   #
-  # The CLASSES (ClassScopes) a tagged Fixnum belongs to -- Fixnum's full class ancestry in this compiler:
-  # Fixnum < Integer < Numeric < Object < BasicObject, plus Kernel (Object `include`s Kernel, and Kernel is a
-  # `class` here, not a module). Comparable is a real module (ModuleScope) so it is handled by the is_a?
-  # (ClassScope) guard below, NOT listed here. A `self` dispatch in any OTHER class body can never see a
-  # Fixnum self. (NOTE: kept in sync with lib/core -- if a new class is `include`d into this chain it must be
-  # added. Missing "Kernel" here is exactly what segfaulted kernel/tap_spec's `3.tap`->__raise_no_block.)
-  FIXNUM_SELF_CLASSES = ["BasicObject", "Object", "Numeric", "Integer", "Fixnum", "Kernel"].freeze
-
-  def self_never_fixnum?(scope)
-    cs = scope.class_scope
-    cs.is_a?(ClassScope) && !FIXNUM_SELF_CLASSES.include?(cs.local_name.to_s)
-  end
-
   # True when the receiver AST provably evaluates to a heap object (never a tagged Fixnum): a literal whose
   # type is fixed by its NODE -- array ([:array,..] -> Array), float ([:float,..] -> Float), or string
   # (rewrite_strconst lowered it to [:sexp,[:call,:__get_string,_]] or, interned, [:sexp,:__FSL_n]). Matched
@@ -616,10 +603,12 @@ class Compiler
           load_class(scope) # Load self.class into %eax
           load_super(scope) # Load superclass from %eax
         else
-          # Skip the Fixnum tag test when the receiver provably isn't a tagged Fixnum: a `self` dispatch in a
-          # class outside Fixnum's class ancestry, or a typed-literal receiver. (Class-constant receivers are
-          # intentionally excluded -- see receiver_never_fixnum?.)
-          known_object = (ob == :self && self_never_fixnum?(scope)) || receiver_never_fixnum?(ob)
+          # Skip the Fixnum tag test ONLY for a typed-literal receiver (array/float/string), whose AST node
+          # fixes its runtime type as a heap object. The `self` case is intentionally NOT skipped: a block
+          # installed onto Integer via define_method has a Fixnum self yet a non-numeric lexical class_scope,
+          # so lexical-scope reasoning is unsound (segfaulted define_method-onto-Integer). Class-constant
+          # receivers are likewise excluded (@classes is a compile-time approximation).
+          known_object = receiver_never_fixnum?(ob)
           load_class(scope, known_object) # Load self.class into %eax
         end
 
