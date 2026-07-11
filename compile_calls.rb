@@ -7,7 +7,7 @@
 
 class Compiler
 
-  def compile_args_nosplat(scope, ob, args, dynamic_adj = false, &block)
+  def compile_args_nosplat(scope, ob, args, dynamic_adj = false, block)
     # FIXME: This used to use "with_stack" which aligns to 16 byte boundaries,
     # but lifted this in here due to dynamically adjusting the stack based on
     # %ebx. Need to determine exactly what to do about this size - it needs to
@@ -26,7 +26,10 @@ class Compiler
     end
     @e.movl(len, :ebx)
 
-    yield
+    # block.call, not yield: block is threaded as a REGULAR Proc argument (not &block) so the self-hosted
+    # compiler doesn't box a fresh closure for it on every call -- compile_args_nosplat runs once per
+    # compiled method call, so that per-call boxing is a hot self-hosted allocator. (See depth_first.)
+    block.call
 
     if dynamic_adj
       # Always dynamically adjust the stack based on %ebx for method calls
@@ -134,7 +137,7 @@ class Compiler
     end
   end
 
-  def compile_args_splat(scope, ob, args)
+  def compile_args_splat(scope, ob, args, block)
     # Because Ruby evaluation order is left to right,
     # we need to first figure out how much space we need on
     # the stack.
@@ -192,7 +195,7 @@ class Compiler
       @e.popl(@e.scratch)
     end
     @e.comment(Emitter::COMMENTS && "END Pushing arguments")
-    yield
+    block.call   # threaded Proc arg, not yield (see compile_args_nosplat)
     @e.comment(Emitter::COMMENTS && "Re-adjusting stack post-call:")
     @e.imull(4,@e.scratch)
     @e.addl(@e.scratch, :esp)
@@ -219,9 +222,10 @@ class Compiler
       dynamic_adjust
 
       if !splat
-        compile_args_nosplat(scope,ob,args,dynamic_adjust, &block)
+        # Thread the block as a plain Proc arg (block, not &block) so the helper doesn't re-box it.
+        compile_args_nosplat(scope,ob,args,dynamic_adjust, block)
       else
-        compile_args_splat(scope,ob,args, &block)
+        compile_args_splat(scope,ob,args, block)
       end
     end
   end
