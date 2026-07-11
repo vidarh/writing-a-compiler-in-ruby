@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 
 # The purpose of the Scanner is to present a narrow interface to read characters from, with support for lookahead / unget.
@@ -56,7 +57,7 @@ class Scanner
 
   def initialize(io)
     @io = io
-    @buf = ""
+    @buf = String.new
     @peeked = nil
     @pos_cache = nil
     @atom_off = nil
