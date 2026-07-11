@@ -10,6 +10,11 @@ class Parser < ParserBase
 
   attr_accessor :include_paths
 
+  # True when the file being parsed carries a `# frozen_string_literal: true` magic comment. Read by the
+  # Tokenizer (via its @parser) to freeze plain string literals at creation, so rewrite_strconst emits the
+  # frozen-literal form. Per-file: set on each Parser instance created in `require`.
+  attr_accessor :frozen_literals
+
   def initialize(scanner, opts = {})
     super(scanner)
     @opts = opts
@@ -1284,6 +1289,17 @@ class Parser < ParserBase
   # Not sure if I think this really belong in the parser,
   # as opposed to being handled as post-processing later -
   # may refactor this as a separate tree-rewriting step later.
+  # Detect a `# frozen_string_literal: true` magic comment. Ruby recognises it on the first source line, or
+  # the second line when the first is a shebang. Reads at most those two lines from the open File and rewinds
+  # so the Scanner still sees the whole source. Returns true/false.
+  def detect_frozen_literals(f)
+    line = f.gets
+    line = f.gets if line && line.start_with?("#!")
+    frozen = line && line.include?("frozen_string_literal") && line.include?("true") ? true : false
+    f.rewind
+    frozen
+  end
+
   def require q
     return true if @@requires[q]
     # FIXME: Handle include path
@@ -1330,10 +1346,12 @@ class Parser < ParserBase
     a = Array.new
     @@requires[q] = a # Prevent include/require loops
 
+    frozen = detect_frozen_literals(f)
     s = Scanner.new(f)
     pos = position
     # FIXME: Is this change also down to parser bug?
     parser =  Parser.new(s, @opts)
+    parser.frozen_literals = frozen
     expr = parser.parse(false)
     e = E[pos,:required, expr]
     @@requires[q] = e

@@ -2263,3 +2263,15 @@ end
   (callm s __set_raw (str))
   s
 ))
+
+# pragma compiler-only
+# Frozen string-literal entry point: like __get_string but marks the object frozen (@flags bit 0) so any
+# in-place mutation raises FrozenError via __check_frozen. Emitted by rewrite_strconst for literals in a
+# file carrying `# frozen_string_literal: true`. (A later optimisation will replace this with a shared
+# static object in .rodata to avoid the per-use allocation entirely, matching how Symbol literals work.)
+%s(defun __get_frozen_string (str) (let (s)
+  (assign s (callm String allocate))
+  (callm s __set_raw (str))
+  (callm s freeze)
+  s
+))

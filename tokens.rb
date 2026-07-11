@@ -511,7 +511,12 @@ module Tokens
         # Adjacent string literals are concatenated (Ruby): `"foo" "bar" "baz"` => "foobarbaz". See
         # get_adjacent_strings; kept in its own method so its loop variable is a clean method local (a var
         # assigned only inside a case/when branch is not reliably registered by the self-hosted compiler).
-        return [get_adjacent_strings(get_quoted_exp), nil]
+        strlit = get_adjacent_strings(get_quoted_exp)
+        # In a `# frozen_string_literal: true` file, a plain (non-interpolated) literal is frozen; freezing
+        # it marks the node so rewrite_strconst emits the frozen form. Interpolated literals come back as a
+        # [:concat,...] Array (not frozen in MRI either), so the is_a?(String) guard skips them.
+        strlit.freeze if strlit.is_a?(String) && @parser && @parser.frozen_literals
+        return [strlit, nil]
       when DIGITS
         return [Number.expect(@s, prev_lastop), nil]
       when ALPHA, ?@, ?$, ?:, ?_

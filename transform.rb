@@ -907,7 +907,11 @@ class Compiler
             lab = @e.get_local
             @string_constants[s] = lab
           end
-          e[i] = E[:sexp, E[:call, :__get_string, lab.to_sym]]
+          # A frozen literal (from a `# frozen_string_literal: true` file; see Tokenizer) is emitted via
+          # __get_frozen_string so in-place mutation raises FrozenError. The rodata label is shared by
+          # content regardless of frozen-ness -- only the wrapper differs per occurrence.
+          getter = s.frozen? ? :__get_frozen_string : :__get_string
+          e[i] = E[:sexp, E[:call, getter, lab.to_sym]]
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with
