@@ -187,11 +187,14 @@ class String
     %s(if (ne (bitand @flags 1) 0) (return true) (return false))
   end
 
-  # Raise FrozenError if this string is frozen. Called at the top of every mutator.
+  # Raise FrozenError if this string is frozen. Called at the top of every mutator, so check the @flags bit
+  # inline (no #frozen? dispatch) and only call the (cold) raiser on the frozen path.
   def __check_frozen
-    if frozen?
-      raise FrozenError.new("can't modify frozen String: #{inspect}")
-    end
+    %s(if (ne (bitand @flags 1) 0) (callm self __raise_frozen))
+  end
+
+  def __raise_frozen
+    raise FrozenError.new("can't modify frozen String: #{inspect}")
   end
 
   def encoding
