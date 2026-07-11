@@ -633,6 +633,10 @@ class Array
     # family as the loop-carried-local bug in lib/core/glob.rb). Root-cause that
     # compiler bug before retrying; until then MyArray[...] with an incompatible
     # #initialize stays unsupported (~40 gated array specs).
+    # EXPERIMENT (2026-07-11): for a plain Array[...] (the case every [..] literal compiles to), `elements`
+    # is already the freshly-splatted plain Array holding exactly the right elements -- return it directly
+    # and skip the second Array + concat copy. Only subclasses need the self.new path.
+    return elements if self.equal?(Array)
     a = self.new
     a.concat(elements)
     a
