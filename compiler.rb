@@ -1579,12 +1579,14 @@ class Compiler
   # Takes the current scope, the array as well as the index number to access.
   def compile_index(scope, arr, index)
     source = compile_eval_arg(scope, arr)
+    const_off = nil
     r = @e.with_register do |reg|
       @e.movl(source, reg)
       if index.is_a?(Numeric)
-        if index != 0
-          @e.addl(index*4, reg)
-        end
+        # Fold a constant index into displacement addressing at the deref site (off(%reg)) instead of
+        # emitting `addl index*4, %reg` and dereferencing (%reg). Saves an instruction per slot access and
+        # leaves %reg = base. reg is scratch (with_register) so nothing relies on it holding base+off.
+        const_off = index * 4
       else
         @e.pushl(reg)
         source = compile_eval_arg(scope, index)
@@ -1593,6 +1595,9 @@ class Compiler
         @e.popl(reg)
         @e.addl(@e.result_value, reg)
       end
+    end
+    if const_off && const_off != 0
+      return Value.new([:indirect_disp, [r, const_off]], lookup_type(arr,index))
     end
     return Value.new([:indirect, r], lookup_type(arr,index))
   end

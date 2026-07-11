@@ -173,6 +173,9 @@ class Emitter
       emit(:movl, source,dest) if source != dest
     when :indirect
       emit(:movl,source, "(%#{dest})")
+    when :indirect_disp
+      # dest == [reg, offset]: displacement addressing offset(%reg), from compile_index's constant path.
+      emit(:movl, source, "#{dest[1]}(%#{dest[0]})")
     when :indirect8
       emit(:movb,source, "(%#{dest})")
     when :global
@@ -208,6 +211,8 @@ class Emitter
       return load_address(aparam)
     when :indirect
       return load_indirect(aparam)
+    when :indirect_disp
+      return load_indirect_disp(aparam, reg || result_value)
     when :indirect8
       return load_indirect8(aparam)
     when :arg
@@ -310,6 +315,12 @@ class Emitter
 
   def load_indirect(arg, reg = :eax)
     movl("(#{to_operand_value(arg,:stripdollar)})", reg)
+    return reg
+  end
+
+  # arg == [basereg, offset]: load from offset(%basereg) (displacement addressing). See compile_index.
+  def load_indirect_disp(arg, reg = :eax)
+    movl("#{arg[1]}(%#{arg[0]})", reg)
     return reg
   end
 
