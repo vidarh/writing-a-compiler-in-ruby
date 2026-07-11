@@ -380,53 +380,7 @@ class Compiler
   # will do as it makes self-compilation viable for this
   # compiler for the first time.
   #
-  # Class scopes whose instances a tagged Fixnum can be `self` in: Integer's CLASS ancestry
-  # (Integer < Numeric < Object < BasicObject) plus Fixnum. A `self` dispatch inside any OTHER class body
-  # therefore can never see a Fixnum self, so load_class can skip the tag test (see self_never_fixnum?).
-  # Modules are deliberately NOT listed: a module (e.g. Comparable) may be mixed into Integer, so a method
-  # defined in a module CAN run with a Fixnum self -- self_never_fixnum? only trusts real ClassScopes.
-  FIXNUM_SELF_CLASSES = ["BasicObject", "Object", "Numeric", "Integer", "Fixnum"].freeze
-
-  # True when a `self` receiver in `scope` provably cannot be a tagged Fixnum: the enclosing lexical scope is
-  # a real class (not a module, not top-level Object) whose name is outside Integer's class ancestry.
-  def self_never_fixnum?(scope)
-    cs = scope.class_scope
-    cs.is_a?(ClassScope) && !FIXNUM_SELF_CLASSES.include?(cs.local_name.to_s)
-  end
-
-  # True when the receiver is a class/module CONSTANT (e.g. `Integer.foo`, `Array.new`): `ob` is a bare
-  # constant Symbol registered in @classes. The receiver is then the class/module OBJECT -- always a heap
-  # object, never a tagged Fixnum -- so the Fixnum tag test is redundant regardless of WHICH class it is
-  # (even Integer/Fixnum: the class OBJECT isn't an instance). A value constant (FOO = 5) is not in @classes,
-  # so it keeps the check. Same @classes lookup (bare + Object__ prefix) as Compiler#get_constant.
-  def receiver_is_class_object?(ob)
-    ob.is_a?(Symbol) && (@classes[ob] || @classes["Object__#{ob}".to_sym]) ? true : false
-  end
-
-  # True when the receiver AST provably evaluates to a heap object (never a tagged Fixnum), so load_class can
-  # skip the tag test: a class/module constant, or a literal whose type is fixed -- an array literal
-  # ([:array,...] -> Array), a float literal ([:float,...] -> Float), or a string literal (rewrite_strconst
-  # has already lowered it to [:sexp,[:call :__get_string ..]] or, when interned, [:sexp, :__FSL_n]). Matched
-  # narrowly on those exact shapes so a tagged-integer sexp (e.g. [:sexp,[:call :__int ..]]) never qualifies.
-  def receiver_never_fixnum?(ob)
-    return true if receiver_is_class_object?(ob)
-    return false unless ob.is_a?(Array)
-    return true if ob[0] == :array || ob[0] == :float
-    if ob[0] == :sexp
-      inner = ob[1]
-      return true if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
-      return true if inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL")
-    end
-    false
-  end
-
-  def load_class(scope, known_object = false)
-    # `known_object`: the receiver is provably a heap object (not a tagged Fixnum) -- e.g. a `self` dispatch
-    # in a non-numeric class body. Skip the tag test entirely and just deref the object's vtable.
-    if known_object
-      @e.load_indirect(:esi, :eax) # class = *(%esi)
-      return
-    end
+  def load_class(scope)
     # On EVERY method dispatch. Default %eax to Fixnum, then overwrite with the object's class pointer
     # only when the receiver is NOT a tagged fixnum (bit 0 clear). Saves the extra jmp + one label vs the
     # branch-both-ways form (4 instrs + 1 label instead of 5 + 2), on every call.
@@ -627,10 +581,7 @@ class Compiler
           load_class(scope) # Load self.class into %eax
           load_super(scope) # Load superclass from %eax
         else
-          # Skip the Fixnum tag test when the receiver provably isn't a tagged Fixnum: a `self` dispatch in a
-          # non-numeric class body, or a class-constant / typed-literal receiver (never a Fixnum).
-          known_object = (ob == :self && self_never_fixnum?(scope)) || receiver_never_fixnum?(ob)
-          load_class(scope, known_object) # Load self.class into %eax
+          load_class(scope) # Load self.class into %eax
         end
 
         if off
