@@ -28,36 +28,41 @@ class Compiler
       return
     end
 
-    # Variable arity (min < max, or rest): keep the inline min/max checks.
-    l = @e.get_local
+    # Variable arity (min < max, or rest): same sharing, but with too-few (__minarg) and too-many
+    # (__maxarg) handlers. On error, jump to the shared handler; otherwise fall through to the body.
+    n_min = minargs - 2
+    (@minarg_fail_handlers ||= {})[n_min] = true
     @e.cmpl(minargs, :ebx)
-    @e.jge(l)
-    compile_eval_arg(fscope,
-      [:sexp,[:call, :__minarg, [minargs - 2, :numargs]]])
+    @e.jl("__minarg_fail_#{n_min}")       # too few args
     if !func.rest?
+      n_max = maxargs - 2
+      (@maxarg_fail_handlers ||= {})[n_max] = true
       @e.cmpl(maxargs, :ebx)
-      @e.jle(l)
-      compile_eval_arg(fscope,
-                      [:sexp,[:call, :__maxarg, [maxargs - 2, :numargs]]])
+      @e.jg("__maxarg_fail_#{n_max}")     # too many args
     end
-    @e.label(l)
     @e.evict_all
   end
 
-  # Emit the shared fixed-arity error handlers collected by output_arity_check. Each is the exact code the
-  # old inline mismatch path emitted, with the expected count baked in: raise via __eqarg(expected, actual),
-  # where actual (numargs) is read from -4(%ebp) -- the current method's prologue-saved %ebx. __eqarg raises
-  # and never returns, so no stack cleanup is needed after the call. Reached only on an arity mismatch.
+  # Emit the shared arity error handlers collected by output_arity_check. Each is the exact code the old
+  # inline mismatch path emitted, with the expected count baked in: raise via <helper>(expected, actual),
+  # where actual (numargs) is read from -4(%ebp) -- the current method's prologue-saved %ebx. The helper
+  # raises and never returns, so no stack cleanup is needed after the call. Reached only on an arity error.
   def output_arity_fail_handlers
-    return unless @arity_fail_handlers
-    @arity_fail_handlers.keys.sort.each do |n|
-      @e.label("__arity_fail_#{n}")
+    emit_arity_handlers(@arity_fail_handlers, "__arity_fail_", "__eqarg")
+    emit_arity_handlers(@minarg_fail_handlers, "__minarg_fail_", "__minarg")
+    emit_arity_handlers(@maxarg_fail_handlers, "__maxarg_fail_", "__maxarg")
+  end
+
+  def emit_arity_handlers(set, prefix, helper)
+    return unless set
+    set.keys.sort.each do |n|
+      @e.label("#{prefix}#{n}")
       @e.subl(24, :esp)
-      @e.movl(n, "(%esp)")            # expected = minargs - 2
+      @e.movl(n, "(%esp)")            # expected count
       @e.movl("-4(%ebp)", :eax)       # actual numargs (prologue's pushl %ebx)
       @e.movl(:eax, "4(%esp)")
-      @e.movl(2, :ebx)                # __eqarg takes 2 args
-      @e.call("__eqarg")
+      @e.movl(2, :ebx)               # the helper takes 2 args
+      @e.call(helper)
     end
   end
 
