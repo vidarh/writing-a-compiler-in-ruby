@@ -15,26 +15,50 @@ class Compiler
     minargs = func.minargs
     maxargs = func.maxargs
 
-    l = @e.get_local
     if minargs == maxargs && !func.rest?
+      # Fixed arity: on mismatch jump to a SHARED per-arity error handler instead of inlining the ~7-line
+      # __eqarg call in every method (dead code unless the arity is wrong). The handler reads numargs from
+      # -4(%ebp) (the prologue's `pushl %ebx`), which is frame-relative, so one shared block serves every
+      # method that expects this arity. See output_arity_fail_handlers. Saves ~7 lines x method.
+      n = minargs - 2
+      (@arity_fail_handlers ||= {})[n] = true
       @e.cmpl(minargs, :ebx)
-      @e.je(l)
+      @e.jne("__arity_fail_#{n}")   # fall through to the body on a match
+      @e.evict_all
+      return
+    end
+
+    # Variable arity (min < max, or rest): keep the inline min/max checks.
+    l = @e.get_local
+    @e.cmpl(minargs, :ebx)
+    @e.jge(l)
+    compile_eval_arg(fscope,
+      [:sexp,[:call, :__minarg, [minargs - 2, :numargs]]])
+    if !func.rest?
+      @e.cmpl(maxargs, :ebx)
+      @e.jle(l)
       compile_eval_arg(fscope,
-        [:sexp,[:call, :__eqarg, [minargs - 2, :numargs]]])
-    else
-      @e.cmpl(minargs, :ebx)
-      @e.jge(l)
-      compile_eval_arg(fscope,
-        [:sexp,[:call, :__minarg, [minargs - 2, :numargs]]])
-      if !func.rest?
-        @e.cmpl(maxargs, :ebx)
-        @e.jle(l)
-        compile_eval_arg(fscope,
-                        [:sexp,[:call, :__maxarg, [maxargs - 2, :numargs]]])
-      end
+                      [:sexp,[:call, :__maxarg, [maxargs - 2, :numargs]]])
     end
     @e.label(l)
     @e.evict_all
+  end
+
+  # Emit the shared fixed-arity error handlers collected by output_arity_check. Each is the exact code the
+  # old inline mismatch path emitted, with the expected count baked in: raise via __eqarg(expected, actual),
+  # where actual (numargs) is read from -4(%ebp) -- the current method's prologue-saved %ebx. __eqarg raises
+  # and never returns, so no stack cleanup is needed after the call. Reached only on an arity mismatch.
+  def output_arity_fail_handlers
+    return unless @arity_fail_handlers
+    @arity_fail_handlers.keys.sort.each do |n|
+      @e.label("__arity_fail_#{n}")
+      @e.subl(24, :esp)
+      @e.movl(n, "(%esp)")            # expected = minargs - 2
+      @e.movl("-4(%ebp)", :eax)       # actual numargs (prologue's pushl %ebx)
+      @e.movl(:eax, "4(%esp)")
+      @e.movl(2, :ebx)                # __eqarg takes 2 args
+      @e.call("__eqarg")
+    end
   end
 
   def output_default_args(fscope, func)

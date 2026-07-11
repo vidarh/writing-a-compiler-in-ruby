@@ -2115,6 +2115,9 @@ class Compiler
     # after the main function, we ouput all functions and constants
     # used and defined so far.
     output_functions
+    # Shared fixed-arity error handlers (collected during output_functions). Emitted here while still in
+    # .text, right after the functions whose arity checks jump to them.
+    output_arity_fail_handlers
     # output_global_init must run AFTER output_functions -- class-object ivars (__classivar__*) are only
     # registered as globals while their method bodies compile in output_functions, and the init routine
     # has to see them to zero->nil them -- but BEFORE the vtable/constants output, which switches to the
