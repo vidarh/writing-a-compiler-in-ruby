@@ -33,9 +33,10 @@ class Compiler
       # method_missing thunk or anything else that might mess around with the
       # argument list before returning from the call.
       @e.comment(Emitter::COMMENTS && "Static adj: #{adj}")
-      @e.addl(4, :ebx) # Need to correspond to the extra space used when assigning "adj" above.
-      @e.sall(2, :ebx) 
-      @e.addl(:ebx, :esp)
+      # esp += (numargs+4)*4, i.e. esp + %ebx*4 + 16 -- computed in ONE leal (SIB addressing) instead of
+      # addl $4,%ebx; sall $2,%ebx; addl %ebx,%esp. Identical result on ~every method call site; also leaves
+      # %ebx untouched (it was scratch numargs, dead after cleanup) rather than trashing it to (ebx+4)*4.
+      @e.leal("16(%esp,%ebx,4)", :esp)
     else
       @e.addl(adj, :esp)
     end
