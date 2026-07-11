@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 # Holds globals, and (for now at least), global constants.
 # Note that Ruby-like "constants" aren't really - they are "assign-once"

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 class Compiler
   def compile_jmp_on_false(scope, r, target)

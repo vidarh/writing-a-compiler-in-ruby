@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 #
 # Method related to function and method calls,
 # including yield and super.
