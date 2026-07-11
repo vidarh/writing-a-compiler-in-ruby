@@ -121,6 +121,10 @@ class Peephole
       return
     end
 
+    if fold_setcc_test_branch(args)
+      return
+    end
+
     # subl $0, reg  (inlined: peephole runs per instruction, so `match([:subl,0,Symbol], args)` allocated
     # a fresh 3-element pattern Array every emit)
     if args.length == 3 && args[0] == :subl && args[1] == 0 && args[2].is_a?(Symbol)
@@ -191,6 +195,41 @@ class Peephole
       @out.emit_row(row)
     end
     @prev = []
+  end
+
+  # setCC %al ; movzbl %al,%eax ; testl %eax,%eax ; jCC L
+  # The comparison lowering (compile_comparison) materialises a 0/1 boolean in %eax, which is then tested to
+  # branch. But setCC and movzbl leave the flags untouched, so the cmpl that fed the setCC is still live at
+  # the testl -- the testl just re-derives the same ZF. Drop it and branch on those flags directly: a `je`
+  # (taken when the boolean is 0, i.e. the setCC condition was FALSE) becomes the setCC's INVERSE branch; a
+  # `jne` becomes the setCC's own branch. The setCC + movzbl are kept, so %eax still holds the boolean --
+  # safe even where the fall-through path uses that value (e.g. `a && b`, which has no else arm).
+  # Operand is the Symbol :al (compile_comparison), which excludes the float setCC path (string "%al").
+  SETCC_INVERSE = {   # branch taken when the setCC condition is FALSE -- pairs with a `je` on the boolean
+    :sete => :jne, :setne => :je, :setl => :jge, :setle => :jg,
+    :setg => :jle, :setge => :jl, :seta => :jbe, :setae => :jb, :setb => :jae, :setbe => :ja,
+  }.freeze
+  SETCC_DIRECT = {    # branch taken when the setCC condition is TRUE -- pairs with a `jne` on the boolean
+    :sete => :je, :setne => :jne, :setl => :jl, :setle => :jle,
+    :setg => :jg, :setge => :jge, :seta => :ja, :setae => :jae, :setb => :jb, :setbe => :jbe,
+  }.freeze
+
+  def fold_setcc_test_branch(args)
+    return false unless args[0] == :je || args[0] == :jne
+    test = @prev[-2]
+    mov  = @prev[-3]
+    setcc = @prev[-4]
+    return false unless test && mov && setcc
+    return false unless test[0] == :testl && test[1] == :eax && test[2] == :eax
+    return false unless mov[0] == :movzbl && mov[1] == :al && mov[2] == :eax
+    return false unless setcc.length == 2 && setcc[1] == :al
+    tbl = (args[0] == :je) ? SETCC_INVERSE : SETCC_DIRECT
+    jcc = tbl[setcc[0]]
+    return false unless jcc
+    @prev.pop           # drop the branch
+    @prev.pop           # drop the redundant testl
+    @prev << [jcc, args[1]]
+    true
   end
 
   # Helpers
