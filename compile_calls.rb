@@ -380,7 +380,27 @@ class Compiler
   # will do as it makes self-compilation viable for this
   # compiler for the first time.
   #
-  def load_class(scope)
+  # Class scopes whose instances a tagged Fixnum can be `self` in: Integer's CLASS ancestry
+  # (Integer < Numeric < Object < BasicObject) plus Fixnum. A `self` dispatch inside any OTHER class body
+  # therefore can never see a Fixnum self, so load_class can skip the tag test (see self_never_fixnum?).
+  # Modules are deliberately NOT listed: a module (e.g. Comparable) may be mixed into Integer, so a method
+  # defined in a module CAN run with a Fixnum self -- self_never_fixnum? only trusts real ClassScopes.
+  FIXNUM_SELF_CLASSES = ["BasicObject", "Object", "Numeric", "Integer", "Fixnum"].freeze
+
+  # True when a `self` receiver in `scope` provably cannot be a tagged Fixnum: the enclosing lexical scope is
+  # a real class (not a module, not top-level Object) whose name is outside Integer's class ancestry.
+  def self_never_fixnum?(scope)
+    cs = scope.class_scope
+    cs.is_a?(ClassScope) && !FIXNUM_SELF_CLASSES.include?(cs.local_name.to_s)
+  end
+
+  def load_class(scope, known_object = false)
+    # `known_object`: the receiver is provably a heap object (not a tagged Fixnum) -- e.g. a `self` dispatch
+    # in a non-numeric class body. Skip the tag test entirely and just deref the object's vtable.
+    if known_object
+      @e.load_indirect(:esi, :eax) # class = *(%esi)
+      return
+    end
     # On EVERY method dispatch. Default %eax to Fixnum, then overwrite with the object's class pointer
     # only when the receiver is NOT a tagged fixnum (bit 0 clear). Saves the extra jmp + one label vs the
     # branch-both-ways form (4 instrs + 1 label instead of 5 + 2), on every call.
@@ -581,7 +601,8 @@ class Compiler
           load_class(scope) # Load self.class into %eax
           load_super(scope) # Load superclass from %eax
         else
-          load_class(scope) # Load self.class into %eax
+          # A `self` dispatch in a non-numeric class body can't have a Fixnum receiver, so skip the tag test.
+          load_class(scope, ob == :self && self_never_fixnum?(scope)) # Load self.class into %eax
         end
 
         if off
