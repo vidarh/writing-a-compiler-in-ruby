@@ -403,6 +403,23 @@ class Compiler
     ob.is_a?(Symbol) && (@classes[ob] || @classes["Object__#{ob}".to_sym]) ? true : false
   end
 
+  # True when the receiver AST provably evaluates to a heap object (never a tagged Fixnum), so load_class can
+  # skip the tag test: a class/module constant, or a literal whose type is fixed -- an array literal
+  # ([:array,...] -> Array), a float literal ([:float,...] -> Float), or a string literal (rewrite_strconst
+  # has already lowered it to [:sexp,[:call :__get_string ..]] or, when interned, [:sexp, :__FSL_n]). Matched
+  # narrowly on those exact shapes so a tagged-integer sexp (e.g. [:sexp,[:call :__int ..]]) never qualifies.
+  def receiver_never_fixnum?(ob)
+    return true if receiver_is_class_object?(ob)
+    return false unless ob.is_a?(Array)
+    return true if ob[0] == :array || ob[0] == :float
+    if ob[0] == :sexp
+      inner = ob[1]
+      return true if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
+      return true if inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL")
+    end
+    false
+  end
+
   def load_class(scope, known_object = false)
     # `known_object`: the receiver is provably a heap object (not a tagged Fixnum) -- e.g. a `self` dispatch
     # in a non-numeric class body. Skip the tag test entirely and just deref the object's vtable.
@@ -611,8 +628,8 @@ class Compiler
           load_super(scope) # Load superclass from %eax
         else
           # Skip the Fixnum tag test when the receiver provably isn't a tagged Fixnum: a `self` dispatch in a
-          # non-numeric class body, or a class/module-constant receiver (the class OBJECT is never a Fixnum).
-          known_object = (ob == :self && self_never_fixnum?(scope)) || receiver_is_class_object?(ob)
+          # non-numeric class body, or a class-constant / typed-literal receiver (never a Fixnum).
+          known_object = (ob == :self && self_never_fixnum?(scope)) || receiver_never_fixnum?(ob)
           load_class(scope, known_object) # Load self.class into %eax
         end
 
