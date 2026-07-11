@@ -55,8 +55,13 @@ module AST
     # as one of the tree transforms is too aggressive, and for
     # the time being it's easier to work around here.
     def update_position
-      xsub = find{ |n| n.respond_to?(:position) }
-      position = xsub.position if xsub
+      # Intentionally EMPTY. The old body was:
+      #   xsub = find{ |n| n.respond_to?(:position) }
+      #   position = xsub.position if xsub
+      # but `position` is a LOCAL (a deliberate transform workaround -- see the initialize/@position note),
+      # so the find's result was DISCARDED. It nonetheless ran a block + respond_to? over EVERY element of
+      # EVERY positionless E[...] node and EVERY Expr#concat -- pure per-node waste on the hottest AST path.
+      # Dropping it is behaviour-identical (self.position is unchanged either way).
     end
 
     def self.[](*args)
