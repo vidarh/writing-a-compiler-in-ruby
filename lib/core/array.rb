@@ -1067,9 +1067,15 @@ class Array
     # Re-read self.size on every iteration (not a cached snapshot): MRI's Array#each observes elements
     # appended to the array DURING iteration, and stops early if it shrinks. A cached length missed
     # both (array/{all,none,count,each,...} "tolerates increasing an array size during iteration").
+    # Raw buffer read instead of `self[i]`: #each is one of the hottest lib/core methods, and self[i] is the
+    # full Array#[] (bounds/Range/negative/tag dispatch). `i < self.size` guards 0 <= i < len, so the checks
+    # are pure overhead; @ptr is re-read from the ivar each iteration (not cached) so an append that reallocs
+    # the buffer during iteration is still observed. (sar i) untags the loop counter. lib/core is compiled-
+    # only, so %s is safe here (unlike compiler code run under MRI).
+    el = nil
     if a == 1
       while i < self.size
-        el = self[i]
+        %s(assign el (index @ptr (sar i)))
         yield(el)
         i += 1
       end
@@ -1077,7 +1083,7 @@ class Array
     end
 
     while i < self.size
-      el = self[i]
+      %s(assign el (index @ptr (sar i)))
       if el.is_a?(Array)
         yield(*el)
       else
