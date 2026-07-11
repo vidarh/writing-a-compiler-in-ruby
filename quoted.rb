@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 module Tokens
   class Quoted
@@ -229,7 +230,7 @@ module Tokens
           prefix = "$"
         end
 
-        var_name = ""
+        var_name = String.new
 
         if prefix == "$" && s.peek
           next_char = s.peek
@@ -286,7 +287,7 @@ module Tokens
           result = handle_interpolation(s, ret, buf, &block)
           if result
             ret = result
-            buf = ""
+            buf = String.new
           else
             sresult = handle_simple_interpolation(s, ret, buf)
             if sresult.is_a?(String)
@@ -319,7 +320,7 @@ module Tokens
     # Returns truthy (the consumed text) if matched, nil otherwise.
     # Does NOT consume the trailing newline (it serves as statement separator).
     def self.heredoc_at_marker?(s, marker)
-      consumed = ""
+      consumed = String.new
 
       # Skip leading whitespace
       while s.peek && (s.peek == " " || s.peek == "\t")
@@ -352,7 +353,7 @@ module Tokens
     # indentation of non-blank lines. Ungets all characters read so the
     # scanner is left in its original state. Returns the min indent value.
     def self.heredoc_scan_indent(s, marker)
-      consumed = ""
+      consumed = String.new
       min_indent = nil
       at_line_start = true
       current_indent = 0
@@ -364,7 +365,7 @@ module Tokens
 
         if at_line_start
           # Check for marker (with optional leading whitespace)
-          probe = ""
+          probe = String.new
           while s.peek && (s.peek == " " || s.peek == "\t")
             probe << s.get
           end
@@ -485,7 +486,7 @@ module Tokens
           result = handle_interpolation(s, ret, buf, &block)
           if result
             ret = result
-            buf = ""
+            buf = String.new
           else
             sresult = handle_simple_interpolation(s, ret, buf)
             if sresult.is_a?(String)
@@ -521,7 +522,7 @@ module Tokens
         min_indent = heredoc_scan_indent(s, marker)
       end
 
-      buf = ""
+      buf = String.new
       at_line_start = true
       strip_remaining = min_indent
 
@@ -566,7 +567,7 @@ module Tokens
     end
 
     def self.expect_squoted(s,q = "'" )
-      buf = ""
+      buf = String.new
       while (e = s.get) && e != q
         if e == "\\" && (s.peek == ?' || s.peek == "\\"[0])
           buf << "\\" + s.get
@@ -621,7 +622,7 @@ module Tokens
           if s.peek == ?{
             # Symbol literal %s{...}
             s.get  # consume {
-            buf = ""
+            buf = String.new
             while s.peek && s.peek != ?}
               buf << s.get_ch   # %s{} body content only; not ungotten -> allocation-free
             end
