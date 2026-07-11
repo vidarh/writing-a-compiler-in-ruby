@@ -187,10 +187,13 @@ class Scanner
   def expect(str,&block)
     return buf if str == EMPTY
     return str.expect(self,&block) if str.respond_to?(:expect)
-    expect_str(str,&block)
+    expect_str(str)
   end
 
-  def expect_str(str, &block)
+  # No &block: expect_str never yields it, but a `&block` PARAMETER is boxed into a closure on every call by
+  # the self-hosted compiler (MRI is lazy). expect_str runs per string/keyword match (one of the hottest
+  # scanner paths), so dropping the unused param removes a per-match closure allocation self-hosted.
+  def expect_str(str)
     str = str.to_s
     return false if peek != str[0]
     buf = ScannerString.new
