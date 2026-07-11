@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 require 'operators'
 require 'set'
@@ -105,7 +106,7 @@ module Tokens
 
   class Int
     def self.expect(s, allow_negative = true)
-      tmp = ""
+      tmp = String.new
       # Only consume leading '-' if allowed (i.e., after an operator, not after ')')
       tmp << s.get_ch if allow_negative && s.peek == ?-
       c = s.peek
@@ -233,7 +234,7 @@ module Tokens
     # separator, so it is put back and left in the stream. Used for a float's fractional and exponent
     # digits (Int.expect already handles underscores in the integer part).
     def self.read_digits(s)
-      out = ""
+      out = String.new
       while true
         c = s.peek
         if Tokens.digit?(c)
@@ -336,7 +337,7 @@ module Tokens
       # the consumed characters are restored so the identifier tokenizes normally.
       if s.peek == ?e || s.peek == ?E
         e_char = s.get
-        esign = ""
+        esign = String.new
         if s.peek == ?+ || s.peek == ?-
           esign = s.get
         end
@@ -569,7 +570,7 @@ module Tokens
 
           # Parse content until closing delimiter, handling interpolation
           ret = nil
-          buf = ""
+          buf = String.new
           depth = 1
 
           while depth > 0
@@ -599,7 +600,7 @@ module Tokens
                 result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
                 if result
                   ret = result
-                  buf = ""
+                  buf = String.new
                 end
               else
                 # Not interpolation, add literal "#" to buffer
@@ -637,7 +638,7 @@ module Tokens
 
             # Parse content until closing delimiter, handling interpolation
             ret = nil
-            buf = ""
+            buf = String.new
             depth = 1
             paired = (delim == "{" || delim == "(" || delim == "[" || delim == "<")
 
@@ -668,7 +669,7 @@ module Tokens
                   result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
                   if result
                     ret = result
-                    buf = ""
+                    buf = String.new
                   end
                 else
                   # Not interpolation, add literal "#" to buffer
@@ -698,7 +699,7 @@ module Tokens
           @s.get  # consume 's'
           if @s.peek == ?{
             @s.get  # consume '{'
-            buf = ""
+            buf = String.new
             while @s.peek && @s.peek != ?}
               buf << @s.get
             end
@@ -740,7 +741,7 @@ module Tokens
             # For %Q, %W, %I, %x, %r: handle interpolation
             # For %q, %w, %i: no interpolation
             ret = nil
-            buf = ""
+            buf = String.new
             depth = 1
             paired = (delim == "{" || delim == "(" || delim == "[" || delim == "<")
             needs_interpolation = (type == ?Q || type == nil || type == ?W || type == ?I || type == ?x || type == ?r)
@@ -769,7 +770,7 @@ module Tokens
                   result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
                   if result
                     ret = result
-                    buf = ""
+                    buf = String.new
                   end
                 else
                   # Not interpolation, add literal "#" to buffer
@@ -861,7 +862,7 @@ module Tokens
           # Parse regexp literal with interpolation support
           @s.get  # consume '/'
           ret = nil
-          buf = ""
+          buf = String.new
           while true
             c = @s.peek
             if c == nil
@@ -903,7 +904,7 @@ module Tokens
                 result = Tokens::Quoted.handle_interpolation(@s, ret, buf) { @parser.parse_defexp }
                 if result
                   ret = result
-                  buf = ""
+                  buf = String.new
                 else
                   buf << c.chr
                 end
@@ -945,7 +946,7 @@ module Tokens
         # e.g., -2**12 should parse as -(2**12) not (-2)**12
         if prev_lastop && Tokens.digit?(@s.peek)
           # Look ahead: consume the number and check what follows
-          num_str = ""
+          num_str = String.new
           while Tokens.digit?(@s.peek)
             num_str << @s.get
           end
@@ -1000,7 +1001,7 @@ module Tokens
         # If we see * in prefix position followed by = or ), treat as identifier :_
         if first == "*" && (@first || prev_lastop)
           # Peek ahead through whitespace to check for = or )
-          ws_chars = ""
+          ws_chars = String.new
           while (wc = @s.peek) && ((wo = wc.ord) == 32 || wo == 9 || wo == 13 || wo == 10)
             ws_chars << @s.get
           end
@@ -1108,7 +1109,7 @@ module Tokens
                (dash || squiggly || @first || prev_lastop)
               # This is a heredoc!
               # Read the heredoc marker
-              marker = ""
+              marker = String.new
               quoted = false
               quote_char = nil
 
@@ -1127,7 +1128,7 @@ module Tokens
               end
 
               # Save the rest of the line (there might be more code after the heredoc marker)
-              rest_of_line = ""
+              rest_of_line = String.new
               while @s.peek && @s.peek != ?\n
                 rest_of_line << @s.get.chr
               end
