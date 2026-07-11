@@ -42,7 +42,7 @@ class String
 
   # Set the binary-safe empty-string fields directly (no numargs/copy logic), for String.allocate.
   def __init_empty
-    @flags = 0
+    %s(assign @flags 0)
     # @buffer must be a RAW C string (char*), not a Ruby String -- assign the bare literal via %s exactly
     # as #initialize does; `@buffer = ""` would store a String object and corrupt the binary-safe layout.
     %s(assign @length 0)
@@ -60,7 +60,7 @@ class String
     # be an FixNum instance instead of the actual
     # value 0.
 
-    @flags  = 0
+    %s(assign @flags 0)
     # @length is the authoritative byte length, stored RAW (not tagged): every %s site
     # below reads/writes it raw. @buffer stays NUL-terminated at @length so C interop
     # (strcmp-free now, but printf/open/... take @buffer) keeps working; NUL bytes
@@ -175,12 +175,23 @@ class String
   # out core/file/basename, core/file/extname, core/kernel/object_id, core/string/clone, and
   # core/string/chilled_string (all do `<str>.frozen?`). Treat freeze as a no-op and report
   # not-frozen (the correct answer for a mutable string; freeze_spec already FAILs, so no PASS is lost).
+  # Frozen state lives in bit 0 of @flags (slot 5; otherwise unused). Set it here; the mutators check it via
+  # __check_frozen and raise FrozenError. This is also the foundation for static frozen String LITERALS in
+  # .rodata (whose @buffer is read-only, so mutation must raise rather than segfault).
   def freeze
+    %s(assign @flags (bitor @flags 1))
     self
   end
 
   def frozen?
-    false
+    %s(if (ne (bitand @flags 1) 0) (return true) (return false))
+  end
+
+  # Raise FrozenError if this string is frozen. Called at the top of every mutator.
+  def __check_frozen
+    if frozen?
+      raise FrozenError.new("can't modify frozen String: #{inspect}")
+    end
   end
 
   def encoding
@@ -311,6 +322,7 @@ class String
   # Implemented as a splice through #replace (rebuilds @buffer in fresh heap memory, so it also works on
   # read-only string literals). Returns the replacement value, as assignment expressions do.
   def []=(*args)
+    __check_frozen
     repl = args[args.length - 1]
     repl = repl.is_a?(Integer) ? repl.chr : repl.to_s
     l = length
@@ -673,6 +685,7 @@ class String
 
   # Prepend the given strings to self in place, returning self.
   def prepend(*others)
+    __check_frozen
     pre = ""
     others.each { |o| pre = pre + o.to_s }
     replace(pre + self)
@@ -1218,6 +1231,7 @@ class String
 
   # Replace this string's contents in place with `other`'s (String#replace), returning self.
   def replace(other)
+    __check_frozen
     o = other.to_s
     olen = o.length
     %s(do
@@ -1273,6 +1287,7 @@ class String
   end
 
   def concat(other)
+    __check_frozen
     if (other.is_a?(Integer))
       other = other.chr
     else
@@ -1301,6 +1316,7 @@ class String
   end
 
   def <<(other)
+    __check_frozen
     concat(other)
   end
 
@@ -1414,6 +1430,7 @@ class String
   # Insert `other` before the character at `index`, modifying self in place and returning self.
   # A negative index counts from the end such that -1 appends after the last character.
   def insert(index, other)
+    __check_frozen
     index = __just_width(index)
     if !other.is_a?(String)
       if other.respond_to?(:to_str)
