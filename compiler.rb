@@ -1061,12 +1061,12 @@ class Compiler
 
   # Compiles and evaluates a given argument within a given scope.
   def compile_eval_arg(scope, arg)
-    if arg.respond_to?(:position) && arg.position != nil
+    # Read #position ONCE (it was called twice: `arg.position != nil` then `p = arg.position`).
+    if arg.respond_to?(:position) && (p = arg.position)
       # Compare position FIELDS instead of building arg.position.inspect (a fresh String) on every
       # expression just to detect a line/col change. This is the hottest codegen method, so that
       # per-expression inspect String was pure allocation + CPU on both hosts. @lastpos now holds the
       # last Position object itself.
-      p  = arg.position
       lp = @lastpos
       # Only line/file matter: @e.lineno emits a stabs marker solely on a LINE change (stabs N_SLINE is
       # line-based, no column), so a column-only change here just triggers a no-op @e.lineno + @lastpos
