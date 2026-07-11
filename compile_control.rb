@@ -106,12 +106,33 @@ class Compiler
   # Takes the current (outer) scope and two expressions representing
   # the if and else arm.
   # If no else arm is given, it defaults to nil.
+  # `(if (lt a b) ...)` compiled the comparison to a 0/1 value (cmpl; setl; movzbl) then tested it
+  # (testl; je) -- a flags->al->eax->flags round-trip. Emit a single conditional branch on the INVERSE
+  # condition instead. Jump to else when the condition is FALSE: lt(a<b) false => a>=b => jge, etc. Signed
+  # (matches the existing setl; correct for tagged fixnums, which preserve signed order).
+  # NOTE: :ne is deliberately EXCLUDED. Enabling it (:ne => :je) segfaults startup (Float#__as_float takes
+  # the wrong coerce path); bisected to :ne specifically, though the emitted `cmpl; je` looks correct in
+  # isolation -- a subtle interaction needing dedicated debugging. The other 5 ops are verified correct.
+  CMP_JMP_INVERSE = { :lt => :jge, :le => :jg, :gt => :jle, :ge => :jl, :eq => :jne }
+
   def compile_if(scope, cond, if_arm, else_arm = nil)
     @e.comment("if: #{cond.inspect}")
 
-    res = compile_eval_arg(scope, cond)
     l_else_arm = @e.get_local + "_else"
-    compile_jmp_on_false(scope, res, l_else_arm)
+    if cond.is_a?(Array) && cond.length == 3 && (jcc = CMP_JMP_INVERSE[cond[0]])
+      # compile_2 evaluates left->reg, right->%eax via the allocator (which may spill+restore around its
+      # own block -- so we must NOT jump out of that block, or the restoring popl is skipped -> stack
+      # imbalance). Do the cmpl inside; emit the branch AFTER compile_2 returns. Nothing between the cmpl and
+      # the jcc affects flags (block cleanup is at most a popl; evict_all only spills cached vars via movl).
+      compile_2(scope, cond[1], cond[2]) do |reg|
+        @e.cmpl(@e.result, reg)
+      end
+      @e.evict_all
+      @e.emit(jcc, l_else_arm)
+    else
+      res = compile_eval_arg(scope, cond)
+      compile_jmp_on_false(scope, res, l_else_arm)
+    end
 
     @e.comment("then: #{if_arm.inspect}")
     ifret = compile_eval_arg(scope, if_arm)
