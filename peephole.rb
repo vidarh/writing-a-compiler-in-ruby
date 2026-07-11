@@ -144,6 +144,26 @@ class Peephole
       return
     end
 
+    # Redundant reload of a never-written constant (nil/false/true) already in %eax. A `movl X, DEST` with
+    # DEST != %eax cannot change %eax, so scanning back over such stores, if the last instruction that DID
+    # write %eax loaded the same constant, this reload is redundant. nil/false/true are global objects set
+    # once at init and never stored to, so their value can't have changed. Common in nil-init chains:
+    # movl nil,%eax; movl %eax,L1; movl nil,%eax; movl %eax,L2; ...  (each reload after the first is dead).
+    if args[0] == :movl && args[2] == :eax &&
+       (args[1] == "nil" || args[1] == "false" || args[1] == "true")
+      i = @prev.length - 2
+      while i >= 0
+        p = @prev[i]
+        if p[0] == :movl && p[2] != :eax
+          i -= 1                       # store to a non-eax dest: %eax unchanged, keep scanning
+        else
+          @prev.pop if p[0] == :movl && p[2] == :eax && p[1] == args[1]
+          break                        # last %eax writer (or an op that may clobber %eax): stop
+        end
+      end
+      return if @prev[-1] != args      # dropped it above
+    end
+
     handle_simple_patterns(last, args)
 
     handle_mov_chain(args, last, @prev[-3])
