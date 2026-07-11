@@ -1068,7 +1068,11 @@ class Compiler
       # last Position object itself.
       p  = arg.position
       lp = @lastpos
-      if lp.nil? || p.lineno != lp.lineno || p.col != lp.col || p.filename != lp.filename
+      # Only line/file matter: @e.lineno emits a stabs marker solely on a LINE change (stabs N_SLINE is
+      # line-based, no column), so a column-only change here just triggers a no-op @e.lineno + @lastpos
+      # write per sub-expression on the same line. Dropping the col check leaves the emitted stabs identical
+      # but skips that per-expression work in the hottest codegen method.
+      if lp.nil? || p.lineno != lp.lineno || p.filename != lp.filename
         @e.lineno(p) if arg[0] != :defm
         @lastpos = p
       end
