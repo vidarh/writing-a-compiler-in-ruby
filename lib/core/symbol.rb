@@ -228,3 +228,8 @@ end
 %s(defun __get_symbol (name) (callm Symbol __get_symbol ((__get_string name))))
 
 %s(__compiler_internal symbol_list)
+
+# Intern frozen string literals (`# frozen_string_literal: true` files) here, right after symbols: classes
+# exist by this point in startup, so __get_frozen_string can allocate. Injects __FSL_n = __get_frozen_string
+# (<content>) for each unique frozen literal; see Compiler#output_frozen_string_list.
+%s(__compiler_internal frozen_string_list)

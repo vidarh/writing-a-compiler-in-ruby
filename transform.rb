@@ -902,16 +902,24 @@ class Compiler
       while i < len
         s = e[i]
         if s.is_a?(String)
-          lab = @string_constants[s]
-          if !lab
-            lab = @e.get_local
-            @string_constants[s] = lab
+          if s.frozen?
+            # A frozen literal (from a `# frozen_string_literal: true` file; see Tokenizer) is interned:
+            # emit a load of its per-content global slot (__FSL_n), built once at startup by
+            # output_frozen_string_list. One allocation per unique literal instead of one per evaluation.
+            slot = @frozen_string_constants[s]
+            if !slot
+              slot = "__FSL_#{@frozen_string_constants.size}".to_sym
+              @frozen_string_constants[s] = slot
+            end
+            e[i] = E[:sexp, slot]
+          else
+            lab = @string_constants[s]
+            if !lab
+              lab = @e.get_local
+              @string_constants[s] = lab
+            end
+            e[i] = E[:sexp, E[:call, :__get_string, lab.to_sym]]
           end
-          # A frozen literal (from a `# frozen_string_literal: true` file; see Tokenizer) is emitted via
-          # __get_frozen_string so in-place mutation raises FrozenError. The rodata label is shared by
-          # content regardless of frozen-ness -- only the wrapper differs per occurrence.
-          getter = s.frozen? ? :__get_frozen_string : :__get_string
-          e[i] = E[:sexp, E[:call, getter, lab.to_sym]]
 
           # FIXME: This is a horrible workaround to deal with a parser
           # inconsistency that leaves calls with a single argument with

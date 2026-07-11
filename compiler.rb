@@ -91,6 +91,11 @@ class Compiler
     @e = emitter
     @global_functions = Globals.new
     @string_constants = {}
+    # Frozen string literals (from `# frozen_string_literal: true` files) are interned: each unique content
+    # maps to a global slot (__FSL_n) holding one shared frozen String, built once at startup by
+    # output_frozen_string_list and loaded per use -- turning N per-use allocations into one, and matching
+    # MRI's single-object-per-literal identity. Mirrors the @symbols/__S_ symbol-interning mechanism.
+    @frozen_string_constants = {}
     @float_constants = {}  # Store float literals to emit in rodata
     @global_constants = Set.new
     @global_constants << :false
