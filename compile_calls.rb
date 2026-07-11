@@ -201,7 +201,7 @@ class Compiler
     @e.addl(@e.scratch, :esp)
   end
 
-  def compile_args(scope, ob, args, dynamic_adjust=false, &block)
+  def compile_args(scope, ob, args, dynamic_adjust=false, block)
     @e.caller_save do
       # Index scan, not args.detect: this runs for every method call, and the block boxed a closure per
       # call on the self-hosted compiler.
@@ -231,7 +231,9 @@ class Compiler
   end
 
   def compile_callm_args(scope, ob, args, &block)
-    compile_args(scope, ob, [ob].concat(args), true, &block)
+    # Materialise the block ONCE (this &block entry) and thread it as a plain Proc arg -- compile_args and
+    # its helpers no longer take &block, so they don't re-box it per compiled method call.
+    compile_args(scope, ob, [ob].concat(args), true, block)
   end
 
 
@@ -346,7 +348,7 @@ class Compiler
       # multi-arg list has a value/[:node]-array/non-keyword-symbol first element, so it is not wrapped.
       args = [args]
     end
-    compile_args(scope, func, args) do
+    compile_args(scope, func, args, false, proc do
       scope
       func
 
@@ -356,7 +358,7 @@ class Compiler
       else
         @e.call(compile_eval_arg(scope, func))
       end
-    end
+    end)
 
     @e.evict_regs_for(:self)
     reload_self(scope)
