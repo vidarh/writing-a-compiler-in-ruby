@@ -251,8 +251,10 @@ module Tokens
 
         if var_name.empty?
           # No variable name found — return chars to buf via caller
-          # Return the characters that should be added to buf
-          result = "#"
+          # Return the characters that should be added to buf. Built on a fresh String (not the "#" literal,
+          # which is frozen under this file's frozen_string_literal) so the << appends below don't raise.
+          result = String.new
+          result << "#"
           result << var_start.chr
           result << "@" if second_at
           return result
