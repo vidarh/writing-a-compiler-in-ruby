@@ -427,6 +427,17 @@ class String
     %s(if (eq @length 0) (return true) (return false))
   end
 
+  # Truncate to the empty string in place, keeping the allocated @buffer/@capacity so it can be refilled
+  # via << without reallocating. Matches MRI's String#clear (returns self).
+  def clear
+    # Truncate to empty. Also drop @capacity to 0 so the next #<< reallocates a fresh writable @buffer: a
+    # string literal's @buffer points at read-only rodata, and #<< within the old capacity would store there
+    # and segfault. (Do NOT write a NUL into the old @buffer for the same reason.)
+    %s(assign @length 0)
+    %s(assign @capacity 0)
+    self
+  end
+
 
   def chr
     self[0]
