@@ -445,6 +445,7 @@ class String
   # Truncate to the empty string in place, keeping the allocated @buffer/@capacity so it can be refilled
   # via << without reallocating. Matches MRI's String#clear (returns self).
   def clear
+    __check_frozen
     # Truncate to empty. Also drop @capacity to 0 so the next #<< reallocates a fresh writable @buffer: a
     # string literal's @buffer points at read-only rodata, and #<< within the old capacity would store there
     # and segfault. (Do NOT write a NUL into the old @buffer for the same reason.)
@@ -916,6 +917,7 @@ class String
   end
 
   def slice!(b, e = nil)
+    __check_frozen
     l = length
     # Range form: slice!(2..), slice!(1..-2), ... -- normalize to (start, length)
     if b.is_a?(Range)
@@ -1006,6 +1008,7 @@ class String
 
   # In-place #upcase. Returns self if any character changed, nil otherwise (mirrors MRI's bang methods).
   def upcase!
+    __check_frozen
     r = upcase
     return nil if r == self
     replace(r)
@@ -1030,6 +1033,7 @@ class String
 
   # In-place #downcase. Returns self if any character changed, nil otherwise.
   def downcase!
+    __check_frozen
     r = downcase
     return nil if r == self
     replace(r)
@@ -1056,6 +1060,7 @@ class String
   end
 
   def capitalize!
+    __check_frozen
     r = capitalize
     return nil if r == self
     replace(r)
@@ -1081,6 +1086,7 @@ class String
   end
 
   def swapcase!
+    __check_frozen
     r = swapcase
     return nil if r == self
     replace(r)
@@ -1125,6 +1131,7 @@ class String
   end
 
   def chop!
+    __check_frozen
     r = chop
     return nil if r == self
     replace(r)
@@ -1261,6 +1268,7 @@ class String
 
   # In-place delete; returns self if anything was removed, else nil.
   def delete!(*sets)
+    __check_frozen
     r = delete(*sets)
     return nil if r == self
     replace(r)
@@ -1283,6 +1291,7 @@ class String
 
   # In-place squeeze; returns self if anything was collapsed, else nil.
   def squeeze!(*sets)
+    __check_frozen
     r = squeeze(*sets)
     return nil if r == self
     replace(r)
@@ -1702,6 +1711,7 @@ class String
 
   # In-place #sub / #gsub. Return self if a substitution was made, nil otherwise (mirrors MRI).
   def sub!(pattern, replacement = nil, &block)
+    __check_frozen
     r = sub(pattern, replacement, &block)
     return nil if r == self
     replace(r)
@@ -1709,6 +1719,7 @@ class String
   end
 
   def gsub!(pattern, replacement = nil, &block)
+    __check_frozen
     r = gsub(pattern, replacement, &block)
     return nil if r == self
     replace(r)
@@ -2115,6 +2126,7 @@ class String
   # Remove trailing newline characters in place
   # Returns self if modified, nil if no modification made
   def chomp!(separator = "\n")
+    __check_frozen
     original_length = self.length
     result = self.chomp(separator)
 
@@ -2217,6 +2229,7 @@ class String
   # Note: This modifies the original string buffer, which only works for
   # dynamically allocated strings. String literals may be in read-only memory.
   def reverse!
+    __check_frozen
     # Create a reversed copy and replace our buffer with it
     rev = self.reverse
     self.__set_raw(rev.__get_raw)
