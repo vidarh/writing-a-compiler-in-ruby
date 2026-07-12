@@ -394,11 +394,14 @@ class Compiler
   # hold a Fixnum at runtime (module_spec / `CONST = 1`) -- that segfaulted when tried.
   def receiver_never_fixnum?(ob)
     return false unless ob.is_a?(Array)
-    return true if ob[0] == :array || ob[0] == :float
+    # A hash/array/float literal is always a heap object, never a tagged fixnum, so the load_class fixnum
+    # guard (`movl Fixnum; testl $1; jne`) is dead code for these receivers.
+    return true if ob[0] == :array || ob[0] == :float || ob[0] == :hash
     if ob[0] == :sexp
       inner = ob[1]
       return true if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
-      return true if inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL")
+      # Frozen string literal (__FSL slot) and interned symbol literal (__S_ slot) are both heap objects.
+      return true if inner.is_a?(Symbol) && (inner.to_s.start_with?("__FSL") || inner.to_s.start_with?("__S_"))
     end
     false
   end
