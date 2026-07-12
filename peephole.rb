@@ -293,13 +293,18 @@ class Peephole
     return unless last2
     return unless last2[0] == :movl && last2[2] == :eax
 
-    # movl src, %eax; movl %eax, dest; movl ???, %eax -> movl src, dest; movl ???, %eax
-    # The third movl overwrites %eax, so the value the first put there is dead: the round-trip through %eax
-    # can be dropped as long as `movl src, dest` is itself a legal mov -- i.e. src OR dest is a register
-    # (x86 forbids only memory->memory; here a register operand is a Symbol, memory/immediate/label a
-    # String). Originally only a register SRC was folded; a register DEST (e.g. movl -4(%ebp),%eax; movl
-    # %eax,%edx; movl ?,%eax  ->  movl -4(%ebp),%edx; movl ?,%eax) is equally safe and far more common.
-    if last && last[0] == :movl && last[1] == :eax && args[0] == :movl && args[2] == :eax
+    # movl src, %eax; movl %eax, dest; <insn overwriting %eax> -> movl src, dest; <insn>
+    # The third instruction overwrites %eax without reading it, so the value the first put there is dead:
+    # the round-trip through %eax can be dropped as long as `movl src, dest` is itself a legal mov -- i.e.
+    # src OR dest is a register (x86 forbids only memory->memory; here a register operand is a Symbol,
+    # memory/immediate/label a String). Originally only a register SRC was folded; a register DEST (e.g.
+    # movl -4(%ebp),%eax; movl %eax,%edx; movl ?,%eax  ->  movl -4(%ebp),%edx; movl ?,%eax) is equally safe
+    # and far more common. The %eax killer is either a `movl ???,%eax` OR a `popl %eax` -- the latter is the
+    # dominant form (`movl Class,%eax; movl %eax,%edx; popl %eax; movl %eax,(%edx)`, ~3.6k in a self-compile:
+    # a value is loaded, copied to an address register, then %eax is reused for the popped store value).
+    eax_killed = (args[0] == :movl && args[2] == :eax) ||
+                 (args[0] == :popl && args[1] == :eax)
+    if last && last[0] == :movl && last[1] == :eax && eax_killed
       src = last2[1]
       dest = last[2]
       if src.is_a?(Symbol) || dest.is_a?(Symbol)
