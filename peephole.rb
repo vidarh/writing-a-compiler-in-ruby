@@ -313,6 +313,16 @@ class Peephole
     o.is_a?(String) && o.include?("esp")
   end
 
+  # True if an operand is an IMMEDIATE value: a numeric literal (stored as Integer, rendered "$N") or an
+  # address literal (stored as a "$label" String). x86 allows an immediate source in a movl to ANY
+  # destination, including memory -- unlike a memory source (a bare-label/`-N(%ebp)` String), which can't
+  # target memory. So an immediate src lets the mov-chain fold apply even when the dest is memory. A String
+  # WITHOUT a leading "$" (e.g. "nil", "Class", "-4(%ebp)") is a memory reference, NOT an immediate.
+  def immediate_operand?(o)
+    return true if o.is_a?(Integer)
+    o.is_a?(String) && o.start_with?("$")
+  end
+
   def handle_mov_chain(args, last, last2)
     return unless last2
     return unless last2[0] == :movl && last2[2] == :eax
@@ -331,7 +341,10 @@ class Peephole
     if last && last[0] == :movl && last[1] == :eax && eax_killed
       src = last2[1]
       dest = last[2]
-      if src.is_a?(Symbol) || dest.is_a?(Symbol)
+      # Legal as long as it isn't memory->memory. A register src/dest (Symbol) covers most cases; ALSO
+      # allow an immediate src (`movl $IMM,%eax; movl %eax,mem; <kill>` -> `movl $IMM,mem`), which is legal
+      # to a memory dest and was previously rejected because "$..."/Integer looked like a non-register.
+      if src.is_a?(Symbol) || dest.is_a?(Symbol) || immediate_operand?(src)
         @prev.pop
         @prev.pop
         @prev.pop
