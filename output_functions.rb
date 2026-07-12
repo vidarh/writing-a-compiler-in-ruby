@@ -84,6 +84,10 @@ class Compiler
     # to inform the register allocation.
     varfreq = xfunc.body.respond_to?(:extra) ? xfunc.body.extra[:varfreq] : []
 
+    # Method-local type inference: which of this function's locals provably always hold a heap (non-fixnum)
+    # value, so receiver_never_fixnum? can drop the fixnum guard for calls on them. Scoped to this function.
+    @nonfixnum_locals = infer_nonfixnum_locals(xfunc)
+
     # @FIXME @bug
     # This triggers a bug where if there is a argument
     # with a name colliding with the method name, the env var rewrite
