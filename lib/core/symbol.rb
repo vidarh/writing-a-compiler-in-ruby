@@ -39,9 +39,18 @@ class Symbol
     self
   end
 
-  def eql? other
-    self.==(other)
+  # Symbols are interned, so ==, ===, and eql? are all EXACT pointer identity. Defining them inline on
+  # Symbol (rather than inheriting Object's) matters for ===: `case tag when :x` compiles to `:x === tag`,
+  # the compiler's hottest node-tag dispatch, and Object#=== does the identity test but then FALLS THROUGH
+  # to `self.==(other)` on a MISS -- a wasted vtable dispatch on every non-matching `when` clause. Returning
+  # false immediately on a miss removes that. eql? (hot in symbol-keyed Hash lookups) likewise dispatched to
+  # == before; now inline. Behaviour is identical (for a symbol, == is already identity).
+  def == other
+    %s(if (eq self other) (return true))
+    false
   end
+  alias === ==
+  alias eql? ==
 
   def <=> other
     if other.is_a?(Symbol)
