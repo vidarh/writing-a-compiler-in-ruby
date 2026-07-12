@@ -393,6 +393,9 @@ class Compiler
   # include class-constant receivers: @classes membership is a compile-time approximation and a constant can
   # hold a Fixnum at runtime (module_spec / `CONST = 1`) -- that segfaulted when tried.
   def receiver_never_fixnum?(ob)
+    # A bare-Symbol receiver is a local/param variable. If method-local type inference proved it always
+    # holds a heap value (never a tagged fixnum), the fixnum guard is dead -- see infer_nonfixnum_locals.
+    return true if ob.is_a?(Symbol) && @nonfixnum_locals && @nonfixnum_locals[ob]
     return false unless ob.is_a?(Array)
     # A hash/array/float literal is always a heap object, never a tagged fixnum, so the load_class fixnum
     # guard (`movl Fixnum; testl $1; jne`) is dead code for these receivers.
@@ -404,6 +407,105 @@ class Compiler
       return true if inner.is_a?(Symbol) && (inner.to_s.start_with?("__FSL") || inner.to_s.start_with?("__S_"))
     end
     false
+  end
+
+  # A VALUE (rhs of an assignment) that is provably never a tagged fixnum: nil/true/false literals and
+  # heap-object literals are all heap; a bare Symbol is a local reference, non-fixnum iff already proven so.
+  # Everything else (method results, tagged-int `(sexp N)`, unknown) is treated as possibly-fixnum.
+  def value_never_fixnum_for_infer?(v, nonfixnum)
+    return true if v == :nil || v == :true || v == :false
+    if v.is_a?(Symbol)
+      return nonfixnum[v] ? true : false
+    end
+    return false if !v.is_a?(Array)
+    return true if v[0] == :array || v[0] == :hash || v[0] == :float
+    if v[0] == :sexp
+      inner = v[1]
+      return true if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
+      return true if inner.is_a?(Symbol) && (inner.to_s.start_with?("__FSL") || inner.to_s.start_with?("__S_"))
+    end
+    false
+  end
+
+  # Method-local type inference (Phase 1 of receiver-type inference): the set of a function's LOCAL
+  # variables that provably ALWAYS hold a non-fixnum (heap) value, so a call whose receiver is such a local
+  # can skip the load_class fixnum guard. SOUND + conservative:
+  #  - a local qualifies only if EVERY [:assign] to it is a provably-non-fixnum value (fixpoint over
+  #    local-to-local copies);
+  #  - PARAMS are excluded (their incoming value comes from the caller -- unknown);
+  #  - a local TAINTED by any non-plain-assign binding (op-assign/incr/decr/multi-assign/rescue-binding,
+  #    which can introduce an arithmetic/unknown value we don't track) is excluded;
+  #  - captured/closure vars are [:index,__env__,n] (not bare Symbols) so they never appear here.
+  # Control flow is irrelevant: if EVERY assignment is non-fixnum the local is non-fixnum at every use.
+  # Missing a taint would be UNSOUND (a fixnum receiver skipping the guard derefs garbage) -- hence the
+  # broad `.include?("assign")` taint plus incr/decr/multi-assign/rescue, and gate + sweep validation.
+  def infer_nonfixnum_locals(func)
+    body = func.respond_to?(:body) ? func.body : nil
+    return nil if !body.is_a?(Array)
+    params = {}
+    if func.respond_to?(:args) && func.args
+      i = 0
+      while i < func.args.length
+        a = func.args[i]
+        params[a.name] = true if a.respond_to?(:name)
+        i += 1
+      end
+    end
+    assigns = {}
+    tainted = {}
+    body.depth_first do |n|
+      t = n[0]
+      if t == :sexp
+        # Inline asm CAN assign a Ruby local by name with a raw, untagged (possibly-fixnum) value --
+        # e.g. Array#each's `%s(assign el (index @ptr (sar i)))` stores a bare array element into the
+        # local `el`. depth_first does not descend into :sexp, so scan it ourselves and TAINT every
+        # `(assign SYM ...)` target: such a local must never be inferred non-fixnum (that elided the
+        # fixnum guard for `[1].each`'s el=1 receiver -> segfault).
+        n.depth_first do |m|
+          tainted[m[1]] = true if m[0] == :assign && m[1].is_a?(Symbol)
+          nil
+        end
+        next :skip
+      end
+      if t == :assign && n[1].is_a?(Symbol)
+        # NB: explicit init, not `assigns[k] ||= []` -- the op-assign index form returns nil self-hosted.
+        assigns[n[1]] = [] if !assigns[n[1]]
+        assigns[n[1]] << n[2]
+      elsif t == :massign || t == :masgn
+        # multi-assign targets (list in n[1..]) get unknown values -> taint every symbol target
+        n.each { |x| tainted[x] = true if x.is_a?(Symbol) }
+      elsif t == :rescue
+        tainted[n[2]] = true if n[2].is_a?(Symbol)   # `rescue => e` binds e to an exception
+      elsif t == :incr || t == :decr
+        tainted[n[1]] = true if n[1].is_a?(Symbol)
+      elsif t.is_a?(Symbol) && t != :assign && t.to_s.include?("assign") && n[1].is_a?(Symbol)
+        tainted[n[1]] = true   # op-assign (+=, ||=, *=, ...) -> arithmetic/unknown value
+      end
+      nil
+    end
+    return nil if assigns.empty?
+    nonfixnum = {}
+    loop do
+      changed = false
+      assigns.each do |lv, values|
+        next if params[lv] || tainted[lv] || nonfixnum[lv]
+        allnf = true
+        j = 0
+        while j < values.length
+          if !value_never_fixnum_for_infer?(values[j], nonfixnum)
+            allnf = false
+            break
+          end
+          j += 1
+        end
+        if allnf
+          nonfixnum[lv] = true
+          changed = true
+        end
+      end
+      break if !changed
+    end
+    nonfixnum.empty? ? nil : nonfixnum
   end
 
   def load_class(scope, known_object = false)
