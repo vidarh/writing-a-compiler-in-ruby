@@ -286,7 +286,31 @@ class Peephole
       return true
     end
 
+    # pushl X ; popl Y  (X != Y)  ->  movl X, Y
+    # A value transfer routed through the stack: pushl reads X, popl writes it to Y, %esp nets to zero. A
+    # direct move is equivalent and cheaper (one instruction, and no memory traffic). Guards: one operand
+    # must be a register (Symbol) so we never form an illegal mem->mem move, and neither may be
+    # %esp-relative -- for those the push/pop's own %esp adjustment changes what the operand addresses, so
+    # the transfer is NOT a plain move. Emitted e.g. by register save/restore around a temporary.
+    if last[0] == :pushl && args[0] == :popl && last[1] != args[1]
+      x = last[1]
+      y = args[1]
+      if (x.is_a?(Symbol) || y.is_a?(Symbol)) && !esp_operand?(x) && !esp_operand?(y)
+        @prev.pop
+        @prev.pop
+        @prev << [:movl, x, y]
+        return true
+      end
+    end
+
     false
+  end
+
+  # True if an operand reads/writes memory relative to %esp (or is %esp itself), whose value shifts under a
+  # push/pop -- such an operand can't participate in the pushl/popl -> movl fold.
+  def esp_operand?(o)
+    return true if o == :esp
+    o.is_a?(String) && o.include?("esp")
   end
 
   def handle_mov_chain(args, last, last2)
