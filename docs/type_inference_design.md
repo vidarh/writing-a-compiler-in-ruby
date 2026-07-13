@@ -183,6 +183,26 @@ NB self-hosted gotcha: `h[k] ||= v` returns nil self-hosted — use explicit `h[
    path when a,b provably Integer and Integer#+ stable). Large; do after 1-4 prove the resolution+emission
    pipeline.
 
+## BLOCKER found (2026-07-13): soundness needs receiver/escape reasoning, not local heuristics
+
+Attempted the v1 analysis and hit a wall. To prove `<literal C>.m` is safe to direct-call, we must prove
+no runtime metaprogramming redefines `C#m`. lib/core's own metaprogramming (`Class.new(...).class_eval
+(&block)`, `(class << self).send(:define_method, ...)`) is harmless to the literal classes ONLY because
+its receiver is a fresh anonymous class / a singleton — but that receiver arrives through a LOCAL
+VARIABLE (`klass`, `sc`). Classifying it therefore requires reasoning about what those locals hold, i.e.
+per-local value/reaching-definitions analysis. User ruled that out (2026-07-13: "you can't determine
+anything from the names of locals") — and it is genuinely fragile (the attempt double-tainted everything
+anyway). Consequence: with lib/core always included, a conservative analysis marks ALL literal classes
+"possibly modified" and devirt fires nowhere; a non-conservative one is unsound.
+
+**Implication:** typed-literal devirt is NOT a cheap first slice. Sound devirtualization of instance
+dispatch requires either (a) a proper whole-program FLOW type + ESCAPE analysis (infer every receiver's
+class AND prove the class object never escapes to a metaprogramming site — large, but it is the real
+"type inference" the project wants, and it subsumes receiver typing for variables too), or (b) making
+lib/core's reflective metaprogramming statically transparent (e.g. so `Class.new(...).class_eval` is
+recognizable without an intermediary local), or (c) a different optimization target. Awaiting steer on
+which. Do NOT ship a local-name/receiver-pattern heuristic.
+
 ## Open risks
 - compile_callm is the hottest, most delicate codegen path — a wrong label = wrong method = crash. Keep
   v1 ultra-conservative (typed literals only, count==1, target-resolved-clean).
