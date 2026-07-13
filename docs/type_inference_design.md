@@ -203,6 +203,78 @@ lib/core's reflective metaprogramming statically transparent (e.g. so `Class.new
 recognizable without an intermediary local), or (c) a different optimization target. Awaiting steer on
 which. Do NOT ship a local-name/receiver-pattern heuristic.
 
+## CHOSEN DIRECTION (2026-07-13, user): devirtualize calls to FROZEN classes
+
+Soundness from immutability instead of a "prove nothing modifies it" analysis. A frozen class cannot be
+modified (modification raises FrozenError), so its method table is fixed == the compile-time definitions.
+Then devirt of `<recv-of-frozen-class-C>.m` to `__method_C_<m>` is sound. Generic + opt-in: ANY code can
+freeze its own classes to enable this; the compiler additionally freezes key system classes early. This
+is the near-term path; long-term whole-program flow inference (below) still wanted, and this opens the
+road to it (the "receiver is class C" half is shared).
+
+Rule (user): "devirtualize all calls that can be PROVEN — by static analysis or by guards — to belong to
+any FROZEN class. The compiler can freeze key system classes early. All calls that can be shown to not
+occur until after those freeze calls can be safely devirtualized."
+
+### Why this is tractable HERE (AOT insight)
+This is an AOT compiler: the ONLY runtime class modification is the reflective methods (define_method /
+class_eval-with-defs / alias_method / undef_method / define-family via send). A static `class Array; def
+m` reopening is compiled into Array's vtable at INIT (before the freeze) — it does NOT raise, and if it
+makes m multiply-defined the devirt "defined-once" check simply skips m (vtable still routes correctly).
+So freezing system classes breaks only programs that do RUNTIME reflective modification of them AFTER the
+freeze. Measured spec impact: 7 specs statically reopen a system class (fine — pre-freeze, handled by
+defined-once), only ~1 does runtime `.class_eval/.define_method/.send` on one.
+
+### Prerequisite: ENFORCED class-object freezing (not yet present)
+Current state: `Object#freeze` is a no-op (object.rb:268); `Class#define_method`/`class_eval` (class.rb
+:465/:550) don't check frozen; Array uses a local `@frozen` ivar but only for array INSTANCES
+(array.rb:1870), not the class object. Needed:
+1. Freezing a CLASS object records frozen state on it (reuse the `@frozen`-ivar pattern on Class, or the
+   stashed slot-1 frozen bit — the object.rb FIXME says that bit "is implemented but stashed, pending a
+   parser regression"; the @frozen-ivar route is more contained).
+2. `define_method` / `class_eval` / `alias_method` / `undef_method` (class.rb) raise FrozenError when
+   `self` (the receiver class) is frozen. NB lib/core's own runtime define_method targets FRESH classes
+   (Class.new) and SINGLETONS (define_singleton_method) which are never frozen — so enforcement won't
+   break Struct/Data/attr_*/define_singleton_method.
+
+### Freeze placement + "after freeze" analysis
+The compiler freezes the chosen system classes at a known point AFTER lib/core is fully defined and
+BEFORE user top-level code (`__main`). USER CAUTION (2026-07-13): a call that MIGHT execute BEFORE the
+freeze cannot be devirtualized — before the freeze the class can still be modified, so the compile-time
+label may be stale. So devirt is allowed only at call sites that provably run AFTER the freeze. Sound
+approximation via a NAME-BASED CALL-GRAPH closure (no receiver types needed, so buildable first):
+  - Pre-freeze ROOTS = every method NAME invoked from code that runs during pre-freeze init = the
+    top-level class/module BODY statements (they execute when the class is defined, before __main's
+    post-freeze region) plus any top-level statements ordered before the freeze call.
+  - PRE-FREEZE-REACHABLE method names = closure: a called name pulls in ALL methods defined with that
+    name (dynamic dispatch over-approximation), whose bodies contribute the names THEY call, to fixpoint.
+  - A call site may devirt only if it is NOT inside a pre-freeze-reachable method (and not itself in
+    pre-freeze top-level code). Expected to be permissive because lib/core class BODIES are mostly bare
+    `def`s (few top-level calls) — VERIFY the root set is small, else the closure explodes and devirt
+    fires nowhere.
+This also generalizes to user `C.freeze` at an arbitrary point: roots = names reachable before that
+freeze in program order.
+
+### The only analysis needed (all non-fragile, NO local reasoning)
+1. Per-class DIRECT `[:defm]` counts — a plain AST scan (`depth_first(:class)` + a body scan stopping at
+   nested class/module/defm). Gives the `__method_C_<m>` label and the defined-once guard. (Reuse the
+   compute_class_direct_methods sketch already in this doc.)
+2. The set of FROZEN classes (the ones the compiler emits freeze for; later, ones a program freezes — a
+   scan for `C.freeze` with C an explicit class constant, honoring program order for the "after" part).
+3. Receiver class = TYPED LITERAL for v1 (`[:array]`->Array, string->String, `[:hash]`->Hash,
+   `[:float]`->Float, `[:sexp,:__S_]`->Symbol, integer literal->Integer). Later: flow inference.
+
+### Step plan (each: gate + full sweep before commit; commit only when green)
+1. Enforced class freeze: Class#freeze records frozen; define_method/class_eval/alias_method/undef_method
+   raise FrozenError if frozen. Test: `C.freeze; C.define_method(:x){}` raises; fresh/singleton unaffected.
+   Sweep to confirm no regression from adding the checks alone (nothing frozen yet).
+2. Compiler emits freeze for the system classes post-lib/core, pre-__main. Sweep; assess the (~1) runtime-
+   modification spec fallout; decide the class set.
+3. Devirt consumer in compile_calls.rb: typed-literal receiver of a frozen class C, m defined-once on C ->
+   emit `@e.call("__method_#{C}_#{clean_method_name(m)}")` instead of `@e.callm`. Restrict to method-body/
+   __main code (post-freeze). Gate + full sweep (crash set == baseline). MEASURE self-compile.
+4. Extend receiver typing beyond literals via the flow inference below.
+
 ## Open risks
 - compile_callm is the hottest, most delicate codegen path — a wrong label = wrong method = crash. Keep
   v1 ultra-conservative (typed literals only, count==1, target-resolved-clean).
