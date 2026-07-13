@@ -275,6 +275,58 @@ freeze in program order.
    __main code (post-freeze). Gate + full sweep (crash set == baseline). MEASURE self-compile.
 4. Extend receiver typing beyond literals via the flow inference below.
 
+## IMPLEMENTED + MEASURED (2026-07-13): freeze-based typed-literal devirt works but is perf-NEUTRAL
+
+Built end-to-end (uncommitted at time of writing): M1 enforced class freeze (Class#freeze +
+FrozenError from define_method/class_eval/*_exec, via a global identity-scanned frozen-class registry,
+lib/core/class.rb); M2 compiler injects `C.freeze` for the literal classes it doesn't see reflectively
+modified, right after the lib/core requires (setup_devirt); M3 devirt consumer (compile_calls.rb) emits a
+direct `call __method_C_<m>` when the receiver is a typed literal of a frozen class, `m` is defined-once
+on C, and the enclosing method is not pre-freeze-reachable. Gates green; a small functional test devirts
+correctly (152 direct calls) and the freeze enforcement is MRI-correct (frozen-class define_method
+raises).
+
+MEASURED on the self-hosted self-compile: **15.0s with devirt vs 15.1s without (DEVIRT_OFF, freezes still
+injected) -- NEUTRAL** (within noise). Reason: only 431 typed-literal-receiver call sites qualify
+(String 342, Array 50, Integer 34, Float 5), and they are not hot; the hot receivers in the compiler are
+VARIABLES and PARAMS (`node`, `exp`, `scope`), which typed-literal analysis can't type. Same conclusion
+as guard-elision: skipping a cache-resident vtable read is ~free. **The mechanism is sound and generic;
+the payoff needs (a) receiver-class FLOW inference to type variable/param receivers (interprocedural for
+params -- the hot ones), and/or (b) INLINING small frozen-class methods at devirt sites (a direct call
+CAN be inlined; that -- not skipping the read -- is where real speedup would come from, e.g. inlining
+Integer#+ raw-add).** Decision on whether to keep the foundation depends on the full sweep (correctness +
+spec impact from freezing) and whether we proceed to flow-inference/inlining.
+
+## THE FUNDAMENTAL REQUIREMENT (user, 2026-07-13) — do not devirtualize without it
+
+A class's method set CHANGES over its lifetime (define_method / class_eval / reopening). So a call
+`recv.m` can NEVER be statically bound to a fixed `__method_C_m` on the assumption that C#m is what it was
+at compile time. Every devirt attempt this session was unsound because it assumed a fixed version. There
+are exactly two sound routes:
+
+- **(A) Freeze + control-flow + method versioning.** After `C.freeze`, C is immutable, so a call to C is
+  safe to devirt ONLY IF it provably executes after that freeze. That needs (1) a SOUND control-flow
+  trace up to and including the freeze -- and it must be sound about DYNAMIC dispatch, blocks/procs, and
+  method_missing (a name-based call-graph closure is NOT sound: it silently misses `send`, invoked procs,
+  and missing-method paths). (2) Because a method that can run BEFORE the freeze can't use the fixed
+  version, you keep a VIRTUALIZED version of it and REPLACE it with a DEVIRTUALIZED version when the
+  freeze executes (swap the vtable entry / method impl at freeze time). Sound-but-no-versioning collapses
+  to "devirt nowhere" once dynamic dispatch during init is modelled honestly -- hence versioning is
+  required for any real benefit. Opt-in: the freeze comes from the CODE (or the compiler's own source for
+  its self-compile), never injected by the compiler into arbitrary programs (injecting broke 200+ specs).
+- **(B) Whole-program flow analysis with class VERSION/GENERATION tracking.** Track each class's
+  generation; increment on every modification; devirt a call only where the class's generation is
+  provably the compile-time one (and the receiver's class is proven). This is the general "actual type
+  inference" route and subsumes variable/param receiver typing.
+
+Both are major whole-program analyses. **The typed-literal freeze devirt actually built + measured this
+session was perf-NEUTRAL** (15.0 vs 15.1s; only 431 cold typed-literal sites; the vtable read is
+cache-resident/~free) AND unsound (fixed-version assumption). So the payoff case does NOT rest on skipping
+the vtable read. It rests on devirt being the ENABLER for INLINING small hot methods (a direct call can be
+inlined; e.g. inlining Integer#+ raw-add / Array#[] in hot loops -- untried, and the plausible real win).
+Reconcile before investing in the versioning/generation machinery: the value is inlining, not read-skip.
+What remains committed: enforced Class#freeze (lib/core/class.rb) as the foundation for route (A).
+
 ## Open risks
 - compile_callm is the hottest, most delicate codegen path — a wrong label = wrong method = crash. Keep
   v1 ultra-conservative (typed literals only, count==1, target-resolved-clean).

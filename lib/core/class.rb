@@ -462,7 +462,40 @@ class Class
   # the class object: object-keyed Hash lookups go through Object#hash/eql? machinery that proved
   # fragile for class objects (layout-sensitive infinite probe loops). Identity scan + symbol-keyed
   # per-class tables use only well-exercised primitives.
+  # ---- Class-object freezing (enables sound devirtualization of frozen classes; see
+  # docs/type_inference_design.md). A frozen class raises on any attempt to add/change an instance method
+  # at runtime, so its method table is immutable. Tracked in a global identity-scanned registry (like
+  # $__dm_classes) rather than an ivar, since class objects have a fixed slot layout. NB this only affects
+  # EXPLICITLY frozen classes: lib/core's own runtime define_method targets fresh Class.new classes and
+  # per-object singletons, which are never frozen. ----
+  def freeze
+    if $__frozen_classes.nil?
+      $__frozen_classes = []
+    end
+    $__frozen_classes << self if !__class_frozen?
+    self
+  end
+
+  def frozen?
+    __class_frozen?
+  end
+
+  def __class_frozen?
+    return false if $__frozen_classes.nil?
+    i = 0
+    while i < $__frozen_classes.length
+      return true if $__frozen_classes[i].equal?(self)
+      i += 1
+    end
+    false
+  end
+
+  def __raise_if_frozen
+    raise FrozenError.new("can't modify frozen Class: #{self}") if __class_frozen?
+  end
+
   def define_method(sym, body = nil, &block)
+    __raise_if_frozen
     pr = block ? block : body
     return nil if pr.nil?
     if $__dm_classes.nil?
@@ -549,6 +582,7 @@ class Class
   # register on it and self-relative calls (attr_reader, include, ...) act on it.
   def class_eval &block
     if block
+      __raise_if_frozen
       # Ruby yields the receiver to the block as its argument too (module_eval/class_eval), so a block
       # written as `Struct.new(:a) { |klass| ... }` receives the class. Pass self as the argument as well
       # as rebinding self; blocks tolerate an unused extra argument.
@@ -558,6 +592,7 @@ class Class
 
   def module_eval &block
     if block
+      __raise_if_frozen
       block.__call_with_self(self, nil)
     end
   end
@@ -565,12 +600,14 @@ class Class
   # class_exec / module_exec: like *_eval but forward arguments to the block.
   def class_exec *args, &block
     if block
+      __raise_if_frozen
       block.__call_with_self(self, nil, *args)
     end
   end
 
   def module_exec *args, &block
     if block
+      __raise_if_frozen
       block.__call_with_self(self, nil, *args)
     end
   end
