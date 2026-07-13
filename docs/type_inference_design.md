@@ -111,6 +111,20 @@ literal class C#m only if its target is provably-or-possibly C. Resolve the targ
 A `singleton_class`/`obj.send` on a per-object singleton NEVER affects instance dispatch → always safe to
 ignore. String eval → none in the self-compile and unsupported by the compiler → treat absence as given.
 
+**VERIFIED 2026-07-13 — this is simpler than feared for the literal classes.** The literal classes
+(Array/String/Hash/Float/Symbol) do NOT call `attr_accessor`/`attr_reader`/`attr_writer` anywhere in
+lib/core (grep: the only hit is a *comment* in string.rb:7). So the one genuinely-hard site (the
+dynamic-`self` `define_method` inside `attr_*`) provably never targets a literal class → it cannot
+disqualify any literal-class direct method. That removes the need for an `attr_*` call-graph. With that
+gone, the remaining define_method targets for the self-compile are all provably-not-a-literal-class:
+`Object.send(:define_method)` (→ Object), `klass.class_eval` on a `Class.new` (→ fresh anon class),
+`sc.send(:define_method)` (→ singleton, no instance effect). **Net: literal-class direct-method devirt is
+sound with a MODEST analysis** — the target-resolution only needs to (a) treat an explicit constant
+receiver as that class, (b) recognize `Class.new`/anonymous/singleton receivers as non-literal, and (c)
+disqualify a literal class C only on a `class C … def/alias/undef/define_method` or `C.<meta>` that names
+it. No deep call-graph/data-flow required for the v1 literal-class slice. (Flow inference is still needed
+later for VARIABLE receivers — the big prize — but not for this first sound slice.)
+
 ## Analysis passes (generic; sketched + validated)
 
 Validated on a self-compile via a since-reverted env-gated pass (`DEVIRT_ANALYZE`). Measured surface
