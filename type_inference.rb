@@ -401,8 +401,19 @@ class TypeInference
     @mclass  = {}          # defm.object_id => class it is defined on
     @super   = {}          # class => superclass
     @incl    = {}          # class => [included module, ...]
-    bm_walk(prog, :Object)
+    @qnames  = {}          # simple const name => { fully-qualified label name => true }
+    bm_walk(prog, :Object, "")
     compute_descendants
+  end
+
+  # The compiler labels a method __method_<scope.name>_<clean(m)>, where scope.name is the FULLY-QUALIFIED
+  # class name (M::C -> "M__C"). The inference keys classes by simple const name, so a direct label is only
+  # reconstructable when the simple name is UNIQUE and TOP-LEVEL (qualified == simple). label_safe? gates
+  # devirt to exactly those classes; nested / name-colliding classes bail (sound). Covers the core-lib
+  # classes (Integer/Array/String/...), which are all top-level.
+  def label_safe?(c)
+    q = @qnames[c]
+    q && q.length == 1 && q.key?(c.to_s)
   end
 
   # @descendants[C] = every class that has C in its MRO (transitive subclasses + includers). A `def C#m`
@@ -497,20 +508,26 @@ class TypeInference
     end
   end
 
+  # Returns the target DEFINING CLASS (a symbol) for a devirtualizable `recv.m`, or nil. The compiler turns
+  # that into the actual label __method_<D>_<clean_method_name(m)> (it owns the name-mangling). Requires: a
+  # concrete named-class set (no TOP/UNK), every class resolves through the MRO to the SAME defining class D
+  # (slot-invariant across the set -- polymorphic-but-slot-invariant still devirtualizes), D has EXACTLY ONE
+  # static def of m (no __N suffix -> base name is the live slot), m not runtime-modifiable (@unstable) nor a
+  # singleton override anywhere, and D is label-safe (unique + top-level so its label name is reconstructable).
   def devirt_decision(recv_ts, m)
     return nil if @eigen_dynamic
     return nil if !recv_ts.is_a?(Hash) || recv_ts.empty?
     return nil if @unstable[m]
-    label = nil
+    target = nil
     recv_ts.each_key do |c|
       d = resolve(c, m)
       return nil if d.nil?                         # inherited from outside the analysed set / method_missing
       return nil if @defcount[[d, m]] != 1         # not defined exactly once statically on D
-      l = "__method_#{d}_#{ti_clean(m)}"
-      return nil if label && label != l            # slot not invariant across the receiver set
-      label = l
+      return nil if !label_safe?(d)                # label name not reconstructable (nested / colliding)
+      return nil if target && target != d          # slot not invariant across the receiver set
+      target = d
     end
-    label
+    target
   end
 
   def fn_inherits?(dv, old)   # does descendant slot value `dv` still inherit parent's OLD value `old`?
@@ -518,18 +535,24 @@ class TypeInference
     return false if old.nil?
     fn_eq(dv, old)
   end
-  def bm_walk(node, cls)
+  def bm_walk(node, cls, prefix)
     return if !node.is_a?(Array)
     t = node[0]
     if t == :class || t == :module
       cn = node[1].is_a?(Symbol) ? node[1] : cls
+      nprefix = prefix
+      if node[1].is_a?(Symbol)
+        q = prefix.empty? ? cn.to_s : "#{prefix}__#{cn}"
+        (@qnames[cn] ||= {})[q] = true             # record this class's fully-qualified label name
+        nprefix = q
+      end
       if t == :class && node[2].is_a?(Symbol) && ti_const?(node[2])
         @super[cn] = node[2]                       # class C < S
       end
       body = node[3]                               # module is [:module, name, :Object, body], same as class
       if body.is_a?(Array)
         body.each do |s|
-          bm_walk(s, cn)
+          bm_walk(s, cn, nprefix)
           record_include(cn, s)                    # include M in the class body
         end
       end
@@ -540,7 +563,7 @@ class TypeInference
       @mclass[node.object_id] = cls
       return
     end
-    node.each { |c| bm_walk(c, cls) if c.is_a?(Array) }
+    node.each { |c| bm_walk(c, cls, prefix) if c.is_a?(Array) }
   end
   def record_include(cls, s)
     return if !s.is_a?(Array)
@@ -652,6 +675,24 @@ class TypeInference
     ts_eq(a, b)
   end
 
+  # Map of devirtualizable call sites -> direct-call label, keyed by the :callm node's object_id. Call AFTER
+  # analyze(prog) so @recv_type holds the final receiver types. The compiler keys emission by the same node
+  # objects (it runs the inference on the exact tree it then walks), so object_id identity is stable.
+  def devirt_map(prog)
+    out = {}
+    dv_collect(prog, out)
+    out
+  end
+  def dv_collect(node, out)
+    return if !node.is_a?(Array)
+    if node[0] == :callm && node[2].is_a?(Symbol)
+      recv = @recv_type[node.object_id]
+      d = recv ? devirt_decision(recv, node[2]) : nil
+      out[node.object_id] = d if d               # value = target defining class; compiler forms the label
+    end
+    node.each { |c| dv_collect(c, out) if c.is_a?(Array) }
+  end
+
   # ---- annotated dump ----
   def dump(prog, io = STDOUT); dump_node(prog, 0, io); end
   def dump_node(node, indent, io)
@@ -665,8 +706,8 @@ class TypeInference
     suffix += "   [#{g}]" if g
     if node[0] == :callm && node[2].is_a?(Symbol)
       recv = @recv_type[node.object_id]
-      lbl = recv ? devirt_decision(recv, node[2]) : nil
-      suffix += "   >>> DEVIRT #{lbl}" if lbl
+      d = recv ? devirt_decision(recv, node[2]) : nil
+      suffix += "   >>> DEVIRT #{d}##{node[2]}" if d
     end
     io.puts "#{pad}(#{node[0].inspect}#{suffix}"
     (node[1..-1] || []).each { |c| dump_node(c, indent + 1, io) }

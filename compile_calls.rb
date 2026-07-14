@@ -618,7 +618,7 @@ class Compiler
   # representing the object to call the method on.
   # The object gets passed to the method, which is just another function,
   # as the first parameter.
-  def compile_callm(scope, ob, method, args, block = nil, do_load_super = false)
+  def compile_callm(scope, ob, method, args, block = nil, do_load_super = false, devirt_label = nil)
     # FIXME: Shouldn't trigger - probably due to the callm rewrites
     return compile_yield(scope, args, block) if method == :yield and ob == :self
     return compile_super(scope, args,block) if method == :super and ob == :self
@@ -701,6 +701,16 @@ class Compiler
           reload_self(scope)
         end
 
+        if devirt_label
+          # Devirtualized: whole-program type inference proved this call has a single concrete target that
+          # is defined exactly once statically on the receiver's resolved class, is not runtime-modifiable,
+          # and is not an eigenclass override -- so the vtable slot is a known constant. Skip the vtable read
+          # entirely (no class load, no indirect `call *off(%eax)`) and call the method body label directly.
+          # self/args/block on the stack and %ebx (numargs) are already set up identically to the dispatched
+          # path, so the callee sees the same frame. See docs/devirt_plan.md + TypeInference#devirt_decision.
+          @e.comment(Emitter::COMMENTS && "devirt direct call #{devirt_label}")
+          @e.call(devirt_label)
+        else
         if do_load_super && do_load_super != :runtime
           # do_load_super is the defining class name - load its superclass directly
           # This fixes super in deep hierarchies (A < B < C) where self.class.superclass
@@ -730,6 +740,7 @@ class Compiler
           # include a function call, as it'll clobber
           # %ebx
           @e.call(compile_eval_arg(scope,method))
+        end
         end
 
         # FIXME: Unsure if the below check is
