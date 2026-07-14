@@ -272,6 +272,7 @@ class TypeInference
     when :while, :until then eval_loop(node, st)
     when :callm
       recv_ty, st = node[1] ? eval(node[1], st) : [(st[:v][:self] || TS_TOP), st]
+      @recv_type[node.object_id] = recv_ty          # for the devirt-decision annotation in the dump
       argtypes, st = eval_args(node[3], st)
       if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])
         ty = { node[1] => true }                     # C.new -> an instance of C
@@ -417,6 +418,75 @@ class TypeInference
       mro(d).each { |c| (@descendants[c] ||= []) << d if c != d }
     end
   end
+  # Devirt preconditions (mirrors the compiler's devirt_tables, kept self-contained here):
+  #   @defcount[[C,m]] = number of STATIC (class-body, not in a block/method) defs of m directly on C.
+  #                      >1 means Globals#set suffixed the label -> the base name is not the live slot.
+  #   @unstable[m]     = m is def'd/alias'd/undef'd inside a block or method body somewhere -> its slot can
+  #                      be runtime __set_vtable'd -> not devirtualizable on ANY class.
+  def compute_preconditions(prog)
+    @defcount = {}
+    @unstable = {}
+    pre_walk(prog, nil, false)
+  end
+  def pre_walk(node, cur_class, in_rt)
+    return if !node.is_a?(Array)
+    t = node[0]
+    if t == :class || t == :module
+      cname = node[1].is_a?(Symbol) ? node[1] : nil
+      pre_walk(node[2], cur_class, in_rt) if t == :class && node[2].is_a?(Array)   # superclass expr
+      node[3].each { |s| pre_walk(s, cname, in_rt) } if node[3].is_a?(Array)
+      return
+    end
+    if t == :defm
+      m = node[1]
+      if m.is_a?(Symbol)
+        if in_rt || cur_class.nil?
+          @unstable[m] = true                     # runtime def, or a def with no static class target
+        else
+          @defcount[[cur_class, m]] = (@defcount[[cur_class, m]] || 0) + 1
+        end
+      end
+      i = 2                                        # the method BODY runs at call time -> runtime context
+      while i < node.length; pre_walk(node[i], nil, true); i += 1; end
+      return
+    end
+    if t == :defun                                 # block/lambda body -> runtime context
+      i = 1
+      while i < node.length; pre_walk(node[i], nil, true); i += 1; end
+      return
+    end
+    if t == :alias
+      @unstable[node[1]] = true if in_rt && node[1].is_a?(Symbol)   # runtime alias re-sets new name's slot
+    elsif t == :undef
+      j = 1
+      while j < node.length
+        @unstable[node[j]] = true if node[j].is_a?(Symbol)
+        j += 1
+      end
+    end
+    node.each { |c| pre_walk(c, cur_class, in_rt) if c.is_a?(Array) }
+  end
+
+  # The sound direct-call label for `recv.m` given the receiver's inferred type-set, or nil if not
+  # devirtualizable. Requires: a concrete named-class set (no TOP/UNK/eigen), every class resolves through
+  # the MRO to a defining class D with EXACTLY ONE static def of m (so the label carries no __N suffix and
+  # is the live slot -- see devirt_plan.md deficiency #2), m not runtime-modifiable (@unstable), and the
+  # SAME label across the whole set (polymorphic-but-slot-invariant still devirtualizes).
+  def devirt_decision(recv_ts, m)
+    return nil if !recv_ts.is_a?(Hash) || recv_ts.empty?
+    return nil if @unstable[m]
+    label = nil
+    recv_ts.each_key do |c|
+      d = resolve(c, m)
+      return nil if d.nil?                         # inherited from outside the analysed set / method_missing
+      return nil if @defcount[[d, m]] != 1         # not defined exactly once statically on D
+      l = "__method_#{d}_#{ti_clean(m)}"
+      return nil if label && label != l            # slot not invariant across the receiver set
+      label = l
+    end
+    label
+  end
+
   def fn_inherits?(dv, old)   # does descendant slot value `dv` still inherit parent's OLD value `old`?
     return old.nil? if dv.nil?
     return false if old.nil?
@@ -522,6 +592,7 @@ class TypeInference
     @cur_returns = nil
     @safe = compute_safe(prog)
     build_methods(prog)
+    compute_preconditions(prog)
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
     iter = 0
@@ -530,6 +601,7 @@ class TypeInference
       @changed = false
       @types = {}
       @gen = {}
+      @recv_type = {}
       @cur_class = :Object                        # top-level self is main, an Object
       st = st0; st[:v][:self] = { :Object => true }
       eval(prog, st)
@@ -565,6 +637,11 @@ class TypeInference
     g = @gen[node.object_id]
     suffix = ann ? "   :: #{ts_str(ann)}" : ""
     suffix += "   [#{g}]" if g
+    if node[0] == :callm && node[2].is_a?(Symbol)
+      recv = @recv_type[node.object_id]
+      lbl = recv ? devirt_decision(recv, node[2]) : nil
+      suffix += "   >>> DEVIRT #{lbl}" if lbl
+    end
     io.puts "#{pad}(#{node[0].inspect}#{suffix}"
     (node[1..-1] || []).each { |c| dump_node(c, indent + 1, io) }
     io.puts "#{pad})"
