@@ -113,9 +113,25 @@ unverified assumption. Listed so devirt does not silently consume an over-optimi
    `__set_vtable`-causing effect at its execution point. Revisit if any construct can observe a class
    between a superclass/module modification and the child's own body.
 
+## Eigenclass handling (implemented in the decision layer)
+
+A devirt to `__method_C_m` is only sound if no object of the receiver type can carry a SINGLETON override
+of m (its `recv[0]` would be the eigenclass, whose m-slot could differ). Handled by marking m `unstable`
+(never devirtualizable) whenever m is installed as a singleton anywhere in the program:
+- `def recv.m` — a `:defm` with an Array name `[recv, :m]` -> mark `m` unstable.
+- `class << recv; def m; ...` — `[:class, [:eigen, recv], ...]`; node[1] is not a Symbol so its inner defs
+  get `cur_class=nil` and fall into the runtime/unstable branch automatically.
+- `recv.define_singleton_method(...)` — sets `@eigen_dynamic` (name is hard to read post-rewrite) which
+  disables ALL devirt. Rare; sound. (Refine to per-name later if it costs real coverage.)
+- `recv.extend(Mod)` — marks every instance method of Mod (and Mod's ancestors) unstable for a literal
+  module const; a computed module expr sets `@eigen_dynamic`.
+- `instance_eval`/`class_eval`/block-scoped defs are caught by the generic `in_rt` rule (a def inside any
+  block/method body is unstable).
+Residual conservative gap (not yet modelled; would only ever produce an UNSOUND devirt if it occurred, so
+must be closed before enabling emission): reflective singleton installs like
+`recv.singleton_class.define_method(:m)`. Treat as a TODO gate for the consumer.
+
 ## Open questions to resolve while building P1 (don't guess -- verify in code)
-- Exact eigenclass creation points and whether `recv[0]` observably becomes the eigenclass (so EIGEN is
-  detectable / excludable).
 - How offsets are assigned for names only ever `define_method`'d (no static `def`) -- do they get a slot?
 - Whether any compiler/lib-core `__set_vtable` runs AFTER init against a class the compiler calls (would
   shrink the stable set); measure via an instrumented build.

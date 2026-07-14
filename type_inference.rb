@@ -426,12 +426,16 @@ class TypeInference
   def compute_preconditions(prog)
     @defcount = {}
     @unstable = {}
+    @eigen_dynamic = false   # a define_singleton_method / dynamic extend we can't name -> disable all devirt
     pre_walk(prog, nil, false)
   end
   def pre_walk(node, cur_class, in_rt)
     return if !node.is_a?(Array)
     t = node[0]
     if t == :class || t == :module
+      # NB: `class << recv` is [:class, [:eigen, recv], ...] -- node[1] is an Array, so cname=nil and the
+      # inner defs fall into the cur_class.nil? branch below -> marked unstable. That is exactly right: a
+      # def in a singleton class installs an eigenclass override, so that method is not devirtualizable.
       cname = node[1].is_a?(Symbol) ? node[1] : nil
       pre_walk(node[2], cur_class, in_rt) if t == :class && node[2].is_a?(Array)   # superclass expr
       node[3].each { |s| pre_walk(s, cname, in_rt) } if node[3].is_a?(Array)
@@ -445,10 +449,17 @@ class TypeInference
         else
           @defcount[[cur_class, m]] = (@defcount[[cur_class, m]] || 0) + 1
         end
+      elsif m.is_a?(Array) && m[1].is_a?(Symbol)
+        @unstable[m[1]] = true                    # singleton `def recv.m` -> eigenclass override of m
       end
       i = 2                                        # the method BODY runs at call time -> runtime context
       while i < node.length; pre_walk(node[i], nil, true); i += 1; end
       return
+    end
+    if t == :callm && node[2] == :define_singleton_method
+      @eigen_dynamic = true                        # installs a singleton method (name hard to read post-rewrite)
+    elsif t == :callm && node[2] == :extend
+      mark_extend(node[3])                          # module's instance methods become singletons on the recv
     end
     if t == :defun                                 # block/lambda body -> runtime context
       i = 1
@@ -472,7 +483,22 @@ class TypeInference
   # the MRO to a defining class D with EXACTLY ONE static def of m (so the label carries no __N suffix and
   # is the live slot -- see devirt_plan.md deficiency #2), m not runtime-modifiable (@unstable), and the
   # SAME label across the whole set (polymorphic-but-slot-invariant still devirtualizes).
+  # `recv.extend(Mod)` installs Mod's (and Mod's ancestors') instance methods as singletons on recv -> those
+  # names become eigenclass overrides on some object -> not devirtualizable anywhere. Literal module const:
+  # mark exactly those names. Dynamic module expr: we can't name them -> disable all devirt (@eigen_dynamic).
+  def mark_extend(args)
+    return (@eigen_dynamic = true) if !args.is_a?(Array)
+    args.each do |a|
+      if a.is_a?(Symbol) && ti_const?(a)
+        mro(a).each { |c| @methods.each_key { |k| @unstable[k[1]] = true if k[0] == c } }
+      elsif a.is_a?(Array)
+        @eigen_dynamic = true                      # a computed module -> unknown method names
+      end
+    end
+  end
+
   def devirt_decision(recv_ts, m)
+    return nil if @eigen_dynamic
     return nil if !recv_ts.is_a?(Hash) || recv_ts.empty?
     return nil if @unstable[m]
     label = nil
