@@ -218,6 +218,123 @@ class TypeInference
     node.each { |c| collect_calls(c, out) if c.is_a?(Array) }
   end
 
+  # ---- reflection / open-world: which classes can gain DYNAMICALLY-NAMED methods via define_method ----
+  # (Literal `define_method(:foo)` is already rewritten to a static :defm, so a SURVIVING define_method call
+  # has a non-literal name -> the method it installs is unknown. A class that runs one in its body -- directly
+  # or via a "definer" helper like attr_reader that transitively calls define_method -- could therefore have
+  # ANY method overridden, so every call resolving to it (or a descendant) must NOT devirtualize.) This is
+  # coarse (whole class, not the specific name) but SOUND and preserves devirt on classes that never touch
+  # define_method (String/Integer/Array/...). It replaces the missing "collapse to unknowable" backstop.
+  def compute_dyn_defined(prog)
+    @dyn_defined = {}     # class => true : may gain a dynamically-named method
+    @dyn_any     = false  # a define_method with an unresolvable (dynamic) target class -> disable all devirt
+    definer = compute_definers(prog)
+    dd_walk(prog, nil, definer)
+    # NB no descendant propagation here -- devirt_decision walks each receiver's MRO and bails if ANY
+    # ancestor is @dyn_defined (a dynamic method on an ancestor is inherited), which is equivalent and
+    # avoids a second mutation pass over the hash.
+  end
+  # Method NAMEs that, when called (with class self), (transitively) run a define_method. attr_reader is a
+  # base definer; attr_accessor calls attr_reader/attr_writer so the fixpoint pulls it in.
+  def compute_definers(prog)
+    defs = {}; collect_defs(prog, defs)
+    calls = {}          # name -> {called-name => true} (collect_calls over the body STATEMENTS)
+    defs.each do |name, bodies|
+      cs = {}
+      bodies.each do |b|
+        # collect_calls returns immediately on a :defm node, so pass the body statements (index 3+), not
+        # the whole defm. Reusing collect_calls (proven self-host-safe) also avoids a bespoke deep tree
+        # traversal, which segfaulted the self-hosted compiler here.
+        i = 3
+        while i < b.length
+          collect_calls(b[i], cs)
+          i += 1
+        end
+      end
+      calls[name] = cs
+    end
+    definer = {}
+    names = defs.keys
+    b = 0
+    while b < names.length
+      n = names[b]; b += 1
+      definer[n] = calls[n][:define_method] ? true : false   # base: directly calls define_method
+    end
+    # Transitive fixpoint using .keys + while loops ONLY -- an each_key block over a POPULATED hash that
+    # mutates a captured local segfaults the self-hosted compiler here (compute_safe's identical loop never
+    # actually iterates because its collect_calls(defm) is a no-op, so this shape was never exercised before).
+    changed = true
+    while changed
+      changed = false
+      x = 0
+      while x < names.length
+        n = names[x]; x += 1
+        next if definer[n]
+        ck = calls[n].keys
+        j = 0
+        while j < ck.length
+          if definer[ck[j]]
+            definer[n] = true; changed = true
+          end
+          j += 1
+        end
+      end
+    end
+    definer
+  end
+  # cur_class = the class whose BODY we are directly in (nil inside a method/block, where self is not a class).
+  # eigen = vars in scope bound to an eigenclass (`v = class << x; self; end`) -- a define_method on one of
+  # those defines a SINGLETON method, which is the @eigen_dynamic domain (gated at define_singleton_method
+  # CALL sites), not a named-class instance method, so it must NOT trip the instance-method @dyn analysis.
+  def dd_walk(node, cur_class, definer, eigen = {})
+    return if !node.is_a?(Array)
+    t = node[0]
+    if t == :class || t == :module
+      cn = node[1].is_a?(Symbol) ? node[1] : nil
+      node[3].each { |s| dd_walk(s, cn, definer, eigen) } if node[3].is_a?(Array)
+      return
+    end
+    if t == :defm || t == :defun
+      ev = {}; collect_eigen_vars(node, ev)           # eigenclass-bound vars local to this body
+      node.each { |c| dd_walk(c, nil, definer, ev) if c.is_a?(Array) }   # method/block body: self != class
+      return
+    end
+    if t == :call && node[1].is_a?(Symbol) && (node[1] == :define_method || definer[node[1]])
+      @dyn_defined[cur_class] = true if cur_class     # implicit self in a class body -> targets that class
+    elsif t == :callm && node[2].is_a?(Symbol)
+      m = node[2]
+      if m == :send || m == :__send__                 # recv.send(:define_method, ...) -- the reflective form
+        m = (node[3].is_a?(Array) ? sym_lit_name(node[3][0]) : nil)
+      end
+      if m && (m == :define_method || definer[m])
+        r = node[1]
+        if r.is_a?(Symbol) && eigen[r] then           # singleton def on an eigenclass -> @eigen domain, skip
+        elsif r == :self then (@dyn_defined[cur_class] = true if cur_class)
+        elsif r.is_a?(Symbol) && ti_const?(r) then @dyn_defined[r] = true
+        else @dyn_any = true end                      # dynamic receiver class -> can't bound it
+      end
+    end
+    node.each { |c| dd_walk(c, cur_class, definer, eigen) if c.is_a?(Array) }
+  end
+  def collect_eigen_vars(node, out)
+    return if !node.is_a?(Array)
+    if node[0] == :assign && node[1].is_a?(Symbol) && node[2].is_a?(Array) &&
+       node[2][0] == :class && node[2][1].is_a?(Array) && node[2][1][0] == :eigen
+      out[node[1]] = true
+    end
+    node.each { |c| collect_eigen_vars(c, out) if c.is_a?(Array) }
+  end
+  # the Symbol name of a symbol-literal arg (`[:sexp, :__S_foo]` -> :foo), else nil.
+  def sym_lit_name(node)
+    return node if node.is_a?(Symbol)
+    if node.is_a?(Array) && node[0] == :sexp && node[1].is_a?(Symbol)
+      s = node[1].to_s
+      # NB use the (start, length) form, not s[4..-1] -- a negative-end Range slice is self-host-fragile.
+      return s[4, s.length].to_sym if s.length > 4 && s[0, 4] == "__S_"
+    end
+    nil
+  end
+
   # ---- eval: [type-set, state] ----
   def eval(node, st)
     return [TS_NIL, st] if node == :nil
@@ -635,11 +752,19 @@ class TypeInference
   # static def of m (no __N suffix -> base name is the live slot), m not runtime-modifiable (@unstable) nor a
   # singleton override anywhere, and D is label-safe (unique + top-level so its label name is reconstructable).
   def devirt_decision(recv_ts, m)
-    return nil if @eigen_dynamic
+    return nil if @eigen_dynamic || @dyn_any        # a define_method whose target/name we can't bound
     return nil if !recv_ts.is_a?(Hash) || recv_ts.empty?
     return nil if @unstable[m]
     target = nil
     recv_ts.each_key do |c|
+      # c or any ANCESTOR may gain a dynamically-named method (define_method) which c would inherit -> any
+      # of c's methods could then be overridden -> can't devirt.
+      anc = mro(c)
+      k = 0
+      while k < anc.length
+        return nil if @dyn_defined[anc[k]]
+        k += 1
+      end
       d = resolve(c, m)
       return nil if d.nil?                         # inherited from outside the analysed set / method_missing
       return nil if @defcount[[d, m]] != 1         # not defined exactly once statically on D
@@ -802,6 +927,7 @@ class TypeInference
     @safe = compute_safe(prog)
     build_methods(prog)
     compute_preconditions(prog)
+    compute_dyn_defined(prog)
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
     iter = 0
