@@ -1,255 +1,384 @@
 # frozen_string_literal: true
 #
-# Whole-program, FLOW-SENSITIVE type inference (points-to on receiver classes) + generation tracking.
+# Whole-program, FLOW-SENSITIVE type inference (points-to on receiver classes) + generation/slot tracking.
 # Inference-first; devirt is a later consumer. Verified via `--type-ast`. Runs in `compile` before codegen.
 # See docs/devirt_plan.md.
 #
-# Flow-sensitive because the generation model is: a class's vtable state is ordered by program points
-# ("A={foo} before bar, A={foo,baz} after"), and an object's type must be pinned to the state observable
-# at each point. The analysis threads a STATE forward through control flow, forks at branches, joins at
-# merges, and fixpoints at loops. Each expression is annotated with its type IN the state at its point.
+# STATE threaded forward through control flow (forked at branches, joined at merges, fixpointed at loops):
+#   st[:v]  = { var_sym => class-set }                 -- points-to for locals/params
+#   st[:s]  = { class_sym => slotmap }                 -- the vtable GENERATION per class at this point
+#            slotmap = TS_UNK (whole class unknowable) | { method_sym => fnset }
+#            fnset   = TS_UNK (slot could hold anything) | { label => true }  ; absent key = not defined yet
 #
-# STATE = { var_sym => class-set }.  class-set = TS_TOP (any class) | Hash{class-tag=>true} | nil (bottom).
-# Sound "may": unknown -> TS_TOP. (Generation state is added to STATE next, once types check out.)
+# class-set / fnset = TS_TOP/TS_UNK (any) | Hash | nil (bottom). Sound "may": unknown -> TS_TOP/TS_UNK.
+# Generations are inherently flow-sensitive: a `def` transitions a slot (the label it writes = "what
+# changes"); a CALL conservatively invalidates the slots it might reach (-> a generation boundary) until
+# interprocedural modification summaries refine it; a dynamic-name/target `define_method` collapses the
+# affected class (or all) to unknowable -- the pathological case that must stay sound (devirt just bails).
 
 class TypeInference
-  TS_TOP = :__top
+  TS_TOP = :__top     # any class (points-to)
+  TS_UNK = :__unk     # unknowable slot/generation
   TS_NIL = { :NilClass => true }
 
   def initialize
-    @types = {}   # node.object_id -> class-set at its evaluation point (for the dump)
+    @types = {}   # node.object_id -> class-set at its eval point
+    @gen   = {}   # node.object_id -> a short generation note (for the dump)
   end
-  attr_reader :types
+  attr_reader :types, :gen
 
-  # ---- class-set lattice ----
+  # ---- class-set / fnset lattice ----
   def join(a, b)
     return TS_TOP if a == TS_TOP || b == TS_TOP
     return b if a.nil?
     return a if b.nil?
-    o = {}
-    a.each { |k, _| o[k] = true }
-    b.each { |k, _| o[k] = true }
-    o
+    o = {}; a.each { |k, _| o[k] = true }; b.each { |k, _| o[k] = true }; o
   end
-
   def ts_eq(a, b)
     return true if a.equal?(b)
     return false if a == TS_TOP || b == TS_TOP || a.nil? || b.nil?
     return false if a.length != b.length
-    a.each_key { |k| return false if !b[k] }
-    true
+    a.each_key { |k| return false if !b[k] }; true
   end
-
   def ts_str(ts)
     return "TOP" if ts == TS_TOP
-    return "BOT" if ts.nil? || ts.empty?
-    "{" + ts.keys.map { |k| k.to_s }.sort.join(",") + "}"
+    return "UNK" if ts == TS_UNK
+    return "BOT" if ts.nil? || (ts.respond_to?(:empty?) && ts.empty?)
+    "{" + ts.keys.map(&:to_s).sort.join(",") + "}"
   end
 
-  # ---- flow-sensitive state (a var->type-set map) ----
-  # merge: per-variable join over the union of keys; a var present in only one branch is nil (Ruby: an
-  # unassigned-in-this-path local reads as nil) on the other side -> join with TS_NIL. Returns [merged, changed?]
-  def merge_states(a, b)
-    out = {}
-    changed = false
-    keys = {}
-    a.each_key { |k| keys[k] = true }
-    b.each_key { |k| keys[k] = true }
-    keys.each_key do |k|
-      av = a.key?(k) ? a[k] : TS_NIL
-      bv = b.key?(k) ? b[k] : TS_NIL
-      out[k] = join(av, bv)
+  # ---- state ----
+  def st0; { :v => {}, :s => {} }; end
+  def dupst(st); { :v => st[:v].dup, :s => st[:s].dup }; end
+
+  # merge two states: per-var join (missing => NilClass, Ruby); per-class slotmap merge
+  def merge(a, b)
+    v = {}
+    ks = {}; a[:v].each_key { |k| ks[k] = true }; b[:v].each_key { |k| ks[k] = true }
+    ks.each_key { |k| v[k] = join(a[:v].key?(k) ? a[:v][k] : TS_NIL, b[:v].key?(k) ? b[:v][k] : TS_NIL) }
+    s = {}
+    cs = {}; a[:s].each_key { |k| cs[k] = true }; b[:s].each_key { |k| cs[k] = true }
+    cs.each_key { |c| s[c] = merge_slotmap(a[:s][c], b[:s][c]) }
+    { :v => v, :s => s }
+  end
+  def merge_slotmap(a, b)
+    return TS_UNK if a == TS_UNK || b == TS_UNK
+    a ||= {}; b ||= {}
+    o = {}
+    ms = {}; a.each_key { |m| ms[m] = true }; b.each_key { |m| ms[m] = true }
+    ms.each_key do |m|
+      av = a[m]; bv = b[m]
+      # a slot defined on one path but not the other -> could be undefined -> unknowable (miss vs fn)
+      o[m] = (av.nil? || bv.nil?) ? TS_UNK : join_fn(av, bv)
     end
-    [out, changed]
+    o
   end
+  def join_fn(a, b); (a == TS_UNK || b == TS_UNK) ? TS_UNK : join(a, b); end
 
-  def states_eq(a, b)
-    return false if a.length != b.length
-    a.each { |k, v| return false if !b.key?(k) || !ts_eq(v, b[k]) }
+  def state_eq(a, b)
+    return false if a[:v].length != b[:v].length || a[:s].length != b[:s].length
+    a[:v].each { |k, x| return false if !b[:v].key?(k) || !ts_eq(x, b[:v][k]) }
+    a[:s].each { |c, sm| return false if !slotmap_eq(sm, b[:s][c]) }
     true
   end
+  def slotmap_eq(a, b)
+    return a == b if a == TS_UNK || b == TS_UNK
+    a ||= {}; b ||= {}
+    return false if a.length != b.length
+    a.each { |m, x| return false if !b.key?(m) || !fn_eq(x, b[m]) }; true
+  end
+  def fn_eq(a, b); (a == TS_UNK || b == TS_UNK) ? a == b : ts_eq(a, b); end
 
-  # ---- eval: returns [type-set, new_state]; threads state through side effects (assigns, calls) ----
+  # query the current function-set in slot (C,m): TS_UNK if unknowable, nil if not defined yet, else fnset
+  def slot(st, c, m)
+    sm = st[:s][c]
+    return TS_UNK if sm == TS_UNK
+    sm ? sm[m] : nil
+  end
+  def set_slot(st, c, m, fnset)
+    st[:s] = st[:s].dup
+    sm = st[:s][c]
+    if sm == TS_UNK
+      # class already unknowable; a known def re-pins this one slot
+      sm = { m => fnset }
+    else
+      sm = (sm || {}).dup
+      sm[m] = fnset
+    end
+    st[:s][c] = sm
+  end
+  def make_class_unknowable(st, c)
+    st[:s] = st[:s].dup
+    st[:s][c] = TS_UNK
+  end
+  # A call is EVALUATED for its effect via a modification summary, NOT blanket-invalidated. A call to a
+  # name that provably modifies no vtable (transitively) leaves the slot state untouched. Only a call whose
+  # target could modify a vtable (a modifier, or an unknown/dynamic target) invalidates -- and, until
+  # per-(class,method) summaries land, it conservatively invalidates every known slot. `@unsafe[name]` =
+  # this name's methods could (transitively) modify a vtable, or the name is unknown/dynamic.
+  def call_effect(st, name)
+    return st if name.is_a?(Symbol) && @safe && @safe[name]   # provably modifies nothing -> no boundary
+    invalidate_all(dupst(st))
+  end
+  def invalidate_all(st)
+    ns = {}
+    st[:s].each do |c, sm|
+      ns[c] = (sm == TS_UNK) ? TS_UNK : (h = {}; sm.each { |m, _| h[m] = TS_UNK }; h)
+    end
+    st[:s] = ns
+    st
+  end
+
+  # ---- modification-summary pre-pass (name-based, sound over-approximation of the call graph) ----
+  # @safe[name] = true iff every method of `name` is DEFINED and neither directly modifies a vtable
+  # (a def/alias/undef in its body) nor (transitively) calls a name that is not safe. Greatest fixpoint:
+  # start every DEFINED name safe, remove any with a direct modification or that calls a non-safe/unknown
+  # name, iterate. Unknown names (no def) are never safe (could be method_missing / anything).
+  def compute_safe(prog)
+    defined = {}   # name -> [body,...]
+    collect_defs(prog, defined)
+    direct = {}    # name -> true if a body directly modifies a vtable
+    calls  = {}    # name -> {called-name => true}
+    defined.each do |name, bodies|
+      cs = {}
+      dm = false
+      bodies.each do |b|
+        dm = true if body_directly_modifies?(b)
+        collect_calls(b, cs)
+      end
+      direct[name] = dm
+      calls[name] = cs
+    end
+    safe = {}
+    defined.each { |name, _| safe[name] = !direct[name] }
+    changed = true
+    while changed
+      changed = false
+      defined.each do |name, _|
+        next if !safe[name]
+        calls[name].each_key do |cn|
+          if !defined.key?(cn) || !safe[cn]   # calls an unknown or non-safe name
+            safe[name] = false; changed = true; break
+          end
+        end
+      end
+    end
+    safe
+  end
+
+  def collect_defs(node, out, in_body = false)
+    return if !node.is_a?(Array)
+    t = node[0]
+    if t == :defm && node[1].is_a?(Symbol)
+      (out[node[1]] ||= []) << node   # record the whole defm; body scanned via its subtree
+    end
+    node.each { |c| collect_defs(c, out, in_body) if c.is_a?(Array) }
+  end
+  # a def/alias/undef anywhere inside a method body is a RUNTIME vtable modification.
+  def body_directly_modifies?(defm)
+    found = false
+    argi = 2
+    i = argi + 1
+    while i < defm.length
+      found ||= subtree_modifies?(defm[i])
+      i += 1
+    end
+    found
+  end
+  def subtree_modifies?(node)
+    return false if !node.is_a?(Array)
+    return true if node[0] == :defm || node[0] == :alias || node[0] == :undef
+    return true if (node[0] == :call || node[0] == :callm) &&
+                   (node[1] == :define_method || node[2] == :define_method ||
+                    node[1] == :alias_method || node[2] == :alias_method)
+    node.any? { |c| subtree_modifies?(c) }
+  end
+  def collect_calls(node, out)
+    return if !node.is_a?(Array)
+    t = node[0]
+    return if t == :defm || t == :defun    # nested scope: its calls are attributed to it, not here
+    if t == :callm && node[2].is_a?(Symbol) then out[node[2]] = true
+    elsif t == :call && node[1].is_a?(Symbol) then out[node[1]] = true
+    end
+    node.each { |c| collect_calls(c, out) if c.is_a?(Array) }
+  end
+
+  # ---- eval: [type-set, state] ----
   def eval(node, st)
     return [TS_NIL, st] if node == :nil
     return [{ :TrueClass => true }, st]  if node == :true
     return [{ :FalseClass => true }, st] if node == :false
     if node.is_a?(Symbol)
-      return [st.key?(node) ? st[node] : TS_TOP, st]   # local/param/const ref
+      # a bare lowercase non-local symbol in expr position is a self-send (possible_callm) -> a CALL
+      if st[:v].key?(node)
+        return [st[:v][node], st]
+      elsif ti_const?(node)
+        return [TS_TOP, st]                          # constant reference
+      else
+        return [TS_TOP, call_effect(st, node)]   # self.<name> call: effect per its summary
+      end
     end
     return [TS_TOP, st] if !node.is_a?(Array)
-    t = node[0]
-    ty, st = eval_node(node, t, st)
+    ty, st = eval_node(node, node[0], st)
     @types[node.object_id] = ty
     [ty, st]
   end
 
   def eval_node(node, t, st)
     case t
-    when :array then [{ :Array => true }, eval_children(node, 1, st)]
-    when :hash  then [{ :Hash => true },  eval_children(node, 1, st)]
+    when :array then [{ :Array => true }, eval_kids(node, 1, st)]
+    when :hash  then [{ :Hash => true },  eval_kids(node, 1, st)]
     when :float then [{ :Float => true }, st]
     when :sexp
       inner = node[1]
-      if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
-        [{ :String => true }, st]
-      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL")
-        [{ :String => true }, st]
-      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__S_")
-        [{ :Symbol => true }, st]
-      elsif inner.is_a?(Integer)
-        [{ :Integer => true }, st]
-      else
-        # raw asm: taint any vars it assigns to TOP (sound), value unknown
-        [TS_TOP, taint_sexp(node, st)]
+      if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string then [{ :String => true }, st]
+      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL") then [{ :String => true }, st]
+      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__S_") then [{ :Symbol => true }, st]
+      elsif inner.is_a?(Integer) then [{ :Integer => true }, st]
+      else [TS_TOP, taint_sexp(node, st)]
       end
     when :assign
-      tv, st2 = eval(node[2], st)
+      tv, st = eval(node[2], st)
       if node[1].is_a?(Symbol)
-        st2 = st2.dup
-        st2[node[1]] = tv
+        st = dupst(st); st[:v][node[1]] = tv
       else
-        _, st2 = eval(node[1], st2)   # index/ivar assign target: eval for effects
+        _, st = eval(node[1], st)
       end
-      [tv, st2]
-    when :do
-      eval_seq(node, 1, st)
+      [tv, st]
+    when :do    then eval_seq(node, 1, st)
     when :if
-      te, s1 = eval(node[1], st)                       # cond
-      tt, sthen = eval_arm(node[2], s1)
-      tf, selse = eval_arm(node[3], s1)
-      merged, = merge_states(sthen, selse)
-      [join(tt, tf), merged]
+      _, s1 = eval(node[1], st)
+      tt, sa = eval_arm(node[2], s1)
+      tf, sb = eval_arm(node[3], s1)
+      [join(tt, tf), merge(sa, sb)]
     when :ternif
       _, s1 = eval(node[1], st)
       alt = node[2]
       if alt.is_a?(Array) && alt[0] == :ternalt
-        tt, sthen = eval_arm(alt[1], s1)
-        tf, selse = eval_arm(alt[2], s1)
-        merged, = merge_states(sthen, selse)
-        [join(tt, tf), merged]
-      else
-        eval_arm(alt, s1)
-      end
-    when :while, :until
-      eval_loop(node, st)
+        tt, sa = eval_arm(alt[1], s1); tf, sb = eval_arm(alt[2], s1)
+        [join(tt, tf), merge(sa, sb)]
+      else eval_arm(alt, s1) end
+    when :while, :until then eval_loop(node, st)
     when :callm
-      st = node[1] ? eval(node[1], st)[1] : st          # receiver
-      st = eval_children(node, 3, st)                   # args live at node[3]
-      # C.new -> instance of C; else unknown result (interprocedural return typing is a later step)
+      st = node[1] ? eval(node[1], st)[1] : st
+      st = eval_kids(node, 3, st)
+      st = call_effect(st, node[2])                  # method call: effect per its summary
       ty = (node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])) ? { node[1] => true } : TS_TOP
       [ty, st]
     when :call
-      st = eval_children(node, 2, st)
+      st = eval_kids(node, 2, st)
+      st = call_effect(st, node[1])
       [TS_TOP, st]
-    when :defm
-      analyze_body(node, node[1].is_a?(Symbol) ? 2 : 2)  # nested scope, own state
-      [node[1].is_a?(Symbol) ? { :Symbol => true } : TS_TOP, st]
-    when :defun
-      analyze_body(node, 1)
-      [{ :Proc => true }, st]
-    when :class, :module
-      # class/module body executes in-line (its defs run now); thread state through its body statements.
-      bodyi = (t == :class) ? 3 : 2
-      st = eval(node[2], st)[1] if t == :class && node[2].is_a?(Array)  # superclass expr
-      eval_seq(node, bodyi, st)
-    else
-      [TS_TOP, eval_children(node, 1, st)]
+    when :defm  then eval_defm(node, st)
+    when :defun then analyze_body(node, 1); [{ :Proc => true }, st]
+    when :class, :module then eval_classbody(node, t, st)
+    else [TS_TOP, eval_kids(node, 1, st)]
     end
   end
 
-  # evaluate children from index i, threading state; ignore their types
-  def eval_children(node, i, st)
+  # a class/module-body `def m`: static def -> set slot (C,m) = {__method_C_m}. Dynamic-name def would come
+  # as a define_method call, not a :defm; a :defm always has a literal name here.
+  def eval_defm(node, st)
+    m = node[1]
+    if m.is_a?(Symbol) && @cur_class
+      st = dupst(st)
+      set_slot(st, @cur_class, m, { "__method_#{@cur_class}_#{ti_clean(m)}" => true })
+      @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
+    end
+    analyze_body(node, 2)          # the method body is a separate scope
+    [m.is_a?(Symbol) ? { :Symbol => true } : TS_TOP, st]
+  end
+
+  def eval_classbody(node, t, st)
+    prev = @cur_class
+    @cur_class = node[1].is_a?(Symbol) ? node[1] : nil
+    if t == :class
+      st = eval(node[2], st)[1] if node[2].is_a?(Array)   # superclass expr, outer scope
+      body = node[3]
+    else
+      body = node[2]
+    end
+    # body is a plain STATEMENT LIST (not a tagged node): evaluate each element in order.
+    if body.is_a?(Array)
+      body.each { |s| _, st = eval(s, st) if s.is_a?(Array) || s.is_a?(Symbol) }
+    end
+    if @cur_class
+      @gen[node.object_id] = "final #{@cur_class}: #{slotmap_str(st[:s][@cur_class])}"
+    end
+    @cur_class = prev
+    [TS_NIL, st]
+  end
+
+  def slotmap_str(sm)
+    return "UNK" if sm == TS_UNK
+    return "{}" if sm.nil?
+    "{" + sm.keys.sort.map { |m| "#{m}=>#{ts_str(sm[m])}" }.join(", ") + "}"
+  end
+
+  def eval_kids(node, i, st)
     while i < node.length
       st = eval(node[i], st)[1] if node[i].is_a?(Array) || node[i].is_a?(Symbol)
       i += 1
     end
     st
   end
-
-  # sequence: thread state, value = last child's type
   def eval_seq(node, i, st)
     last = TS_NIL
     while i < node.length
       c = node[i]
-      if c.is_a?(Array) || c.is_a?(Symbol)
-        last, st = eval(c, st)
-      end
+      last, st = eval(c, st) if c.is_a?(Array) || c.is_a?(Symbol)
       i += 1
     end
     [last, st]
   end
-
-  # an if/ternary arm: may be nil (missing arm -> value nil, state unchanged), a :do, or an expression
-  def eval_arm(arm, st)
-    return [TS_NIL, st] if arm.nil?
-    eval(arm, st)
-  end
-
-  # loop: fixpoint the body's effect on state (bounded), value nil
+  def eval_arm(arm, st); arm.nil? ? [TS_NIL, st] : eval(arm, st); end
   def eval_loop(node, st)
-    _, st = eval(node[1], st) if node[1].is_a?(Array) || node[1].is_a?(Symbol)  # cond
-    body = node[2]
-    guard = 0
-    cur = st
+    _, st = eval(node[1], st) if node[1].is_a?(Array) || node[1].is_a?(Symbol)
+    cur = st; guard = 0
     while guard < 50
       guard += 1
-      _, after = eval_arm(body, cur)
-      merged, = merge_states(cur, after)
-      break if states_eq(merged, cur)
-      cur = merged
+      _, after = eval_arm(node[2], cur)
+      m = merge(cur, after)
+      break if state_eq(m, cur)
+      cur = m
     end
     [TS_NIL, cur]
   end
-
   def taint_sexp(node, st)
-    st = st.dup
-    walk_taint(node, st)
-    st
+    st = dupst(st); walk_taint(node, st); st
   end
   def walk_taint(node, st)
     return if !node.is_a?(Array)
-    st[node[1]] = TS_TOP if node[0] == :assign && node[1].is_a?(Symbol)
+    st[:v][node[1]] = TS_TOP if node[0] == :assign && node[1].is_a?(Symbol)
     node.each { |c| walk_taint(c, st) if c.is_a?(Array) }
   end
+  def ti_const?(sym); s = sym.to_s; s.length > 0 && (b = s.getbyte(0)) >= 65 && b <= 90; end
+  def ti_clean(m); m.to_s; end   # NB: real compiler uses clean_method_name; adequate for the dump
 
-  def ti_const?(sym)
-    s = sym.to_s
-    return false if s.length == 0
-    b = s.getbyte(0)
-    b >= 65 && b <= 90
-  end
-
-  # analyze a nested scope (defm/defun body) with a fresh state: params enter as TOP (interprocedural
-  # param typing is a later step). argi = index of the arg list.
   def analyze_body(node, argi)
-    st = {}
+    st = st0
     args = node[argi]
-    if args.is_a?(Array)
-      args.each { |a| st[a] = TS_TOP if a.is_a?(Symbol) }
-    end
+    args.each { |a| st[:v][a] = TS_TOP if a.is_a?(Symbol) } if args.is_a?(Array)
+    saved = @cur_class; @cur_class = nil
     eval_seq(node, argi + 1, st)
+    @cur_class = saved
   end
 
-  def analyze(prog)
-    eval(prog, {})
-    self
-  end
+  def analyze(prog); @cur_class = nil; @safe = compute_safe(prog); eval(prog, st0); self; end
 
-  # ---- annotated-AST dump ----
-  def dump(prog, io = STDOUT)
-    dump_node(prog, 0, io)
-  end
+  # ---- annotated dump ----
+  def dump(prog, io = STDOUT); dump_node(prog, 0, io); end
   def dump_node(node, indent, io)
     pad = "  " * indent
     if !node.is_a?(Array)
-      io.puts "#{pad}#{node.inspect}"
-      return
+      io.puts "#{pad}#{node.inspect}"; return
     end
     ann = @types[node.object_id]
+    g = @gen[node.object_id]
     suffix = ann ? "   :: #{ts_str(ann)}" : ""
+    suffix += "   [#{g}]" if g
     io.puts "#{pad}(#{node[0].inspect}#{suffix}"
-    node[1..-1].each { |c| dump_node(c, indent + 1, io) }
+    (node[1..-1] || []).each { |c| dump_node(c, indent + 1, io) }
     io.puts "#{pad})"
   end
 end
