@@ -180,7 +180,9 @@ class TypeInference
     return if !node.is_a?(Array)
     t = node[0]
     if t == :defm && node[1].is_a?(Symbol)
-      (out[node[1]] ||= []) << node   # record the whole defm; body scanned via its subtree
+      # NB explicit init, not `(h[k] ||= []) << v`: the op-assign-index form returns nil self-hosted.
+      out[node[1]] = [] if !out[node[1]]
+      out[node[1]] << node            # record the whole defm; body scanned via its subtree
     end
     node.each { |c| collect_defs(c, out, in_body) if c.is_a?(Array) }
   end
@@ -535,7 +537,11 @@ class TypeInference
     @incl.each  { |k, vs| classes[k] = true; vs.each { |v| classes[v] = true } }
     @methods.each_key { |k| classes[k[0]] = true }
     classes.each_key do |d|
-      mro(d).each { |c| (@descendants[c] ||= []) << d if c != d }
+      mro(d).each do |c|
+        next if c == d
+        @descendants[c] = [] if !@descendants[c]   # explicit init (op-assign-index returns nil self-hosted)
+        @descendants[c] << d
+      end
     end
   end
   # Devirt preconditions (mirrors the compiler's devirt_tables, kept self-contained here):
@@ -652,7 +658,8 @@ class TypeInference
       nprefix = prefix
       if node[1].is_a?(Symbol)
         q = prefix.empty? ? cn.to_s : "#{prefix}__#{cn}"
-        (@qnames[cn] ||= {})[q] = true             # record this class's fully-qualified label name
+        @qnames[cn] = {} if !@qnames[cn]           # explicit init (op-assign-index returns nil self-hosted)
+        @qnames[cn][q] = true                      # record this class's fully-qualified label name
         nprefix = q
       end
       if t == :class && node[2].is_a?(Symbol) && ti_const?(node[2])
@@ -679,7 +686,11 @@ class TypeInference
     if (s[0] == :call && s[1] == :include && s[2].is_a?(Array)) ||
        (s[0] == :callm && s[2] == :include && s[3].is_a?(Array))
       args = (s[0] == :call) ? s[2] : s[3]
-      args.each { |m| (@incl[cls] ||= []) << m if m.is_a?(Symbol) }
+      args.each do |m|
+        next if !m.is_a?(Symbol)
+        @incl[cls] = [] if !@incl[cls]             # explicit init (op-assign-index returns nil self-hosted)
+        @incl[cls] << m
+      end
     end
   end
 
