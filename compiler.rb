@@ -14,6 +14,7 @@ require 'extensions'
 require 'ast'
 require 'transform'
 require 'print_sexp'
+require 'type_inference'   # top-level: a class def must inline at top level, not inside compile()'s body
 
 require 'compile_arithmetic'
 require 'compile_comparisons'
@@ -2135,7 +2136,6 @@ class Compiler
     # sites to direct calls. Runs AFTER the tree-rewrites above so node identities match what compile_exp
     # walks. Sound-by-construction (see docs/devirt_plan.md); still validating on the full sweep.
     if ENV["DEVIRT"]
-      require 'type_inference'
       ti = TypeInference.new
       ti.analyze(exp)
       @devirt_labels = ti.devirt_map(exp)
