@@ -376,14 +376,28 @@ class TypeInference
   def ti_const?(sym); s = sym.to_s; s.length > 0 && (b = s.getbyte(0)) >= 65 && b <= 90; end
   def ti_clean(m); m.to_s; end   # NB: real compiler uses clean_method_name; adequate for the dump
 
+  # self inside a method of C is not just C: the method can be INHERITED, so at runtime self may be any
+  # descendant of C. Typing self as {C} + descendants keeps self-send devirt sound -- a self-send to a
+  # method some subclass overrides then sees non-invariant slots and bails, instead of wrongly binding the
+  # base label. (Without this, an inherited method's self-send to an overridden method miscompiles.)
+  def self_type_set(cls)
+    h = { cls => true }
+    (@descendants[cls] || []).each { |d| h[d] = true }
+    h
+  end
   def analyze_body(node, argi, cls, name)
     st = st0
-    st[:v][:self] = cls ? { cls => true } : TS_TOP
+    st[:v][:self] = cls ? self_type_set(cls) : TS_TOP
     args = node[argi]
     if args.is_a?(Array)
       i = 0
       args.each do |a|
-        st[:v][a] = (cls && name) ? @param_types[[cls, name, i]] : TS_TOP if a.is_a?(Symbol)
+        # An optional param is `[:name, :default, val]`, a splat `[:name, :rest]`, etc. -- NOT a bare Symbol.
+        # We must still seed it from @param_types (the passed-arg types); otherwise it is left unset, and the
+        # default-value prologue (`if numargs<N; name = default`) + "missing var => NilClass" in the merge
+        # makes it look like {NilClass} -- masking the real arg type and mis-devirtualizing e.g. `len.nil?`.
+        pname = a.is_a?(Symbol) ? a : ((a.is_a?(Array) && a[0].is_a?(Symbol)) ? a[0] : nil)
+        st[:v][pname] = (cls && name) ? @param_types[[cls, name, i]] : TS_TOP if pname
         i += 1
       end
     end
@@ -629,7 +643,15 @@ class TypeInference
   # is TOP or no matching (direct) method is found (inherited/method_missing not yet resolved).
   def interproc_call(recv_ty, name, argtypes)
     cs, all = callees(recv_ty, name)
-    return TS_TOP if cs == :unknown
+    if cs == :unknown
+      # Unresolved receiver -> this call could reach ANY method named `name`. For SOUND param typing we must
+      # widen every same-named method's params to TOP: otherwise a method whose real integer/other args only
+      # ever arrive through unknown receivers (e.g. String#[](i, len) called on a TOP receiver) would keep the
+      # under-approximated type from its remaining resolved/default call sites -> unsound devirt of a call on
+      # that param (e.g. `len.nil?` devirt'd to NilClass#nil?). See the selftest concat-on-84 regression.
+      widen_all_params_named(name, argtypes.length)
+      return TS_TOP
+    end
     cs.each do |c, m|
       i = 0
       argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
@@ -637,6 +659,16 @@ class TypeInference
     rt = all ? nil : TS_TOP     # an unresolved receiver class -> result could be anything
     cs.each { |c, m| rt = join(rt, @return_types[[c, m]]) }
     rt
+  end
+  def widen_all_params_named(name, argc)
+    @methods.each_key do |k|
+      next if k[1] != name
+      i = 0
+      while i < argc
+        grow_param([k[0], name, i], TS_TOP)
+        i += 1
+      end
+    end
   end
 
   def analyze(prog)
@@ -684,16 +716,28 @@ class TypeInference
   def devirt_map(prog)
     out = {}
     dv_collect(prog, out)
+    # DEVIRT_MAX=N (debug): keep only the first N devirt sites in tree order, to bisect a bad site.
+    if ENV["DEVIRT_MAX"]
+      lim = ENV["DEVIRT_MAX"].to_i
+      out = out.to_a[0, lim].to_h
+    end
     out
   end
-  def dv_collect(node, out)
+  def dv_collect(node, out, ctx = "toplevel")
     return if !node.is_a?(Array)
+    ctx = "#{node[1]}" if (node[0] == :class || node[0] == :module) && node[1].is_a?(Symbol)
+    ctx = "#{ctx}##{node[1]}" if node[0] == :defm && node[1].is_a?(Symbol)
     if node[0] == :callm && node[2].is_a?(Symbol)
       recv = @recv_type[node.object_id]
       d = recv ? devirt_decision(recv, node[2]) : nil
-      out[node.object_id] = d if d               # value = target defining class; compiler forms the label
+      if d
+        if ENV["DEVIRT_DUMP"]
+          STDERR.puts("SITE ##{out.size} in #{ctx}: #{d}##{node[2]}  recv_ts=#{ts_str(recv)}  recvnode=#{node[1].inspect[0,40]}")
+        end
+        out[node.object_id] = d                  # value = target defining class; compiler forms the label
+      end
     end
-    node.each { |c| dv_collect(c, out) if c.is_a?(Array) }
+    node.each { |c| dv_collect(c, out, ctx) if c.is_a?(Array) }
   end
 
   # ---- annotated dump ----
