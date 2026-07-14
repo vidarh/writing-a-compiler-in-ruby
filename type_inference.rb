@@ -233,6 +233,14 @@ class TypeInference
       end
     end
     return [TS_TOP, st] if !node.is_a?(Array)
+    # A node whose head is NOT a Symbol is a bare STATEMENT LIST (e.g. a when-body [[:assign,...],...], or a
+    # class/case body slice), not a tagged node. Evaluate every element from index 0 -- otherwise eval_node's
+    # default treats element 0 as a tag and eval_kids(node,1) DROPS the first statement, so its assignments
+    # are never seen and the vars it writes are under-approximated (e.g. `first = @s.get` in a case -> first
+    # stays {NilClass} -> `first == x` mis-devirtualized to NilClass#==).
+    if !node[0].is_a?(Symbol)
+      return eval_seq(node, 0, st)
+    end
     ty, st = eval_node(node, node[0], st)
     @types[node.object_id] = ty
     [ty, st]
@@ -298,11 +306,46 @@ class TypeInference
       rt, st = node[1] ? eval(node[1], st) : [TS_NIL, st]
       @cur_returns = join(@cur_returns, rt)
       [rt, st]
+    when :case  then eval_case(node, st)
     when :defm  then eval_defm(node, st)
     when :defun then analyze_body(node, 1, nil, nil); [{ :Proc => true }, st]
     when :class, :module then eval_classbody(node, t, st)
     else [TS_TOP, eval_kids(node, 1, st)]
     end
+  end
+
+  # [:case, subject, [[:when, cond, body], ...], else-body?]. Each when body is an ALTERNATIVE evaluated from
+  # the pre-case state; the result joins all branch values (+ nil / the else) and the state merges all
+  # branches (+ the no-match fall-through). Linear eval would both drop the no-match path AND thread one
+  # branch's assignments into the next -> unsound either way.
+  def eval_case(node, st)
+    _, st = eval(node[1], st) if node[1] && (node[1].is_a?(Array) || node[1].is_a?(Symbol))
+    pre = st
+    result = nil
+    merged = nil
+    whens = node[2]
+    if whens.is_a?(Array)
+      whens.each do |w|
+        next unless w.is_a?(Array) && w[0] == :when
+        cst = pre
+        _, cst = eval(w[1], cst) if w[1].is_a?(Array) || w[1].is_a?(Symbol)   # conditions (side effects/state)
+        bval = TS_NIL; bst = cst
+        i = 2
+        while i < w.length
+          bval, bst = eval(w[i], bst) if w[i].is_a?(Array) || w[i].is_a?(Symbol)
+          i += 1
+        end
+        result = join(result, bval)
+        merged = merged ? merge(merged, bst) : bst
+      end
+    end
+    if node[3]                                     # explicit else
+      ev, es = eval(node[3], pre)
+      result = join(result, ev); merged = merged ? merge(merged, es) : es
+    else                                           # no else: a no-match leaves state=pre, value nil
+      result = join(result, TS_NIL); merged = merged ? merge(merged, pre) : pre
+    end
+    [result.nil? ? TS_NIL : result, merged || pre]
   end
 
   # a class/module-body `def m`: static def -> set slot (C,m) = {__method_C_m}. Dynamic-name def would come
