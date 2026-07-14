@@ -268,7 +268,7 @@ class TypeInference
       end
       [tv, st]
     when :do    then eval_seq(node, 1, st)
-    when :if
+    when :if, :unless   # same [cond, then, else] shape; branch-join is symmetric so unless == if here
       _, s1 = eval(node[1], st)
       tt, sa = eval_arm(node[2], s1)
       tf, sb = eval_arm(node[3], s1)
@@ -307,6 +307,24 @@ class TypeInference
       rt, st = node[1] ? eval(node[1], st) : [TS_NIL, st]
       @cur_returns = join(@cur_returns, rt)
       [rt, st]
+    when :and, :or
+      # Short-circuit: node[2] may not run. Result = join of both operands; state merges "b ran" (sb) with
+      # "b skipped" (sa) -- else an assignment inside the RHS is threaded as if it always executes.
+      ta, sa = eval(node[1], st)
+      tb, sb = eval(node[2], sa)
+      [join(ta, tb), merge(sa, sb)]
+    when :or_assign, :and_assign
+      # `v ||= x` / `v &&= x`: v keeps its old value OR takes x -> new type = join(old v, type(x)).
+      tr, st = eval(node[2], st)
+      lhs = node[1]
+      if lhs.is_a?(Symbol)
+        old = st[:v].key?(lhs) ? st[:v][lhs] : TS_NIL
+        st = dupst(st); st[:v][lhs] = join(old, tr)
+        [st[:v][lhs], st]
+      else
+        [TS_TOP, st]                               # ivar/index target -- not a tracked local
+      end
+    when :block then eval_block(node, st)
     when :case  then eval_case(node, st)
     when :defm  then eval_defm(node, st)
     when :defun then analyze_body(node, 1, nil, nil); [{ :Proc => true }, st]
@@ -319,6 +337,32 @@ class TypeInference
   # the pre-case state; the result joins all branch values (+ nil / the else) and the state merges all
   # branches (+ the no-match fall-through). Linear eval would both drop the no-match path AND thread one
   # branch's assignments into the next -> unsound either way.
+  # [:block, args, body, (:rescue handler conds)..., (:ensure ...)]. A begin/rescue: an exception can raise
+  # ANYWHERE in the body, so a rescue handler is evaluated from merge(pre-body, post-body) -- covering both
+  # "nothing ran" and "body completed" -- and the block's result state merges the completed-body state with
+  # every handler's. Without this, a var assigned late in the body looks unconditionally set (drops the
+  # raised-early path).
+  def eval_block(node, st)
+    st = eval(node[1], st)[1] if node[1].is_a?(Array) && !node[1].empty?   # args (usually empty)
+    pre = st
+    bval, sb = node[2] ? eval(node[2], st) : [TS_NIL, st]
+    result = bval
+    merged = sb
+    i = 3
+    while i < node.length
+      r = node[i]
+      if r.is_a?(Array) && r[0] == :rescue
+        hstate = merge(pre, sb)
+        hval, hs = r[1] ? eval(r[1], hstate) : [TS_NIL, hstate]
+        result = join(result, hval)
+        merged = merge(merged, hs)
+      elsif r.is_a?(Array) || r.is_a?(Symbol)
+        _, merged = eval(r, merged)               # ensure / other trailing clause -- always runs
+      end
+      i += 1
+    end
+    [result, merged]
+  end
   def eval_case(node, st)
     _, st = eval(node[1], st) if node[1] && (node[1].is_a?(Array) || node[1].is_a?(Symbol))
     pre = st
