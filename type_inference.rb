@@ -279,6 +279,10 @@ class TypeInference
       argtypes, st = eval_args(node[3], st)
       if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])
         ty = { node[1] => true }                     # C.new -> an instance of C
+        # C.new(args) invokes C#initialize(args): flow the args into initialize's params, else every
+        # .new-argument param is under-approximated (an optional one collapses to its nil default) -> a
+        # later `!param` / `param.nil?` mis-devirtualizes. Discard the return (initialize's value is unused).
+        interproc_call(ty, :initialize, argtypes)
       else
         ty = interproc_call(recv_ty, node[2], argtypes)
       end
