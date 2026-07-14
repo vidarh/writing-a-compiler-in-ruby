@@ -9,6 +9,7 @@ require 'compiler'
   transform = !ARGV.include?("--notransform")
   nostabs = ARGV.include?("--nostabs")
   dumpsymtabs = ARGV.include?("--dumpsymtabs")
+  type_ast = ARGV.include?("--type-ast")
 
   # Option to not rewrite the parse tree (breaks compilation, but useful for debugging of the parser)
   OpPrec::TreeOutput.dont_rewrite if ARGV.include?("--dont-rewrite")
@@ -65,6 +66,14 @@ require 'compiler'
       if dump || dumpsymtabs
         print_sexp prog if dump
         c.global_scope.dump if dumpsymtabs
+        exit(0)
+      end
+
+      if type_ast
+        require 'type_inference'
+        ti = TypeInference.new
+        ti.analyze(prog)
+        ti.dump(prog)
         exit(0)
       end
 
