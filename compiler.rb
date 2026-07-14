@@ -1777,111 +1777,6 @@ class Compiler
   end
 
 
-  # ---- P1 devirtualization (see docs/devirt_plan.md) ----
-  # Sound against the __set_vtable contract: a method m's vtable slot on class C, where m is defined
-  # directly ONCE on C, is stable from C's setup onward UNLESS a runtime __set_vtable re-sets it. Runtime
-  # __set_vtable of a slot happens only via: a `def`/`alias` executed inside a block or method body (its
-  # target is a runtime self), or an `undef`. (A static class-body `def`/`alias`/`include` is init-time;
-  # `include` is first-wins so it can't overwrite an already-set direct slot; `prepend` is a no-op;
-  # dynamic-path `define_method` writes the side-table, which does NOT change a static slot in the current
-  # compiler.) So: devirt `recv.m` when recv is a typed literal of class C, C defines m directly exactly
-  # once, and m's NAME is never runtime-(re)defined/aliased/undef'd anywhere. Points-to is limited to
-  # typed literals in P1 (variable/param receivers are P2).
-  DEVIRT_LITERAL_CLASSES = { :Array => true, :String => true, :Hash => true, :Float => true,
-    :Symbol => true, :Integer => true }
-
-  # One walk producing [direct, unstable]:
-  #   direct   = {C => {m => static-class-body-def count}}  (the slot's compile-time function)
-  #   unstable = {m => true}  for names that can be runtime __set_vtable'd (def/alias inside a block or
-  #              method body) or undef'd -> not devirtualizable on any class.
-  def devirt_tables(exp)
-    direct = {}
-    unstable = {}
-    devirt_walk(exp, nil, false, direct, unstable)
-    [direct, unstable]
-  end
-
-  # cur_class: enclosing class/module for a static def (nil if none). in_rt: inside a method/block body
-  # (so a def/alias here is a RUNTIME __set_vtable on a points-to'd target).
-  def devirt_walk(node, cur_class, in_rt, direct, unstable)
-    return if !node.is_a?(Array)
-    t = node[0]
-    if t == :class || t == :module
-      cname = node[1].is_a?(Symbol) ? node[1] : nil
-      direct[cname] = {} if cname && !direct[cname]
-      i = (t == :class) ? 3 : 1        # class: [:class,name,super,*body]; module: [:module,name,*body]
-      devirt_walk(node[2], cur_class, in_rt, direct, unstable) if t == :class && node[2].is_a?(Array)
-      while i < node.length
-        devirt_walk(node[i], cname, in_rt, direct, unstable)
-        i += 1
-      end
-      return
-    end
-    if t == :defm
-      m = node[1]
-      if m.is_a?(Symbol)
-        if in_rt || cur_class.nil?
-          unstable[m] = true            # runtime def, or a def with no static class target
-        else
-          direct[cur_class][m] = (direct[cur_class][m] || 0) + 1
-        end
-      end
-      i = 2                             # method BODY runs at call time -> runtime, no class context
-      while i < node.length
-        devirt_walk(node[i], nil, true, direct, unstable)
-        i += 1
-      end
-      return
-    end
-    if t == :defun                       # block/lambda body -> runtime
-      i = 1
-      while i < node.length
-        devirt_walk(node[i], nil, true, direct, unstable)
-        i += 1
-      end
-      return
-    end
-    if t == :alias
-      unstable[node[1]] = true if in_rt && node[1].is_a?(Symbol)   # runtime alias re-sets new name's slot
-    elsif t == :undef
-      j = 1
-      while j < node.length
-        unstable[node[j]] = true if node[j].is_a?(Symbol)
-        j += 1
-      end
-    end
-    i = 0
-    while i < node.length
-      devirt_walk(node[i], cur_class, in_rt, direct, unstable) if node[i].is_a?(Array)
-      i += 1
-    end
-  end
-
-  # Typed-literal receiver -> its exact (named) class, else nil.
-  def devirt_literal_class(ob)
-    return nil if !ob.is_a?(Array)
-    return :Array if ob[0] == :array
-    return :Hash  if ob[0] == :hash
-    return :Float if ob[0] == :float
-    if ob[0] == :sexp
-      inner = ob[1]
-      return :String if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
-      if inner.is_a?(Symbol)
-        s = inner.to_s
-        return :String if s.length >= 5 && s[0, 5] == "__FSL"
-        return :Symbol if s.length >= 4 && s[0, 4] == "__S_"
-      end
-      return :Integer if inner.is_a?(Integer)
-    end
-    nil
-  end
-
-  def setup_devirt(exp)
-    d, u = devirt_tables(exp)
-    @devirt_direct = d
-    @devirt_unstable = u
-  end
-
   # The direct-call label for a devirtualizable :callm node `exp`, else nil. The type-inference pass
   # (gated by ENV["DEVIRT"]) maps the node to its target DEFINING CLASS; we form the actual method label
   # __method_<class>_<clean_method_name(m)> here so the operator/name mangling matches the emitted function.
@@ -1889,17 +1784,6 @@ class Compiler
     return nil if !@devirt_labels
     d = @devirt_labels[exp.object_id]
     d ? "__method_#{d}_#{clean_method_name(exp[2])}" : nil
-  end
-
-  # The direct-call label for a devirtualizable call, else nil.
-  def devirt_target(ob, method)
-    return nil if ENV["DEVIRT_OFF"] || !@devirt_direct || !method.is_a?(Symbol)
-    return nil if @devirt_unstable[method]                   # name can be runtime-modified
-    c = devirt_literal_class(ob)
-    return nil if !c || !DEVIRT_LITERAL_CLASSES[c]
-    d = @devirt_direct[c]
-    return nil if !d || d[method] != 1                       # not defined exactly once directly on C
-    "__method_#{c}_#{clean_method_name(method)}"
   end
 
   # We need to ensure we find the maximum

@@ -185,12 +185,15 @@ class TypeInference
     node.each { |c| collect_defs(c, out, in_body) if c.is_a?(Array) }
   end
   # a def/alias/undef anywhere inside a method body is a RUNTIME vtable modification.
-  def body_directly_modifies?(defm)
+  # NB: the parameter must NOT be named `defm` -- a param name equal to a node tag makes the method's args
+  # list the node [:defm], which depth_first(:defm) then mis-visits as a malformed def (nil name). See the
+  # node-tag/local-name collision class in the compiler.
+  def body_directly_modifies?(dm_node)
     found = false
     argi = 2
     i = argi + 1
-    while i < defm.length
-      found ||= subtree_modifies?(defm[i])
+    while i < dm_node.length
+      found ||= subtree_modifies?(dm_node[i])
       i += 1
     end
     found
