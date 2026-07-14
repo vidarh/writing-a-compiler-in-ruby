@@ -131,6 +131,34 @@ Residual conservative gap (not yet modelled; would only ever produce an UNSOUND 
 must be closed before enabling emission): reflective singleton installs like
 `recv.singleton_class.define_method(:m)`. Treat as a TODO gate for the consumer.
 
+## Points-to soundness invariant (the P2 consumer depends on this)
+
+The devirt decision consumes a MAY-points-to: a receiver's type-set must OVER-approximate every class it can
+hold at runtime. A too-NARROW set is the failure mode (a receiver typed {NilClass} that is really an Integer
+-> `x.nil?` devirt'd to NilClass#nil? which always returns true -> wrong branch -> crash). Every construct
+that can bind/assign a variable, or return a value, must therefore be modelled so the type only ever widens.
+Bugs found & fixed validating DEVIRT=1 against selftest + the compiler's own code (all were under-approx):
+
+- **Optional params** `x = nil` are `[:x, :default, :nil]` in the arg list (not a Symbol) -> must still be
+  seeded from @param_types, else the default prologue collapses them to {NilClass}.
+- **`C.new(args)`** must flow args into `initialize`'s params (else ctor params collapse to their defaults).
+- **`send`/`__send__`** dispatches to a runtime-chosen method -> widen every param of every method on the
+  receiver's classes to TOP. Same for any **TOP-receiver** call (widen all same-named methods' params).
+- **self** inside a method is {C} + descendants (an inherited method's self is a subclass).
+- **Bare statement lists** (head not a Symbol: when-bodies, body slices) eval from index 0, not 1 (else the
+  first statement -- often an assignment -- is dropped).
+- **Branch/flow constructs must join the not-taken path:** `:if`/`:unless` (join both arms), `:case`
+  (each when-body from the pre-state, merged with no-match/else), `:and`/`:or` short-circuit (RHS may skip),
+  `:or_assign`/`:and_assign` (`v ||= x` -> join(old v, x)), `:block` begin/rescue (handler from
+  merge(pre-body, post-body); an exception can raise anywhere).
+- **Blocks** capture outer vars into `__env__` -> read as TOP (sound). **Splat/yield/unknown returns** -> TOP.
+
+Result (2026-07-14): selftest passes DEVIRT on+off (Fails: 0); the devirt-compiled compiler is at PARITY
+with the normal one (both compile selftest correctly; both hit the same PRE-EXISTING self-host wall on
+driver.rb -- not a devirt bug). Measured self-compile speedup from devirt alone: ~2.4% (dispatch-read
+elimination; the larger win needs P3 inlining + P4 strength reduction). Debug hooks: DEVIRT_MAX=N (limit to
+first N sites, to bisect) and DEVIRT_DUMP (print each site with its enclosing method).
+
 ## Open questions to resolve while building P1 (don't guess -- verify in code)
 - How offsets are assigned for names only ever `define_method`'d (no static `def`) -- do they get a slot?
 - Whether any compiler/lib-core `__set_vtable` runs AFTER init against a class the compiler calls (would
