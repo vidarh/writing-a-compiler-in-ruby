@@ -89,13 +89,21 @@ unverified assumption. Listed so devirt does not silently consume an over-optimi
    rather than being modelled as the specific propagation they perform (this is why an `include M` body
    shows the included slot as UNK even though we resolve it fine via ancestry).
 
-2. **Label-based generation identity is name-scoped, not version-scoped.** A slot's function is labelled
-   `__method_<C>_<m>`, so two `def`s of the same `C#m` (a reopen with a different body) look like the SAME
-   function -> the analysis treats the slot as stable across the reopen. This is only sound if the
-   compiler's reopen codegen reuses the same symbol and the vtable slot keeps pointing at it (so a direct
-   `call __method_C_m` always reaches the current body). MUST verify how method reopening is compiled
-   (same symbol overwritten vs a fresh symbol + slot update) before emitting any direct call, or the
-   generation domain must carry a real version counter.
+2. **Label-based generation identity is name-scoped — RESOLVED into a hard devirt precondition.**
+   VERIFIED in codegen (2026-07-14): `compile_defm` names a method's function `__method_<C>_<m>` and then
+   calls `fname = @global_functions.set(fname, f)`; `Globals#set` (globals.rb:13) appends a `__N` suffix
+   whenever the name was already used, and the vtable install `__set_vtable(self, offset(m), fname.to_sym)`
+   uses the RETURNED (suffixed) name. So a static reopen of `C#m` emits `__method_C_m` AND
+   `__method_C_m__1`, and the LAST install wins the slot -> the live slot points at `__method_C_m__1`.
+   Confirmed on `class C; def m;1;end; def m;2;end; end`: two labels, two sequential installs, suffixed one
+   last. **Consequence:** a direct `call __method_C_m` is only correct when `(C,m)` is defined EXACTLY ONCE
+   statically on its defining class (no suffix was ever generated). **Sound devirt precondition (adopt):**
+   emit a direct call to `__method_<D>_<m>` only when, for the resolved defining class D, m is defined
+   exactly once statically on D (a per-`(class,method)` static-def count == 1) AND m is not runtime-
+   modifiable (no `def`/`alias`/`undef` of m inside any block/method body -- the `unstable` set). This is
+   exactly the count==1 + unstable guard already sketched in the leftover `devirt_target`/`devirt_tables`.
+   The flow-sensitive generation then only has to rule out an intervening override / runtime __set_vtable
+   within the receiver's live range; it never has to reason about which suffix is current.
 
 3. **Descendant propagation is applied eagerly at the `def`, not at the flow-order execution site.**
    `set_slot(C,m)` pushes into `@descendants[C]` immediately (using the static hierarchy), rather than
