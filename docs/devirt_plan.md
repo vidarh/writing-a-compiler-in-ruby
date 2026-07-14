@@ -75,6 +75,36 @@ those V and their G-ranges (from analysis 2), then the target is that single fun
 - **P3 — inlining** of statically-resolved small methods.
 - **P4 — strength reduction** on inlined fixnum/array primitives.
 
+## Known deficiencies in the current inference (must clear before trusting devirt)
+
+These are all currently SOUND (they only ever widen: to UNK / TOP), but imprecise or reliant on an
+unverified assumption. Listed so devirt does not silently consume an over-optimistic type.
+
+1. **Coarse call-invalidation.** A call whose target is a modifier or is unknown/dynamic invalidates
+   EVERY known slot to UNK (`invalidate_all`), rather than only the slots that call could actually reach
+   in the receiver's generation. Correct fix: per-`(class,method)` modification summaries (what vtable
+   slots each method can `__set_vtable`, via points-to on the modifier's receiver) so an unrelated call
+   leaves the rest of the generation intact. Until then `bar` erasing `foo` in `class A; def foo; bar;
+   def baz` is expected. `include`/`alias`/`define_method` calls fall under this too -- they invalidate
+   rather than being modelled as the specific propagation they perform (this is why an `include M` body
+   shows the included slot as UNK even though we resolve it fine via ancestry).
+
+2. **Label-based generation identity is name-scoped, not version-scoped.** A slot's function is labelled
+   `__method_<C>_<m>`, so two `def`s of the same `C#m` (a reopen with a different body) look like the SAME
+   function -> the analysis treats the slot as stable across the reopen. This is only sound if the
+   compiler's reopen codegen reuses the same symbol and the vtable slot keeps pointing at it (so a direct
+   `call __method_C_m` always reaches the current body). MUST verify how method reopening is compiled
+   (same symbol overwritten vs a fresh symbol + slot update) before emitting any direct call, or the
+   generation domain must carry a real version counter.
+
+3. **Descendant propagation is applied eagerly at the `def`, not at the flow-order execution site.**
+   `set_slot(C,m)` pushes into `@descendants[C]` immediately (using the static hierarchy), rather than
+   modelling `include M` / a class reopening at the point in the statement stream where it runs. Sound in
+   practice because a class cannot be instantiated before its body (which contains its `include`s) runs,
+   so no receiver of the not-yet-updated vtable can exist -- but the rigorous model applies each
+   `__set_vtable`-causing effect at its execution point. Revisit if any construct can observe a class
+   between a superclass/module modification and the child's own body.
+
 ## Open questions to resolve while building P1 (don't guess -- verify in code)
 - Exact eigenclass creation points and whether `recv[0]` observably becomes the eigenclass (so EIGEN is
   detectable / excludable).

@@ -95,17 +95,27 @@ class TypeInference
     return TS_UNK if sm == TS_UNK
     sm ? sm[m] : nil
   end
-  def set_slot(st, c, m, fnset)
-    st[:s] = st[:s].dup
+  def set_one(st, c, m, fnset)   # low-level: set slot (c,m) in an already-duped st[:s]
     sm = st[:s][c]
     if sm == TS_UNK
-      # class already unknowable; a known def re-pins this one slot
-      sm = { m => fnset }
+      sm = { m => fnset }        # class already unknowable; a known def re-pins this one slot
     else
       sm = (sm || {}).dup
       sm[m] = fnset
     end
     st[:s][c] = sm
+  end
+  # Setting slot (C,m) also PROPAGATES to every descendant of C that was still inheriting C's old m --
+  # mirroring __set_vtable's down-propagation into non-overriding children. This is a SOUNDNESS
+  # requirement: without it a subclass slot would look stable across a superclass `def` and be wrongly
+  # devirtualized. A descendant that overrode m (its slot != C's old value) keeps its own.
+  def set_slot(st, c, m, fnset)
+    old = slot(st, c, m)
+    st[:s] = st[:s].dup
+    set_one(st, c, m, fnset)
+    (@descendants[c] || []).each do |d|
+      set_one(st, d, m, fnset) if fn_inherits?(slot(st, d, m), old)
+    end
   end
   def make_class_unknowable(st, c)
     st[:s] = st[:s].dup
@@ -303,12 +313,8 @@ class TypeInference
   def eval_classbody(node, t, st)
     prev = @cur_class
     @cur_class = node[1].is_a?(Symbol) ? node[1] : nil
-    if t == :class
-      st = eval(node[2], st)[1] if node[2].is_a?(Array)   # superclass expr, outer scope
-      body = node[3]
-    else
-      body = node[2]
-    end
+    st = eval(node[2], st)[1] if t == :class && node[2].is_a?(Array)   # superclass expr, outer scope
+    body = node[3]                                          # class & module both: body at node[3]
     # body is a plain STATEMENT LIST (not a tagged node): evaluate each element in order.
     if body.is_a?(Array)
       body.each { |s| _, st = eval(s, st) if s.is_a?(Array) || s.is_a?(Symbol) }
@@ -395,6 +401,26 @@ class TypeInference
     @super   = {}          # class => superclass
     @incl    = {}          # class => [included module, ...]
     bm_walk(prog, :Object)
+    compute_descendants
+  end
+
+  # @descendants[C] = every class that has C in its MRO (transitive subclasses + includers). A `def C#m`
+  # propagates to these (mirroring __set_vtable's down-propagation) -- REQUIRED for a sound generation:
+  # a superclass/module modification changes the flattened slot of every non-overriding descendant.
+  def compute_descendants
+    @descendants = {}
+    classes = {}
+    @super.each { |k, v| classes[k] = true; classes[v] = true }
+    @incl.each  { |k, vs| classes[k] = true; vs.each { |v| classes[v] = true } }
+    @methods.each_key { |k| classes[k[0]] = true }
+    classes.each_key do |d|
+      mro(d).each { |c| (@descendants[c] ||= []) << d if c != d }
+    end
+  end
+  def fn_inherits?(dv, old)   # does descendant slot value `dv` still inherit parent's OLD value `old`?
+    return old.nil? if dv.nil?
+    return false if old.nil?
+    fn_eq(dv, old)
   end
   def bm_walk(node, cls)
     return if !node.is_a?(Array)
@@ -404,7 +430,7 @@ class TypeInference
       if t == :class && node[2].is_a?(Symbol) && ti_const?(node[2])
         @super[cn] = node[2]                       # class C < S
       end
-      body = (t == :class) ? node[3] : node[2]
+      body = node[3]                               # module is [:module, name, :Object, body], same as class
       if body.is_a?(Array)
         body.each do |s|
           bm_walk(s, cn)
