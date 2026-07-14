@@ -481,17 +481,22 @@ class TypeInference
   end
   def analyze_body(node, argi, cls, name)
     st = st0
-    st[:v][:self] = cls ? self_type_set(cls) : TS_TOP
+    # `name` is a Symbol only for a normal instance method. A SINGLETON def (`def self.m`/`def obj.m`) has an
+    # Array name and is NOT in @methods, so NO call ever records its params/return -> we cannot bound its
+    # arg types. Type self AND every param as TOP for those (and for blocks, cls=nil). Otherwise the params
+    # default to {NilClass} (bottom seed + the default prologue) and a check on them mis-devirtualizes --
+    # e.g. File.basename(name, suffix=nil)'s suffix looked {NilClass}, skipping the suffix-strip branch.
+    known = cls && name.is_a?(Symbol)
+    st[:v][:self] = known ? self_type_set(cls) : TS_TOP
     args = node[argi]
     if args.is_a?(Array)
       i = 0
       args.each do |a|
         # An optional param is `[:name, :default, val]`, a splat `[:name, :rest]`, etc. -- NOT a bare Symbol.
-        # We must still seed it from @param_types (the passed-arg types); otherwise it is left unset, and the
-        # default-value prologue (`if numargs<N; name = default`) + "missing var => NilClass" in the merge
-        # makes it look like {NilClass} -- masking the real arg type and mis-devirtualizing e.g. `len.nil?`.
+        # Seed it from @param_types (the passed-arg types) whichever form it takes; else the default-value
+        # prologue (`if numargs<N; name = default`) + "missing var => NilClass" makes it look {NilClass}.
         pname = a.is_a?(Symbol) ? a : ((a.is_a?(Array) && a[0].is_a?(Symbol)) ? a[0] : nil)
-        st[:v][pname] = (cls && name) ? @param_types[[cls, name, i]] : TS_TOP if pname
+        st[:v][pname] = known ? @param_types[[cls, name, i]] : TS_TOP if pname
         i += 1
       end
     end
