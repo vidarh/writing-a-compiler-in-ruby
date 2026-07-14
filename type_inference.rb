@@ -215,7 +215,8 @@ class TypeInference
       elsif ti_const?(node)
         return [TS_TOP, st]                          # constant reference
       else
-        return [TS_TOP, call_effect(st, node)]   # self.<name> call: effect per its summary
+        self_ty = st[:v][:self] || TS_TOP
+        return [interproc_call(self_ty, node, []), call_effect(st, node)]
       end
     end
     return [TS_TOP, st] if !node.is_a?(Array)
@@ -260,17 +261,27 @@ class TypeInference
       else eval_arm(alt, s1) end
     when :while, :until then eval_loop(node, st)
     when :callm
-      st = node[1] ? eval(node[1], st)[1] : st
-      st = eval_kids(node, 3, st)
-      st = call_effect(st, node[2])                  # method call: effect per its summary
-      ty = (node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])) ? { node[1] => true } : TS_TOP
+      recv_ty, st = node[1] ? eval(node[1], st) : [(st[:v][:self] || TS_TOP), st]
+      argtypes, st = eval_args(node[3], st)
+      if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])
+        ty = { node[1] => true }                     # C.new -> an instance of C
+      else
+        ty = interproc_call(recv_ty, node[2], argtypes)
+      end
+      st = call_effect(st, node[2])                  # generation effect per its summary
       [ty, st]
     when :call
-      st = eval_kids(node, 2, st)
+      argtypes, st = eval_args(node[2], st)
+      self_ty = st[:v][:self] || TS_TOP
+      ty = interproc_call(self_ty, node[1], argtypes)
       st = call_effect(st, node[1])
-      [TS_TOP, st]
+      [ty, st]
+    when :return
+      rt, st = node[1] ? eval(node[1], st) : [TS_NIL, st]
+      @cur_returns = join(@cur_returns, rt)
+      [rt, st]
     when :defm  then eval_defm(node, st)
-    when :defun then analyze_body(node, 1); [{ :Proc => true }, st]
+    when :defun then analyze_body(node, 1, nil, nil); [{ :Proc => true }, st]
     when :class, :module then eval_classbody(node, t, st)
     else [TS_TOP, eval_kids(node, 1, st)]
     end
@@ -285,7 +296,7 @@ class TypeInference
       set_slot(st, @cur_class, m, { "__method_#{@cur_class}_#{ti_clean(m)}" => true })
       @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
     end
-    analyze_body(node, 2)          # the method body is a separate scope
+    analyze_body(node, 2, @cur_class, m)   # the method body is a separate scope
     [m.is_a?(Symbol) ? { :Symbol => true } : TS_TOP, st]
   end
 
@@ -355,16 +366,129 @@ class TypeInference
   def ti_const?(sym); s = sym.to_s; s.length > 0 && (b = s.getbyte(0)) >= 65 && b <= 90; end
   def ti_clean(m); m.to_s; end   # NB: real compiler uses clean_method_name; adequate for the dump
 
-  def analyze_body(node, argi)
+  def analyze_body(node, argi, cls, name)
     st = st0
+    st[:v][:self] = cls ? { cls => true } : TS_TOP
     args = node[argi]
-    args.each { |a| st[:v][a] = TS_TOP if a.is_a?(Symbol) } if args.is_a?(Array)
-    saved = @cur_class; @cur_class = nil
-    eval_seq(node, argi + 1, st)
-    @cur_class = saved
+    if args.is_a?(Array)
+      i = 0
+      args.each do |a|
+        st[:v][a] = (cls && name) ? @param_types[[cls, name, i]] : TS_TOP if a.is_a?(Symbol)
+        i += 1
+      end
+    end
+    sc = @cur_class; sr = @cur_returns
+    @cur_class = nil; @cur_returns = nil
+    last, _ = eval_seq(node, argi + 1, st)
+    @cur_returns = join(@cur_returns, last)        # fall-through value is a return
+    grow_return([cls, name], @cur_returns) if cls && name
+    @cur_class = sc; @cur_returns = sr
   end
 
-  def analyze(prog); @cur_class = nil; @safe = compute_safe(prog); eval(prog, st0); self; end
+  # ---- interprocedural: build (class,name)->defm and its class; type self/params/returns ----
+  # Context-INSENSITIVE: a method's param i type = union of arg i over ALL its call sites; its return type
+  # = union of its return expressions; a call `recv.m` reaches method m of every class in type(recv)
+  # (self-send: recv=self, typed as the enclosing class). Mutual with points-to -> iterate to a fixpoint.
+  def build_methods(prog)
+    @methods = {}          # [class, name] => defm node
+    @mclass  = {}          # defm.object_id => class it is defined on
+    bm_walk(prog, :Object)
+  end
+  def bm_walk(node, cls)
+    return if !node.is_a?(Array)
+    t = node[0]
+    if t == :class || t == :module
+      cn = node[1].is_a?(Symbol) ? node[1] : cls
+      body = (t == :class) ? node[3] : node[2]
+      body.each { |s| bm_walk(s, cn) } if body.is_a?(Array)
+      return
+    end
+    if t == :defm && node[1].is_a?(Symbol)
+      @methods[[cls, node[1]]] = node
+      @mclass[node.object_id] = cls
+      # a method body's nested defs belong to a runtime target, not statically to cls -> don't recurse as cls
+      return
+    end
+    node.each { |c| bm_walk(c, cls) if c.is_a?(Array) }
+  end
+
+  # callees of a call to `name` given the receiver's type-set: [class,name] pairs, or :unknown if the
+  # receiver is TOP (any class) so we can't bound them.
+  def callees(recv_ts, name)
+    return :unknown if recv_ts == TS_TOP || recv_ts.nil?
+    out = []
+    recv_ts.each_key do |c|
+      out << [c, name] if @methods.key?([c, name])
+    end
+    out
+  end
+
+  # evaluate an argument list, threading state; return [ [type per arg], state ]
+  def eval_args(args, st)
+    types = []
+    if args.is_a?(Array)
+      args.each do |a|
+        if a.is_a?(Array) || a.is_a?(Symbol)
+          ty, st = eval(a, st); types << ty
+        end
+      end
+    elsif args.is_a?(Symbol)
+      ty, st = eval(args, st); types << ty
+    end
+    [types, st]
+  end
+
+  # interprocedural result of calling `name` on a receiver of type recv_ty with the given arg types:
+  # record args into the callees' param types, return the join of their return types. TOP if the receiver
+  # is TOP or no matching (direct) method is found (inherited/method_missing not yet resolved).
+  def interproc_call(recv_ty, name, argtypes)
+    cs = callees(recv_ty, name)
+    return TS_TOP if cs == :unknown || cs.empty?
+    cs.each do |c, m|
+      i = 0
+      argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
+    end
+    rt = nil
+    cs.each { |c, m| rt = join(rt, @return_types[[c, m]]) }
+    rt
+  end
+
+  def analyze(prog)
+    @cur_class = nil
+    @cur_returns = nil
+    @safe = compute_safe(prog)
+    build_methods(prog)
+    @param_types  = {}     # [class,name,i] => class-set
+    @return_types = {}     # [class,name]   => class-set
+    iter = 0
+    loop do
+      iter += 1
+      @changed = false
+      @types = {}
+      @gen = {}
+      @cur_class = :Object                        # top-level self is main, an Object
+      st = st0; st[:v][:self] = { :Object => true }
+      eval(prog, st)
+      break if !@changed || iter > 40
+    end
+    self
+  end
+
+  def grow_param(key, ts)
+    old = @param_types[key]
+    nu = join(old, ts)
+    if !ts_eq_maybe(old, nu); @param_types[key] = nu; @changed = true; end
+  end
+  def grow_return(key, ts)
+    old = @return_types[key]
+    nu = join(old, ts)
+    if !ts_eq_maybe(old, nu); @return_types[key] = nu; @changed = true; end
+  end
+  def ts_eq_maybe(a, b)
+    return true if a.equal?(b)
+    return false if a.nil? != b.nil?
+    ts_eq(a, b)
+  end
 
   # ---- annotated dump ----
   def dump(prog, io = STDOUT); dump_node(prog, 0, io); end
