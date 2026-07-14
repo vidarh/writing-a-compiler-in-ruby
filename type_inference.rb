@@ -392,6 +392,8 @@ class TypeInference
   def build_methods(prog)
     @methods = {}          # [class, name] => defm node
     @mclass  = {}          # defm.object_id => class it is defined on
+    @super   = {}          # class => superclass
+    @incl    = {}          # class => [included module, ...]
     bm_walk(prog, :Object)
   end
   def bm_walk(node, cls)
@@ -399,28 +401,64 @@ class TypeInference
     t = node[0]
     if t == :class || t == :module
       cn = node[1].is_a?(Symbol) ? node[1] : cls
+      if t == :class && node[2].is_a?(Symbol) && ti_const?(node[2])
+        @super[cn] = node[2]                       # class C < S
+      end
       body = (t == :class) ? node[3] : node[2]
-      body.each { |s| bm_walk(s, cn) } if body.is_a?(Array)
+      if body.is_a?(Array)
+        body.each do |s|
+          bm_walk(s, cn)
+          record_include(cn, s)                    # include M in the class body
+        end
+      end
       return
     end
     if t == :defm && node[1].is_a?(Symbol)
       @methods[[cls, node[1]]] = node
       @mclass[node.object_id] = cls
-      # a method body's nested defs belong to a runtime target, not statically to cls -> don't recurse as cls
       return
     end
     node.each { |c| bm_walk(c, cls) if c.is_a?(Array) }
   end
-
-  # callees of a call to `name` given the receiver's type-set: [class,name] pairs, or :unknown if the
-  # receiver is TOP (any class) so we can't bound them.
-  def callees(recv_ts, name)
-    return :unknown if recv_ts == TS_TOP || recv_ts.nil?
-    out = []
-    recv_ts.each_key do |c|
-      out << [c, name] if @methods.key?([c, name])
+  def record_include(cls, s)
+    return if !s.is_a?(Array)
+    if (s[0] == :call && s[1] == :include && s[2].is_a?(Array)) ||
+       (s[0] == :callm && s[2] == :include && s[3].is_a?(Array))
+      args = (s[0] == :call) ? s[2] : s[3]
+      args.each { |m| (@incl[cls] ||= []) << m if m.is_a?(Symbol) }
     end
-    out
+  end
+
+  # method-resolution order of C (C, its includes reversed, then the superclass's MRO). prepend omitted:
+  # it is a no-op in this compiler. Cycle-guarded.
+  def mro(c, seen = {})
+    return [] if c.nil? || seen[c]
+    seen[c] = true
+    chain = [c]
+    (@incl[c] || []).reverse_each { |m| chain.concat(mro(m, seen)) }
+    s = @super[c]
+    chain.concat(mro(s, seen)) if s && s != c
+    chain
+  end
+  # the class that actually defines `name` for an instance of c (walking the MRO), or nil (inherited from
+  # outside the analysed set / method_missing).
+  def resolve(c, name)
+    mro(c).each { |x| return x if @methods.key?([x, name]) }
+    nil
+  end
+
+  # callees of a call to `name` on a receiver of type recv_ts. Returns [pairs, all_resolved?]: the resolved
+  # [defining-class, name] pairs, and whether EVERY receiver class resolved (if not, the result must widen
+  # to include TOP -- an unresolved class means method_missing / a definer outside the analysed set).
+  def callees(recv_ts, name)
+    return [:unknown, false] if recv_ts == TS_TOP || recv_ts.nil?
+    out = []
+    all = true
+    recv_ts.each_key do |c|
+      r = resolve(c, name)
+      if r then out << [r, name] else all = false end
+    end
+    [out, all]
   end
 
   # evaluate an argument list, threading state; return [ [type per arg], state ]
@@ -442,13 +480,13 @@ class TypeInference
   # record args into the callees' param types, return the join of their return types. TOP if the receiver
   # is TOP or no matching (direct) method is found (inherited/method_missing not yet resolved).
   def interproc_call(recv_ty, name, argtypes)
-    cs = callees(recv_ty, name)
-    return TS_TOP if cs == :unknown || cs.empty?
+    cs, all = callees(recv_ty, name)
+    return TS_TOP if cs == :unknown
     cs.each do |c, m|
       i = 0
       argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
     end
-    rt = nil
+    rt = all ? nil : TS_TOP     # an unresolved receiver class -> result could be anything
     cs.each { |c, m| rt = join(rt, @return_types[[c, m]]) }
     rt
   end
