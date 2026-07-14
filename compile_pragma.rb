@@ -30,6 +30,10 @@ class Compiler
       return output_symbol_list(scope)
     when :frozen_string_list
       return output_frozen_string_list(scope)
+    when :type_effect
+      # A declaration consumed by the type inferencer (type_inference.rb compute_effects) to describe a
+      # reflective helper's net vtable effect. Pure annotation -- emit NO code.
+      return Value.new([:global, :nil])
     end
 
     error("Unknown pragma: #{type}")

@@ -495,6 +495,7 @@ class Class
   end
 
   def define_method(sym, body = nil, &block)
+    %s(__compiler_internal type_effect defines_slot 0)
     __raise_if_frozen
     pr = block ? block : body
     return nil if pr.nil?
@@ -543,12 +544,20 @@ class Class
   end
 
   # FIXME: Should handle multiple symbols
+  #
+  # The `%s(__compiler_internal type_effect ...)` lines are compiler pragmas (see compile_pragma.rb) that emit
+  # NO code -- they declare this reflective helper's net effect on the vtable so the type inferencer/
+  # devirtualiser need not decipher it from define_method's s-expressions. `defines_slot N` = defines an
+  # instance slot named by arg N, on self; `defines_slot_eq N` = defines the slot arg_N.to_s + "=".
   def attr_accessor sym
+    %s(__compiler_internal type_effect defines_slot 0)
+    %s(__compiler_internal type_effect defines_slot_eq 0)
     attr_reader sym
     attr_writer sym
   end
-  
+
   def attr_reader sym
+    %s(__compiler_internal type_effect defines_slot 0)
     define_method sym do
 #       %s(ivar self sym) # FIXME: Create the "ivar" s-exp directive.
       nil
@@ -556,6 +565,7 @@ class Class
   end
 
   def attr_writer sym
+    %s(__compiler_internal type_effect defines_slot_eq 0)
     # FIXME: Ouch: Requires both String, string interpolation and String#to_sym to
     # be implemented on top of define_method and "ivar"
     define_method "#{sym.to_s}=".to_sym do |val|

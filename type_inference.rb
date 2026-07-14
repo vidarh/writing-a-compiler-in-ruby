@@ -218,21 +218,31 @@ class TypeInference
     node.each { |c| collect_calls(c, out) if c.is_a?(Array) }
   end
 
-  # ---- reflection / open-world: which classes can gain DYNAMICALLY-NAMED methods via define_method ----
-  # (Literal `define_method(:foo)` is already rewritten to a static :defm, so a SURVIVING define_method call
-  # has a non-literal name -> the method it installs is unknown. A class that runs one in its body -- directly
-  # or via a "definer" helper like attr_reader that transitively calls define_method -- could therefore have
-  # ANY method overridden, so every call resolving to it (or a descendant) must NOT devirtualize.) This is
-  # coarse (whole class, not the specific name) but SOUND and preserves devirt on classes that never touch
-  # define_method (String/Integer/Array/...). It replaces the missing "collapse to unknowable" backstop.
-  def compute_dyn_defined(prog)
-    @dyn_defined = {}     # class => true : may gain a dynamically-named method
-    @dyn_any     = false  # a define_method with an unresolvable (dynamic) target class -> disable all devirt
-    definer = compute_definers(prog)
-    dd_walk(prog, nil, definer)
-    # NB no descendant propagation here -- devirt_decision walks each receiver's MRO and bails if ANY
-    # ancestor is @dyn_defined (a dynamic method on an ancestor is inherited), which is equivalent and
-    # avoids a second mutation pass over the hash.
+  # ---- reflection / generations: which SLOTS a class's generation may advance beyond a single static def ----
+  # A reflective helper (attr_reader/writer/accessor, define_method, ...) advances a SPECIFIC slot's
+  # generation. Rather than deciphering that from the helper's s-expressions, each core helper carries a
+  # `%s(__compiler_internal type_effect ...)` pragma (compile_pragma.rb) declaring its net effect; @effects
+  # maps the helper's NAME to that declaration. compute_slots then resolves a class-body call to the helper
+  # against the call's literal arg to mark exactly the affected slot @dyn_slot -- leaving the class's OTHER
+  # slots (ordinary `def`s) provably single-generation and devirtualizable. An un-annotated method that
+  # transitively calls define_method (a user-defined definer) has no pragma, so its target slot is unknown ->
+  # the whole class is marked @unknowable (the sound fallback). This replaces the old whole-class @dyn_defined.
+  def compute_effects(prog)
+    @effects = {}          # helper NAME => [[kind, arg-index], ...]
+    effects_walk(prog)
+  end
+  # An effect pragma sits as a body statement `[:sexp, [:__compiler_internal, :type_effect, kind, argi]]`.
+  def effects_walk(node, cur = nil)
+    return if !node.is_a?(Array)
+    if node[0] == :defm && node[1].is_a?(Symbol)
+      cur = node[1]
+    elsif node[0] == :sexp && node[1].is_a?(Array) && node[1][0] == :__compiler_internal &&
+          node[1][1] == :type_effect && cur
+      e = node[1]
+      @effects[cur] = [] if !@effects[cur]     # explicit init (op-assign-index returns nil self-hosted)
+      @effects[cur] << [e[2], e[3]]            # [kind, arg-index]
+    end
+    node.each { |c| effects_walk(c, cur) if c.is_a?(Array) }
   end
   # Method NAMEs that, when called (with class self), (transitively) run a define_method. attr_reader is a
   # base definer; attr_accessor calls attr_reader/attr_writer so the fixpoint pulls it in.
@@ -282,39 +292,169 @@ class TypeInference
     end
     definer
   end
-  # cur_class = the class whose BODY we are directly in (nil inside a method/block, where self is not a class).
-  # eigen = vars in scope bound to an eigenclass (`v = class << x; self; end`) -- a define_method on one of
-  # those defines a SINGLETON method, which is the @eigen_dynamic domain (gated at define_singleton_method
-  # CALL sites), not a named-class instance method, so it must NOT trip the instance-method @dyn analysis.
-  def dd_walk(node, cur_class, definer, eigen = {})
+  # Per-slot generation state (replaces the whole-class @dyn_defined, the per-name @unstable, and the global
+  # @eigen_dynamic). ONE walk populates:
+  #   @slot_defs[[C,m]] = number of STATIC class-body defs of m on C. >1 => Globals#set suffixed the label =>
+  #                       the base name is not the live slot (a later generation replaced it).
+  #   @dyn_slot[[C,m]]  = slot (C,m) may be (re)set at runtime or by a reflective helper on THIS class => its
+  #                       generation range is not a single static label => not devirtualizable.
+  #   @unknowable[C]    = C may gain an ARBITRARILY-named method (dynamic-name define_method / un-annotated
+  #                       user definer whose target slot we cannot resolve) => none of C's slots are stable.
+  #   @dyn_singleton[m] = m may be installed as a SINGLETON on some object (def obj.m / extend / eigenclass
+  #                       define_method) => not devirtualizable on any receiver (narrow per-name open-world
+  #                       residue: we cannot pin object identity).
+  #   @dyn_global       = a reflective op with an unbounded target class in effective code => disable devirt.
+  def compute_slots(prog)
+    @slot_defs = {}
+    @dyn_slot = {}
+    @unknowable = {}
+    @dyn_singleton = {}
+    @dyn_global = false
+    @definer = compute_definers(prog)
+    slot_walk(prog, nil, false, {})
+  end
+  def set_dyn_slot(c, m); @dyn_slot[[c, m]] = true if c && m.is_a?(Symbol); end
+  # A symbol-LITERAL argument ([:sexp,:__S_foo] -> :foo). Strict: a bare Symbol is a VARIABLE reference, not a
+  # literal, so it returns nil (an unresolvable dynamic name) -- never mistakes `attr_reader var` for a slot.
+  def sym_arg(node)
+    if node.is_a?(Array) && node[0] == :sexp && node[1].is_a?(Symbol)
+      s = node[1].to_s
+      return s[4, s.length].to_sym if s.length > 4 && s[0, 4] == "__S_"
+    end
+    nil
+  end
+  # arg i of a :call/:callm arg node, which is either an Array of args or a single bare arg.
+  def call_arg(a, i)
+    return a[i] if a.is_a?(Array)
+    return a if i == 0
+    nil
+  end
+  # lex = nearest lexically-enclosing named class (default definee for `def`/`alias`), nil if none.
+  # in_rt = inside a method/block body -> self is not a class object, and a `def` here modifies at runtime.
+  # eigen = locals in this body bound to an eigenclass (`v = class << x; self; end`).
+  def slot_walk(node, lex, in_rt, eigen)
     return if !node.is_a?(Array)
     t = node[0]
     if t == :class || t == :module
-      cn = node[1].is_a?(Symbol) ? node[1] : nil
-      node[3].each { |s| dd_walk(s, cn, definer, eigen) } if node[3].is_a?(Array)
+      if node[1].is_a?(Symbol)
+        slot_walk(node[2], lex, in_rt, eigen) if t == :class && node[2].is_a?(Array)   # superclass expr
+        node[3].each { |s| slot_walk(s, node[1], false, {}) } if node[3].is_a?(Array)   # body: self=this class
+      else                                              # `class << recv` -- defs here install singletons
+        node[3].each { |s| slot_walk(s, nil, true, eigen) } if node[3].is_a?(Array)
+      end
       return
     end
-    if t == :defm || t == :defun
-      ev = {}; collect_eigen_vars(node, ev)           # eigenclass-bound vars local to this body
-      node.each { |c| dd_walk(c, nil, definer, ev) if c.is_a?(Array) }   # method/block body: self != class
+    if t == :defm
+      slot_def(node, lex, in_rt)
+      ev = {}; collect_eigen_vars(node, ev)
+      i = 2
+      while i < node.length; slot_walk(node[i], lex, true, ev); i += 1; end   # body runs at call time
       return
     end
-    if t == :call && node[1].is_a?(Symbol) && (node[1] == :define_method || definer[node[1]])
-      @dyn_defined[cur_class] = true if cur_class     # implicit self in a class body -> targets that class
+    if t == :defun
+      ev = {}; collect_eigen_vars(node, ev)
+      i = 1
+      while i < node.length; slot_walk(node[i], lex, true, ev); i += 1; end   # block/lambda body: runtime
+      return
+    end
+    if t == :call && node[1].is_a?(Symbol)
+      reflect_call(node[1], node[2], (in_rt ? nil : lex), in_rt, nil, eigen)   # implicit self = lex in a body
     elsif t == :callm && node[2].is_a?(Symbol)
-      m = node[2]
-      if m == :send || m == :__send__                 # recv.send(:define_method, ...) -- the reflective form
-        m = (node[3].is_a?(Array) ? sym_lit_name(node[3][0]) : nil)
+      reflect_callm(node, lex, in_rt, eigen)
+    elsif t == :alias
+      set_dyn_slot(lex, node[1]) if node[1].is_a?(Symbol)     # alias (re)sets the new name's slot
+    elsif t == :undef
+      j = 1
+      while j < node.length; set_dyn_slot(lex, node[j]); j += 1; end
+    end
+    node.each { |c| slot_walk(c, lex, in_rt, eigen) if c.is_a?(Array) }
+  end
+  def slot_def(node, lex, in_rt)
+    m = node[1]
+    if m.is_a?(Symbol)
+      if in_rt
+        # A runtime `def` (inside a method/block body). Its default definee is not statically reliable -- a
+        # block may be class_eval'd onto another class -- so bail m globally (the old @unstable semantics)
+        # rather than risk an unsound per-slot attribution to the lexical class.
+        @dyn_singleton[m] = true
+      elsif lex
+        @slot_defs[[lex, m]] = (@slot_defs[[lex, m]] || 0) + 1                  # static class-body def
+      else
+        @dyn_singleton[m] = true                                              # top-level/unknown-target def
       end
-      if m && (m == :define_method || definer[m])
-        r = node[1]
-        if r.is_a?(Symbol) && eigen[r] then           # singleton def on an eigenclass -> @eigen domain, skip
-        elsif r == :self then (@dyn_defined[cur_class] = true if cur_class)
-        elsif r.is_a?(Symbol) && ti_const?(r) then @dyn_defined[r] = true
-        else @dyn_any = true end                      # dynamic receiver class -> can't bound it
+    elsif m.is_a?(Array) && m[1].is_a?(Symbol)                                # singleton `def recv.m`
+      r = m[0]
+      # class-body `def self.m` / `def Const.m` is a CLASS method (on the class object's eigenclass); it does
+      # not affect instance-method dispatch. Anything else installs a singleton on some object.
+      unless !in_rt && (r == :self || (r.is_a?(Symbol) && ti_const?(r)))
+        @dyn_singleton[m[1]] = true
       end
     end
-    node.each { |c| dd_walk(c, cur_class, definer, eigen) if c.is_a?(Array) }
+  end
+  def reflect_callm(node, lex, in_rt, eigen)
+    m = node[2]; r = node[1]; args = node[3]
+    if m == :send || m == :__send__                     # recv.send(:name, ...) -- reflective form
+      nm = args.is_a?(Array) ? sym_arg(args[0]) : sym_arg(args)
+      return if nm.nil?
+      rest = args.is_a?(Array) ? args[1, args.length] : nil   # drop the leading name -> indices line up
+      reflect_call(nm, rest, callm_target(r, lex, in_rt), in_rt, r, eigen)
+      return
+    end
+    return mark_extend(args) if m == :extend
+    reflect_call(m, args, callm_target(r, lex, in_rt), in_rt, r, eigen)
+  end
+  # The class an explicit receiver denotes when statically pinnable to a concrete class body: `self` in a
+  # class body -> that class; a constant -> that constant. Otherwise nil (unknown / eigen / instance).
+  def callm_target(r, lex, in_rt)
+    return nil if in_rt
+    return lex if r == :self
+    return r if r.is_a?(Symbol) && ti_const?(r)
+    nil
+  end
+  def reflect_call(name, args, tclass, in_rt, recv, eigen)
+    return if name.nil?
+    return apply_singleton_define(args) if name == :define_singleton_method
+    # define_method on an eigenclass-bound var (`v = class << x; self; end`) installs a SINGLETON on some
+    # object x -> the eigenclass open-world domain, which does not affect named-class instance-method
+    # dispatch here. Skip (matches the pre-generation analysis; documented residual hole).
+    return if recv.is_a?(Symbol) && eigen && eigen[recv]
+    return apply_pragma_effect(name, args, tclass) if @effects[name]
+    if name == :define_method || (name.is_a?(Symbol) && @definer[name])   # define_method / un-annotated definer
+      if tclass then @unknowable[tclass] = true          # can't resolve the slot -> any of tclass's may change
+      elsif !in_rt then @dyn_global = true end            # unbounded target class in effective code
+      # in_rt with no tclass: a definer forwarding inside a method body -- its net effect is recorded at the
+      # concrete-class use site, nothing to add here.
+    end
+  end
+  def apply_pragma_effect(name, args, tclass)
+    return if tclass.nil?                                 # helper not invoked with a concrete class self
+    effs = @effects[name]
+    i = 0
+    while i < effs.length
+      e = effs[i]; i += 1
+      sv = sym_arg(call_arg(args, e[1]))
+      if sv.nil? then @unknowable[tclass] = true          # dynamic slot name -> any of tclass's slots
+      elsif e[0] == :defines_slot then set_dyn_slot(tclass, sv)
+      elsif e[0] == :defines_slot_eq then set_dyn_slot(tclass, (sv.to_s + "=").to_sym)
+      end
+    end
+  end
+  def apply_singleton_define(args)
+    nm = sym_arg(call_arg(args, 0))
+    if nm then @dyn_singleton[nm] = true else @dyn_global = true end
+  end
+  # `recv.extend(Mod)` installs Mod's (and its ancestors') instance methods as singletons on recv -> those
+  # names become eigenclass overrides on some object -> not devirtualizable. Literal module const: mark those
+  # names @dyn_singleton. Dynamic module expr: unbounded -> @dyn_global.
+  def mark_extend(args)
+    return (@dyn_global = true) if !args.is_a?(Array)
+    args.each do |a|
+      if a.is_a?(Symbol) && ti_const?(a)
+        mro(a).each { |c| @methods.each_key { |k| @dyn_singleton[k[1]] = true if k[0] == c } }
+      elsif a.is_a?(Array)
+        @dyn_global = true
+      end
+    end
   end
   def collect_eigen_vars(node, out)
     return if !node.is_a?(Array)
@@ -324,17 +464,6 @@ class TypeInference
     end
     node.each { |c| collect_eigen_vars(c, out) if c.is_a?(Array) }
   end
-  # the Symbol name of a symbol-literal arg (`[:sexp, :__S_foo]` -> :foo), else nil.
-  def sym_lit_name(node)
-    return node if node.is_a?(Symbol)
-    if node.is_a?(Array) && node[0] == :sexp && node[1].is_a?(Symbol)
-      s = node[1].to_s
-      # NB use the (start, length) form, not s[4..-1] -- a negative-end Range slice is self-host-fragile.
-      return s[4, s.length].to_sym if s.length > 4 && s[0, 4] == "__S_"
-    end
-    nil
-  end
-
   # ---- eval: [type-set, state] ----
   def eval(node, st)
     return [TS_NIL, st] if node == :nil
@@ -666,110 +795,41 @@ class TypeInference
       end
     end
   end
-  # Devirt preconditions (mirrors the compiler's devirt_tables, kept self-contained here):
-  #   @defcount[[C,m]] = number of STATIC (class-body, not in a block/method) defs of m directly on C.
-  #                      >1 means Globals#set suffixed the label -> the base name is not the live slot.
-  #   @unstable[m]     = m is def'd/alias'd/undef'd inside a block or method body somewhere -> its slot can
-  #                      be runtime __set_vtable'd -> not devirtualizable on ANY class.
-  def compute_preconditions(prog)
-    @defcount = {}
-    @unstable = {}
-    @eigen_dynamic = false   # a define_singleton_method / dynamic extend we can't name -> disable all devirt
-    pre_walk(prog, nil, false)
-  end
-  def pre_walk(node, cur_class, in_rt)
-    return if !node.is_a?(Array)
-    t = node[0]
-    if t == :class || t == :module
-      # NB: `class << recv` is [:class, [:eigen, recv], ...] -- node[1] is an Array, so cname=nil and the
-      # inner defs fall into the cur_class.nil? branch below -> marked unstable. That is exactly right: a
-      # def in a singleton class installs an eigenclass override, so that method is not devirtualizable.
-      cname = node[1].is_a?(Symbol) ? node[1] : nil
-      pre_walk(node[2], cur_class, in_rt) if t == :class && node[2].is_a?(Array)   # superclass expr
-      node[3].each { |s| pre_walk(s, cname, in_rt) } if node[3].is_a?(Array)
-      return
-    end
-    if t == :defm
-      m = node[1]
-      if m.is_a?(Symbol)
-        if in_rt || cur_class.nil?
-          @unstable[m] = true                     # runtime def, or a def with no static class target
-        else
-          @defcount[[cur_class, m]] = (@defcount[[cur_class, m]] || 0) + 1
-        end
-      elsif m.is_a?(Array) && m[1].is_a?(Symbol)
-        @unstable[m[1]] = true                    # singleton `def recv.m` -> eigenclass override of m
-      end
-      i = 2                                        # the method BODY runs at call time -> runtime context
-      while i < node.length; pre_walk(node[i], nil, true); i += 1; end
-      return
-    end
-    if t == :callm && node[2] == :define_singleton_method
-      @eigen_dynamic = true                        # installs a singleton method (name hard to read post-rewrite)
-    elsif t == :callm && node[2] == :extend
-      mark_extend(node[3])                          # module's instance methods become singletons on the recv
-    end
-    if t == :defun                                 # block/lambda body -> runtime context
-      i = 1
-      while i < node.length; pre_walk(node[i], nil, true); i += 1; end
-      return
-    end
-    if t == :alias
-      @unstable[node[1]] = true if in_rt && node[1].is_a?(Symbol)   # runtime alias re-sets new name's slot
-    elsif t == :undef
-      j = 1
-      while j < node.length
-        @unstable[node[j]] = true if node[j].is_a?(Symbol)
-        j += 1
-      end
-    end
-    node.each { |c| pre_walk(c, cur_class, in_rt) if c.is_a?(Array) }
-  end
-
-  # The sound direct-call label for `recv.m` given the receiver's inferred type-set, or nil if not
-  # devirtualizable. Requires: a concrete named-class set (no TOP/UNK/eigen), every class resolves through
-  # the MRO to a defining class D with EXACTLY ONE static def of m (so the label carries no __N suffix and
-  # is the live slot -- see devirt_plan.md deficiency #2), m not runtime-modifiable (@unstable), and the
-  # SAME label across the whole set (polymorphic-but-slot-invariant still devirtualizes).
-  # `recv.extend(Mod)` installs Mod's (and Mod's ancestors') instance methods as singletons on recv -> those
-  # names become eigenclass overrides on some object -> not devirtualizable anywhere. Literal module const:
-  # mark exactly those names. Dynamic module expr: we can't name them -> disable all devirt (@eigen_dynamic).
-  def mark_extend(args)
-    return (@eigen_dynamic = true) if !args.is_a?(Array)
-    args.each do |a|
-      if a.is_a?(Symbol) && ti_const?(a)
-        mro(a).each { |c| @methods.each_key { |k| @unstable[k[1]] = true if k[0] == c } }
-      elsif a.is_a?(Array)
-        @eigen_dynamic = true                      # a computed module -> unknown method names
-      end
-    end
-  end
-
   # Returns the target DEFINING CLASS (a symbol) for a devirtualizable `recv.m`, or nil. The compiler turns
-  # that into the actual label __method_<D>_<clean_method_name(m)> (it owns the name-mangling). Requires: a
-  # concrete named-class set (no TOP/UNK), every class resolves through the MRO to the SAME defining class D
-  # (slot-invariant across the set -- polymorphic-but-slot-invariant still devirtualizes), D has EXACTLY ONE
-  # static def of m (no __N suffix -> base name is the live slot), m not runtime-modifiable (@unstable) nor a
-  # singleton override anywhere, and D is label-safe (unique + top-level so its label name is reconstructable).
+  # that into the actual label __method_<D>_<clean_method_name(m)> (it owns the name-mangling). This is the
+  # (V,G) base case: for EVERY class V the receiver may hold, slot m must be a single static function across
+  # its whole generation range. Here G is over-approximated to all generations (a slot devirts iff it is
+  # defined by exactly ONE static def and never advanced by a reflective helper / runtime def on any ancestor
+  # up to the resolver) -- sound; per-receiver generation ranges are a later refinement. Requires: a concrete
+  # named-class set (no TOP/UNK), each class resolves through the MRO to the SAME defining class D
+  # (slot-invariant across the set), D's slot m single-static-generation (@slot_defs==1, no @dyn_slot/
+  # @unknowable on any nearer ancestor), m not a singleton on some object (@dyn_singleton), and D label-safe.
   def devirt_decision(recv_ts, m)
-    return nil if @eigen_dynamic || @dyn_any        # a define_method whose target/name we can't bound
+    return nil if @dyn_global                        # an unbounded reflective op -> no devirt anywhere
     return nil if !recv_ts.is_a?(Hash) || recv_ts.empty?
-    return nil if @unstable[m]
+    return nil if @dyn_singleton[m]                  # m may be a singleton on some object -> can't pin dispatch
     target = nil
-    recv_ts.each_key do |c|
-      # c or any ANCESTOR may gain a dynamically-named method (define_method) which c would inherit -> any
-      # of c's methods could then be overridden -> can't devirt.
+    # NB .keys + while, not recv_ts.each_key { ... target = d ... }: an each_key block over a POPULATED hash
+    # that mutates a captured local segfaults the self-hosted compiler.
+    cs = recv_ts.keys
+    ci = 0
+    while ci < cs.length
+      c = cs[ci]; ci += 1
+      d = resolve(c, m)
+      return nil if d.nil?                           # inherited from outside the analysed set / method_missing
+      # Walk c's MRO down to d: a NEARER ancestor whose slot m is dynamically modified, or which may gain
+      # arbitrarily-named methods, would SHADOW d at runtime -> not devirtualizable.
       anc = mro(c)
       k = 0
       while k < anc.length
-        return nil if @dyn_defined[anc[k]]
-        k += 1
+        a = anc[k]; k += 1
+        return nil if @unknowable[a]
+        return nil if @dyn_slot[[a, m]]
+        break if a == d
       end
-      d = resolve(c, m)
-      return nil if d.nil?                         # inherited from outside the analysed set / method_missing
-      return nil if @defcount[[d, m]] != 1         # not defined exactly once statically on D
-      return nil if !label_safe?(d)                # label name not reconstructable (nested / colliding)
-      return nil if target && target != d          # slot not invariant across the receiver set
+      return nil if @slot_defs[[d, m]] != 1          # not defined exactly once statically on d (else suffixed)
+      return nil if !label_safe?(d)                  # label name not reconstructable (nested / colliding)
+      return nil if target && target != d            # slot not invariant across the receiver set
       target = d
     end
     target
@@ -926,8 +986,8 @@ class TypeInference
     @cur_returns = nil
     @safe = compute_safe(prog)
     build_methods(prog)
-    compute_preconditions(prog)
-    compute_dyn_defined(prog)
+    compute_effects(prog)
+    compute_slots(prog)
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
     iter = 0
