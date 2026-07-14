@@ -285,6 +285,7 @@ class TypeInference
       recv_ty, st = node[1] ? eval(node[1], st) : [(st[:v][:self] || TS_TOP), st]
       @recv_type[node.object_id] = recv_ty          # for the devirt-decision annotation in the dump
       argtypes, st = eval_args(node[3], st)
+      widen_all_params_of(recv_ty) if node[2] == :send || node[2] == :__send__   # dynamic dispatch
       if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])
         ty = { node[1] => true }                     # C.new -> an instance of C
         # C.new(args) invokes C#initialize(args): flow the args into initialize's params, else every
@@ -713,6 +714,23 @@ class TypeInference
       i = 0
       while i < argc
         grow_param([k[0], name, i], TS_TOP)
+        i += 1
+      end
+    end
+  end
+  # `recv.send(name, *args)` / `__send__` dispatches to a method chosen at runtime -- we can't resolve which,
+  # so every param of every method reachable on recv's classes could receive these args. Widen them ALL to
+  # TOP (across every param position), else a method only ever called via send keeps its default-nil param
+  # types and gets wrongly devirtualized (e.g. compile_* dispatched by Compiler#compile_exp's send).
+  def widen_all_params_of(recv_ty)
+    all = (recv_ty == TS_TOP || recv_ty.nil? || !recv_ty.is_a?(Hash))
+    @methods.each do |k, dm|
+      next if !all && !recv_ty.key?(k[0])
+      args = dm[2]
+      argc = args.is_a?(Array) ? args.length : 0
+      i = 0
+      while i < argc
+        grow_param([k[0], k[1], i], TS_TOP)
         i += 1
       end
     end
