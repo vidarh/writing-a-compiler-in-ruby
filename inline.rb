@@ -14,9 +14,9 @@ class Compiler
   #                        receiver[offset]). Offsets come from dclass's ClassScope, so this is general --
   #                        NOT getter-specific; getters/setters are merely the trivial one-statement cases.
   #   a parameter       -> the corresponding argument expression
-  # Receiver and arguments are each evaluated ONCE into a fresh temp (unless already a bare local/self/
-  # literal, which is side-effect-free and substituted directly), so multiple uses in the body don't
-  # re-run side effects. Returns a spliceable AST, or nil to fall back to the direct devirt call.
+  # Receiver and arguments must be side-effect-free (see inline_side_effect_free?) so they can be
+  # substituted directly into the body without temp binding. Multiple uses therefore do not re-run side
+  # effects. Returns a spliceable AST, or nil to fall back to the direct devirt call.
   def inline_devirt_body(scope, recv, args, dclass, defm)
     # Only inline inside a method/block body. At top level (main's @global_scope) a bare local used as the
     # raw-index base resolves through a path the `%s(index ...)` primitive can't load (atype "e"); those call
@@ -32,6 +32,10 @@ class Compiler
     args = [args] if !args.is_a?(Array)
     return nil if args.length != params.length
     body = defm[3]                                    # compile_defm compiles this SINGLE node as the body
+    return nil if body.nil?
+
+    # Strip a trailing explicit return where it is equivalent to the body's value.
+    body, _ = inline_unwrap_return(body)
     return nil if body.nil?
     return nil if !inline_safe_node?(body, params)
 
@@ -52,12 +56,11 @@ class Compiler
       STDERR.puts "[inline ##{@inline_dbg}] #{dclass}##{defm[1]} recv=#{recv.inspect[0,40]} args=#{args.inspect[0,40]} body=#{body.inspect[0,60]}" if ENV["INLINE_DEBUG"]
     end
 
-    # Direct substitution: self -> recv, ivar -> raw index on recv, params -> arg exprs. No [:let] rebinding
-    # -- [:let] is unreliable as an EXPRESSION VALUE (its register eviction clobbers the result). So operands
-    # must be side-effect-free (a bare local/self/literal) and substituted directly; the caller materialises
-    # the spliced result (see compile_callm) so it can be used in argument position.
-    return nil if !inline_pure?(recv)
-    return nil if args.any? { |a| !inline_pure?(a) }
+    # Direct substitution: self -> recv, ivar -> raw index on recv, params -> arg exprs. Operands must be
+    # side-effect-free so they can be duplicated/substituted directly; the caller materialises the spliced
+    # result (see compile_callm) so it can be used in argument position.
+    return nil if !inline_side_effect_free?(recv)
+    return nil if args.any? { |a| !inline_side_effect_free?(a) }
     @inline_count = (@inline_count || 0) + 1
     subst = { :self => recv }
     i = 0
@@ -72,6 +75,47 @@ class Compiler
   # Side-effect-free and safely re-substitutable: a bare local var, self, or a small literal.
   def inline_pure?(e)
     e == :self || e == :nil || e == :true || e == :false || e.is_a?(Integer) || e.is_a?(Symbol)
+  end
+
+  # True for expressions that can be duplicated or used multiple times without changing program semantics:
+  # literals, self/params/locals, ivar reads, constants, and pure arithmetic/raw-index operations. Excludes
+  # anything that allocates, calls a method, performs assignment, or contains control flow.
+  def inline_side_effect_free?(e)
+    return true if e == :self || e == :nil || e == :true || e == :false
+    return true if e.is_a?(Integer) || e.is_a?(String)
+    if e.is_a?(Symbol)
+      return true if inline_ivar?(e) || ti_const_name?(e)
+      return true                                   # a local/param/constant/keyword symbol
+    end
+    return false if !e.is_a?(Array)
+    h = e[0]
+    case h
+    when :call, :callm, :yield, :super, :block, :proc, :lambda, :defun, :defm,
+         :while, :until, :case, :return, :next, :break, :redo,
+         :assign, :and_assign, :or_assign, :let, :sexp, :array, :hash, :float
+      false
+    else
+      e[1..-1].all? { |c| inline_side_effect_free?(c) }
+    end
+  end
+
+  # If `body` is a single [:return, expr], return [expr, true]. If it is a [:do, ..., [:return, expr]]
+  # whose final statement is a return and there is no earlier return, return [the :do with the trailing
+  # return stripped, true]. Otherwise return [body, false].
+  def inline_unwrap_return(body)
+    return [body, false] if !body.is_a?(Array)
+    if body[0] == :return
+      return [body[1], true]
+    end
+    if body[0] == :do && body.length > 1
+      last = body[-1]
+      if last.is_a?(Array) && last[0] == :return
+        new_body = body.dup
+        new_body[-1] = last[1]          # replace trailing return with its expression (may be nil)
+        return [new_body, true]
+      end
+    end
+    [body, false]
   end
 
   # An ivar reference symbol (`@x`), excluding class vars (`@@x`).
