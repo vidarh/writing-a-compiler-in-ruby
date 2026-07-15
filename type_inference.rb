@@ -5,8 +5,8 @@
 # See docs/devirt_plan.md.
 #
 # STATE threaded forward through control flow (forked at branches, joined at merges, fixpointed at loops):
-#   st[:v]  = { var_sym => class-set }                 -- points-to for locals/params
-#   st[:s]  = { class_sym => slotmap }                 -- the vtable GENERATION per class at this point
+#   st.v  = { var_sym => class-set }                 -- points-to for locals/params
+#   st.s  = { class_sym => slotmap }                 -- the vtable GENERATION per class at this point
 #            slotmap = TS_UNK (whole class unknowable) | { method_sym => fnset }
 #            fnset   = TS_UNK (slot could hold anything) | { label => true }  ; absent key = not defined yet
 #
@@ -118,11 +118,17 @@ class TypeInference
   end
 
   # ---- state ----
-  def st0; { :v => {}, :s => {} }; end
-  def dupst(st); { :v => st[:v].dup, :s => st[:s].dup }; end
-  # Lightweight state forks: only dup the half that will actually be mutated.
-  def dupst_v(st); { :v => st[:v].dup, :s => st[:s] }; end
-  def dupst_s(st); { :v => st[:v], :s => st[:s].dup }; end
+  class TIState
+    attr_accessor :v, :s
+    def initialize(v = {}, s = {}); @v = v; @s = s; end
+    def dup; TIState.new(@v.dup, @s.dup); end
+    def dup_v; TIState.new(@v.dup, @s); end
+    def dup_s; TIState.new(@v, @s.dup); end
+  end
+  def st0; TIState.new; end
+  def dupst(st); st.dup; end
+  def dupst_v(st); st.dup_v; end
+  def dupst_s(st); st.dup_s; end
 
   # merge two states: per-var join (missing => NilClass, Ruby); per-class slotmap merge
   def merge(a, b)
@@ -164,19 +170,19 @@ class TypeInference
 
   # query the current function-set in slot (C,m): TS_UNK if unknowable, nil if not defined yet, else fnset
   def slot(st, c, m)
-    sm = st[:s][c]
+    sm = st.s[c]
     return TS_UNK if sm == TS_UNK
     sm ? sm[m] : nil
   end
-  def set_one(st, c, m, fnset)   # low-level: set slot (c,m) in an already-duped st[:s]
-    sm = st[:s][c]
+  def set_one(st, c, m, fnset)   # low-level: set slot (c,m) in an already-duped st.s
+    sm = st.s[c]
     if sm == TS_UNK
       sm = { m => fnset }        # class already unknowable; a known def re-pins this one slot
     else
       sm = (sm || {}).dup
       sm[m] = fnset
     end
-    st[:s][c] = sm
+    st.s[c] = sm
   end
   # Setting slot (C,m) also PROPAGATES to every descendant of C that was still inheriting C's old m --
   # mirroring __set_vtable's down-propagation into non-overriding children. This is a SOUNDNESS
@@ -184,15 +190,15 @@ class TypeInference
   # devirtualized. A descendant that overrode m (its slot != C's old value) keeps its own.
   def set_slot(st, c, m, fnset)
     old = slot(st, c, m)
-    st[:s] = st[:s].dup
+    st.s = st.s.dup
     set_one(st, c, m, fnset)
     (@descendants[c] || []).each do |d|
       set_one(st, d, m, fnset) if fn_inherits?(slot(st, d, m), old)
     end
   end
   def make_class_unknowable(st, c)
-    st[:s] = st[:s].dup
-    st[:s][c] = TS_UNK
+    st.s = st.s.dup
+    st.s[c] = TS_UNK
   end
   # A call is EVALUATED for its effect via a modification summary, NOT blanket-invalidated. A call to a
   # name that provably modifies no vtable (transitively) leaves the slot state untouched. Only a call whose
@@ -205,10 +211,10 @@ class TypeInference
   end
   def invalidate_all(st)
     ns = {}
-    st[:s].each do |c, sm|
+    st.s.each do |c, sm|
       ns[c] = (sm == TS_UNK) ? TS_UNK : (h = {}; sm.each { |m, _| h[m] = TS_UNK }; h)
     end
-    st[:s] = ns
+    st.s = ns
     st
   end
 
@@ -554,12 +560,12 @@ class TypeInference
     return [class_set(:FalseClass), st] if node == :false
     if node.is_a?(Symbol)
       # a bare lowercase non-local symbol in expr position is a self-send (possible_callm) -> a CALL
-      v = st[:v][node]
+      v = st.v[node]
       return [v, st] if v
       if ti_const?(node)
         return [TS_TOP, st]                          # constant reference
       else
-        self_ty = st[:v][:self] || TS_TOP
+        self_ty = st.v[:self] || TS_TOP
         return [interproc_call(self_ty, node, []), call_effect(st, node)]
       end
     end
@@ -593,7 +599,7 @@ class TypeInference
     when :assign
       tv, st = eval(node[2], st)
       if node[1].is_a?(Symbol)
-        st = dupst_v(st); st[:v][node[1]] = tv
+        st = dupst_v(st); st.v[node[1]] = tv
       else
         _, st = eval(node[1], st)
       end
@@ -613,7 +619,7 @@ class TypeInference
       else eval_arm(alt, s1) end
     when :while, :until then eval_loop(node, st)
     when :callm
-      recv_ty, st = node[1] ? eval(node[1], st) : [(st[:v][:self] || TS_TOP), st]
+      recv_ty, st = node[1] ? eval(node[1], st) : [(st.v[:self] || TS_TOP), st]
       @recv_type[node.object_id] = recv_ty          # for the devirt-decision annotation in the dump
       argtypes, st = eval_args(node[3], st)
       widen_all_params_of(recv_ty) if node[2] == :send || node[2] == :__send__   # dynamic dispatch
@@ -630,7 +636,7 @@ class TypeInference
       [ty, st]
     when :call
       argtypes, st = eval_args(node[2], st)
-      self_ty = st[:v][:self] || TS_TOP
+      self_ty = st.v[:self] || TS_TOP
       ty = interproc_call(self_ty, node[1], argtypes)
       st = call_effect(st, node[1])
       [ty, st]
@@ -649,9 +655,9 @@ class TypeInference
       tr, st = eval(node[2], st)
       lhs = node[1]
       if lhs.is_a?(Symbol)
-        old = st[:v].key?(lhs) ? st[:v][lhs] : TS_NIL
-        st = dupst_v(st); st[:v][lhs] = join(old, tr)
-        [st[:v][lhs], st]
+        old = st.v.key?(lhs) ? st.v[lhs] : TS_NIL
+        st = dupst_v(st); st.v[lhs] = join(old, tr)
+        [st.v[lhs], st]
       else
         [TS_TOP, st]                               # ivar/index target -- not a tracked local
       end
@@ -731,7 +737,7 @@ class TypeInference
     if m.is_a?(Symbol) && @cur_class
       st = dupst_s(st)
       set_slot(st, @cur_class, m, { "__method_#{@cur_class}_#{ti_clean(m)}" => true })
-      @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
+      @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st.s[@cur_class][m])}"
     end
     key = (@cur_class && m.is_a?(Symbol)) ? [@cur_class, m] : nil
     if !key || @dirty_methods[key]
@@ -750,7 +756,7 @@ class TypeInference
       body.each { |s| _, st = eval(s, st) if s.is_a?(Array) || s.is_a?(Symbol) }
     end
     if @cur_class
-      @gen[node.object_id] = "final #{@cur_class}: #{slotmap_str(st[:s][@cur_class])}"
+      @gen[node.object_id] = "final #{@cur_class}: #{slotmap_str(st.s[@cur_class])}"
     end
     @cur_class = prev
     [TS_NIL, st]
@@ -796,7 +802,7 @@ class TypeInference
   end
   def walk_taint(node, st)
     return if !node.is_a?(Array)
-    st[:v][node[1]] = TS_TOP if node[0] == :assign && node[1].is_a?(Symbol)
+    st.v[node[1]] = TS_TOP if node[0] == :assign && node[1].is_a?(Symbol)
     node.each { |c| walk_taint(c, st) if c.is_a?(Array) }
   end
   def ti_const?(sym); s = sym.to_s; s.length > 0 && (b = s.getbyte(0)) >= 65 && b <= 90; end
@@ -824,7 +830,7 @@ class TypeInference
     # default to {NilClass} (bottom seed + the default prologue) and a check on them mis-devirtualizes --
     # e.g. File.basename(name, suffix=nil)'s suffix looked {NilClass}, skipping the suffix-strip branch.
     known = cls && name.is_a?(Symbol)
-    st[:v][:self] = known ? self_type_set(cls) : TS_TOP
+    st.v[:self] = known ? self_type_set(cls) : TS_TOP
     args = node[argi]
     if args.is_a?(Array)
       i = 0
@@ -833,7 +839,7 @@ class TypeInference
         # Seed it from @param_types (the passed-arg types) whichever form it takes; else the default-value
         # prologue (`if numargs<N; name = default`) + "missing var => NilClass" makes it look {NilClass}.
         pname = a.is_a?(Symbol) ? a : ((a.is_a?(Array) && a[0].is_a?(Symbol)) ? a[0] : nil)
-        st[:v][pname] = known ? @param_types[[cls, name, i]] : TS_TOP if pname
+        st.v[pname] = known ? @param_types[[cls, name, i]] : TS_TOP if pname
         i += 1
       end
     end
@@ -1101,7 +1107,7 @@ class TypeInference
       @gen = {}
       @recv_type = {}
       @cur_class = :Object                        # top-level self is main, an Object
-      st = st0; st[:v][:self] = class_set(:Object)
+      st = st0; st.v[:self] = class_set(:Object)
       iter_t = Time.now
       @current_method_key = :main
       eval(prog, st)
