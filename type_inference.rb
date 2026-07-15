@@ -1130,7 +1130,15 @@ class TypeInference
       end
       @dirty_methods = next_dirty
       @param_types_prev = {}
-      @param_types.each_key { |k| (@param_types_prev[[k[0], k[1]]] ||= {})[k[2]] = @param_types[k] }
+      @param_types.each_key do |k|
+        key = [k[0], k[1]]
+        h = @param_types_prev[key]
+        if h.nil?
+          h = {}
+          @param_types_prev[key] = h
+        end
+        h[k[2]] = @param_types[k]
+      end
       @return_types_prev = @return_types.dup
       STDERR.puts "[time] ti.dirty_next: #{@dirty_methods.length}" if ENV["COMPILER_TIME"]
     end
