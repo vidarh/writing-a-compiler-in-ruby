@@ -114,8 +114,8 @@ flowchart TD
 - [x] Known-safe `:sexp` forms are allowed in receiver/argument/body checks.
 - [x] `INLINE_DEBUG=2` diagnostic helper reports why candidates are rejected.
 - [x] `make selftest` passes with `INLINE=1` (Fails: 0).
-- [ ] `make selftest-c` passes with `INLINE=1` (Fails: 0).
-- [x] `make spec` passes with `INLINE=1` (custom spec, including `spec/inline_broaden_spec.rb`).
+- [x] `make selftest-c` passes with `INLINE=1` (Fails: 0).
+- [x] `make spec` passes with `INLINE=1` (custom spec, including `spec/inline_broaden_spec.rb`); results match `INLINE=0` (79/22/1 at file level, pass rate 79%), so no inlining regression.
 - [x] New mspec tests in `spec/inline_*_spec.rb` cover the broadened cases.
 - [ ] `make specs-parallel` on `compiler@ax52` shows no regressions (or any regressions are understood and documented in `docs/KNOWN_ISSUES.md`).
 - [x] Inline site count with `INLINE=1` increases measurably from the baseline 36 on `make selftest` (new count ~780).
