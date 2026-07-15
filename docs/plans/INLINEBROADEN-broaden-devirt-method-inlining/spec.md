@@ -247,18 +247,27 @@ A fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` after Phase 3 shows:
 
 | reason | count | notes |
 |---|---|---|
-| `unsafe_body` | 250 (was 326) | raw `%s(if)` return-branch predicates now inline |
+| `unsafe_body` | 315 (was 326) | raw `%s(if)` return-branch predicates now inline |
 | `unsupported_param` | 0 | unchanged |
 | `not_in_funcscope` | 21 | unchanged |
 | `impure_arg` | 3 | unchanged |
 | `arg_count_mismatch` | 1 | unchanged |
 
-Inline site count on `test/selftest.rb` increased from ~782 to **~852** (approximately 70 additional sites).
+Inline site count on `test/selftest.rb` increased from **782** to **804** (22 additional sites on this workload).
+
+Local compile-time comparison (test/selftest.rb, `INLINE=1`, wall-clock):
+
+| compiler | Phase 2 | Phase 3 | change |
+|---|---|---|---|
+| MRI-hosted (`./compile`) | 33.4s | 29.4s | -4.0s (~ -12%) |
+| self-hosted (`./compile2`) | 129.6s | 152.6s | +23.0s (~ +18%) |
+
+Runtime of the generated `out/selftest2` binary is essentially unchanged for this tiny test (~0.074s → ~0.070s); a larger workload is needed to see a reliable runtime speedup.
 
 ### Ax52 validation status
 
-- `make selftest-c` on `compiler@ax52`: to be run.
-- `make specs-parallel` on `compiler@ax52`: to be compared against the Phase 2 baseline (PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0 / ERROR 0).
+- `make selftest-c` on `compiler@ax52`: **Fails: 0** with Phase 3 changes.
+- `make specs-parallel` on `compiler@ax52`: comparison run is in progress.
 
 ### Risks
 
