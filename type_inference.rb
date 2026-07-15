@@ -75,9 +75,6 @@ class TypeInference
   def initialize
     @types = {}   # node.object_id -> class-set at its eval point
     @gen   = {}   # node.object_id -> a short generation note (for the dump)
-  def initialize
-    @types = {}   # node.object_id -> class-set at its eval point
-    @gen   = {}   # node.object_id -> a short generation note (for the dump)
   end
   attr_reader :types, :gen
 
@@ -123,6 +120,9 @@ class TypeInference
   # ---- state ----
   def st0; { :v => {}, :s => {} }; end
   def dupst(st); { :v => st[:v].dup, :s => st[:s].dup }; end
+  # Lightweight state forks: only dup the half that will actually be mutated.
+  def dupst_v(st); { :v => st[:v].dup, :s => st[:s] }; end
+  def dupst_s(st); { :v => st[:v], :s => st[:s].dup }; end
 
   # merge two states: per-var join (missing => NilClass, Ruby); per-class slotmap merge
   def merge(a, b)
@@ -201,7 +201,7 @@ class TypeInference
   # this name's methods could (transitively) modify a vtable, or the name is unknown/dynamic.
   def call_effect(st, name)
     return st if name.is_a?(Symbol) && @safe && @safe[name]   # provably modifies nothing -> no boundary
-    invalidate_all(dupst(st))
+    invalidate_all(dupst_s(st))
   end
   def invalidate_all(st)
     ns = {}
@@ -593,7 +593,7 @@ class TypeInference
     when :assign
       tv, st = eval(node[2], st)
       if node[1].is_a?(Symbol)
-        st = dupst(st); st[:v][node[1]] = tv
+        st = dupst_v(st); st[:v][node[1]] = tv
       else
         _, st = eval(node[1], st)
       end
@@ -650,7 +650,7 @@ class TypeInference
       lhs = node[1]
       if lhs.is_a?(Symbol)
         old = st[:v].key?(lhs) ? st[:v][lhs] : TS_NIL
-        st = dupst(st); st[:v][lhs] = join(old, tr)
+        st = dupst_v(st); st[:v][lhs] = join(old, tr)
         [st[:v][lhs], st]
       else
         [TS_TOP, st]                               # ivar/index target -- not a tracked local
@@ -729,7 +729,7 @@ class TypeInference
   def eval_defm(node, st)
     m = node[1]
     if m.is_a?(Symbol) && @cur_class
-      st = dupst(st)
+      st = dupst_s(st)
       set_slot(st, @cur_class, m, { "__method_#{@cur_class}_#{ti_clean(m)}" => true })
       @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
     end
@@ -789,7 +789,7 @@ class TypeInference
     [TS_NIL, cur]
   end
   def taint_sexp(node, st)
-    st = dupst(st); walk_taint(node, st); st
+    st = dupst_v(st); walk_taint(node, st); st
   end
   def walk_taint(node, st)
     return if !node.is_a?(Array)
