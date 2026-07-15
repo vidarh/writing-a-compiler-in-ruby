@@ -425,6 +425,18 @@ the test places `InlineBox` before the `describe` block to avoid the crash.
 
 ---
 
+### 15. `spec/escapes_spec.rb` segfaults at runtime — COMPILER BUG
+
+`./run_rubyspec ./spec/escapes_spec.rb` compiles successfully but the resulting binary segfaults
+at runtime (exit code 139). The crash is reproducible with `INLINE=0`, so it is not caused by the
+inliner. It likely relates to string escape handling or binary-unsafe NUL-in-literal construction
+(see "Binary-unsafe string literals" below). This is one of the failures in the custom `make spec`
+run.
+
+Workaround: none known; defer fixing (documented here).
+
+---
+
 ## Known Limitations (architectural / project-scale)
 
 1. **eval() with dynamic strings** — AOT compilation cannot evaluate runtime
