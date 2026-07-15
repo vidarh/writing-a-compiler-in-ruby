@@ -1802,7 +1802,8 @@ class Compiler
   # For a devirtualised `recv.m` with no block, the [target-class, method-body] to try inlining (see
   # inline.rb#inline_devirt_body). nil if not devirt'd, the body is unknown, or a block is present.
   def inline_for(exp)
-    return nil if ENV["INLINE"] == "0"          # devirt-driven inlining is now on by default; opt out with INLINE=0.
+    return nil if ENV["INLINE"] != "1"          # devirt-driven inlining is opt-in: current broadened inliner slows
+                                                # self-hosted compile, so default off until it is net faster.
     return nil if !@devirt_labels || exp[4]
     d = @devirt_labels[exp.object_id]
     return nil if !d || !@devirt_method_asts
