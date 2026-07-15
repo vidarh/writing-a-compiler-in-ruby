@@ -1038,7 +1038,12 @@ class TypeInference
     end
     cs.each do |c, m|
       callee = [c, m]
-      (@callers[callee] ||= []) << @current_method_key if @current_method_key
+      arr = @callers[callee]
+      if arr.nil?
+        arr = []
+        @callers[callee] = arr
+      end
+      arr << @current_method_key if @current_method_key
       i = 0
       argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
     end
@@ -1117,7 +1122,10 @@ class TypeInference
         old = @return_types_prev ? @return_types_prev[key] : nil
         if !ts_eq_maybe(old, @return_types[key])
           next_dirty[key] = true
-          (@callers[key] || []).each { |caller| next_dirty[caller] = true if caller }
+          callers = @callers[key]
+          if callers
+            callers.each { |caller| next_dirty[caller] = true if caller }
+          end
         end
       end
       @dirty_methods = next_dirty
