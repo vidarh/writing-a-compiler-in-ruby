@@ -88,6 +88,12 @@ class Compiler
     body = inline_normalize_return_if(body)
     return inline_bail(dclass, defm, :unsafe_body, body.inspect[0,60]) if !inline_safe_node?(body, param_names)
 
+    if ENV["INLINE_MAX_NODES"]
+      nodes = inline_node_count(body)
+      max_nodes = ENV["INLINE_MAX_NODES"].to_i
+      return inline_bail(dclass, defm, :body_too_large, "nodes=#{nodes} max=#{max_nodes}") if nodes > max_nodes
+    end
+
     cscope = @classes[dclass] || @classes["Object__#{dclass}".to_sym]
     return inline_bail(dclass, defm, :no_class_scope) if !cscope
     # Pre-resolve every ivar offset up front; bail the whole inline if any is unknown.
@@ -309,6 +315,19 @@ class Compiler
   # An ivar reference symbol (`@x`), excluding class vars (`@@x`).
   def inline_ivar?(s)
     s.is_a?(Symbol) && (t = s.to_s)[0] == ?@ && t[1] != ?@
+  end
+
+  # Rough AST-node count for the inliner's code-size guard. Counts every array element
+  # and leaf so that large bodies bail instead of bloating hot call sites.
+  def inline_node_count(node)
+    return 1 if !node.is_a?(Array)
+    n = 1
+    i = 0
+    while i < node.length
+      n += inline_node_count(node[i])
+      i += 1
+    end
+    n
   end
 
   # A body is safe to inline only if every statement is a simple expression over {self, ivars, params,
