@@ -29,28 +29,42 @@ class Compiler
     params = defm[2]
     return inline_bail(dclass, defm, :bad_params, params.inspect[0,40]) if !params.is_a?(Array)
     # Allow required and optional positional params. Optional params are filled with their
-    # side-effect-free default expressions when the call provides fewer arguments. Rest/block
-    # params and impure defaults are rejected.
+    # side-effect-free default expressions when the call provides fewer arguments. Rest and block
+    # params are ignored when the call does not supply them (they are not substituted; if the body
+    # references them they will be rejected as free locals by inline_safe_node?).
     param_entries = []
+    param_names = []
     required_count = 0
+    positional_count = 0
+    has_rest = false
+    has_block = false
     params.each do |p|
       if p.is_a?(Symbol)
         param_entries << [:required, p]
+        param_names << p
         required_count += 1
+        positional_count += 1
       elsif p.is_a?(Array) && p[0].is_a?(Symbol) && p[1] == :default && p.length == 3
         default_expr = p[2]
         return inline_bail(dclass, defm, :impure_default, p.inspect[0,40]) if !inline_side_effect_free?(default_expr)
         param_entries << [:optional, p[0], default_expr]
+        param_names << p[0]
+        positional_count += 1
+      elsif p.is_a?(Array) && p[0] == :__splat && p.length == 2
+        param_entries << [:rest, p[1]]
+        has_rest = true
+      elsif p.is_a?(Array) && p[0] == :block && p.length == 2
+        param_entries << [:block, p[1]]
+        has_block = true
       else
         return inline_bail(dclass, defm, :unsupported_param, p.inspect[0,40])
       end
     end
-    param_names = param_entries.map { |e| e[1] }
-    total_params = param_names.length
+    total_params = positional_count
     args = [] if args.nil?
     args = [args] if !args.is_a?(Array)
-    if args.length < required_count || args.length > total_params
-      return inline_bail(dclass, defm, :arg_count_mismatch, "args=#{args.length} required=#{required_count} total=#{total_params}")
+    if args.length < required_count || (!has_rest && args.length > total_params)
+      return inline_bail(dclass, defm, :arg_count_mismatch, "args=#{args.length} required=#{required_count} positional=#{total_params} rest=#{has_rest}")
     end
     # Fill missing trailing arguments with deep-copied default expressions. Work on a copy so we
     # do not mutate the caller's args array if we later bail out and it falls back to a direct call.
@@ -176,6 +190,13 @@ class Compiler
       return false if inner.length != 3
       fname = inner[1]
       (fname == :__get_string || fname == :__get_symbol) && inner[2].is_a?(Symbol)
+    when :if, :ifelse
+      # %s(if cond then else) value expression. Both branches must be side-effect-free.
+      # For method bodies we use the stricter inline_safe_node? so free locals are rejected;
+      # for receiver/argument checks the normal side-effect-free predicate is enough.
+      return false if inner.length != 4
+      branch_check = params ? lambda { |n| inline_safe_node?(n, params) } : lambda { |n| inline_side_effect_free?(n) }
+      branch_check.call(inner[1]) && branch_check.call(inner[2]) && branch_check.call(inner[3])
     else
       false
     end

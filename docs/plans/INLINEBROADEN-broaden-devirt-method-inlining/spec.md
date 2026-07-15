@@ -136,3 +136,63 @@ flowchart TD
 
 ---
 *Status: DEPLOYED - Inlining is now enabled by default; all local and ax52 validation passed.*
+
+## Phase 2: Further broadening (next steps)
+
+Optional params have already been extended beyond the original plan: the inliner now fills missing trailing arguments from side-effect-free default expressions (`def m(a, b=0)` called as `m(1)`). A duplicate of the caller's `args` array is used so an eventual bail does not mutate the original call site.
+
+A fresh `INLINE_DEBUG=2` run over `test/selftest.rb` (default inlining) shows the remaining rejections:
+
+| reason | count | notes |
+|---|---|---|
+| `unsafe_body` | 286 | bodies containing `:let`, raw `%s(if ...)` with early returns, or method calls |
+| `unsupported_param` | 40 | almost entirely `[:__splat, :rest]` and `[:block, :block]` params on core methods |
+| `not_in_funcscope` | 21 | top-level call sites; inherent limitation |
+| `impure_arg` | 3 | arguments containing real method calls |
+| `arg_count_mismatch` | 1 | arity edge case |
+
+The two highest-leverage, low-risk broadenings are:
+
+1. **Allow ignored rest/block params when the call does not use them.**
+   - Parse `[:__splat, :rest]` and `[:block, :block]` but do **not** add them to the substitution map.
+   - Permit the call as long as `args.length` is within `[required_count, required_count + optional_count]` (i.e. no actual splat/block argument is passed).
+   - Body safety remains conservative: if the body references the ignored param it will be rejected as a free local by `inline_safe_node?`.
+   - This unlocks many core methods (`Array#[]`, `Integer#chr`, `String#[]=`, `Array#max` without block, etc.) that are currently rejected solely for having a never-used `*args` or `&block` signature.
+
+2. **Allow value-producing `%s(if cond then else)` inside `:sexp`.**
+   - Core predicate methods compile to raw `%s(if ...)` forms. When both branches are side-effect-free expressions (no early returns, no calls, no assignments), the whole form is pure and can be treated like a ternary expression.
+   - Add an `:if`/`:ifelse` case to `inline_safe_sexp?` requiring three children and verifying each with `inline_side_effect_free?`.
+   - Keep rejecting raw `%s(if ...)` branches that contain `:return`, `:call`/`:callm`, `:assign`, or other impure nodes.
+
+**Deferred / out of scope for Phase 2:**
+- `:let` bodies (known expression-value register issues; needs a safe temp-binding mechanism first).
+- Early-return translation inside `%s(if ...)` (would require control-flow restructuring, not a simple value splice).
+- Inlining through method-call arguments or multi-level inlining.
+- Side-effecting receivers/arguments bound to temps.
+
+### Phase 2 acceptance criteria
+
+- [x] `INLINE_DEBUG=2` counts for `unsupported_param` drop to zero on `make selftest`.
+- [x] `inline_safe_sexp?` accepts value-producing `%s(if cond then else)` / `%s(ifelse cond then else)` forms.
+- [x] `make selftest` / `make selftest-c` remain Fails: 0.
+- [x] `spec/inline_broaden_spec.rb` gains tests for:
+  - a method with a `*args` parameter called without splat arguments;
+  - a method with an `&block` parameter called without a block;
+  - a predicate-style method whose body is a raw `%s(if ...)` value expression.
+- [ ] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the pre-Phase-2 baseline.
+- [ ] Inline site count on `make selftest` is measured and documented (expected: rest/block broadening removes `unsupported_param` rejections, but many of those candidates then fail `unsafe_body` due to `:let`/complex bodies, so the net count may not rise until bodies are also broadened).
+
+### Phase 2 measurements (local)
+
+After the changes a fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` shows:
+
+- `unsupported_param`: 0 (was 40)
+- `unsafe_body`: 326 (was 286) — the rest/block candidates are now allowed through param parsing and are rejected by body safety instead.
+- Total bails: 351, inline sites: ~782 (unchanged from Phase 1 on this workload).
+
+This confirms the param broadening is working and the next bottleneck is body safety (`:let`, early-return raw `%s(if ...)`, and method calls).
+
+### Risks
+
+- Rest/block broadening must not accidentally substitute an unbound `:rest`/`:block` symbol; keeping them out of `param_names` and relying on `inline_safe_node?` prevents this.
+- `%s(if ...)` broadening must remain expression-only; any branch that is not side-effect-free falls back to the direct call.

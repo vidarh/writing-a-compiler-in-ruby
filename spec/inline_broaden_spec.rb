@@ -38,6 +38,18 @@ class InlineBox
   def set_with_default(v, d = 0)
     @v = v + d
   end
+
+  def set_with_rest(v, *rest)
+    @v = v
+  end
+
+  def set_with_block(v, &block)
+    @v = v
+  end
+
+  def positive?
+    %s(if (gt @v 0) true false)
+  end
 end
 
 class InlineHarness
@@ -83,6 +95,23 @@ class InlineHarness
     box.set_with_default(7)
     box.value
   end
+
+  def rest_arg_ignored
+    box = InlineBox.new(0)
+    box.set_with_rest(9)
+    box.value
+  end
+
+  def block_arg_ignored
+    box = InlineBox.new(0)
+    box.set_with_block(11)
+    box.value
+  end
+
+  def predicate_with_raw_if
+    box = InlineBox.new(5)
+    box.positive?
+  end
 end
 
 describe "Broadened devirt inlining" do
@@ -116,5 +145,17 @@ describe "Broadened devirt inlining" do
 
   it "inlines a method with optional params using the default value" do
     @h.optional_arg_missing.should == 7
+  end
+
+  it "inlines a method with an unused rest param when no splat args are passed" do
+    @h.rest_arg_ignored.should == 9
+  end
+
+  it "inlines a method with an unused block param when no block is passed" do
+    @h.block_arg_ignored.should == 11
+  end
+
+  it "inlines a predicate whose body is a raw %s(if) value expression" do
+    @h.predicate_with_raw_if.should == true
   end
 end
