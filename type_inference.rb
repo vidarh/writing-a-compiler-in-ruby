@@ -133,12 +133,12 @@ class TypeInference
   # merge two states: per-var join (missing => NilClass, Ruby); per-class slotmap merge
   def merge(a, b)
     v = {}
-    ks = {}; a[:v].each_key { |k| ks[k] = true }; b[:v].each_key { |k| ks[k] = true }
-    ks.each_key { |k| v[k] = join(a[:v].key?(k) ? a[:v][k] : TS_NIL, b[:v].key?(k) ? b[:v][k] : TS_NIL) }
+    ks = {}; a.v.each_key { |k| ks[k] = true }; b.v.each_key { |k| ks[k] = true }
+    ks.each_key { |k| v[k] = join(a.v.key?(k) ? a.v[k] : TS_NIL, b.v.key?(k) ? b.v[k] : TS_NIL) }
     s = {}
-    cs = {}; a[:s].each_key { |k| cs[k] = true }; b[:s].each_key { |k| cs[k] = true }
-    cs.each_key { |c| s[c] = merge_slotmap(a[:s][c], b[:s][c]) }
-    { :v => v, :s => s }
+    cs = {}; a.s.each_key { |k| cs[k] = true }; b.s.each_key { |k| cs[k] = true }
+    cs.each_key { |c| s[c] = merge_slotmap(a.s[c], b.s[c]) }
+    TIState.new(v, s)
   end
   def merge_slotmap(a, b)
     return TS_UNK if a == TS_UNK || b == TS_UNK
@@ -155,9 +155,9 @@ class TypeInference
   def join_fn(a, b); (a == TS_UNK || b == TS_UNK) ? TS_UNK : join(a, b); end
 
   def state_eq(a, b)
-    return false if a[:v].length != b[:v].length || a[:s].length != b[:s].length
-    a[:v].each { |k, x| return false if !b[:v].key?(k) || !ts_eq(x, b[:v][k]) }
-    a[:s].each { |c, sm| return false if !slotmap_eq(sm, b[:s][c]) }
+    return false if a.v.length != b.v.length || a.s.length != b.s.length
+    a.v.each { |k, x| return false if !b.v.key?(k) || !ts_eq(x, b.v[k]) }
+    a.s.each { |c, sm| return false if !slotmap_eq(sm, b.s[c]) }
     true
   end
   def slotmap_eq(a, b)
