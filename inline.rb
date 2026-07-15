@@ -21,13 +21,13 @@ class Compiler
     # Only inline inside a method/block body. At top level (main's @global_scope) a bare local used as the
     # raw-index base resolves through a path the `%s(index ...)` primitive can't load (atype "e"); those call
     # sites are rare and fall back to the direct devirt call. Method params/locals/self work fine.
-    return nil if !scope_has_funcscope?(scope)
+    return inline_bail(dclass, defm, :not_in_funcscope) if !scope_has_funcscope?(scope)
     if ENV["INLINE_DEBUG"]
       @inl_calls = (@inl_calls || 0) + 1
       STDERR.puts "[inl entry ##{@inl_calls}] #{dclass}##{defm[1]}" if @inl_calls % 200 == 1 || @inl_calls < 5
     end
     params = defm[2]
-    return nil if !params.is_a?(Array)
+    return inline_bail(dclass, defm, :bad_params, params.inspect[0,40]) if !params.is_a?(Array)
     # Allow optional positional params when the call provides ALL arguments (no default value is used).
     # Reject rest/block params and unsupported forms.
     param_names = []
@@ -37,22 +37,22 @@ class Compiler
       elsif p.is_a?(Array) && p[0].is_a?(Symbol) && p[1] == :default && p.length == 3
         param_names << p[0]
       else
-        return nil
+        return inline_bail(dclass, defm, :unsupported_param, p.inspect[0,40])
       end
     end
     args = [] if args.nil?
     args = [args] if !args.is_a?(Array)
-    return nil if args.length != param_names.length
+    return inline_bail(dclass, defm, :arg_count_mismatch, "args=#{args.length} params=#{param_names.length}") if args.length != param_names.length
     body = defm[3]                                    # compile_defm compiles this SINGLE node as the body
-    return nil if body.nil?
+    return inline_bail(dclass, defm, :no_body) if body.nil?
 
     # Strip a trailing explicit return where it is equivalent to the body's value.
     body, _ = inline_unwrap_return(body)
-    return nil if body.nil?
-    return nil if !inline_safe_node?(body, param_names)
+    return inline_bail(dclass, defm, :return_unwrap_failed) if body.nil?
+    return inline_bail(dclass, defm, :unsafe_body, body.inspect[0,60]) if !inline_safe_node?(body, param_names)
 
     cscope = @classes[dclass] || @classes["Object__#{dclass}".to_sym]
-    return nil if !cscope
+    return inline_bail(dclass, defm, :no_class_scope) if !cscope
     # Pre-resolve every ivar offset up front; bail the whole inline if any is unknown.
     offs = {}
     ok = true
@@ -60,7 +60,7 @@ class Compiler
       o = cscope.find_ivar_offset(iv)
       if o then offs[iv] = o else ok = false end
     end
-    return nil if !ok
+    return inline_bail(dclass, defm, :unknown_ivar) if !ok
 
     if ENV["INLINE_MAX"]
       @inline_dbg = (@inline_dbg || 0) + 1
@@ -71,8 +71,10 @@ class Compiler
     # Direct substitution: self -> recv, ivar -> raw index on recv, params -> arg exprs. Operands must be
     # side-effect-free so they can be duplicated/substituted directly; the caller materialises the spliced
     # result (see compile_callm) so it can be used in argument position.
-    return nil if !inline_side_effect_free?(recv)
-    return nil if args.any? { |a| !inline_side_effect_free?(a) }
+    return inline_bail(dclass, defm, :impure_recv, recv.inspect[0,40]) if !inline_side_effect_free?(recv)
+    args.each_with_index do |a, i|
+      return inline_bail(dclass, defm, :impure_arg, "arg#{i}=#{a.inspect[0,40]}") if !inline_side_effect_free?(a)
+    end
     @inline_count = (@inline_count || 0) + 1
     subst = { :self => recv }
     i = 0
@@ -84,6 +86,23 @@ class Compiler
     STDERR.puts "        -> #{spliced.inspect[0,110]}" if ENV["INLINE_DEBUG"]
     spliced
   end
+
+  # Diagnostic helper for INLINE_DEBUG=2: log why a candidate was rejected. Throttled per (method,reason)
+  # so the output is readable; returns nil so it can be used as `return inline_bail(...)`.
+  def inline_bail(dclass, defm, reason, detail = nil)
+    if ENV["INLINE_DEBUG"] == "2"
+      @inline_bails ||= Hash.new(0)
+      key = "#{dclass}##{defm[1]}:#{reason}"
+      @inline_bails[key] += 1
+      if @inline_bails[key] <= 3
+        msg = "[inline bail] #{dclass}##{defm[1]}: #{reason}"
+        msg += " #{detail}" if detail
+        STDERR.puts msg
+      end
+    end
+    nil
+  end
+
   # Side-effect-free and safely re-substitutable: a bare local var, self, or a small literal.
   def inline_pure?(e)
     e == :self || e == :nil || e == :true || e == :false || e.is_a?(Integer) || e.is_a?(Symbol)
@@ -100,6 +119,7 @@ class Compiler
       return true                                   # a local/param/constant/keyword symbol
     end
     return false if !e.is_a?(Array)
+    return true if inline_safe_sexp?(e)
     h = e[0]
     case h
     when :call, :callm, :safe_callm, :yield, :super, :block, :proc, :lambda, :defun, :defm,
@@ -109,6 +129,56 @@ class Compiler
     else
       e[1..-1].all? { |c| inline_side_effect_free?(c) }
     end
+  end
+
+  # Known-safe %s() forms that can appear in a side-effect-free operand or inlinable body.
+  # The compiler lowers Ruby literals to :sexp wrappers, so rejecting :sexp outright blocks
+  # almost all literal receivers/arguments and many simple core-library getters.
+  # `params` is non-nil when we are checking a method body (so parameters/self/ivars are in scope);
+  # nil when checking a receiver/argument for side-effect freedom.
+  def inline_safe_sexp?(sexp, params = nil)
+    return false if !sexp.is_a?(Array) || sexp[0] != :sexp || sexp.length != 2
+    inner = sexp[1]
+    # %s(sexp N) - tagged integer literal produced by rewrite_integer_constant.
+    return true if inner.is_a?(Integer)
+    # %s(sexp :__S_name) - symbol literal produced by rewrite_symbol_constant.
+    return true if inner.is_a?(Symbol) && inner.to_s.start_with?("__S_")
+    return false if !inner.is_a?(Array)
+    h = inner[0]
+    case h
+    when :__int
+      # %s(__int expr) - raw integer tagging, pure if the operand is.
+      inner.length == 2 && inline_safe_sexp_operand?(inner[1], params)
+    when :index
+      # %s(index obj offset) - raw slot read, pure if obj/offset are.
+      inner.length == 3 &&
+        inline_safe_sexp_operand?(inner[1], params) &&
+        inline_safe_sexp_operand?(inner[2], params)
+    when :call
+      # Pure literal constructors emitted by the compiler.
+      return false if inner.length != 3
+      fname = inner[1]
+      (fname == :__get_string || fname == :__get_symbol) && inner[2].is_a?(Symbol)
+    else
+      false
+    end
+  end
+
+  # An operand inside a known-safe %s() expression. We allow self/ivar/param/const/literal
+  # and simple recursively-safe primitive operations, but not calls/assignments/control flow.
+  def inline_safe_sexp_operand?(e, params)
+    return true if e == :self || e.is_a?(Integer)
+    if e.is_a?(Symbol)
+      return true if inline_ivar?(e)
+      return true if params && params.include?(e)
+      return true if ti_const_name?(e)
+      return true if e.to_s.start_with?("__S_")
+      return false
+    end
+    return false if !e.is_a?(Array)
+    # Nested primitive operator arrays (e.g. %s(index self (+ offset 1))).
+    # The head is treated as an operator; we only verify its operands.
+    e[1..-1].all? { |c| inline_safe_sexp_operand?(c, params) }
   end
 
   # If `body` is a single [:return, expr], return [expr, true]. If it is a [:do, ..., [:return, expr]]
@@ -155,8 +225,10 @@ class Compiler
     h = n[0]
     case h
     when :return, :yield, :super, :block, :proc, :lambda, :defun, :defm, :while, :until,
-         :case, :next, :break, :redo, :and_assign, :or_assign, :let, :sexp
+         :case, :next, :break, :redo, :and_assign, :or_assign, :let
       false
+    when :sexp
+      inline_safe_sexp?(n, params)
     when :assign
       # only an ivar assignment is safe (a local assignment would introduce a call-site local); the RHS and
       # any nested target must also be safe.
