@@ -39,6 +39,17 @@ class Compiler
   attr_reader :global_functions, :global_scope
   attr_writer :trace, :stackfence
 
+  # Simple phase timer. Disabled by default; set COMPILER_TIME=1 to print
+  # phase breakdown to stderr. We keep it lightweight so it can stay in the
+  # source tree without perturbing normal compiles.
+  def time_phase(name)
+    return yield unless ENV["COMPILER_TIME"]
+    t0 = Time.now
+    yield
+    t1 = Time.now
+    STDERR.puts "[time] #{name}: %.3fs" % (t1 - t0)
+  end
+
   # list of all predefined keywords with a corresponding compile-method
   # call & callm are ignored, since their compile-methods require
   # a special calling convention
@@ -2133,49 +2144,49 @@ class Compiler
 
   # Starts the actual compile process.
   def compile exp
-    alloc_vtable_offsets(exp)
-    scan_and_register_constants(exp)  # Pre-scan to register all constants
+    time_phase("alloc_vtable_offsets") { alloc_vtable_offsets(exp) }
+    time_phase("scan_and_register_constants") { scan_and_register_constants(exp) }  # Pre-scan to register all constants
 
     # Rewrite "expr rescue fallback" modifiers into begin/rescue blocks before compilation.
-    rewrite_rescue_mod(exp)
+    time_phase("rewrite_rescue_mod") { rewrite_rescue_mod(exp) }
 
     # Transform pattern matching to when clauses
     # NOTE: This runs AFTER preprocess(), so pattern-bound variables won't be captured
     # in __env__ for nested closures. See docs/KNOWN_ISSUES.md and transform.rb:rewrite_pattern_matching
-    rewrite_pattern_matching(exp)
+    time_phase("rewrite_pattern_matching") { rewrite_pattern_matching(exp) }
 
     # Whole-program type inference -> devirtualize provably-monomorphic call sites to direct calls. Runs
     # AFTER the tree-rewrites above so node identities match what compile_exp walks. ON BY DEFAULT (opt out
     # with DEVIRT=0) so the MRI and self-hosted compilers always make the SAME decisions and cannot diverge.
     # Sound-by-construction (per-slot generation model, type_inference.rb); validated at full-sweep parity.
     if ENV["DEVIRT"] != "0"
-      ti = TypeInference.new
-      ti.analyze(exp)
-      @devirt_labels = ti.devirt_map(exp)
-      @devirt_method_asts = ti.methods_map          # [class,name] => defm, for devirt-driven inlining
-      STDERR.puts "[devirt] #{@devirt_labels.length} call sites devirtualized" if ENV["DEVIRT_VERBOSE"]
+      time_phase("type_inference") do
+        ti = TypeInference.new
+        ti.analyze(exp)
+        @devirt_labels = ti.devirt_map(exp)
+        @devirt_method_asts = ti.methods_map          # [class,name] => defm, for devirt-driven inlining
+        STDERR.puts "[devirt] #{@devirt_labels.length} call sites devirtualized" if ENV["DEVIRT_VERBOSE"]
+      end
     end
 
-    compile_main(exp)
+    time_phase("compile_main") { compile_main(exp) }
     # after the main function, we ouput all functions and constants
     # used and defined so far.
-    output_functions
+    time_phase("output_functions") { output_functions }
     STDERR.puts "[inline] #{@inline_count || 0} call sites inlined" if ENV["INLINE_VERBOSE"] && ENV["INLINE"] != "0"
     # Shared fixed-arity error handlers (collected during output_functions). Emitted here while still in
     # .text, right after the functions whose arity checks jump to them.
-    output_arity_fail_handlers
+    time_phase("output_arity_fail_handlers") { output_arity_fail_handlers }
     # output_global_init must run AFTER output_functions -- class-object ivars (__classivar__*) are only
     # registered as globals while their method bodies compile in output_functions, and the init routine
     # has to see them to zero->nil them -- but BEFORE the vtable/constants output, which switches to the
     # .data/.bss section (output_global_init emits .text code and relies on being left in .text here).
     # __init_globals is a separate function called at startup, so emitting its body here is fine.
-    output_global_init
-    output_vtable_thunks
-    output_vtable_names
-    output_ivar_table
-    output_const_table
-    output_constants
-    @e.flush
+    time_phase("output_global_init") { output_global_init }
+    time_phase("output_vtables") { output_vtable_thunks; output_vtable_names; output_ivar_table }
+    time_phase("output_const_table") { output_const_table }
+    time_phase("output_constants") { output_constants }
+    time_phase("emitter_flush") { @e.flush }
   end
 
   def compile_splat(scope, expr)

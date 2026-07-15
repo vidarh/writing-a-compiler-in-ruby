@@ -46,7 +46,9 @@ require 'compiler'
 
   begin
     parser = Parser.new(s, {:norequire => norequire, :include_paths => include_paths})
+    t_parse = Time.now
     prog = parser.parse
+    STDERR.puts "[time] parse: %.3fs" % (Time.now - t_parse) if ENV["COMPILER_TIME"]
   rescue CompilerError => e
     STDERR.puts e.message
     exit(1)
@@ -61,7 +63,9 @@ require 'compiler'
       c.trace = true if trace
       c.stackfence = true if stackfence
 
+      t_preprocess = Time.now
       c.preprocess(prog) if transform
+      STDERR.puts "[time] preprocess: %.3fs" % (Time.now - t_preprocess) if ENV["COMPILER_TIME"] && transform
 
       if dump || dumpsymtabs
         print_sexp prog if dump
@@ -77,7 +81,9 @@ require 'compiler'
         exit(0)
       end
 
+      t_compile = Time.now
       c.compile(prog)
+      STDERR.puts "[time] compile: %.3fs" % (Time.now - t_compile) if ENV["COMPILER_TIME"]
     rescue CompilerError => e
       STDERR.puts e.message
       exit(1)
