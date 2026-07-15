@@ -19,7 +19,58 @@
 class TypeInference
   TS_TOP = :__top     # any class (points-to)
   TS_UNK = :__unk     # unknowable slot/generation
-  TS_NIL = { :NilClass => true }
+  # Class-sets are represented as either:
+  #   - nil              : bottom (no class, also used for missing/untyped)
+  #   - TS_TOP           : any class
+  #   - a Symbol         : a singleton set { C }
+  #   - a Hash           : a multi-set { C1 => true, C2 => true, ... }
+  # Singletons are kept as Symbols to avoid Hash allocation/lookup overhead
+  # for the overwhelmingly common single-class case.
+  TS_NIL = :NilClass
+
+  # ---- class-set helpers ----
+  def class_set(c); c; end
+  def class_set_top?(ts); ts == TS_TOP; end
+  def class_set_empty?(ts); ts.nil?; end
+  def class_set_singleton?(ts); ts.is_a?(Symbol) && ts != TS_TOP && ts != TS_UNK; end
+  def class_set_hash?(ts); ts.is_a?(Hash); end
+  def class_set_each(ts)
+    if ts.is_a?(Hash); ts.each_key { |c| yield c }
+    elsif ts.is_a?(Symbol) && ts != TS_TOP && ts != TS_UNK; yield ts
+    end
+  end
+  def class_set_include?(ts, c)
+    return false if ts.nil?
+    return true if ts == TS_TOP
+    return ts == c if ts.is_a?(Symbol)
+    ts.key?(c)
+  end
+  def class_set_size(ts)
+    return 0 if ts.nil?
+    return 1 if ts.is_a?(Symbol) && ts != TS_TOP && ts != TS_UNK
+    return ts.length if ts.is_a?(Hash)
+    0
+  end
+  def class_set_keys(ts)
+    return [] if ts.nil?
+    return [ts] if ts.is_a?(Symbol) && ts != TS_TOP && ts != TS_UNK
+    ts.keys
+  end
+  def class_set_add(ts, c)
+    return TS_TOP if ts == TS_TOP
+    return class_set(c) if ts.nil?
+    return ts if ts == c
+    return ts if ts.is_a?(Hash) && ts.key?(c)
+    if ts.is_a?(Symbol)
+      { ts => true, c => true }
+    else
+      ts = ts.dup; ts[c] = true; ts
+    end
+  end
+  def class_set_two(a, b)
+    return class_set(a) if a == b
+    { a => true, b => true }
+  end
 
   def initialize
     @types = {}   # node.object_id -> class-set at its eval point
@@ -56,11 +107,23 @@ class TypeInference
     return TS_TOP if a == TS_TOP || b == TS_TOP
     return b if a.nil?
     return a if b.nil?
-    if a.equal?(b)
-      @cnt_join_equal += 1
-      return a
+    return a if a.equal?(b)
+    return b if a == b  # both singletons or singleton == hash-with-one
+    # Fast path: singleton + singleton
+    if a.is_a?(Symbol) && b.is_a?(Symbol)
+      @cnt_join_new += 1
+      return class_set_two(a, b)
     end
-    # Check subset relationships to avoid creating a new hash
+    # Normalize so that if exactly one is a singleton, `a` is the singleton
+    if b.is_a?(Symbol)
+      a, b = b, a
+    end
+    if a.is_a?(Symbol)
+      return b if b.is_a?(Hash) && b.key?(a)
+      @cnt_join_new += 1
+      return class_set_add(b, a)
+    end
+    # Both are Hashes
     alen = a.length
     blen = b.length
     if alen <= blen && a.each_key.all? { |k| b.key?(k) }
@@ -72,24 +135,22 @@ class TypeInference
       return a
     end
     @cnt_join_new += 1
-    alen = a.length
-    blen = b.length
-    @cnt_join_size1 += 1 if alen == 1 || blen == 1
-    @cnt_join_size2 += 1 if alen == 2 || blen == 2
-    @cnt_join_size3plus += 1 if alen > 2 || blen > 2
     o = {}; a.each { |k, _| o[k] = true }; b.each { |k, _| o[k] = true }; o
   end
   def ts_eq(a, b)
     @cnt_ts_eq += 1
     return true if a.equal?(b)
     return false if a == TS_TOP || b == TS_TOP || a.nil? || b.nil?
+    return false if a.is_a?(Symbol) || b.is_a?(Symbol)  # singleton vs hash or singleton != singleton handled above
     return false if a.length != b.length
     a.each_key { |k| return false if !b[k] }; true
   end
   def ts_str(ts)
     return "TOP" if ts == TS_TOP
     return "UNK" if ts == TS_UNK
-    return "BOT" if ts.nil? || (ts.respond_to?(:empty?) && ts.empty?)
+    return "BOT" if ts.nil?
+    return ts.to_s if ts.is_a?(Symbol)
+    return "BOT" if ts.respond_to?(:empty?) && ts.empty?
     "{" + ts.keys.map(&:to_s).sort.join(",") + "}"
   end
 
@@ -525,8 +586,8 @@ class TypeInference
   def eval(node, st)
     @cnt_eval += 1
     return [TS_NIL, st] if node == :nil
-    return [{ :TrueClass => true }, st]  if node == :true
-    return [{ :FalseClass => true }, st] if node == :false
+    return [class_set(:TrueClass), st]  if node == :true
+    return [class_set(:FalseClass), st] if node == :false
     if node.is_a?(Symbol)
       # a bare lowercase non-local symbol in expr position is a self-send (possible_callm) -> a CALL
       if st[:v].key?(node)
@@ -555,15 +616,15 @@ class TypeInference
   def eval_node(node, t, st)
     @cnt_eval_node += 1
     case t
-    when :array then [{ :Array => true }, eval_kids(node, 1, st)]
-    when :hash  then [{ :Hash => true },  eval_kids(node, 1, st)]
-    when :float then [{ :Float => true }, st]
+    when :array then [class_set(:Array), eval_kids(node, 1, st)]
+    when :hash  then [class_set(:Hash),  eval_kids(node, 1, st)]
+    when :float then [class_set(:Float), st]
     when :sexp
       inner = node[1]
-      if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string then [{ :String => true }, st]
-      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL") then [{ :String => true }, st]
-      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__S_") then [{ :Symbol => true }, st]
-      elsif inner.is_a?(Integer) then [{ :Integer => true }, st]
+      if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string then [class_set(:String), st]
+      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__FSL") then [class_set(:String), st]
+      elsif inner.is_a?(Symbol) && inner.to_s.start_with?("__S_") then [class_set(:Symbol), st]
+      elsif inner.is_a?(Integer) then [class_set(:Integer), st]
       else [TS_TOP, taint_sexp(node, st)]
       end
     when :assign
@@ -594,7 +655,7 @@ class TypeInference
       argtypes, st = eval_args(node[3], st)
       widen_all_params_of(recv_ty) if node[2] == :send || node[2] == :__send__   # dynamic dispatch
       if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1]) && !custom_new?(node[1])
-        ty = { node[1] => true }                     # C.new -> an instance of C (default allocator only)
+        ty = class_set(node[1])                     # C.new -> an instance of C (default allocator only)
         # C.new(args) invokes C#initialize(args): flow the args into initialize's params, else every
         # .new-argument param is under-approximated (an optional one collapses to its nil default) -> a
         # later `!param` / `param.nil?` mis-devirtualizes. Discard the return (initialize's value is unused).
@@ -634,7 +695,7 @@ class TypeInference
     when :block then eval_block(node, st)
     when :case  then eval_case(node, st)
     when :defm  then eval_defm(node, st)
-    when :defun then analyze_body(node, 1, nil, nil); [{ :Proc => true }, st]
+    when :defun then analyze_body(node, 1, nil, nil); [class_set(:Proc), st]
     when :class, :module then eval_classbody(node, t, st)
     else [TS_TOP, eval_kids(node, 1, st)]
     end
@@ -710,7 +771,7 @@ class TypeInference
       @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
     end
     analyze_body(node, 2, @cur_class, m)   # the method body is a separate scope
-    [m.is_a?(Symbol) ? { :Symbol => true } : TS_TOP, st]
+    [m.is_a?(Symbol) ? class_set(:Symbol) : TS_TOP, st]
   end
 
   def eval_classbody(node, t, st)
@@ -780,8 +841,10 @@ class TypeInference
   # method some subclass overrides then sees non-invariant slots and bails, instead of wrongly binding the
   # base label. (Without this, an inherited method's self-send to an overridden method miscompiles.)
   def self_type_set(cls)
+    desc = @descendants[cls] || []
+    return class_set(cls) if desc.empty?
     h = { cls => true }
-    (@descendants[cls] || []).each { |d| h[d] = true }
+    desc.each { |d| h[d] = true }
     h
   end
   def analyze_body(node, argi, cls, name)
@@ -865,12 +928,11 @@ class TypeInference
   # @unknowable on any nearer ancestor), m not a singleton on some object (@dyn_singleton), and D label-safe.
   def devirt_decision(recv_ts, m)
     return nil if @dyn_global                        # an unbounded reflective op -> no devirt anywhere
-    return nil if !recv_ts.is_a?(Hash) || recv_ts.empty?
+    return nil if recv_ts.nil? || recv_ts == TS_TOP || recv_ts == TS_UNK
+    return nil if recv_ts.is_a?(Hash) && recv_ts.empty?
     return nil if @dyn_singleton[m]                  # m may be a singleton on some object -> can't pin dispatch
     target = nil
-    # NB .keys + while, not recv_ts.each_key { ... target = d ... }: an each_key block over a POPULATED hash
-    # that mutates a captured local segfaults the self-hosted compiler.
-    cs = recv_ts.keys
+    cs = class_set_keys(recv_ts)
     ci = 0
     while ci < cs.length
       c = cs[ci]; ci += 1
@@ -969,7 +1031,7 @@ class TypeInference
     return [:unknown, false] if recv_ts == TS_TOP || recv_ts.nil?
     out = []
     all = true
-    recv_ts.each_key do |c|
+    class_set_each(recv_ts) do |c|
       r = resolve(c, name)
       if r then out << [r, name] else all = false end
     end
@@ -1031,7 +1093,7 @@ class TypeInference
   def widen_all_params_of(recv_ty)
     all = (recv_ty == TS_TOP || recv_ty.nil? || !recv_ty.is_a?(Hash))
     @methods.each do |k, dm|
-      next if !all && !recv_ty.key?(k[0])
+      next if !all && !class_set_include?(recv_ty, k[0])
       args = dm[2]
       argc = args.is_a?(Array) ? args.length : 0
       i = 0
@@ -1059,7 +1121,7 @@ class TypeInference
       @gen = {}
       @recv_type = {}
       @cur_class = :Object                        # top-level self is main, an Object
-      st = st0; st[:v][:self] = { :Object => true }
+      st = st0; st[:v][:self] = class_set(:Object)
       iter_t = Time.now
       eval(prog, st)
       time_phase("eval_iter_#{iter}") { } # just to print elapsed if enabled; eval already ran
