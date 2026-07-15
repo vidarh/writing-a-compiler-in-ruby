@@ -91,7 +91,7 @@ class Compiler
 
   def initialize emitter = Emitter.new
     @e = emitter
-    @devirt_labels = nil   # populated only when ENV["DEVIRT"] is set (see compile); nil disables devirt
+    @devirt_labels = nil   # populated by compile() unless DEVIRT=0 (devirt is on by default); nil disables devirt
     @global_functions = Globals.new
     @string_constants = {}
     # Frozen string literals (from `# frozen_string_literal: true` files) are interned: each unique content
@@ -2132,10 +2132,11 @@ class Compiler
     # in __env__ for nested closures. See docs/KNOWN_ISSUES.md and transform.rb:rewrite_pattern_matching
     rewrite_pattern_matching(exp)
 
-    # Optional (gated, default OFF): whole-program type inference -> devirtualize provably-monomorphic call
-    # sites to direct calls. Runs AFTER the tree-rewrites above so node identities match what compile_exp
-    # walks. Sound-by-construction (see docs/devirt_plan.md); still validating on the full sweep.
-    if ENV["DEVIRT"]
+    # Whole-program type inference -> devirtualize provably-monomorphic call sites to direct calls. Runs
+    # AFTER the tree-rewrites above so node identities match what compile_exp walks. ON BY DEFAULT (opt out
+    # with DEVIRT=0) so the MRI and self-hosted compilers always make the SAME decisions and cannot diverge.
+    # Sound-by-construction (per-slot generation model, type_inference.rb); validated at full-sweep parity.
+    if ENV["DEVIRT"] != "0"
       ti = TypeInference.new
       ti.analyze(exp)
       @devirt_labels = ti.devirt_map(exp)
