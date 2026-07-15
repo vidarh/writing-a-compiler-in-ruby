@@ -20,21 +20,15 @@ run_time() {
 echo "== building out/driver ==" | tee -a "$LOG"
 make compiler
 
-echo "== workloads: selftest, driver; modes: default, INLINE=0 ==" | tee -a "$LOG"
+echo "== workloads: selftest, driver ==" | tee -a "$LOG"
 
 for workload in test/selftest.rb driver.rb; do
-  for mode in default noinline; do
-    export INLINE=0
-    if [ "$mode" = "default" ]; then
-      unset INLINE
-    fi
-    echo "-- $workload $mode --" | tee -a "$LOG"
-    for i in $(seq 1 "$RUNS"); do
-      run_time "${workload}:${mode}:compile:$i" ./compile "$workload" -I.
-    done
-    for i in $(seq 1 "$RUNS"); do
-      run_time "${workload}:${mode}:compile2:$i" ./compile2 "$workload" -I.
-    done
+  echo "-- $workload --" | tee -a "$LOG"
+  for i in $(seq 1 "$RUNS"); do
+    run_time "${workload}:compile:$i" ./compile "$workload" -I.
+  done
+  for i in $(seq 1 "$RUNS"); do
+    run_time "${workload}:compile2:$i" ./compile2 "$workload" -I.
   done
 done
 
