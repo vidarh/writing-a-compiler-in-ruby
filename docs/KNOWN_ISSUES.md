@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated**: 2026-07-09
+**Last Updated**: 2026-07-15
 
 ## Current State
 
@@ -402,6 +402,26 @@ Distinct from the earlier op-assign index-SPLAT compile failure (`@b[*k] ||= v`,
 this is the plain-index form and a wrong-VALUE, not a compile error. Root likely in how the
 op-assign-index setter path leaves (or fails to leave) the value in the result register. When
 memoising on the self-hosted compiler, avoid `@h[k] ||= v` as a value; use the explicit form.
+
+---
+
+### 14. Forward-referenced class definition segfaults (2026-07-15) — COMPILER BUG
+
+Using a class before it is defined in the same file (e.g. `describe` block first, `class Foo`
+after it) compiles successfully but the resulting binary segfaults at runtime. A minimal repro is:
+
+```ruby
+a = A.new
+puts(a.x)
+
+class A
+  def initialize; @x = 1; end
+  def x; @x; end
+end
+```
+
+Workaround: define classes before their first use. This was hit while adding `spec/inline_broaden_spec.rb`;
+the test places `InlineBox` before the `describe` block to avoid the crash.
 
 ---
 
