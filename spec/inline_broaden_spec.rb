@@ -77,6 +77,12 @@ class InlineHarness
     box.set_with_default(5, 3)
     box.value
   end
+
+  def optional_arg_missing
+    box = InlineBox.new(0)
+    box.set_with_default(7)
+    box.value
+  end
 end
 
 describe "Broadened devirt inlining" do
@@ -106,5 +112,9 @@ describe "Broadened devirt inlining" do
 
   it "inlines a method with optional params when all arguments are provided" do
     @h.optional_arg_provided.should == 8
+  end
+
+  it "inlines a method with optional params using the default value" do
+    @h.optional_arg_missing.should == 7
   end
 end

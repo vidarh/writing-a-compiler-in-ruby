@@ -28,21 +28,38 @@ class Compiler
     end
     params = defm[2]
     return inline_bail(dclass, defm, :bad_params, params.inspect[0,40]) if !params.is_a?(Array)
-    # Allow optional positional params when the call provides ALL arguments (no default value is used).
-    # Reject rest/block params and unsupported forms.
-    param_names = []
+    # Allow required and optional positional params. Optional params are filled with their
+    # side-effect-free default expressions when the call provides fewer arguments. Rest/block
+    # params and impure defaults are rejected.
+    param_entries = []
+    required_count = 0
     params.each do |p|
       if p.is_a?(Symbol)
-        param_names << p
+        param_entries << [:required, p]
+        required_count += 1
       elsif p.is_a?(Array) && p[0].is_a?(Symbol) && p[1] == :default && p.length == 3
-        param_names << p[0]
+        default_expr = p[2]
+        return inline_bail(dclass, defm, :impure_default, p.inspect[0,40]) if !inline_side_effect_free?(default_expr)
+        param_entries << [:optional, p[0], default_expr]
       else
         return inline_bail(dclass, defm, :unsupported_param, p.inspect[0,40])
       end
     end
+    param_names = param_entries.map { |e| e[1] }
+    total_params = param_names.length
     args = [] if args.nil?
     args = [args] if !args.is_a?(Array)
-    return inline_bail(dclass, defm, :arg_count_mismatch, "args=#{args.length} params=#{param_names.length}") if args.length != param_names.length
+    if args.length < required_count || args.length > total_params
+      return inline_bail(dclass, defm, :arg_count_mismatch, "args=#{args.length} required=#{required_count} total=#{total_params}")
+    end
+    # Fill missing trailing arguments with deep-copied default expressions. Work on a copy so we
+    # do not mutate the caller's args array if we later bail out and it falls back to a direct call.
+    effective_args = args.dup
+    while effective_args.length < total_params
+      entry = param_entries[effective_args.length]
+      effective_args << __deep_dup_node(entry[2])
+    end
+    args = effective_args
     body = defm[3]                                    # compile_defm compiles this SINGLE node as the body
     return inline_bail(dclass, defm, :no_body) if body.nil?
 
