@@ -400,6 +400,8 @@ class Compiler
     # A hash/array/float literal is always a heap object, never a tagged fixnum, so the load_class fixnum
     # guard (`movl Fixnum; testl $1; jne`) is dead code for these receivers.
     return true if ob[0] == :array || ob[0] == :float || ob[0] == :hash
+    # Comparison and logical-not operators always return true/false (heap globals), never a tagged Fixnum.
+    return true if [:lt, :le, :gt, :ge, :eq, :ne, :not].include?(ob[0])
     if ob[0] == :sexp
       inner = ob[1]
       return true if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
@@ -419,6 +421,8 @@ class Compiler
     end
     return false if !v.is_a?(Array)
     return true if v[0] == :array || v[0] == :hash || v[0] == :float
+    # Comparison and logical-not results are true/false globals, never tagged Fixnums.
+    return true if [:lt, :le, :gt, :ge, :eq, :ne, :not].include?(v[0])
     if v[0] == :sexp
       inner = v[1]
       return true if inner.is_a?(Array) && inner[0] == :call && inner[1] == :__get_string
