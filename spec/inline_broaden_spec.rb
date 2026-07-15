@@ -51,6 +51,10 @@ class InlineBox
     %s(if (gt @v 0) true false)
   end
 
+  def set_with_impure_default(v, d = self.class)
+    @v = v + d
+  end
+
   def equal_to?(other)
     %s(if (eq @v other) (return true) (return false))
   end
@@ -103,6 +107,12 @@ class InlineHarness
     box = InlineBox.new(0)
     box.set_with_default(7)
     box.value
+  end
+
+  def optional_arg_with_impure_default_provided
+    box = InlineBox.new(0)
+    # Provide both args so the impure default expression is never evaluated.
+    box.set_with_impure_default(4, 5)
   end
 
   def rest_arg_ignored
@@ -174,6 +184,10 @@ describe "Broadened devirt inlining" do
 
   it "inlines a method with optional params using the default value" do
     @h.optional_arg_missing.should == 7
+  end
+
+  it "inlines a method with an impure default when all arguments are provided" do
+    @h.optional_arg_with_impure_default_provided.should == 9
   end
 
   it "inlines a method with an unused rest param when no splat args are passed" do

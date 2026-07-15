@@ -45,8 +45,9 @@ class Compiler
         required_count += 1
         positional_count += 1
       elsif p.is_a?(Array) && p[0].is_a?(Symbol) && p[1] == :default && p.length == 3
+        # Defer the side-effect check until we actually need to fill from this default.
+        # Calls that provide all positional arguments should not be blocked by an impure default.
         default_expr = p[2]
-        return inline_bail(dclass, defm, :impure_default, p.inspect[0,40]) if !inline_side_effect_free?(default_expr)
         param_entries << [:optional, p[0], default_expr]
         param_names << p[0]
         positional_count += 1
@@ -71,6 +72,7 @@ class Compiler
     effective_args = args.dup
     while effective_args.length < total_params
       entry = param_entries[effective_args.length]
+      return inline_bail(dclass, defm, :impure_default, entry.inspect[0,40]) if entry[0] == :optional && !inline_side_effect_free?(entry[2])
       effective_args << __deep_dup_node(entry[2])
     end
     args = effective_args
