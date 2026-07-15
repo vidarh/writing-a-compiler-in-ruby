@@ -38,10 +38,18 @@ The core transplant machinery is sound: it deep-copies the body, rewrites `self`
 3. **Inline multi-statement `:do` bodies more explicitly**:
    - Document/verify that `:do` bodies are already handled generically; add targeted tests for multi-statement accessors/predicates to prevent regressions.
 
-4. **Add a small diagnostic helper** (optional, gated by `INLINE_DEBUG=2`):
-   - Print why each devirt target was *not* inlined (e.g. `impure_recv`, `unsafe_body`, `return`, `default_args`). This makes the next broadening iteration data-driven.
+4. **Allow optional positional params when the call provides all arguments**.
 
-5. **Validation:**
+5. **Allow known-safe `:sexp` forms** (the compiler lowers Ruby literals and raw core reads to `%s(...)`):
+   - Tagged integer literals `[:sexp, N]`, symbol literals `[:sexp, :__S_*]`,
+     string/symbol constructors `[:sexp, [:call, :__get_string/:__get_symbol, label]]`,
+     and raw reads `[:sexp, [:__int, expr]]` / `[:sexp, [:index, obj, offset]]`.
+   - This is the main unlock: without it almost every literal receiver/argument and most simple core getters are rejected.
+
+6. **Add a small diagnostic helper** (gated by `INLINE_DEBUG=2`):
+   - Print why each devirt target was *not* inlined (e.g. `impure_recv`, `unsafe_body`, `default_args`). This makes the next broadening iteration data-driven.
+
+7. **Validation:**
    - `make selftest` and `make selftest-c` must pass with `INLINE=1`.
    - Run `make specs-parallel` on `compiler@ax52` with and without `INLINE=1` to confirm no rubyspec regressions and measure pass-rate/code-size change.
    - Compare generated assembly line counts / self-compile wall time for the compiler driver.
@@ -99,23 +107,26 @@ flowchart TD
 
 ## Acceptance Criteria
 
-- [ ] `inline_side_effect_free?` exists and is used for receiver/argument eligibility.
-- [ ] `[:return, expr]` single-statement bodies inline correctly.
-- [ ] Multi-statement `:do` bodies with a trailing `return` inline correctly.
-- [ ] `make selftest` passes with `INLINE=1` (Fails: 0).
+- [x] `inline_side_effect_free?` exists and is used for receiver/argument eligibility.
+- [x] `[:return, expr]` single-statement bodies inline correctly.
+- [x] Multi-statement `:do` bodies with a trailing `return` inline correctly.
+- [x] Optional positional params are supported when the call provides all arguments.
+- [x] Known-safe `:sexp` forms are allowed in receiver/argument/body checks.
+- [x] `INLINE_DEBUG=2` diagnostic helper reports why candidates are rejected.
+- [x] `make selftest` passes with `INLINE=1` (Fails: 0).
 - [ ] `make selftest-c` passes with `INLINE=1` (Fails: 0).
-- [ ] `make spec` passes with `INLINE=1`.
-- [ ] New mspec tests in `spec/inline_*_spec.rb` cover the broadened cases.
+- [x] `make spec` passes with `INLINE=1` (custom spec, including `spec/inline_broaden_spec.rb`).
+- [x] New mspec tests in `spec/inline_*_spec.rb` cover the broadened cases.
 - [ ] `make specs-parallel` on `compiler@ax52` shows no regressions (or any regressions are understood and documented in `docs/KNOWN_ISSUES.md`).
-- [ ] Inline site count with `INLINE=1` increases measurably from the current 36 on `make selftest` (target TBD after baseline; document the new number).
+- [x] Inline site count with `INLINE=1` increases measurably from the baseline 36 on `make selftest` (new count ~780).
 - [ ] `INLINE=1` remains opt-in until the ax52 sweep and selftest-c are clean; only then consider enabling by default.
 
 ## Open Questions
 
-- How many additional devirt sites become eligible with the broader purity/return rules? A quick diagnostic pass over the compiler's own AST will quantify this before code changes land.
+- How many additional devirt sites become eligible with the broader purity/return rules? **Answered:** the dominant blocker was `:sexp` lowered literals/raw reads; allowing the known-safe forms raised `make selftest` inline count from 36 to ~780.
 - Does broadening purity to include arithmetic on locals expose any latent register-cache issues in `compile_eval_arg` when the same expression is duplicated inside the body? The expressions are side-effect-free, but the compiler's register allocator may compile them twice. This is safe but may affect code size; measure.
-- Should `inline_side_effect_free?` allow `:sexp` sub-expressions that are pure (e.g. `%s(index ...)` raw reads)? Probably not in v1 — too easy to miss a side effect.
-- Is there value in handling default arguments when the call provides all positional args? Likely a later iteration; optional params are common in core but complicate param binding.
+- Should `inline_side_effect_free?` allow `:sexp` sub-expressions that are pure (e.g. `%s(index ...)` raw reads)? **Answered/implemented:** yes, for the specific literal/raw-read forms the compiler emits.
+- Is there value in handling default arguments when the call provides all positional args? **Implemented:** optional params are now allowed when the call passes all arguments.
 
 ## Risks
 
@@ -124,4 +135,4 @@ flowchart TD
 - **Code bloat:** Inlining more sites increases code size. Acceptable if it unlocks later strength reduction; measure assembly line counts.
 
 ---
-*Status: PROPOSAL - Awaiting approval*
+*Status: IMPLEMENTED - Local selftest/spec pass; awaiting ax52 selftest-c and specs-parallel validation.*
