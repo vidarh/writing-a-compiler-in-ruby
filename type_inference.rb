@@ -733,7 +733,10 @@ class TypeInference
       set_slot(st, @cur_class, m, { "__method_#{@cur_class}_#{ti_clean(m)}" => true })
       @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
     end
-    analyze_body(node, 2, @cur_class, m)   # the method body is a separate scope
+    key = (@cur_class && m.is_a?(Symbol)) ? [@cur_class, m] : nil
+    if !key || @dirty_methods[key]
+      analyze_body(node, 2, @cur_class, m)   # the method body is a separate scope
+    end
     [m.is_a?(Symbol) ? class_set(:Symbol) : TS_TOP, st]
   end
 
@@ -811,6 +814,9 @@ class TypeInference
     h
   end
   def analyze_body(node, argi, cls, name)
+    key = (cls && name.is_a?(Symbol)) ? [cls, name] : nil
+    prev_key = @current_method_key
+    @current_method_key = key
     st = st0
     # `name` is a Symbol only for a normal instance method. A SINGLETON def (`def self.m`/`def obj.m`) has an
     # Array name and is NOT in @methods, so NO call ever records its params/return -> we cannot bound its
@@ -837,6 +843,7 @@ class TypeInference
     @cur_returns = join(@cur_returns, last)        # fall-through value is a return
     grow_return([cls, name], @cur_returns) if cls && name
     @cur_class = sc; @cur_returns = sr
+    @current_method_key = prev_key
   end
 
   # ---- interprocedural: build (class,name)->defm and its class; type self/params/returns ----
@@ -1030,6 +1037,8 @@ class TypeInference
       return TS_TOP
     end
     cs.each do |c, m|
+      callee = [c, m]
+      @callers[callee] << @current_method_key if @current_method_key
       i = 0
       argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
     end
@@ -1074,6 +1083,11 @@ class TypeInference
     time_phase("compute_slots")  { compute_slots(prog) }
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
+    @callers = Hash.new { |h, k| h[k] = [] }
+    @current_method_key = nil
+    # All methods are dirty initially.
+    @dirty_methods = {}
+    @methods.each_key { |k| @dirty_methods[k] = true }
     iter = 0
     loop do
       iter += 1
@@ -1084,10 +1098,33 @@ class TypeInference
       @cur_class = :Object                        # top-level self is main, an Object
       st = st0; st[:v][:self] = class_set(:Object)
       iter_t = Time.now
+      @current_method_key = :main
       eval(prog, st)
+      @current_method_key = nil
       time_phase("eval_iter_#{iter}") { } # just to print elapsed if enabled; eval already ran
       STDERR.puts "[time] ti.eval_iter_#{iter}: %.3fs" % (Time.now - iter_t) if ENV["COMPILER_TIME"]
       break if !@changed || iter > 40
+      # Build the dirty set for the next iteration from param/return changes.
+      next_dirty = {}
+      # Param changes: a method is dirty if any of its param slots grew.
+      @param_types.each_key do |k|
+        key = [k[0], k[1]]
+        changed = !@param_types_prev || !@param_types_prev[key] || !ts_eq_maybe(@param_types_prev[key][k[2]], @param_types[k])
+        next_dirty[key] = true if changed
+      end
+      # Return changes: dirty the method itself and all its callers.
+      @return_types.each_key do |key|
+        old = @return_types_prev ? @return_types_prev[key] : nil
+        if !ts_eq_maybe(old, @return_types[key])
+          next_dirty[key] = true
+          @callers[key].each { |caller| next_dirty[caller] = true if caller }
+        end
+      end
+      @dirty_methods = next_dirty
+      @param_types_prev = {}
+      @param_types.each_key { |k| (@param_types_prev[[k[0], k[1]]] ||= {})[k[2]] = @param_types[k] }
+      @return_types_prev = @return_types.dup
+      STDERR.puts "[time] ti.dirty_next: #{@dirty_methods.length}" if ENV["COMPILER_TIME"]
     end
     STDERR.puts "[time] ti.fixpoint_iters: #{iter}" if ENV["COMPILER_TIME"]
     self
