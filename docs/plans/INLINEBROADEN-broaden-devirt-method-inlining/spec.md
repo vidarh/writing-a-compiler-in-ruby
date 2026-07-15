@@ -174,13 +174,14 @@ The two highest-leverage, low-risk broadenings are:
 
 - [x] `INLINE_DEBUG=2` counts for `unsupported_param` drop to zero on `make selftest`.
 - [x] `inline_safe_sexp?` accepts value-producing `%s(if cond then else)` / `%s(ifelse cond then else)` forms.
-- [x] `make selftest` / `make selftest-c` remain Fails: 0.
+- [x] `make selftest` / `make selftest-c` remain Fails: 0 (verified locally and on `compiler@ax52`).
 - [x] `spec/inline_broaden_spec.rb` gains tests for:
   - a method with a `*args` parameter called without splat arguments;
   - a method with an `&block` parameter called without a block;
   - a predicate-style method whose body is a raw `%s(if ...)` value expression.
 - [ ] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the pre-Phase-2 baseline.
-- [ ] Inline site count on `make selftest` is measured and documented (expected: rest/block broadening removes `unsupported_param` rejections, but many of those candidates then fail `unsafe_body` due to `:let`/complex bodies, so the net count may not rise until bodies are also broadened).
+  - **Pre-Phase-2 baseline** (commit before rest/block/%s(if) changes): PASS 117, FAIL 411, CRASH 5, TIMEOUT 2, COMPILE_FAIL 0 (535 files).
+  - **Post-Phase-2 run** is in progress on `compiler@ax52`.
 
 ### Phase 2 measurements (local)
 
@@ -191,6 +192,13 @@ After the changes a fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` shows:
 - Total bails: 351, inline sites: ~782 (unchanged from Phase 1 on this workload).
 
 This confirms the param broadening is working and the next bottleneck is body safety (`:let`, early-return raw `%s(if ...)`, and method calls).
+
+### Ax52 validation status
+
+- `make selftest-c` on `compiler@ax52`: **Fails: 0** with Phase 2 changes.
+- `make specs-parallel` on `compiler@ax52`:
+  - Pre-Phase-2 baseline: PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0.
+  - Post-Phase-2 comparison run is in progress.
 
 ### Risks
 
