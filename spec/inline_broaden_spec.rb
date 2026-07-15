@@ -34,6 +34,10 @@ class InlineBox
   def set_or_clear(flag, v)
     @v = flag ? v : 0
   end
+
+  def set_with_default(v, d = 0)
+    @v = v + d
+  end
 end
 
 class InlineHarness
@@ -67,6 +71,12 @@ class InlineHarness
     v2 = box.value
     [v1, v2]
   end
+
+  def optional_arg_provided
+    box = InlineBox.new(0)
+    box.set_with_default(5, 3)
+    box.value
+  end
 end
 
 describe "Broadened devirt inlining" do
@@ -92,5 +102,9 @@ describe "Broadened devirt inlining" do
 
   it "inlines a method whose argument is a conditional side-effect-free expression" do
     @h.conditional_expression_arg.should == [99, 0]
+  end
+
+  it "inlines a method with optional params when all arguments are provided" do
+    @h.optional_arg_provided.should == 8
   end
 end

@@ -27,17 +27,29 @@ class Compiler
       STDERR.puts "[inl entry ##{@inl_calls}] #{dclass}##{defm[1]}" if @inl_calls % 200 == 1 || @inl_calls < 5
     end
     params = defm[2]
-    return nil if !params.is_a?(Array) || params.any? { |p| !p.is_a?(Symbol) }   # plain positional only
+    return nil if !params.is_a?(Array)
+    # Allow optional positional params when the call provides ALL arguments (no default value is used).
+    # Reject rest/block params and unsupported forms.
+    param_names = []
+    params.each do |p|
+      if p.is_a?(Symbol)
+        param_names << p
+      elsif p.is_a?(Array) && p[0].is_a?(Symbol) && p[1] == :default && p.length == 3
+        param_names << p[0]
+      else
+        return nil
+      end
+    end
     args = [] if args.nil?
     args = [args] if !args.is_a?(Array)
-    return nil if args.length != params.length
+    return nil if args.length != param_names.length
     body = defm[3]                                    # compile_defm compiles this SINGLE node as the body
     return nil if body.nil?
 
     # Strip a trailing explicit return where it is equivalent to the body's value.
     body, _ = inline_unwrap_return(body)
     return nil if body.nil?
-    return nil if !inline_safe_node?(body, params)
+    return nil if !inline_safe_node?(body, param_names)
 
     cscope = @classes[dclass] || @classes["Object__#{dclass}".to_sym]
     return nil if !cscope
@@ -64,8 +76,8 @@ class Compiler
     @inline_count = (@inline_count || 0) + 1
     subst = { :self => recv }
     i = 0
-    while i < params.length
-      subst[params[i]] = args[i]
+    while i < param_names.length
+      subst[param_names[i]] = args[i]
       i += 1
     end
     spliced = inline_rewrite(body, subst, recv, offs)   # body is the SINGLE body node (compile_defm's defm[3])
