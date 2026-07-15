@@ -239,7 +239,9 @@ Implementation:
 - [x] Inlined call results carry type `:object` so they work correctly when used as Ruby conditions.
 - [x] `make selftest` / `make selftest-c` remain Fails: 0 locally.
 - [x] `spec/inline_broaden_spec.rb` passes (15/15 after the impure-default test was added).
-- [ ] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the Phase 2 baseline.
+- [x] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the Phase 2 baseline.
+  - Phase 2 baseline: PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0 / ERROR 0.
+  - Phase 3 run: PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0 / ERROR 0 (identical file statuses; wall-clock 669.8s vs 666.8s, within noise).
 
 ### Phase 3b: Defer the impure-default check for optional params
 
@@ -284,8 +286,8 @@ Runtime of the generated `out/selftest2` binary is essentially unchanged for thi
 
 ### Ax52 validation status
 
-- `make selftest-c` on `compiler@ax52`: **Fails: 0** with Phase 3 changes.
-- `make specs-parallel` on `compiler@ax52`: comparison run is in progress.
+- `make selftest-c` on `compiler@ax52`: **Fails: 0** with Phase 3 (+ 3b) changes.
+- `make specs-parallel` on `compiler@ax52`: **PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0 / ERROR 0** — identical file-level status to the Phase 2 baseline (wall-clock 669.8s vs 666.8s, within run-to-run noise).
 
 ### Risks
 
