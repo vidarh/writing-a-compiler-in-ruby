@@ -90,7 +90,7 @@ class Compiler
     return false if !e.is_a?(Array)
     h = e[0]
     case h
-    when :call, :callm, :yield, :super, :block, :proc, :lambda, :defun, :defm,
+    when :call, :callm, :safe_callm, :yield, :super, :block, :proc, :lambda, :defun, :defm,
          :while, :until, :case, :return, :next, :break, :redo,
          :assign, :and_assign, :or_assign, :let, :sexp, :array, :hash, :float
       false
