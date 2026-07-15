@@ -1805,8 +1805,6 @@ class Compiler
   # For a devirtualised `recv.m` with no block, the [target-class, method-body] to try inlining (see
   # inline.rb#inline_devirt_body). nil if not devirt'd, the body is unknown, or a block is present.
   def inline_for(exp)
-    return nil if ENV["INLINE"] != "1"          # devirt-driven inlining is opt-in: current broadened inliner slows
-                                                # self-hosted compile, so default off until it is net faster.
     return nil if !@devirt_labels || exp[4]
     d = @devirt_labels[exp.object_id]
     return nil if !d || !@devirt_method_asts
@@ -2177,7 +2175,7 @@ class Compiler
     # after the main function, we ouput all functions and constants
     # used and defined so far.
     time_phase("output_functions") { output_functions }
-    STDERR.puts "[inline] #{@inline_count || 0} call sites inlined" if ENV["INLINE_VERBOSE"] && ENV["INLINE"] != "0"
+    STDERR.puts "[inline] #{@inline_count || 0} call sites inlined" if ENV["INLINE_VERBOSE"]
     # Shared fixed-arity error handlers (collected during output_functions). Emitted here while still in
     # .text, right after the functions whose arity checks jump to them.
     time_phase("output_arity_fail_handlers") { output_arity_fail_handlers }
