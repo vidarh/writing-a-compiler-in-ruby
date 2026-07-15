@@ -80,8 +80,9 @@ class Compiler
     # Strip a trailing explicit return where it is equivalent to the body's value.
     body, _ = inline_unwrap_return(body)
     return inline_bail(dclass, defm, :return_unwrap_failed) if body.nil?
-    # Convert raw `%s(if cond (return a) (return b))` (and similar :ifelse) into a value ternary.
-    # This is the shape produced by many core predicates; the return statements are implicit at the call site.
+    # Convert raw `%s(if cond (return a) (return b))` (and similar :ifelse) into a Ruby-level
+    # `[:if, cond, a, b]`. This is the shape produced by many core predicates; the return statements
+    # are implicit at the call site and lifting to a Ruby :if keeps the result type as :object.
     body = inline_normalize_return_if(body)
     return inline_bail(dclass, defm, :unsafe_body, body.inspect[0,60]) if !inline_safe_node?(body, param_names)
 
