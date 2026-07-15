@@ -761,7 +761,15 @@ class TypeInference
         # Seed it from @param_types (the passed-arg types) whichever form it takes; else the default-value
         # prologue (`if numargs<N; name = default`) + "missing var => NilClass" makes it look {NilClass}.
         pname = a.is_a?(Symbol) ? a : ((a.is_a?(Array) && a[0].is_a?(Symbol)) ? a[0] : nil)
-        st[:v][pname] = known ? ((@param_types[cls] || {})[name] || {})[i] : TS_TOP if pname
+        if pname
+          if known
+            pm = @param_types[cls]
+            pn = pm ? pm[name] : nil
+            st[:v][pname] = pn ? pn[i] : nil
+          else
+            st[:v][pname] = TS_TOP
+          end
+        end
         i += 1
       end
     end
@@ -969,7 +977,11 @@ class TypeInference
       argtypes.each { |at| grow_param(c, m, i, at); i += 1 }
     end
     rt = all ? nil : TS_TOP     # an unresolved receiver class -> result could be anything
-    cs.each { |c, m| rt = join(rt, (@return_types[c] || {})[m]) }
+    cs.each do |c, m|
+      rm = @return_types[c]
+      rts = rm ? rm[m] : nil
+      rt = join(rt, rts)
+    end
     rt
   end
   def widen_all_params_named(name, argc)
@@ -1027,14 +1039,26 @@ class TypeInference
   end
 
   def grow_param(cls, name, i, ts)
-    pm = (@param_types[cls] ||= {})
-    pn = (pm[name] ||= {})
+    pm = @param_types[cls]
+    if pm.nil?
+      pm = {}
+      @param_types[cls] = pm
+    end
+    pn = pm[name]
+    if pn.nil?
+      pn = {}
+      pm[name] = pn
+    end
     old = pn[i]
     nu = join(old, ts)
     if !ts_eq_maybe(old, nu); pn[i] = nu; @changed = true; end
   end
   def grow_return(cls, name, ts)
-    rm = (@return_types[cls] ||= {})
+    rm = @return_types[cls]
+    if rm.nil?
+      rm = {}
+      @return_types[cls] = rm
+    end
     old = rm[name]
     nu = join(old, ts)
     if !ts_eq_maybe(old, nu); rm[name] = nu; @changed = true; end
