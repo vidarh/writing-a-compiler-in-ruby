@@ -25,7 +25,9 @@ class Compiler
       when :call, :callm, :safe_callm, :yield, :super
         true
       when :lt, :le, :gt, :ge, :eq, :ne, :not
-        source[1..-1].all? { |c| source_known_nonzero?(c) }
+        # Comparisons and logical-not return a raw 0/1 boolean, so they CAN produce raw 0.
+        # Do not treat them as known-nonzero even if their operands are.
+        false
       when :add, :sub, :mul, :div, :mod, :sar, :shl, :shr, :bitand, :bitor, :bitxor
         source[1..-1].all? { |c| source_known_nonzero?(c) }
       when :and, :or
