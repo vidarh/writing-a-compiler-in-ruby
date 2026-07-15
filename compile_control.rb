@@ -1,7 +1,70 @@
 # frozen_string_literal: true
 
 class Compiler
-  def compile_jmp_on_false(scope, r, target)
+  # True for source AST expressions whose runtime value can never be the raw 0 used to
+  # represent an uninitialized global/ivar slot. Local variables/args are nil-initialized,
+  # array/hash slots are initialized to nil, and method/comparison/arithmetic results are
+  # always real objects. Only global variables, instance variables, class variables, and raw
+  # sexp slot reads can expose raw 0.
+  def source_known_nonzero?(source)
+    return false if source.nil?
+    case source
+    when :self, :true, :false, :nil
+      true
+    when Integer, String, Float
+      true
+    when Symbol
+      s = source.to_s
+      # $g / @x / @@x may be uninitialized (raw 0). Everything else (local, arg, constant,
+      # method call on self) resolves to a real object reference.
+      !(s[0] == ?$ || (s[0] == ?@ && (s.length < 2 || s[1] != ?@)) || (s[0] == ?@ && s[1] == ?@))
+    when Array
+      return false if source.empty?
+      h = source[0]
+      case h
+      when :call, :callm, :safe_callm, :yield, :super
+        true
+      when :lt, :le, :gt, :ge, :eq, :ne, :not
+        source[1..-1].all? { |c| source_known_nonzero?(c) }
+      when :add, :sub, :mul, :div, :mod, :sar, :shl, :shr, :bitand, :bitor, :bitxor
+        source[1..-1].all? { |c| source_known_nonzero?(c) }
+      when :and, :or
+        source[1..-1].all? { |c| source_known_nonzero?(c) }
+      when :if
+        # Both branches must be known nonzero.
+        source.length == 4 && source_known_nonzero?(source[2]) && source_known_nonzero?(source[3])
+      when :array, :hash, :float
+        true
+      when :deref
+        true # constant reference
+      when :index, :bindex
+        # Ruby [] returns the slot value, which is initialized to nil for Array/Hash.
+        source[1..-1].all? { |c| source_known_nonzero?(c) }
+      when :sexp
+        return false if source.length != 2
+        inner = source[1]
+        return false if !inner.is_a?(Array)
+        ih = inner[0]
+        case ih
+        when :__int
+          true
+        when :call
+          # __get_string / __get_symbol / other literal constructors
+          inner.length == 3 && (inner[1] == :__get_string || inner[1] == :__get_symbol)
+        when :if
+          inner.length == 4 && source_known_nonzero?(inner[2]) && source_known_nonzero?(inner[3])
+        else
+          false # raw index/deref/etc. may read uninitialized memory
+        end
+      else
+        false
+      end
+    else
+      false
+    end
+  end
+
+  def compile_jmp_on_false(scope, r, target, source = nil)
     if r && r.type == :object
       @e.save_result(r)
       @e.evict_all
@@ -12,15 +75,18 @@ class Compiler
       # A raw 0 (null) is an uninitialized global/ivar slot -- MRI reads those as nil, which is falsy.
       # Without this, `$g ||= x` (or any `if $unset`) saw 0 as truthy, kept the raw 0, and SIGSEGV'd on use.
       # Safe: a Ruby Integer 0 is the tagged value 1, never raw 0, so this only catches genuinely-null slots.
-      @e.testl(@e.result_value, @e.result_value)
-      @e.je(target)
+      # Skip the raw-0 guard when the source expression cannot produce raw 0.
+      unless source && source_known_nonzero?(source)
+        @e.testl(@e.result_value, @e.result_value)
+        @e.je(target)
+      end
     else
       @e.evict_all
       @e.jmp_on_false(target, r)
     end
   end
 
-  def compile_jmp_on_true(scope, r, target)
+  def compile_jmp_on_true(scope, r, target, source = nil)
     # Jump on true is the inverse of jump on false
     # We jump if the value is NOT nil and NOT false
     if r && r.type == :object
@@ -33,8 +99,10 @@ class Compiler
       @e.cmpl(@e.result_value, "false")
       @e.je(skip)
       # Raw 0 (null/uninitialized slot) is falsy too -- see compile_jmp_on_false.
-      @e.testl(@e.result_value, @e.result_value)
-      @e.je(skip)
+      unless source && source_known_nonzero?(source)
+        @e.testl(@e.result_value, @e.result_value)
+        @e.je(skip)
+      end
       # Value is truthy - jump to target
       @e.jmp(target)
       @e.local(skip)
@@ -65,7 +133,7 @@ class Compiler
 
     ret = compile_eval_arg(scope,left)
     l_or = @e.get_local + "_or"
-    compile_jmp_on_false(scope, ret, l_or)
+    compile_jmp_on_false(scope, ret, l_or, left)
 
     l_end_or = @e.get_local + "_end_or"
     @e.jmp(l_end_or)
@@ -87,7 +155,7 @@ class Compiler
 
     ret = compile_eval_arg(scope,left)
     l_or = @e.get_local + "_or"
-    compile_jmp_on_false(scope, ret, l_or)
+    compile_jmp_on_false(scope, ret, l_or, left)
 
     l_end_or = @e.get_local + "_end_or"
     @e.jmp(l_end_or)
@@ -134,7 +202,7 @@ class Compiler
       @e.emit(jcc, l_else_arm)
     else
       res = compile_eval_arg(scope, cond)
-      compile_jmp_on_false(scope, res, l_else_arm)
+      compile_jmp_on_false(scope, res, l_else_arm, cond)
     end
 
     @e.comment(Emitter::COMMENTS && "then: #{if_arm.inspect}")
@@ -240,7 +308,7 @@ class Compiler
       @e.local(continue_label)
       @e.evict_all
       var = compile_eval_arg(scope, cond)
-      compile_jmp_on_true(scope, var, loop_label)  # while: loop again while the condition is TRUE
+      compile_jmp_on_true(scope, var, loop_label, cond)  # while: loop again while the condition is TRUE
 
       nilval = compile_eval_arg(scope, :nil)
       @e.movl(nilval, :eax) if nilval != :eax
@@ -257,7 +325,7 @@ class Compiler
     loop_label = @e.local
 
     var = compile_eval_arg(scope, cond)
-    compile_jmp_on_false(scope, var, normal_exit)
+    compile_jmp_on_false(scope, var, normal_exit, cond)
     # Handle bare symbols/values in body - evaluate them directly
     if body.is_a?(Array)
       compile_exp(ControlScope.new(scope, break_label, loop_label), body)
@@ -320,7 +388,7 @@ class Compiler
       @e.local(continue_label)  # `next` lands here, at the post-condition
       @e.evict_all
       var = compile_eval_arg(scope, cond)
-      compile_jmp_on_false(scope, var, loop_label)  # Loop while condition is false
+      compile_jmp_on_false(scope, var, loop_label, cond)  # Loop while condition is false
 
       # Normal exit (fall through): set %eax to nil
       nilval = compile_eval_arg(scope, :nil)
@@ -339,7 +407,7 @@ class Compiler
       loop_label = @e.local
 
       var = compile_eval_arg(scope, cond)
-      compile_jmp_on_true(scope, var, normal_exit)  # Jump on true (opposite of while)
+      compile_jmp_on_true(scope, var, normal_exit, cond)  # Jump on true (opposite of while)
       # Handle bare symbols/values in body - evaluate them directly
       if body.is_a?(Array)
         compile_exp(ControlScope.new(scope, break_label, loop_label), body)
