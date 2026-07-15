@@ -238,12 +238,29 @@ Implementation:
 - [x] The single-return-branch-with-fallback pattern (`%s(if cond (return a)); b`) is also normalized.
 - [x] Inlined call results carry type `:object` so they work correctly when used as Ruby conditions.
 - [x] `make selftest` / `make selftest-c` remain Fails: 0 locally.
-- [x] `spec/inline_broaden_spec.rb` passes (14/14).
+- [x] `spec/inline_broaden_spec.rb` passes (15/15 after the impure-default test was added).
 - [ ] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the Phase 2 baseline.
+
+### Phase 3b: Defer the impure-default check for optional params
+
+The original optional-param support required the default expression to be side-effect-free even when the call provided all positional arguments and the default was never used. That blocked inlining of methods like:
+
+```ruby
+def m(a, b = some_side_effecting_call)
+  ...
+end
+m(1, 2)  # default is irrelevant
+```
+
+The check is now deferred to the fill loop in `inline_devirt_body`: we only validate and deep-copy the default when a missing trailing argument actually needs it. Calls that pass all args inline as before; calls that rely on the default still require a side-effect-free default expression.
+
+- Regression test added to `spec/inline_broaden_spec.rb`.
+- `make selftest` / `make selftest-c` remain Fails: 0.
+- On `test/selftest.rb` this broadening did not change bail/site counts (no method in that workload has an impure default and all args provided), but it removes an unnecessary restriction for future callers.
 
 ### Phase 3 measurements (local)
 
-A fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` after Phase 3 shows:
+A fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` after Phase 3 (+ 3b) shows:
 
 | reason | count | notes |
 |---|---|---|
@@ -252,6 +269,7 @@ A fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` after Phase 3 shows:
 | `not_in_funcscope` | 21 | unchanged |
 | `impure_arg` | 3 | unchanged |
 | `arg_count_mismatch` | 1 | unchanged |
+| `impure_default` | 0 | only counted when a fill actually occurs |
 
 Inline site count on `test/selftest.rb` increased from **782** to **804** (22 additional sites on this workload).
 
