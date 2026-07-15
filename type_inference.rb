@@ -761,7 +761,7 @@ class TypeInference
         # Seed it from @param_types (the passed-arg types) whichever form it takes; else the default-value
         # prologue (`if numargs<N; name = default`) + "missing var => NilClass" makes it look {NilClass}.
         pname = a.is_a?(Symbol) ? a : ((a.is_a?(Array) && a[0].is_a?(Symbol)) ? a[0] : nil)
-        st[:v][pname] = known ? @param_types[[cls, name, i]] : TS_TOP if pname
+        st[:v][pname] = known ? ((@param_types[cls] || {})[name] || {})[i] : TS_TOP if pname
         i += 1
       end
     end
@@ -769,7 +769,7 @@ class TypeInference
     @cur_class = nil; @cur_returns = nil
     last, _ = eval_seq(node, argi + 1, st)
     @cur_returns = join(@cur_returns, last)        # fall-through value is a return
-    grow_return([cls, name], @cur_returns) if cls && name
+    grow_return(cls, name, @cur_returns) if cls && name
     @cur_class = sc; @cur_returns = sr
   end
 
@@ -966,10 +966,10 @@ class TypeInference
     end
     cs.each do |c, m|
       i = 0
-      argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
+      argtypes.each { |at| grow_param(c, m, i, at); i += 1 }
     end
     rt = all ? nil : TS_TOP     # an unresolved receiver class -> result could be anything
-    cs.each { |c, m| rt = join(rt, @return_types[[c, m]]) }
+    cs.each { |c, m| rt = join(rt, (@return_types[c] || {})[m]) }
     rt
   end
   def widen_all_params_named(name, argc)
@@ -977,7 +977,7 @@ class TypeInference
       next if k[1] != name
       i = 0
       while i < argc
-        grow_param([k[0], name, i], TS_TOP)
+        grow_param(k[0], name, i, TS_TOP)
         i += 1
       end
     end
@@ -992,10 +992,8 @@ class TypeInference
       next if !all && !recv_ty.key?(k[0])
       args = dm[2]
       argc = args.is_a?(Array) ? args.length : 0
-      i = 0
-      while i < argc
-        grow_param([k[0], k[1], i], TS_TOP)
-        i += 1
+      argc.times do |i|
+        grow_param(k[0], k[1], i, TS_TOP)
       end
     end
   end
@@ -1007,8 +1005,8 @@ class TypeInference
     time_phase("build_methods")  { build_methods(prog) }
     time_phase("compute_effects"){ compute_effects(prog) }
     time_phase("compute_slots")  { compute_slots(prog) }
-    @param_types  = {}     # [class,name,i] => class-set
-    @return_types = {}     # [class,name]   => class-set
+    @param_types  = {}     # class => name => i => class-set
+    @return_types = {}     # class => name => class-set
     iter = 0
     loop do
       iter += 1
@@ -1028,15 +1026,18 @@ class TypeInference
     self
   end
 
-  def grow_param(key, ts)
-    old = @param_types[key]
+  def grow_param(cls, name, i, ts)
+    pm = (@param_types[cls] ||= {})
+    pn = (pm[name] ||= {})
+    old = pn[i]
     nu = join(old, ts)
-    if !ts_eq_maybe(old, nu); @param_types[key] = nu; @changed = true; end
+    if !ts_eq_maybe(old, nu); pn[i] = nu; @changed = true; end
   end
-  def grow_return(key, ts)
-    old = @return_types[key]
+  def grow_return(cls, name, ts)
+    rm = (@return_types[cls] ||= {})
+    old = rm[name]
     nu = join(old, ts)
-    if !ts_eq_maybe(old, nu); @return_types[key] = nu; @changed = true; end
+    if !ts_eq_maybe(old, nu); rm[name] = nu; @changed = true; end
   end
   def ts_eq_maybe(a, b)
     return true if a.equal?(b)
