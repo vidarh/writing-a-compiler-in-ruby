@@ -629,7 +629,11 @@ class Compiler
       spliced = inline_devirt_body(scope, ob, args, inline_desc[0], inline_desc[1])
       if spliced
         @e.comment(Emitter::COMMENTS && "inlined #{inline_desc[0]}##{method}")
-        return compile_eval_arg(scope, spliced)
+        # Materialise the spliced result into the result register and return a :subexpr Value -- exactly like
+        # a normal call's return. Returning compile_eval_arg's Value directly can hand back an unmaterialised
+        # memory ref (e.g. [:indirect_disp,...]) that a caller in argument position mis-reads.
+        @e.save_result(compile_eval_arg(scope, spliced))
+        return Value.new([:subexpr])
       end
     end
 

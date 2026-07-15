@@ -46,26 +46,27 @@ class Compiler
     end
     return nil if !ok
 
-    if ENV["INLINE_DEBUG"]
+    if ENV["INLINE_MAX"]
       @inline_dbg = (@inline_dbg || 0) + 1
-      return nil if @inline_dbg > 8
-      STDERR.puts "[inline ##{@inline_dbg}] #{dclass}##{defm[1]} body=#{body.inspect[0,90]}"
+      return nil if @inline_dbg > ENV["INLINE_MAX"].to_i
+      STDERR.puts "[inline ##{@inline_dbg}] #{dclass}##{defm[1]} recv=#{recv.inspect[0,40]} args=#{args.inspect[0,40]} body=#{body.inspect[0,60]}" if ENV["INLINE_DEBUG"]
     end
 
-    # Only inline when the receiver and every argument are ALREADY side-effect-free (a bare local / self /
-    # literal), so each may be substituted directly and re-used any number of times. Impure operands would
-    # need a `[:let]` temp binding to evaluate once; that splice path is deferred (kept simple first).
+    # Direct substitution: self -> recv, ivar -> raw index on recv, params -> arg exprs. No [:let] rebinding
+    # -- [:let] is unreliable as an EXPRESSION VALUE (its register eviction clobbers the result). So operands
+    # must be side-effect-free (a bare local/self/literal) and substituted directly; the caller materialises
+    # the spliced result (see compile_callm) so it can be used in argument position.
     return nil if !inline_pure?(recv)
     return nil if args.any? { |a| !inline_pure?(a) }
+    @inline_count = (@inline_count || 0) + 1
     subst = { :self => recv }
     i = 0
     while i < params.length
       subst[params[i]] = args[i]
       i += 1
     end
-
     spliced = inline_rewrite(body, subst, recv, offs)   # body is the SINGLE body node (compile_defm's defm[3])
-    STDERR.puts "        -> #{spliced.inspect[0,90]}" if ENV["INLINE_DEBUG"]
+    STDERR.puts "        -> #{spliced.inspect[0,110]}" if ENV["INLINE_DEBUG"]
     spliced
   end
   # Side-effect-free and safely re-substitutable: a bare local var, self, or a small literal.

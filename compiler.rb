@@ -2160,6 +2160,7 @@ class Compiler
     # after the main function, we ouput all functions and constants
     # used and defined so far.
     output_functions
+    STDERR.puts "[inline] #{@inline_count || 0} call sites inlined" if ENV["INLINE_VERBOSE"] && ENV["INLINE"]
     # Shared fixed-arity error handlers (collected during output_functions). Emitted here while still in
     # .text, right after the functions whose arity checks jump to them.
     output_arity_fail_handlers
