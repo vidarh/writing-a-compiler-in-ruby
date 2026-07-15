@@ -24,6 +24,13 @@ class TypeInference
   def initialize
     @types = {}   # node.object_id -> class-set at its eval point
     @gen   = {}   # node.object_id -> a short generation note (for the dump)
+    @cnt_eval = 0
+    @cnt_eval_node = 0
+    @cnt_join = 0
+    @cnt_ts_eq = 0
+    @cnt_merge = 0
+    @cnt_interproc_call = 0
+    @cnt_callees = 0
   end
   attr_reader :types, :gen
 
@@ -38,12 +45,14 @@ class TypeInference
 
   # ---- class-set / fnset lattice ----
   def join(a, b)
+    @cnt_join += 1
     return TS_TOP if a == TS_TOP || b == TS_TOP
     return b if a.nil?
     return a if b.nil?
     o = {}; a.each { |k, _| o[k] = true }; b.each { |k, _| o[k] = true }; o
   end
   def ts_eq(a, b)
+    @cnt_ts_eq += 1
     return true if a.equal?(b)
     return false if a == TS_TOP || b == TS_TOP || a.nil? || b.nil?
     return false if a.length != b.length
@@ -62,6 +71,7 @@ class TypeInference
 
   # merge two states: per-var join (missing => NilClass, Ruby); per-class slotmap merge
   def merge(a, b)
+    @cnt_merge += 1
     v = {}
     ks = {}; a[:v].each_key { |k| ks[k] = true }; b[:v].each_key { |k| ks[k] = true }
     ks.each_key { |k| v[k] = join(a[:v].key?(k) ? a[:v][k] : TS_NIL, b[:v].key?(k) ? b[:v][k] : TS_NIL) }
@@ -485,6 +495,7 @@ class TypeInference
   end
   # ---- eval: [type-set, state] ----
   def eval(node, st)
+    @cnt_eval += 1
     return [TS_NIL, st] if node == :nil
     return [{ :TrueClass => true }, st]  if node == :true
     return [{ :FalseClass => true }, st] if node == :false
@@ -514,6 +525,7 @@ class TypeInference
   end
 
   def eval_node(node, t, st)
+    @cnt_eval_node += 1
     case t
     when :array then [{ :Array => true }, eval_kids(node, 1, st)]
     when :hash  then [{ :Hash => true },  eval_kids(node, 1, st)]
@@ -925,6 +937,7 @@ class TypeInference
   # [defining-class, name] pairs, and whether EVERY receiver class resolved (if not, the result must widen
   # to include TOP -- an unresolved class means method_missing / a definer outside the analysed set).
   def callees(recv_ts, name)
+    @cnt_callees += 1
     return [:unknown, false] if recv_ts == TS_TOP || recv_ts.nil?
     out = []
     all = true
@@ -954,6 +967,7 @@ class TypeInference
   # record args into the callees' param types, return the join of their return types. TOP if the receiver
   # is TOP or no matching (direct) method is found (inherited/method_missing not yet resolved).
   def interproc_call(recv_ty, name, argtypes)
+    @cnt_interproc_call += 1
     cs, all = callees(recv_ty, name)
     if cs == :unknown
       # Unresolved receiver -> this call could reach ANY method named `name`. For SOUND param typing we must
@@ -1025,6 +1039,9 @@ class TypeInference
       break if !@changed || iter > 40
     end
     STDERR.puts "[time] ti.fixpoint_iters: #{iter}" if ENV["COMPILER_TIME"]
+    if ENV["COMPILER_TIME"]
+      STDERR.puts "[time] ti.counters: eval=#{@cnt_eval} eval_node=#{@cnt_eval_node} join=#{@cnt_join} ts_eq=#{@cnt_ts_eq} merge=#{@cnt_merge} interproc=#{@cnt_interproc_call} callees=#{@cnt_callees}"
+    end
     self
   end
 
