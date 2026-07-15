@@ -3,7 +3,7 @@ Created: 2026-07-15
 
 # Broaden Devirtualization-Driven Method Inlining
 
-Extend the opt-in `INLINE=1` devirt-driven inliner in [inline.rb](../../inline.rb) so that more simple, provably safe methods are transplanted at their call sites, reducing call overhead and paving the way for later strength reduction.
+Extend the devirt-driven inliner in [inline.rb](../../inline.rb) (now on by default, opt out with `INLINE=0`) so that more simple, provably safe methods are transplanted at their call sites, reducing call overhead and paving the way for later strength reduction.
 
 ## Goal Reference
 
@@ -119,7 +119,7 @@ flowchart TD
 - [x] New mspec tests in `spec/inline_*_spec.rb` cover the broadened cases.
 - [x] `make specs-parallel` on `compiler@ax52` shows no regressions: tracked 535-file set yields identical outcomes with and without `INLINE=1` (PASS 117, FAIL 411, CRASH 5, TIMEOUT 2, ERROR 0; 0 files changed status).
 - [x] Inline site count with `INLINE=1` increases measurably from the baseline 36 on `make selftest` (new count ~780).
-- [x] `INLINE=1` remains opt-in; validation is clean, so enabling by default is now a candidate for a follow-up change.
+- [x] `INLINE=1` is now the default; `INLINE=0` can still opt out. Validation is clean, so the change is safe to keep enabled.
 
 ## Open Questions
 
@@ -135,4 +135,4 @@ flowchart TD
 - **Code bloat:** Inlining more sites increases code size. Acceptable if it unlocks later strength reduction; measure assembly line counts.
 
 ---
-*Status: VALIDATED - All local and ax52 checks pass; the broadened inliner shows no rubyspec or custom-spec regressions.*
+*Status: DEPLOYED - Inlining is now enabled by default; all local and ax52 validation passed.*
