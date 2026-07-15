@@ -293,3 +293,34 @@ Runtime of the generated `out/selftest2` binary is essentially unchanged for thi
 
 - The `:object` type for all inlined call results is sound because we are inlining Ruby method bodies (which must return Ruby objects), but a future raw-s-expression method that intentionally returns a non-object raw value would need its type preserved rather than forced to `:object`.
 - Lifting a raw sexp condition to a Ruby `:if` relies on the compiler's existing handling of raw operators (`:eq`, `:ne`, `:lt`, etc.) in `compile_if`; complex sexp-only conditions (`:not`, custom macros) may not be representable and will simply bail if the transformed node is not safe.
+
+## Phase 4 (proposed): Beta-reduce simple local bindings
+
+After Phases 2 and 3 the remaining `unsafe_body` rejections on `test/selftest.rb` are dominated by:
+
+| reason | count | typical cause |
+|---|---|---|
+| `unsafe_body` | 315 | `:let` wrappers from closure rewriting / block params, `:while`/`:until` loops, local `:assign`, and method calls whose own body is still rejected |
+
+Many of these are not independently fixable (loops and early returns change control flow), but a non-trivial subset are `:let` bodies that only exist to bind a side-effect-free expression to a local variable. If the binding is single-assignment and the expression is pure, the inliner can beta-reduce the let away and then check the reduced body for safety.
+
+Candidate patterns:
+
+- `[:let, [var], [:assign, var, expr], body]` where `expr` is side-effect-free and `var` is not reassigned inside the let.
+- `[:do, [:assign, var, expr], ..., final_expr]` with the same restrictions.
+
+Implementation sketch:
+
+1. Add `inline_beta_reduce_bindings(body)` to `inline.rb`.
+2. Collect single-assignment bindings whose RHS passes `inline_side_effect_free?`.
+3. Substitute the RHS for every read of the variable in the remaining body.
+4. Remove the assignment/let binding and re-check the reduced body with `inline_safe_node?`.
+5. Bail if any collected variable is reassigned, has its address taken, or appears in an unsafe position.
+
+This would unlock additional core methods, but it is more invasive than the previous phases because it changes the shape of the transplanted body. It should be validated with the same ax52 `make specs-parallel` comparison before being enabled by default.
+
+### Deferred / out of scope
+
+- Methods containing loops, early returns, exception handling, or nested definitions.
+- Inlining through method-call arguments (kept side-effect-free only).
+- Multi-level inlining beyond what the normal compile pipeline already does.
