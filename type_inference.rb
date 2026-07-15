@@ -590,9 +590,9 @@ class TypeInference
     return [class_set(:FalseClass), st] if node == :false
     if node.is_a?(Symbol)
       # a bare lowercase non-local symbol in expr position is a self-send (possible_callm) -> a CALL
-      if st[:v].key?(node)
-        return [st[:v][node], st]
-      elsif ti_const?(node)
+      v = st[:v][node]
+      return [v, st] if v
+      if ti_const?(node)
         return [TS_TOP, st]                          # constant reference
       else
         self_ty = st[:v][:self] || TS_TOP
