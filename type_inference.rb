@@ -309,9 +309,15 @@ class TypeInference
     @dyn_slot = {}
     @unknowable = {}
     @dyn_singleton = {}
+    @custom_new = {}     # class => true : defines a custom class-level `new` (a factory like Struct/Data/Class
+                         # whose `new` returns a CLASS/other, not an instance) -> the `C.new -> {C}` rule bails.
     @dyn_global = false
     @definer = compute_definers(prog)
     slot_walk(prog, nil, false, {})
+  end
+  def custom_new?(c)
+    mro(c).each { |a| return true if @custom_new[a] }
+    false
   end
   def set_dyn_slot(c, m); @dyn_slot[[c, m]] = true if c && m.is_a?(Symbol); end
   # A symbol-LITERAL argument ([:sexp,:__S_foo] -> :foo). Strict: a bare Symbol is a VARIABLE reference, not a
@@ -384,10 +390,14 @@ class TypeInference
       end
     elsif m.is_a?(Array) && m[1].is_a?(Symbol)                                # singleton `def recv.m`
       r = m[0]
-      # class-body `def self.m` / `def Const.m` is a CLASS method (on the class object's eigenclass); it does
-      # not affect instance-method dispatch. Anything else installs a singleton on some object.
-      unless !in_rt && (r == :self || (r.is_a?(Symbol) && ti_const?(r)))
-        @dyn_singleton[m[1]] = true
+      if !in_rt && (r == :self || (r.is_a?(Symbol) && ti_const?(r)))
+        # class-body `def self.m` / `def Const.m` is a CLASS method (on the class object's eigenclass); it
+        # does not affect instance-method dispatch. But record a custom `new` so the `C.new -> {C}`
+        # allocation rule bails (a factory `new` returns a CLASS/other, not an instance of C).
+        tc = (r == :self) ? lex : r
+        @custom_new[tc] = true if m[1] == :new && tc
+      else
+        @dyn_singleton[m[1]] = true                                          # singleton on some object
       end
     end
   end
@@ -534,8 +544,8 @@ class TypeInference
       @recv_type[node.object_id] = recv_ty          # for the devirt-decision annotation in the dump
       argtypes, st = eval_args(node[3], st)
       widen_all_params_of(recv_ty) if node[2] == :send || node[2] == :__send__   # dynamic dispatch
-      if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1])
-        ty = { node[1] => true }                     # C.new -> an instance of C
+      if node[2] == :new && node[1].is_a?(Symbol) && ti_const?(node[1]) && !custom_new?(node[1])
+        ty = { node[1] => true }                     # C.new -> an instance of C (default allocator only)
         # C.new(args) invokes C#initialize(args): flow the args into initialize's params, else every
         # .new-argument param is under-approximated (an optional one collapses to its nil default) -> a
         # later `!param` / `param.nil?` mis-devirtualizes. Discard the return (initialize's value is unused).
