@@ -27,6 +27,15 @@ class TypeInference
   end
   attr_reader :types, :gen
 
+  # Lightweight phase timer. Output is off unless COMPILER_TIME=1.
+  def time_phase(name)
+    return yield unless ENV["COMPILER_TIME"]
+    t0 = Time.now
+    yield
+    t1 = Time.now
+    STDERR.puts "[time] ti.#{name}: %.3fs" % (t1 - t0)
+  end
+
   # ---- class-set / fnset lattice ----
   def join(a, b)
     return TS_TOP if a == TS_TOP || b == TS_TOP
@@ -994,10 +1003,10 @@ class TypeInference
   def analyze(prog)
     @cur_class = nil
     @cur_returns = nil
-    @safe = compute_safe(prog)
-    build_methods(prog)
-    compute_effects(prog)
-    compute_slots(prog)
+    time_phase("compute_safe")   { @safe = compute_safe(prog) }
+    time_phase("build_methods")  { build_methods(prog) }
+    time_phase("compute_effects"){ compute_effects(prog) }
+    time_phase("compute_slots")  { compute_slots(prog) }
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
     iter = 0
@@ -1009,9 +1018,13 @@ class TypeInference
       @recv_type = {}
       @cur_class = :Object                        # top-level self is main, an Object
       st = st0; st[:v][:self] = { :Object => true }
+      iter_t = Time.now
       eval(prog, st)
+      time_phase("eval_iter_#{iter}") { } # just to print elapsed if enabled; eval already ran
+      STDERR.puts "[time] ti.eval_iter_#{iter}: %.3fs" % (Time.now - iter_t) if ENV["COMPILER_TIME"]
       break if !@changed || iter > 40
     end
+    STDERR.puts "[time] ti.fixpoint_iters: #{iter}" if ENV["COMPILER_TIME"]
     self
   end
 
