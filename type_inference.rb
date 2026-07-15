@@ -1038,7 +1038,7 @@ class TypeInference
     end
     cs.each do |c, m|
       callee = [c, m]
-      @callers[callee] << @current_method_key if @current_method_key
+      (@callers[callee] ||= []) << @current_method_key if @current_method_key
       i = 0
       argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
     end
@@ -1083,7 +1083,7 @@ class TypeInference
     time_phase("compute_slots")  { compute_slots(prog) }
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
-    @callers = Hash.new { |h, k| h[k] = [] }
+    @callers = {}
     @current_method_key = nil
     # All methods are dirty initially.
     @dirty_methods = {}
@@ -1117,7 +1117,7 @@ class TypeInference
         old = @return_types_prev ? @return_types_prev[key] : nil
         if !ts_eq_maybe(old, @return_types[key])
           next_dirty[key] = true
-          @callers[key].each { |caller| next_dirty[caller] = true if caller }
+          (@callers[key] || []).each { |caller| next_dirty[caller] = true if caller }
         end
       end
       @dirty_methods = next_dirty
