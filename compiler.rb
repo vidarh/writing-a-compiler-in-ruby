@@ -23,6 +23,7 @@ require 'compile_class'
 require 'compile_control'
 require 'compile_include'
 require 'compile_pragma'
+require 'inline'           # devirt-driven method-body inlining (+ the dormant :__inline keyword helpers)
 
 require 'trace'
 require 'stackfence'
@@ -1725,7 +1726,7 @@ class Compiler
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
       return compile_call(scope, exp[1], exp[2],exp[3], pos) if (exp[0] == :call)
-      return compile_callm(scope, exp[1], exp[2], exp[3], exp[4], false, devirt_label_for(exp)) if (exp[0] == :callm)
+      return compile_callm(scope, exp[1], exp[2], exp[3], exp[4], false, devirt_label_for(exp), inline_for(exp)) if (exp[0] == :callm)
       return compile_safe_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :safe_callm)
       # Only treat as function call if exp[0] is a Symbol (function name)
       # If exp[0] is an array, it's a list of statements to execute in sequence
@@ -1785,6 +1786,17 @@ class Compiler
     return nil if !@devirt_labels
     d = @devirt_labels[exp.object_id]
     d ? "__method_#{d}_#{clean_method_name(exp[2])}" : nil
+  end
+
+  # For a devirtualised `recv.m` with no block, the [target-class, method-body] to try inlining (see
+  # inline.rb#inline_devirt_body). nil if not devirt'd, the body is unknown, or a block is present.
+  def inline_for(exp)
+    return nil if !ENV["INLINE"]          # devirt-driven inlining is opt-in (INLINE=1): WIP, see inline.rb.
+    return nil if !@devirt_labels || exp[4]
+    d = @devirt_labels[exp.object_id]
+    return nil if !d || !@devirt_method_asts
+    defm = @devirt_method_asts[[d, exp[2]]]
+    defm ? [d, defm] : nil
   end
 
   # We need to ensure we find the maximum
@@ -2140,6 +2152,7 @@ class Compiler
       ti = TypeInference.new
       ti.analyze(exp)
       @devirt_labels = ti.devirt_map(exp)
+      @devirt_method_asts = ti.methods_map          # [class,name] => defm, for devirt-driven inlining
       STDERR.puts "[devirt] #{@devirt_labels.length} call sites devirtualized" if ENV["DEVIRT_VERBOSE"]
     end
 

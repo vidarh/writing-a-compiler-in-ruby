@@ -1034,6 +1034,9 @@ class TypeInference
   # Map of devirtualizable call sites -> direct-call label, keyed by the :callm node's object_id. Call AFTER
   # analyze(prog) so @recv_type holds the final receiver types. The compiler keys emission by the same node
   # objects (it runs the inference on the exact tree it then walks), so object_id identity is stable.
+  # [class, name] => defm node, for the devirt-driven inliner (a devirt'd site's target body).
+  def methods_map; @methods; end
+
   def devirt_map(prog)
     out = {}
     dv_collect(prog, out)

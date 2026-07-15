@@ -618,10 +618,20 @@ class Compiler
   # representing the object to call the method on.
   # The object gets passed to the method, which is just another function,
   # as the first parameter.
-  def compile_callm(scope, ob, method, args, block = nil, do_load_super = false, devirt_label = nil)
+  def compile_callm(scope, ob, method, args, block = nil, do_load_super = false, devirt_label = nil, inline_desc = nil)
     # FIXME: Shouldn't trigger - probably due to the callm rewrites
     return compile_yield(scope, args, block) if method == :yield and ob == :self
     return compile_super(scope, args,block) if method == :super and ob == :self
+
+    # Devirt-driven inlining: if inference proved a single target and its body transplants cleanly, splice
+    # the body here instead of calling it (see inline.rb). Falls through to the direct devirt call otherwise.
+    if inline_desc
+      spliced = inline_devirt_body(scope, ob, args, inline_desc[0], inline_desc[1])
+      if spliced
+        @e.comment(Emitter::COMMENTS && "inlined #{inline_desc[0]}##{method}")
+        return compile_eval_arg(scope, spliced)
+      end
+    end
 
     # Special handling for defined?() - don't evaluate arguments, just stub to nil
     if method == :defined? && ob == :self
