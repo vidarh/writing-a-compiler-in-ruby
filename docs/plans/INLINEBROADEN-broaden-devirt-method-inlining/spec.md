@@ -179,9 +179,9 @@ The two highest-leverage, low-risk broadenings are:
   - a method with a `*args` parameter called without splat arguments;
   - a method with an `&block` parameter called without a block;
   - a predicate-style method whose body is a raw `%s(if ...)` value expression.
-- [ ] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the pre-Phase-2 baseline.
-  - **Pre-Phase-2 baseline** (commit before rest/block/%s(if) changes): PASS 117, FAIL 411, CRASH 5, TIMEOUT 2, COMPILE_FAIL 0 (535 files).
-  - **Post-Phase-2 run** is in progress on `compiler@ax52`.
+- [x] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the pre-Phase-2 baseline.
+  - **Pre-Phase-2 baseline**: PASS 117, FAIL 411, CRASH 5, TIMEOUT 2, COMPILE_FAIL 0 (535 files).
+  - **Post-Phase-2 run**: PASS 117, FAIL 411, CRASH 5, TIMEOUT 2, COMPILE_FAIL 0, ERROR 0 (identical file statuses).
 
 ### Phase 2 measurements (local)
 
@@ -198,9 +198,69 @@ This confirms the param broadening is working and the next bottleneck is body sa
 - `make selftest-c` on `compiler@ax52`: **Fails: 0** with Phase 2 changes.
 - `make specs-parallel` on `compiler@ax52`:
   - Pre-Phase-2 baseline: PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0.
-  - Post-Phase-2 comparison run is in progress.
+  - Post-Phase-2 run: PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0 / ERROR 0 (no regressions).
 
 ### Risks
 
 - Rest/block broadening must not accidentally substitute an unbound `:rest`/`:block` symbol; keeping them out of `param_names` and relying on `inline_safe_node?` prevents this.
 - `%s(if ...)` broadening must remain expression-only; any branch that is not side-effect-free falls back to the direct call.
+
+## Phase 3: Translate raw `%s(if ...)` return branches into Ruby `:if`
+
+The dominant remaining `unsafe_body` rejections are single-statement core predicates written as raw s-expressions with explicit returns, e.g.:
+
+```ruby
+def empty?
+  %s(if (eq @len 0) (return true) (return false))
+end
+```
+
+At the call site the return is implicit, so this is semantically equivalent to the value ternary `%s(if (eq @len 0) true false)`. Lifting it lets the inliner splice the predicate directly.
+
+Implementation:
+
+1. **`inline_normalize_return_if`** in `inline.rb` recognizes three patterns:
+   - `[:sexp, [:if/:ifelse, cond, [:return, a], [:return, b]]]` → `[:if, cond, a, b]`.
+   - A `:do` whose final statement is the above sexp → replace only that final statement with `[:if, cond, a, b]`.
+   - A `:do` whose final two statements are `%s(if cond (return a))` followed by a fallback value `b` (the shape of `Object#equal?`) → replace the pair with `[:if, cond, a, b]`.
+   The result is a normal Ruby `:if` node, so the branches keep their `:object` type and truthiness checks remain correct.
+
+2. **Fix the inlined-call result type** in `compile_calls.rb`:
+   The devirt-driven inline path was returning `Value.new([:subexpr])` with no type. That caused `compile_jmp_on_false` to fall back to a raw `testl %eax` when the inlined result was used as a condition, treating the `false` singleton pointer as truthy. The inline path now returns `Value.new([:subexpr], :object)`, matching the normal (non-inlined) `compile_callm` return and ensuring `false`/`nil` are recognized as falsy.
+
+3. **Regression tests** in `spec/inline_broaden_spec.rb` cover:
+   - both branches returning explicit values (true/false cases);
+   - a single return branch with a fallback value (true/false cases).
+
+### Phase 3 acceptance criteria
+
+- [x] `inline_normalize_return_if` transforms raw `%s(if ...)` / `%s(ifelse ...)` bodies whose branches are `[:return, expr]` into Ruby `:if` nodes.
+- [x] The single-return-branch-with-fallback pattern (`%s(if cond (return a)); b`) is also normalized.
+- [x] Inlined call results carry type `:object` so they work correctly when used as Ruby conditions.
+- [x] `make selftest` / `make selftest-c` remain Fails: 0 locally.
+- [x] `spec/inline_broaden_spec.rb` passes (14/14).
+- [ ] `make specs-parallel` on `compiler@ax52` shows no status regressions versus the Phase 2 baseline.
+
+### Phase 3 measurements (local)
+
+A fresh `INLINE_DEBUG=2 ./compile test/selftest.rb` after Phase 3 shows:
+
+| reason | count | notes |
+|---|---|---|
+| `unsafe_body` | 250 (was 326) | raw `%s(if)` return-branch predicates now inline |
+| `unsupported_param` | 0 | unchanged |
+| `not_in_funcscope` | 21 | unchanged |
+| `impure_arg` | 3 | unchanged |
+| `arg_count_mismatch` | 1 | unchanged |
+
+Inline site count on `test/selftest.rb` increased from ~782 to **~852** (approximately 70 additional sites).
+
+### Ax52 validation status
+
+- `make selftest-c` on `compiler@ax52`: to be run.
+- `make specs-parallel` on `compiler@ax52`: to be compared against the Phase 2 baseline (PASS 117 / FAIL 411 / CRASH 5 / TIMEOUT 2 / COMPILE_FAIL 0 / ERROR 0).
+
+### Risks
+
+- The `:object` type for all inlined call results is sound because we are inlining Ruby method bodies (which must return Ruby objects), but a future raw-s-expression method that intentionally returns a non-object raw value would need its type preserved rather than forced to `:object`.
+- Lifting a raw sexp condition to a Ruby `:if` relies on the compiler's existing handling of raw operators (`:eq`, `:ne`, `:lt`, etc.) in `compile_if`; complex sexp-only conditions (`:not`, custom macros) may not be representable and will simply bail if the transformed node is not safe.

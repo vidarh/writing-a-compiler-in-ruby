@@ -50,6 +50,15 @@ class InlineBox
   def positive?
     %s(if (gt @v 0) true false)
   end
+
+  def equal_to?(other)
+    %s(if (eq @v other) (return true) (return false))
+  end
+
+  def equal_to_or_false?(other)
+    %s(if (eq @v other) (return true))
+    false
+  end
 end
 
 class InlineHarness
@@ -112,6 +121,26 @@ class InlineHarness
     box = InlineBox.new(5)
     box.positive?
   end
+
+  def predicate_with_return_branches_true
+    box = InlineBox.new(5)
+    box.equal_to?(5)
+  end
+
+  def predicate_with_return_branches_false
+    box = InlineBox.new(5)
+    box.equal_to?(3)
+  end
+
+  def predicate_with_return_branch_and_fallback_true
+    box = InlineBox.new(5)
+    box.equal_to_or_false?(5)
+  end
+
+  def predicate_with_return_branch_and_fallback_false
+    box = InlineBox.new(5)
+    box.equal_to_or_false?(3)
+  end
 end
 
 describe "Broadened devirt inlining" do
@@ -157,5 +186,21 @@ describe "Broadened devirt inlining" do
 
   it "inlines a predicate whose body is a raw %s(if) value expression" do
     @h.predicate_with_raw_if.should == true
+  end
+
+  it "inlines a predicate whose raw %s(if) branches are explicit returns (true case)" do
+    @h.predicate_with_return_branches_true.should == true
+  end
+
+  it "inlines a predicate whose raw %s(if) branches are explicit returns (false case)" do
+    @h.predicate_with_return_branches_false.should == false
+  end
+
+  it "inlines a predicate with a single return branch and a fallback value (true case)" do
+    @h.predicate_with_return_branch_and_fallback_true.should == true
+  end
+
+  it "inlines a predicate with a single return branch and a fallback value (false case)" do
+    @h.predicate_with_return_branch_and_fallback_false.should == false
   end
 end

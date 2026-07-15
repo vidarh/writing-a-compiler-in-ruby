@@ -633,7 +633,7 @@ class Compiler
         # a normal call's return. Returning compile_eval_arg's Value directly can hand back an unmaterialised
         # memory ref (e.g. [:indirect_disp,...]) that a caller in argument position mis-reads.
         @e.save_result(compile_eval_arg(scope, spliced))
-        return Value.new([:subexpr])
+        return Value.new([:subexpr], :object)
       end
     end
 

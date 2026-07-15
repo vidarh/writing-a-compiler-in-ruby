@@ -80,6 +80,9 @@ class Compiler
     # Strip a trailing explicit return where it is equivalent to the body's value.
     body, _ = inline_unwrap_return(body)
     return inline_bail(dclass, defm, :return_unwrap_failed) if body.nil?
+    # Convert raw `%s(if cond (return a) (return b))` (and similar :ifelse) into a value ternary.
+    # This is the shape produced by many core predicates; the return statements are implicit at the call site.
+    body = inline_normalize_return_if(body)
     return inline_bail(dclass, defm, :unsafe_body, body.inspect[0,60]) if !inline_safe_node?(body, param_names)
 
     cscope = @classes[dclass] || @classes["Object__#{dclass}".to_sym]
@@ -236,6 +239,68 @@ class Compiler
       end
     end
     [body, false]
+  end
+
+  # Convert raw `%s(if cond (return a) (return b))` / `%s(ifelse cond (return a) (return b))` into
+  # Ruby-level `[:if, cond, a, b]`. The raw condition is preserved, but the branches are compiled as
+  # ordinary Ruby expressions so the result carries the correct :object type and truthiness checks work.
+  # Also handles the trailing-if-return-with-fallback form `%s(if cond (return a)); b` inside a :do.
+  def inline_normalize_return_if(body)
+    return body if !body.is_a?(Array)
+
+    # Helper: recognize a sexp(if/ifelse) whose branches are [:return, expr].
+    normalize_sexp = lambda do |node|
+      return nil if !node.is_a?(Array) || node[0] != :sexp || node.length != 2
+      inner = node[1]
+      return nil if !inner.is_a?(Array)
+      head = inner[0]
+      return nil if head != :if && head != :ifelse
+      return nil if inner.length != 4
+      cond = inner[1]
+      then_b = inner[2]
+      else_b = inner[3]
+      return nil if !then_b.is_a?(Array) || then_b[0] != :return
+      return nil if !else_b.is_a?(Array) || else_b[0] != :return
+      [:if, cond, then_b[1], else_b[1]]
+    end
+
+    # Case 1: the entire body is the if-return-return sexp.
+    if (n = normalize_sexp.call(body))
+      return n
+    end
+
+    # Case 2: a :do whose final statement is an if-return-return sexp.
+    if body[0] == :do && body.length >= 2
+      last = body[-1]
+      if (n = normalize_sexp.call(last))
+        new_body = body.dup
+        new_body[-1] = n
+        return new_body
+      end
+    end
+
+    # Case 3: a :do whose final two statements are `%s(if cond (return a))` followed by a fallback value.
+    # This is the shape of e.g. Object#equal?; it is equivalent to `[:if, cond, a, fallback]`.
+    if body[0] == :do && body.length >= 3
+      sif = body[-2]
+      fallback = body[-1]
+      if sif.is_a?(Array) && sif[0] == :sexp && sif.length == 2
+        inner = sif[1]
+        if inner.is_a?(Array) && (inner[0] == :if || inner[0] == :ifelse) && inner.length == 3
+          cond = inner[1]
+          ret = inner[2]
+          if ret.is_a?(Array) && ret[0] == :return
+            new_last = [:if, cond, ret[1], fallback]
+            new_body = body.dup
+            new_body[-2] = new_last
+            new_body.pop
+            return new_body
+          end
+        end
+      end
+    end
+
+    body
   end
 
   # An ivar reference symbol (`@x`), excluding class vars (`@@x`).
