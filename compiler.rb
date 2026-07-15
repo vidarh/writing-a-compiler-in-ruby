@@ -1298,7 +1298,10 @@ class Compiler
     len = exp.length
     while i < len
       source = compile_eval_arg(scope, exp[i])
-      @e.save_result(source)
+      # Only the final expression's value is observable as the block's result. Intermediate expressions
+      # are evaluated purely for side effects, so skip the movl-to-%eax save_result and any associated
+      # register/memory traffic.
+      @e.save_result(source) if i == len - 1
       i += 1
     end
 
