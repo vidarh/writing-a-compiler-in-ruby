@@ -31,6 +31,9 @@ class TypeInference
     @cnt_join_subset_ab = 0
     @cnt_join_subset_ba = 0
     @cnt_join_new = 0
+    @cnt_join_size1 = 0
+    @cnt_join_size2 = 0
+    @cnt_join_size3plus = 0
     @cnt_ts_eq = 0
     @cnt_merge = 0
     @cnt_interproc_call = 0
@@ -69,6 +72,11 @@ class TypeInference
       return a
     end
     @cnt_join_new += 1
+    alen = a.length
+    blen = b.length
+    @cnt_join_size1 += 1 if alen == 1 || blen == 1
+    @cnt_join_size2 += 1 if alen == 2 || blen == 2
+    @cnt_join_size3plus += 1 if alen > 2 || blen > 2
     o = {}; a.each { |k, _| o[k] = true }; b.each { |k, _| o[k] = true }; o
   end
   def ts_eq(a, b)
@@ -1060,7 +1068,7 @@ class TypeInference
     end
     STDERR.puts "[time] ti.fixpoint_iters: #{iter}" if ENV["COMPILER_TIME"]
     if ENV["COMPILER_TIME"]
-      STDERR.puts "[time] ti.counters: eval=#{@cnt_eval} eval_node=#{@cnt_eval_node} join=#{@cnt_join}(eq=#{@cnt_join_equal} ab=#{@cnt_join_subset_ab} ba=#{@cnt_join_subset_ba} new=#{@cnt_join_new}) ts_eq=#{@cnt_ts_eq} merge=#{@cnt_merge} interproc=#{@cnt_interproc_call} callees=#{@cnt_callees}"
+      STDERR.puts "[time] ti.counters: eval=#{@cnt_eval} eval_node=#{@cnt_eval_node} join=#{@cnt_join}(eq=#{@cnt_join_equal} ab=#{@cnt_join_subset_ab} ba=#{@cnt_join_subset_ba} new=#{@cnt_join_new} sz1=#{@cnt_join_size1} sz2=#{@cnt_join_size2} sz3+=#{@cnt_join_size3plus}) ts_eq=#{@cnt_ts_eq} merge=#{@cnt_merge} interproc=#{@cnt_interproc_call} callees=#{@cnt_callees}"
     end
     self
   end
