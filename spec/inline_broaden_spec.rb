@@ -63,6 +63,11 @@ class InlineBox
     %s(if (eq @v other) (return true))
     false
   end
+
+  def local_sum(other)
+    tmp = @v
+    tmp + other
+  end
 end
 
 class InlineHarness
@@ -151,6 +156,11 @@ class InlineHarness
     box = InlineBox.new(5)
     box.equal_to_or_false?(3)
   end
+
+  def local_sum_call
+    box = InlineBox.new(5)
+    box.local_sum(3)
+  end
 end
 
 describe "Broadened devirt inlining" do
@@ -216,5 +226,9 @@ describe "Broadened devirt inlining" do
 
   it "inlines a predicate with a single return branch and a fallback value (false case)" do
     @h.predicate_with_return_branch_and_fallback_false.should == false
+  end
+
+  it "inlines a method whose body declares a local variable" do
+    @h.local_sum_call.should == 8
   end
 end

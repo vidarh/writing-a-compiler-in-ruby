@@ -86,7 +86,14 @@ class Compiler
     # `[:if, cond, a, b]`. This is the shape produced by many core predicates; the return statements
     # are implicit at the call site and lifting to a Ruby :if keeps the result type as :object.
     body = inline_normalize_return_if(body)
-    return inline_bail(dclass, defm, :unsafe_body, body.inspect[0,60]) if !inline_safe_node?(body, param_names)
+
+    # :let-bound locals are scoped to the method body. Rename them to fresh symbols before splicing
+    # so they cannot capture or shadow caller locals, then treat them as in-scope for the safety check.
+    body, let_names = inline_alpha_rename_lets(body)
+    return inline_bail(dclass, defm, :let_rename_failed) if body.nil?
+    all_params = param_names + let_names
+
+    return inline_bail(dclass, defm, :unsafe_body, body.inspect[0,60]) if !inline_safe_node?(body, all_params)
 
     if ENV["INLINE_MAX_NODES"]
       nodes = inline_node_count(body)
@@ -330,6 +337,48 @@ class Compiler
     n
   end
 
+  # Rename every :let-bound local in `node` to a fresh symbol so the spliced body does not capture or
+  # shadow caller locals. Returns [renamed_node, Array(fresh_names)]. The fresh names are globally unique
+  # for this compilation run, start with "__inl_", and are never substituted for self/params/ivars.
+  def inline_alpha_rename_lets(node, mapping = {})
+    return [mapping[node] || node, []] if !node.is_a?(Array)
+
+    if node[0] == :let
+      names = node[1]
+      return [nil, []] if !names.is_a?(Array)
+
+      fresh = []
+      saved = {}
+      names.each do |name|
+        return [nil, []] if !name.is_a?(Symbol)
+        @inline_let_counter = (@inline_let_counter || 0) + 1
+        f = "__inl_#{@inline_let_counter}_#{name}".to_sym
+        fresh << f
+        saved[name] = mapping[name]
+        mapping[name] = f
+      end
+
+      new_children = []
+      all_fresh = fresh.dup
+      node[2..-1].each do |child|
+        c, f = inline_alpha_rename_lets(child, mapping)
+        return [nil, []] if c.nil?
+        new_children << c
+        all_fresh.concat(f)
+      end
+
+      names.each { |name| mapping[name] = saved[name] }
+      return [[:let, fresh] + new_children, all_fresh.uniq]
+    end
+
+    new_node = node.map do |child|
+      c, _ = inline_alpha_rename_lets(child, mapping)
+      return [nil, []] if c.nil?
+      c
+    end
+    [new_node, []]
+  end
+
   # A body is safe to inline only if every statement is a simple expression over {self, ivars, params,
   # literals, indexing, arithmetic, plain method calls}. Anything that would not splice cleanly -- an early
   # return, yield/super/block/lambda, a nested def, loops/case, or a reference to a FREE LOCAL (a bare
@@ -350,14 +399,22 @@ class Compiler
     h = n[0]
     case h
     when :return, :yield, :super, :block, :proc, :lambda, :defun, :defm, :while, :until,
-         :case, :next, :break, :redo, :and_assign, :or_assign, :let
+         :case, :next, :break, :redo, :and_assign, :or_assign
       false
+    when :let
+      # A :let introduces scoped locals; they are added to the safe-param set for the body.
+      names = n[1]
+      return false if !names.is_a?(Array) || names.any? { |x| !x.is_a?(Symbol) }
+      new_params = params + names
+      n[2..-1].all? { |c| inline_safe_node?(c, new_params) }
     when :sexp
       inline_safe_sexp?(n, params)
     when :assign
-      # only an ivar assignment is safe (a local assignment would introduce a call-site local); the RHS and
-      # any nested target must also be safe.
-      return false if !inline_ivar?(n[1])
+      # An ivar assignment or an assignment to a local that is in scope (method param or :let-bound
+      # local) is safe; the RHS and any nested target must also be safe.
+      target = n[1]
+      return false if !target.is_a?(Symbol)
+      return false if !(inline_ivar?(target) || params.include?(target))
       n[2..-1].all? { |c| inline_safe_node?(c, params) }
     else
       # generic node (callm/call/index/arithmetic/if/array/...): every child must be safe.
