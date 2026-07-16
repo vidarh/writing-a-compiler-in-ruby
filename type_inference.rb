@@ -883,12 +883,16 @@ class TypeInference
   # a superclass/module modification changes the flattened slot of every non-overriding descendant.
   def compute_descendants
     @descendants = {}
+    @mro_cache = {}
+    @resolve_cache = {}
     classes = {}
     @super.each { |k, v| classes[k] = true; classes[v] = true }
     @incl.each  { |k, vs| classes[k] = true; vs.each { |v| classes[v] = true } }
     @methods.each_key { |k| classes[k[0]] = true }
     classes.each_key do |d|
-      mro(d).each do |c|
+      chain = mro(d)
+      @mro_cache[d] = chain
+      chain.each do |c|
         next if c == d
         @descendants[c] = [] if !@descendants[c]   # explicit init (op-assign-index returns nil self-hosted)
         @descendants[c] << d
@@ -986,6 +990,8 @@ class TypeInference
   # method-resolution order of C (C, its includes reversed, then the superclass's MRO). prepend omitted:
   # it is a no-op in this compiler. Cycle-guarded.
   def mro(c, seen = {})
+    cached = @mro_cache[c]
+    return cached if cached
     return [] if c.nil? || seen[c]
     seen[c] = true
     chain = [c]
@@ -997,7 +1003,15 @@ class TypeInference
   # the class that actually defines `name` for an instance of c (walking the MRO), or nil (inherited from
   # outside the analysed set / method_missing).
   def resolve(c, name)
-    mro(c).each { |x| return x if @methods.key?([x, name]) }
+    key = [c, name]
+    return @resolve_cache[key] if @resolve_cache.key?(key)
+    mro(c).each do |x|
+      if @methods.key?([x, name])
+        @resolve_cache[key] = x
+        return x
+      end
+    end
+    @resolve_cache[key] = nil
     nil
   end
 
