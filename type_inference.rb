@@ -743,6 +743,13 @@ class TypeInference
   def eval_classbody(node, t, st)
     prev = @cur_class
     @cur_class = node[1].is_a?(Symbol) ? node[1] : nil
+    # In fixpoint iterations after the first, a class with no dirty methods cannot affect type inference:
+    # its slot definitions are stable and its method bodies are skipped. Skip the whole body to avoid
+    # re-traversing large class bodies on every iteration.
+    if @cur_class && !@dirty_classes[@cur_class]
+      @cur_class = prev
+      return [TS_NIL, st]
+    end
     st = eval(node[2], st)[1] if t == :class && node[2].is_a?(Array)   # superclass expr, outer scope
     body = node[3]                                          # class & module both: body at node[3]
     # body is a plain STATEMENT LIST (not a tagged node): evaluate each element in order.
@@ -1038,12 +1045,14 @@ class TypeInference
     end
     cs.each do |c, m|
       callee = [c, m]
-      arr = @callers[callee]
-      if arr.nil?
-        arr = []
-        @callers[callee] = arr
+      if @current_method_key
+        h = @callers[callee]
+        if h.nil?
+          h = {}
+          @callers[callee] = h
+        end
+        h[@current_method_key] = true
       end
-      arr << @current_method_key if @current_method_key
       i = 0
       argtypes.each { |at| grow_param([c, m, i], at); i += 1 }
     end
@@ -1088,11 +1097,13 @@ class TypeInference
     time_phase("compute_slots")  { compute_slots(prog) }
     @param_types  = {}     # [class,name,i] => class-set
     @return_types = {}     # [class,name]   => class-set
-    @callers = {}
+    @callers = {}          # [class,name] => { caller_key => true }
     @current_method_key = nil
     # All methods are dirty initially.
     @dirty_methods = {}
     @methods.each_key { |k| @dirty_methods[k] = true }
+    @dirty_classes = {}
+    @methods.each_key { |k| @dirty_classes[k[0]] = true }
     iter = 0
     loop do
       iter += 1
@@ -1123,12 +1134,12 @@ class TypeInference
         if !ts_eq_maybe(old, @return_types[key])
           next_dirty[key] = true
           callers = @callers[key]
-          if callers
-            callers.each { |caller| next_dirty[caller] = true if caller }
-          end
+          callers.each_key { |caller| next_dirty[caller] = true if caller } if callers
         end
       end
       @dirty_methods = next_dirty
+      @dirty_classes = {}
+      @dirty_methods.each_key { |k| @dirty_classes[k[0]] = true }
       @param_types_prev = {}
       @param_types.each_key do |k|
         key = [k[0], k[1]]
