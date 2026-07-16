@@ -153,11 +153,12 @@ Bugs found & fixed validating DEVIRT=1 against selftest + the compiler's own cod
   merge(pre-body, post-body); an exception can raise anywhere).
 - **Blocks** capture outer vars into `__env__` -> read as TOP (sound). **Splat/yield/unknown returns** -> TOP.
 
-Result (2026-07-14): selftest passes DEVIRT on+off (Fails: 0); the devirt-compiled compiler is at PARITY
-with the normal one (both compile selftest correctly; both hit the same PRE-EXISTING self-host wall on
+Result (2026-07-14): devirt is always enabled. The devirt-compiled compiler is at PARITY with the
+pre-devirt one (both compile selftest correctly; both hit the same PRE-EXISTING self-host wall on
 driver.rb -- not a devirt bug). Measured self-compile speedup from devirt alone: ~2.4% (dispatch-read
 elimination; the larger win needs P3 inlining + P4 strength reduction). Debug hooks: DEVIRT_MAX=N (limit to
-first N sites, to bisect) and DEVIRT_DUMP (print each site with its enclosing method).
+first N sites, to bisect) and DEVIRT_DUMP (print each site with its enclosing method). The old DEVIRT=0
+opt-out switch has been removed; there is no supported way to disable devirtualisation.
 
 ## Open questions to resolve while building P1 (don't guess -- verify in code)
 - How offsets are assigned for names only ever `define_method`'d (no static `def`) -- do they get a slot?

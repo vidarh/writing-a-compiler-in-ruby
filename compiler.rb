@@ -103,7 +103,7 @@ class Compiler
 
   def initialize emitter = Emitter.new
     @e = emitter
-    @devirt_labels = nil   # populated by compile() unless DEVIRT=0 (devirt is on by default); nil disables devirt
+    @devirt_labels = nil   # populated by compile(); nil disables devirt if inference is skipped
     @global_functions = Globals.new
     @string_constants = {}
     # Frozen string literals (from `# frozen_string_literal: true` files) are interned: each unique content
@@ -1794,7 +1794,8 @@ class Compiler
 
 
   # The direct-call label for a devirtualizable :callm node `exp`, else nil. The type-inference pass
-  # (gated by ENV["DEVIRT"]) maps the node to its target DEFINING CLASS; we form the actual method label
+  # maps the node to its target DEFINING CLASS; we form the actual method label from that class and
+  # the method name. nil if inference did not run or the node was not devirtualizable.
   # __method_<class>_<clean_method_name(m)> here so the operator/name mangling matches the emitted function.
   def devirt_label_for(exp)
     return nil if !@devirt_labels
@@ -2158,17 +2159,14 @@ class Compiler
     time_phase("rewrite_pattern_matching") { rewrite_pattern_matching(exp) }
 
     # Whole-program type inference -> devirtualize provably-monomorphic call sites to direct calls. Runs
-    # AFTER the tree-rewrites above so node identities match what compile_exp walks. ON BY DEFAULT (opt out
-    # with DEVIRT=0) so the MRI and self-hosted compilers always make the SAME decisions and cannot diverge.
+    # AFTER the tree-rewrites above so node identities match what compile_exp walks. Always enabled.
     # Sound-by-construction (per-slot generation model, type_inference.rb); validated at full-sweep parity.
-    if ENV["DEVIRT"] != "0"
-      time_phase("type_inference") do
-        ti = TypeInference.new
-        ti.analyze(exp)
-        @devirt_labels = ti.devirt_map(exp)
-        @devirt_method_asts = ti.methods_map          # [class,name] => defm, for devirt-driven inlining
-        STDERR.puts "[devirt] #{@devirt_labels.length} call sites devirtualized" if ENV["DEVIRT_VERBOSE"]
-      end
+    time_phase("type_inference") do
+      ti = TypeInference.new
+      ti.analyze(exp)
+      @devirt_labels = ti.devirt_map(exp)
+      @devirt_method_asts = ti.methods_map          # [class,name] => defm, for devirt-driven inlining
+      STDERR.puts "[devirt] #{@devirt_labels.length} call sites devirtualized" if ENV["DEVIRT_VERBOSE"]
     end
 
     time_phase("compile_main") { compile_main(exp) }
