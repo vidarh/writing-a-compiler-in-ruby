@@ -746,7 +746,7 @@ class TypeInference
     # In fixpoint iterations after the first, a class with no dirty methods cannot affect type inference:
     # its slot definitions are stable and its method bodies are skipped. Skip the whole body to avoid
     # re-traversing large class bodies on every iteration.
-    if @cur_class && !@dirty_classes[@cur_class]
+    if @reanalyze_dirty
       @cur_class = prev
       return [TS_NIL, st]
     end
@@ -1105,6 +1105,7 @@ class TypeInference
     @dirty_classes = {}
     @methods.each_key { |k| @dirty_classes[k[0]] = true }
     iter = 0
+    @reanalyze_dirty = false
     loop do
       iter += 1
       @changed = false
@@ -1116,6 +1117,16 @@ class TypeInference
       iter_t = Time.now
       @current_method_key = :main
       eval(prog, st)
+      # In fixpoint iterations after the first, class bodies were skipped during eval; re-analyze the dirty
+      # method bodies directly instead of re-traversing every class body.
+      if @reanalyze_dirty
+        @dirty_methods.each_key do |key|
+          node = @methods[key]
+          next if !node
+          @current_method_key = key
+          analyze_body(node, 2, key[0], key[1])
+        end
+      end
       @current_method_key = nil
       time_phase("eval_iter_#{iter}") { } # just to print elapsed if enabled; eval already ran
       STDERR.puts "[time] ti.eval_iter_#{iter}: %.3fs" % (Time.now - iter_t) if ENV["COMPILER_TIME"]
@@ -1151,6 +1162,7 @@ class TypeInference
         h[k[2]] = @param_types[k]
       end
       @return_types_prev = @return_types.dup
+      @reanalyze_dirty = true
       STDERR.puts "[time] ti.dirty_next: #{@dirty_methods.length}" if ENV["COMPILER_TIME"]
     end
     STDERR.puts "[time] ti.fixpoint_iters: #{iter}" if ENV["COMPILER_TIME"]
