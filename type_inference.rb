@@ -815,11 +815,17 @@ class TypeInference
   # method some subclass overrides then sees non-invariant slots and bails, instead of wrongly binding the
   # base label. (Without this, an inherited method's self-send to an overridden method miscompiles.)
   def self_type_set(cls)
+    cached = @self_type_set_cache[cls]
+    return cached if cached
     desc = @descendants[cls] || []
-    return class_set(cls) if desc.empty?
-    h = { cls => true }
-    desc.each { |d| h[d] = true }
-    h
+    if desc.empty?
+      cached = class_set(cls)
+    else
+      cached = { cls => true }
+      desc.each { |d| cached[d] = true }
+    end
+    @self_type_set_cache[cls] = cached
+    cached
   end
   def analyze_body(node, argi, cls, name)
     key = (cls && name.is_a?(Symbol)) ? [cls, name] : nil
@@ -885,6 +891,7 @@ class TypeInference
     @descendants = {}
     @mro_cache = {}
     @resolve_cache = {}
+    @self_type_set_cache = {}
     classes = {}
     @super.each { |k, v| classes[k] = true; classes[v] = true }
     @incl.each  { |k, vs| classes[k] = true; vs.each { |v| classes[v] = true } }
