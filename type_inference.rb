@@ -632,6 +632,8 @@ class TypeInference
     when :call
       argtypes, st = eval_args(node[2], st)
       self_ty = st[:v][:self] || TS_TOP
+      # Bare method calls `m(...)` dispatch on self; record self type so devirt_map can direct-call them.
+      @recv_type[node.object_id] = self_ty if node[1].is_a?(Symbol)
       ty = interproc_call(self_ty, node[1], argtypes)
       st = call_effect(st, node[1])
       [ty, st]
@@ -1133,7 +1135,10 @@ class TypeInference
       @changed = false
       @types = {} if @dump_ast
       @gen = {} if @dump_ast
-      @recv_type = {}
+      # Keep receiver types from previous iterations for methods that are not re-analyzed this pass.
+      # Clean method bodies are skipped after the first iteration, but their final receiver types are
+      # still needed by devirt_map.
+      @recv_type ||= {}
       @cur_class = :Object                        # top-level self is main, an Object
       st = st0; st[:v][:self] = class_set(:Object)
       iter_t = Time.now
@@ -1227,12 +1232,14 @@ class TypeInference
     return if !node.is_a?(Array)
     ctx = "#{node[1]}" if (node[0] == :class || node[0] == :module) && node[1].is_a?(Symbol)
     ctx = "#{ctx}##{node[1]}" if node[0] == :defm && node[1].is_a?(Symbol)
-    if node[0] == :callm && node[2].is_a?(Symbol)
+    if (node[0] == :callm && node[2].is_a?(Symbol)) ||
+       (node[0] == :call && node[1].is_a?(Symbol))
       recv = @recv_type[node.object_id]
-      d = recv ? devirt_decision(recv, node[2]) : nil
+      mname = node[0] == :callm ? node[2] : node[1]
+      d = recv ? devirt_decision(recv, mname) : nil
       if d
         if ENV["DEVIRT_DUMP"]
-          STDERR.puts("SITE ##{out.size} in #{ctx}: #{d}##{node[2]}  recv_ts=#{ts_str(recv)}  recvnode=#{node[1].inspect[0,40]}")
+          STDERR.puts("SITE ##{out.size} in #{ctx}: #{d}##{mname}  recv_ts=#{ts_str(recv)}  recvnode=#{node[0] == :callm ? node[1].inspect[0,40] : ':self'}")
         end
         out[node.object_id] = d                  # value = target defining class; compiler forms the label
       end

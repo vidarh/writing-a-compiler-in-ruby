@@ -1806,10 +1806,14 @@ class Compiler
   # For a devirtualised `recv.m` with no block, the [target-class, method-body] to try inlining (see
   # inline.rb#inline_devirt_body). nil if not devirt'd, the body is unknown, or a block is present.
   def inline_for(exp)
-    return nil if !@devirt_labels || exp[4]
+    return nil if !@devirt_labels
+    # :callm block is exp[4]; :call block is exp[3]. Inlining a method that takes a block is not supported.
+    has_block = (exp[0] == :callm && exp[4]) || (exp[0] == :call && exp[3])
+    return nil if has_block
     d = @devirt_labels[exp.object_id]
     return nil if !d || !@devirt_method_asts
-    defm = @devirt_method_asts[[d, exp[2]]]
+    mname = exp[0] == :callm ? exp[2] : exp[1]
+    defm = @devirt_method_asts[[d, mname]]
     defm ? [d, defm] : nil
   end
 
