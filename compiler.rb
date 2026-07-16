@@ -1739,8 +1739,12 @@ class Compiler
     elsif @@oper_methods.member?(exp[0])
       return compile_callm(scope, exp[1], exp[0], exp[2..-1])
     else
-      return compile_call(scope, exp[1], exp[2],exp[3], pos) if (exp[0] == :call)
-      return compile_callm(scope, exp[1], exp[2], exp[3], exp[4], false, devirt_label_for(exp), inline_for(exp)) if (exp[0] == :callm)
+      return compile_call(scope, exp[1], exp[2], exp[3], pos,
+                            devirt_label_for(exp),
+                            inline_desc_without_recursion(scope, inline_for(exp))) if (exp[0] == :call)
+      return compile_callm(scope, exp[1], exp[2], exp[3], exp[4], false,
+                           devirt_label_for(exp),
+                           inline_desc_without_recursion(scope, inline_for(exp))) if (exp[0] == :callm)
       return compile_safe_callm(scope, exp[1], exp[2], exp[3], exp[4]) if (exp[0] == :safe_callm)
       # Only treat as function call if exp[0] is a Symbol (function name)
       # If exp[0] is an array, it's a list of statements to execute in sequence
@@ -1793,14 +1797,16 @@ class Compiler
   end
 
 
-  # The direct-call label for a devirtualizable :callm node `exp`, else nil. The type-inference pass
-  # maps the node to its target DEFINING CLASS; we form the actual method label from that class and
-  # the method name. nil if inference did not run or the node was not devirtualizable.
+  # The direct-call label for a devirtualizable :call/:callm node `exp`, else nil. The type-inference
+  # pass maps the node to its target DEFINING CLASS; we form the actual method label from that class
+  # and the method name. nil if inference did not run or the node was not devirtualizable.
   # __method_<class>_<clean_method_name(m)> here so the operator/name mangling matches the emitted function.
   def devirt_label_for(exp)
     return nil if !@devirt_labels
+    mname = (exp[0] == :callm) ? exp[2] : exp[1]
+    return nil if !mname.is_a?(Symbol)
     d = @devirt_labels[exp.object_id]
-    d ? "__method_#{d}_#{clean_method_name(exp[2])}" : nil
+    d ? "__method_#{d}_#{clean_method_name(mname)}" : nil
   end
 
   # For a devirtualised `recv.m` with no block, the [target-class, method-body] to try inlining (see
@@ -1815,6 +1821,28 @@ class Compiler
     mname = exp[0] == :callm ? exp[2] : exp[1]
     defm = @devirt_method_asts[[d, mname]]
     defm ? [d, defm] : nil
+  end
+
+  # Drop an inline descriptor if inlining the target into the current scope would inline
+  # a method into itself (direct recursion). The codegen walk is depth-first and has no
+  # recursion budget, so splicing a recursive body produces unbounded expansion.
+  def inline_desc_without_recursion(scope, inline_desc)
+    return nil if !inline_desc || inline_recursive?(scope, inline_desc)
+    inline_desc
+  end
+
+  def inline_recursive?(scope, inline_desc)
+    target_class, defm = inline_desc
+    target_name = defm[1]
+    s = scope
+    while s
+      if s.respond_to?(:method) && s.method && s.method.name.is_a?(Symbol)
+        cs = s.class_scope
+        return true if cs && cs.name == target_class && s.method.name == target_name
+      end
+      s = s.is_a?(Scope) ? s.next : nil
+    end
+    false
   end
 
   # We need to ensure we find the maximum

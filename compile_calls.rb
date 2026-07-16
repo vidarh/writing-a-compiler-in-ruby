@@ -241,7 +241,7 @@ class Compiler
   # Compiles a function call.
   # Takes the current scope, the function to call as well as the arguments
   # to call the function with.
-  def compile_call(scope, func, args, block = nil, pos = nil)
+  def compile_call(scope, func, args, block = nil, pos = nil, devirt_label = nil, inline_desc = nil)
     return compile_yield(scope, args, block) if func == :yield
 
     # Handle visibility methods, attr, and module_function at compile time
@@ -310,11 +310,9 @@ class Compiler
     # This is a bit of a hack. get_arg will also be called from
     # compile_eval_arg below, but we need to know if it's a callm
     fargs = get_arg(scope, func)
-    dv = devirt_label_for(exp)
-    inl = inline_for(exp)
 
     return compile_super(scope, args,block) if func == :super
-    return compile_callm(scope,:self, func, args,block, false, dv, inl) if fargs and fargs[0] == :possible_callm || fargs[0] == :global
+    return compile_callm(scope,:self, func, args,block, false, devirt_label, inline_desc) if fargs and fargs[0] == :possible_callm || fargs[0] == :global
 
     # `name(...)` with explicit call syntax is ALWAYS a method call in Ruby, even when a parameter (or
     # rest parameter) of the same name is in scope -- a bare local/param can only be invoked via
@@ -322,7 +320,7 @@ class Compiler
     # `a()` as an indirect call THROUGH the (still unset) parameter slot and jumped to a tagged-integer
     # "address", segfaulting. Route such calls to normal method dispatch on self instead. (Only :arg/
     # :argaddr -- parameters -- are redirected; :lvar/ivar/global resolutions are left as-is.)
-    return compile_callm(scope,:self, func, args,block, false, dv, inl) if func.is_a?(Symbol) && fargs && (fargs[0] == :arg || fargs[0] == :argaddr)
+    return compile_callm(scope,:self, func, args,block, false, devirt_label, inline_desc) if func.is_a?(Symbol) && fargs && (fargs[0] == :arg || fargs[0] == :argaddr)
 
     # The same applies to a LOCAL of the same name: a DEFAULTED parameter lives in a local slot
     # (:lvar), so in `def foo(bar = bar()); bar; end` the default expression's explicit `bar()`
@@ -331,7 +329,7 @@ class Compiler
     # s-expressions DO use `(call var ...)` for genuine indirect calls through function-pointer
     # variables, so anything under a SexpScope (every %s(...) body) keeps the low-level behaviour.
     if func.is_a?(Symbol) && fargs && fargs[0] == :lvar && !scope_has_sexpscope?(scope)
-      return compile_callm(scope,:self, func, args,block, false, dv, inl)
+      return compile_callm(scope,:self, func, args,block, false, devirt_label, inline_desc)
     end
 
     # Wrap single argument in array if needed
