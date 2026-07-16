@@ -72,9 +72,10 @@ class TypeInference
     { a => true, b => true }
   end
 
-  def initialize
+  def initialize(dump_ast = false)
     @types = {}   # node.object_id -> class-set at its eval point
     @gen   = {}   # node.object_id -> a short generation note (for the dump)
+    @dump_ast = dump_ast
   end
   attr_reader :types, :gen
 
@@ -573,7 +574,7 @@ class TypeInference
       return eval_seq(node, 0, st)
     end
     ty, st = eval_node(node, node[0], st)
-    @types[node.object_id] = ty
+    @types[node.object_id] = ty if @dump_ast
     [ty, st]
   end
 
@@ -731,7 +732,7 @@ class TypeInference
     if m.is_a?(Symbol) && @cur_class
       st = dupst_s(st)
       set_slot(st, @cur_class, m, { "__method_#{@cur_class}_#{ti_clean(m)}" => true })
-      @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}"
+      @gen[node.object_id] = "def #{@cur_class}##{m} -> #{ts_str(st[:s][@cur_class][m])}" if @dump_ast
     end
     key = (@cur_class && m.is_a?(Symbol)) ? [@cur_class, m] : nil
     if !key || @dirty_methods[key]
@@ -757,7 +758,7 @@ class TypeInference
       body.each { |s| _, st = eval(s, st) if s.is_a?(Array) || s.is_a?(Symbol) }
     end
     if @cur_class
-      @gen[node.object_id] = "final #{@cur_class}: #{slotmap_str(st[:s][@cur_class])}"
+      @gen[node.object_id] = "final #{@cur_class}: #{slotmap_str(st[:s][@cur_class])}" if @dump_ast
     end
     @cur_class = prev
     [TS_NIL, st]
@@ -1109,8 +1110,8 @@ class TypeInference
     loop do
       iter += 1
       @changed = false
-      @types = {}
-      @gen = {}
+      @types = {} if @dump_ast
+      @gen = {} if @dump_ast
       @recv_type = {}
       @cur_class = :Object                        # top-level self is main, an Object
       st = st0; st[:v][:self] = class_set(:Object)

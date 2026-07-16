@@ -75,7 +75,7 @@ require 'compiler'
 
       if type_ast
         require 'type_inference'
-        ti = TypeInference.new
+        ti = TypeInference.new(true)
         ti.analyze(prog)
         ti.dump(prog)
         exit(0)
